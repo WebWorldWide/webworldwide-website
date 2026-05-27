@@ -4,7 +4,7 @@
   Rendered to `/.well-known/webfinger` (no extension; the output
   format declared in hugo.toml drops it). Returns a Webfinger JRD
   (JSON Resource Descriptor, RFC 7033) so that any Fediverse server
-  resolving `@blog@terminaleighty.com` finds the Bridgy Fed actor
+  resolving `@blog@webworldwide.online` finds the Bridgy Fed actor
   and delegates inbox/outbox/follow there.
 
   Spec: https://fed.brid.gy/docs#how-web

@@ -169,7 +169,7 @@
   // the first 160 chars of body text when the meta description is empty.
   function siteDomain() {
     // Hard-coded for now — Phase 9 will surface a per-site config.
-    return 'terminaleighty.com';
+    return 'webworldwide.online';
   }
   function updateSeoPreview() {
     const title = (titleEl?.value || '').trim();

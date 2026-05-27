@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # ==============================================================================
-# Terminal Eighty — Pi Setup Script
+# Web World Wide — Pi Setup Script
 # Run this once after cloning the repo to configure and start all services
 # ==============================================================================
 
 set -e
 
-REPO_DIR="/home/adam/terminal-eighty-blog"
+REPO_DIR="/home/adam/web-world-wide-online"
 DOCKER_DIR="$REPO_DIR/docker"
 ENV_FILE="$DOCKER_DIR/.env"
 
@@ -54,9 +54,9 @@ UMAMI_DB_PASS=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
 # ── Step 4: Write .env file ──
 cat > "$ENV_FILE" <<EOF
 # ── Domains ──
-DOMAIN_ADMIN=admin.terminaleighty.com
-DOMAIN_COMMENTS=comments.terminaleighty.com
-DOMAIN_ANALYTICS=analytics.terminaleighty.com
+DOMAIN_ADMIN=admin.webworldwide.online
+DOMAIN_COMMENTS=comments.webworldwide.online
+DOMAIN_ANALYTICS=analytics.webworldwide.online
 
 # ── Cloudflare ──
 CLOUDFLARE_TUNNEL_TOKEN=$CF_TOKEN
@@ -92,7 +92,7 @@ echo "[*] Setting up auto-update and maintenance cron jobs..."
 # Check if cron jobs already exist
 CRON_EXISTS=$(crontab -l 2>/dev/null | grep -c "auto-update.sh" || true)
 if [ "$CRON_EXISTS" -eq 0 ]; then
-    (crontab -l 2>/dev/null; echo ""; echo "# Terminal Eighty Auto-Update (every 5 minutes)"; echo "*/5 * * * * $REPO_DIR/scripts/auto-update.sh >> /var/log/auto-update.log 2>&1"; echo "# Terminal Eighty Maintenance (Sundays at 3 AM)"; echo "0 3 * * 0 $REPO_DIR/scripts/maintenance.sh >> /var/log/maintenance.log 2>&1") | crontab -
+    (crontab -l 2>/dev/null; echo ""; echo "# Web World Wide Auto-Update (every 5 minutes)"; echo "*/5 * * * * $REPO_DIR/scripts/auto-update.sh >> /var/log/auto-update.log 2>&1"; echo "# Web World Wide Maintenance (Sundays at 3 AM)"; echo "0 3 * * 0 $REPO_DIR/scripts/maintenance.sh >> /var/log/maintenance.log 2>&1") | crontab -
     echo "      Cron jobs installed."
 else
     echo "      Cron jobs already exist. Skipping."
@@ -105,9 +105,9 @@ echo "║     SETUP COMPLETE                          ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
 echo "  Services:"
-echo "    CMS:       https://admin.terminaleighty.com"
-echo "    Comments:  https://comments.terminaleighty.com"
-echo "    Analytics: https://analytics.terminaleighty.com"
+echo "    CMS:       https://admin.webworldwide.online"
+echo "    Comments:  https://comments.webworldwide.online"
+echo "    Analytics: https://analytics.webworldwide.online"
 echo ""
 echo "  Auto-update: Every 5 minutes"
 echo "  Maintenance: Sundays at 3:00 AM"

@@ -304,7 +304,7 @@
   const baseCommands = [
     { label: 'Dashboard', hint: 'Go to dashboard', href: '/index.html' },
     { label: 'New post', hint: 'Open a blank editor', href: '/editor.html' },
-    { label: 'View site', hint: 'Open the public site', href: 'https://terminaleighty.com' },
+    { label: 'View site', hint: 'Open the public site', href: 'https://webworldwide.online' },
     {
       label: 'Toggle theme',
       hint: 'Dark ↔ light',

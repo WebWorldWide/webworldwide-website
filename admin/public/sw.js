@@ -1,4 +1,4 @@
-const CACHE_NAME = 'terminal-eighty-cms-v1';
+const CACHE_NAME = 'web-world-wide-cms-v1';
 
 // Only caching static assets, not API calls or HTML that needs auth
 const urlsToCache = [

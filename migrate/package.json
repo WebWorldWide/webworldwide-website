@@ -1,5 +1,5 @@
 {
-  "name": "terminal-eighty-migrate",
+  "name": "web-world-wide-migrate",
   "version": "1.0.0",
   "description": "Migrate Ghost blog content to Hugo",
   "main": "migrate.js",

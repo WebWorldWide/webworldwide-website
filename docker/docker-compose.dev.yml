@@ -13,7 +13,7 @@
 #
 # Volumes are scoped to `*_data_dev` so a `docker volume prune` after a
 # dev session never touches production-shaped data.
-name: terminal-eighty-dev
+name: web-world-wide-dev
 
 services:
   postgres:
@@ -54,7 +54,7 @@ services:
     restart: unless-stopped
     environment:
       REMARK_URL: http://localhost:8081
-      SITE: terminaleighty
+      SITE: webworldwide
       SECRET: dev-only-secret-not-for-prod
       AUTH_ANON: "true"
       ADMIN_PASSWD: admin

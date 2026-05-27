@@ -1,4 +1,4 @@
-name: terminal-eighty
+name: web-world-wide
 
 services:
   # 1. Cloudflare Tunnel (Inbound traffic without port forwarding)
@@ -27,7 +27,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
-  # 3. Terminal Eighty CMS (Node.js Admin Panel)
+  # 3. Web World Wide CMS (Node.js Admin Panel)
   cms:
     build:
       context: ../admin
@@ -55,7 +55,7 @@ services:
     environment:
       - REMARK_URL=https://${DOMAIN_COMMENTS}
       - SECRET=${REMARK42_SECRET}
-      - SITE=terminaleighty
+      - SITE=webworldwide
       - AUTH_ANON=true             # No login required for users
       - ADMIN_SHARED_ID=${REMARK42_ADMIN_ID}
     volumes:

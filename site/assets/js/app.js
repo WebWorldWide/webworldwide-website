@@ -1,6 +1,6 @@
 // @ts-check
 /* ============================================================
-   Terminal Eighty — frontend behaviors
+   Web World Wide — frontend behaviors
    ------------------------------------------------------------
    - Theme toggle  (persists to localStorage.theme)
    - Live clock    (HH:MM:SS, updates 1Hz, decorative)

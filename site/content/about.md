@@ -6,7 +6,7 @@ draft: false
 tags: []
 type: "page"
 ---
-Terminal Eighty is an independent publication launched in December 2025 by Adam Nolle. If you subscribe today, you'll get full access to the website as well as email newsletters about new content when it's available. Your subscription makes this site possible, and allows Terminal Eighty to continue to exist. Thank you!
+Web World Wide is an independent publication launched in December 2025 by Adam Nolle. If you subscribe today, you'll get full access to the website as well as email newsletters about new content when it's available. Your subscription makes this site possible, and allows Web World Wide to continue to exist. Thank you!
 
 ### Access all areas
 

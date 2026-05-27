@@ -43,7 +43,7 @@ The site already advertises itself as a `rel="me"` host. To federate it onto
 the Fediverse:
 
 1. Visit <https://fed.brid.gy/>
-2. Enter your blog URL (`https://terminaleighty.com/`)
+2. Enter your blog URL (`https://webworldwide.online/`)
 3. Click **Federate**
 4. Verify that webmentions start arriving at `/webmention` (the admin's
    `Comments` view shows them in the moderation queue)
@@ -77,7 +77,7 @@ Posts with a future `publish_at` flip live when the cron fires. Recommended
 cadence: every 5 minutes.
 
 ```cron
-*/5 * * * * /home/pi/terminal-eighty-blog/scripts/promote-scheduled.sh >> /home/pi/log/promote.log 2>&1
+*/5 * * * * /home/pi/web-world-wide-online/scripts/promote-scheduled.sh >> /home/pi/log/promote.log 2>&1
 ```
 
 ### 6. Webmention dump → Hugo data
@@ -86,7 +86,7 @@ Approved webmentions are baked into `site/data/webmentions/<slug>.json` so
 they render at build time. Recommended cadence: every 5 minutes.
 
 ```cron
-*/5 * * * * /home/pi/terminal-eighty-blog/scripts/dump-webmentions.sh >> /home/pi/log/webmentions.log 2>&1
+*/5 * * * * /home/pi/web-world-wide-online/scripts/dump-webmentions.sh >> /home/pi/log/webmentions.log 2>&1
 ```
 
 Both scripts are idempotent and exit 0 on no-op, so they're safe to run on a

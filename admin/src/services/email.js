@@ -24,7 +24,7 @@
  *
  * Then add a cron:
  *
- *   0 * * * * cd /opt/terminal-eighty && node scripts/email-digest.mjs
+ *   0 * * * * cd /opt/web-world-wide && node scripts/email-digest.mjs
  *
  * The script (and this module) exits 0 when SMTP isn't configured so
  * the cron line is safe to leave in place on hosts that don't want it.
@@ -158,7 +158,7 @@ export async function sendDigest(args) {
   await transport.sendMail({
     from: cfg.from,
     to: cfg.to.join(', '),
-    subject: `Terminal Eighty digest — ${digest.count} new`,
+    subject: `Web World Wide digest — ${digest.count} new`,
     text: digest.text,
     html: digest.html,
   });

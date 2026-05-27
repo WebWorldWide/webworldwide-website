@@ -175,8 +175,8 @@ describe('embed-loader bluesky-thread handler (Phase 9)', () => {
     document.body.innerHTML = `
       <section class="bluesky-thread">
         <button id="ph" type="button"
-                data-embed-href="https://bsky.app/profile/blog.terminaleighty.com/post/3kxyz"
-                data-embed-uri="at://blog.terminaleighty.com/app.bsky.feed.post/3kxyz"
+                data-embed-href="https://bsky.app/profile/blog.webworldwide.online/post/3kxyz"
+                data-embed-uri="at://blog.webworldwide.online/app.bsky.feed.post/3kxyz"
                 data-embed-type="bluesky-thread"
                 aria-label="Load Bluesky thread discussion for this post">
           View thread
@@ -189,7 +189,7 @@ describe('embed-loader bluesky-thread handler (Phase 9)', () => {
     // Iframe src points at embed.bsky.app, NOT the original bsky.app URL.
     expect(iframe.getAttribute('src')).toContain('https://embed.bsky.app/embed?uri=');
     expect(iframe.getAttribute('src')).toContain(
-      encodeURIComponent('at://blog.terminaleighty.com/app.bsky.feed.post/3kxyz'),
+      encodeURIComponent('at://blog.webworldwide.online/app.bsky.feed.post/3kxyz'),
     );
     // Sandbox + title still applied.
     expect(iframe.getAttribute('sandbox')).toContain('allow-scripts');

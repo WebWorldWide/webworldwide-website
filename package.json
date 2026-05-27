@@ -1,8 +1,8 @@
 {
-  "name": "terminal-eighty-blog",
+  "name": "web-world-wide-online",
   "version": "1.0.0",
   "private": true,
-  "description": "Terminal Eighty — self-hosted Hugo blog + Node admin CMS. This root package orchestrates lint, test, and CI for the whole monorepo.",
+  "description": "Web World Wide — self-hosted Hugo blog + Node admin CMS. This root package orchestrates lint, test, and CI for the whole monorepo.",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

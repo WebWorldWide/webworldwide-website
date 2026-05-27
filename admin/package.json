@@ -1,7 +1,7 @@
 {
-  "name": "terminal-eighty-cms",
+  "name": "web-world-wide-cms",
   "version": "1.0.0",
-  "description": "Admin CMS for Terminal Eighty blog",
+  "description": "Admin CMS for Web World Wide blog",
   "main": "server.js",
   "type": "module",
   "scripts": {

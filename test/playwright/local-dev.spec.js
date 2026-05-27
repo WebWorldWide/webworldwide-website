@@ -28,7 +28,7 @@ test.describe('local-dev stack', () => {
   test('public Hugo site is reachable on :1313', async ({ page }) => {
     const res = await page.goto('http://localhost:1313/');
     expect(res?.status()).toBe(200);
-    await expect(page).toHaveTitle(/Terminal Eighty/i);
+    await expect(page).toHaveTitle(/Web World Wide/i);
   });
 
   test('admin login page renders the password form', async ({ page }) => {

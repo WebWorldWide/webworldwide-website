@@ -59,7 +59,7 @@ import { webUrlToAtUri } from '../services/bluesky.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Configuration ───────────────────────────────────────────────────
-const TARGET_HOSTS = (process.env.WEBMENTION_HOSTS || 'terminaleighty.com')
+const TARGET_HOSTS = (process.env.WEBMENTION_HOSTS || 'webworldwide.online')
   .split(',')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
@@ -178,7 +178,7 @@ async function fetchSource(url) {
   try {
     const res = await fetchImpl(url, {
       headers: {
-        'User-Agent': 'TerminalEighty-Webmention/1.0 (+https://terminaleighty.com)',
+        'User-Agent': 'WebWorldWide-Webmention/1.0 (+https://webworldwide.online)',
         Accept: 'text/html, application/xhtml+xml',
       },
       redirect: 'follow',

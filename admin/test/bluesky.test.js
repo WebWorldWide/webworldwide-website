@@ -123,12 +123,12 @@ test('composeThread fits short title+excerpt into a single post', () => {
   const posts = bluesky.composeThread({
     title: 'Hello, World',
     excerpt: 'A short excerpt that should fit just fine.',
-    url: 'https://terminaleighty.com/hello-world/',
+    url: 'https://webworldwide.online/hello-world/',
   });
   assert.equal(posts.length, 1);
   assert.equal(posts[0].isRoot, true);
   assert.ok(posts[0].text.includes('Hello, World'));
-  assert.ok(posts[0].text.includes('https://terminaleighty.com/hello-world/'));
+  assert.ok(posts[0].text.includes('https://webworldwide.online/hello-world/'));
   assert.ok(posts[0].text.length <= 300);
 });
 
@@ -138,7 +138,7 @@ test('composeThread chains long excerpts into a numbered thread', () => {
   const posts = bluesky.composeThread({
     title: 'Long Post',
     excerpt: longExcerpt,
-    url: 'https://terminaleighty.com/long/',
+    url: 'https://webworldwide.online/long/',
   });
   assert.ok(posts.length >= 2, `expected chain, got ${posts.length}`);
   assert.equal(posts[0].isRoot, true);
@@ -177,8 +177,8 @@ test('composeThread never emits an empty or orphan continuation', () => {
 // ── AT URI / web URL ─────────────────────────────────────────────────
 
 test('webUrlToAtUri parses a bsky.app post URL', () => {
-  const uri = bluesky.webUrlToAtUri('https://bsky.app/profile/blog.terminaleighty.com/post/3kxyz');
-  assert.equal(uri, 'at://blog.terminaleighty.com/app.bsky.feed.post/3kxyz');
+  const uri = bluesky.webUrlToAtUri('https://bsky.app/profile/blog.webworldwide.online/post/3kxyz');
+  assert.equal(uri, 'at://blog.webworldwide.online/app.bsky.feed.post/3kxyz');
 });
 
 test('webUrlToAtUri rejects non-bsky hosts', () => {
@@ -209,7 +209,7 @@ test('isConfigured reflects env vars', () => {
   delete process.env.BLUESKY_HANDLE;
   delete process.env.BLUESKY_APP_PASSWORD;
   assert.equal(bluesky.isConfigured(), false);
-  process.env.BLUESKY_HANDLE = 'blog.terminaleighty.com';
+  process.env.BLUESKY_HANDLE = 'blog.webworldwide.online';
   process.env.BLUESKY_APP_PASSWORD = 'xxxx-xxxx-xxxx-xxxx';
   assert.equal(bluesky.isConfigured(), true);
 });
@@ -221,7 +221,7 @@ test('signIn surfaces a clear error when env is unset', async () => {
 });
 
 test('signIn surfaces the agent login error verbatim', async () => {
-  process.env.BLUESKY_HANDLE = 'blog.terminaleighty.com';
+  process.env.BLUESKY_HANDLE = 'blog.webworldwide.online';
   process.env.BLUESKY_APP_PASSWORD = 'wrong';
   bluesky.setAgentFactory(async () => makeMockAgent({ failLogin: 'AuthenticationRequired' }));
   await assert.rejects(() => bluesky.signIn(), /AuthenticationRequired/);
@@ -235,12 +235,12 @@ test('postThread sends a single record for short input', async () => {
   const result = await bluesky.postThread(agent, {
     title: 'Hi',
     excerpt: 'short',
-    url: 'https://terminaleighty.com/hi/',
+    url: 'https://webworldwide.online/hi/',
   });
   assert.equal(agent.posted.length, 1);
   assert.equal(agent.posted[0].$type, 'app.bsky.feed.post');
   assert.ok(agent.posted[0].embed, 'expected link card embed');
-  assert.equal(agent.posted[0].embed.external.uri, 'https://terminaleighty.com/hi/');
+  assert.equal(agent.posted[0].embed.external.uri, 'https://webworldwide.online/hi/');
   assert.ok(result.rootUri.startsWith('at://'));
   assert.ok(result.rootCid);
 });
@@ -251,7 +251,7 @@ test('postThread chains continuation posts with reply.root / parent', async () =
   const result = await bluesky.postThread(agent, {
     title: 'Long',
     excerpt: longExcerpt,
-    url: 'https://terminaleighty.com/long/',
+    url: 'https://webworldwide.online/long/',
   });
   assert.ok(agent.posted.length >= 2, 'expected continuation posts');
   // First post has no reply field.
@@ -310,7 +310,7 @@ test('crossPostChangedPosts skips when env is unset', async () => {
 });
 
 test('crossPostChangedPosts skips drafts + already-posted + too-old', async () => {
-  process.env.BLUESKY_HANDLE = 'blog.terminaleighty.com';
+  process.env.BLUESKY_HANDLE = 'blog.webworldwide.online';
   process.env.BLUESKY_APP_PASSWORD = 'xxxx-xxxx-xxxx-xxxx';
   bluesky.setAgentFactory(async () => makeMockAgent());
 
@@ -349,7 +349,7 @@ test('crossPostChangedPosts skips drafts + already-posted + too-old', async () =
 });
 
 test('crossPostChangedPosts writes bluesky_uri back to front-matter', async () => {
-  process.env.BLUESKY_HANDLE = 'blog.terminaleighty.com';
+  process.env.BLUESKY_HANDLE = 'blog.webworldwide.online';
   process.env.BLUESKY_APP_PASSWORD = 'xxxx';
   // Reset MAX_AGE_MS from the previous test's 1-second override so
   // a fresh post passes the staleness check.
@@ -383,7 +383,7 @@ test('crossPostChangedPosts writes bluesky_uri back to front-matter', async () =
 });
 
 test('crossPostChangedPosts respects the rate cap', async () => {
-  process.env.BLUESKY_HANDLE = 'blog.terminaleighty.com';
+  process.env.BLUESKY_HANDLE = 'blog.webworldwide.online';
   process.env.BLUESKY_APP_PASSWORD = 'xxxx';
   process.env.BLUESKY_MAX_AGE_MS = String(365 * 24 * 60 * 60 * 1000);
   process.env.BLUESKY_MAX_PER_RUN = '2'; // resolved per-call now
@@ -409,7 +409,7 @@ test('crossPostChangedPosts respects the rate cap', async () => {
 });
 
 test('crossPostChangedPosts surfaces signIn failure as per-file error', async () => {
-  process.env.BLUESKY_HANDLE = 'blog.terminaleighty.com';
+  process.env.BLUESKY_HANDLE = 'blog.webworldwide.online';
   process.env.BLUESKY_APP_PASSWORD = 'wrong';
   bluesky.setAgentFactory(async () => makeMockAgent({ failLogin: 'invalid_credentials' }));
   writePost('signfail.md', {

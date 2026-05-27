@@ -102,7 +102,7 @@
        it survives GitHub Pages (no custom headers available there).
        The endpoint is hosted on the admin's subdomain, behind Caddy
        (see `docker/Caddyfile` — Phase 8 added the route). */ -}}
-{{- $webmentionEndpoint := site.Params.webmentionURL | default "https://admin.terminaleighty.com/webmention" }}
+{{- $webmentionEndpoint := site.Params.webmentionURL | default "https://admin.webworldwide.online/webmention" }}
 <link rel="webmention" href="{{ $webmentionEndpoint }}" />
 
 {{/* Favicon */}}

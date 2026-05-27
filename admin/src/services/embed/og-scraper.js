@@ -30,7 +30,7 @@ export { setFetchImpl } from './oembed.js';
 // oembed.js trips a build error.
 void _set;
 
-const USER_AGENT = 'TerminalEighty/1.0 (+https://terminaleighty)';
+const USER_AGENT = 'WebWorldWide/1.0 (+https://webworldwide)';
 const DEFAULT_TIMEOUT_MS = 5000;
 const MAX_BYTES = 256 * 1024;
 

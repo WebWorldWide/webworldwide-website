@@ -32,8 +32,8 @@ COPY src/ ./src/
 COPY public/ ./public/
 
 # Git config for the CMS user
-RUN git config --global user.name "Terminal Eighty CMS" && \
-    git config --global user.email "cms@terminaleighty.com" && \
+RUN git config --global user.name "Web World Wide CMS" && \
+    git config --global user.email "cms@webworldwide.online" && \
     git config --global init.defaultBranch main && \
     git config --global --add safe.directory /app
 

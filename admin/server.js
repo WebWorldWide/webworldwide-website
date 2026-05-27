@@ -1,5 +1,5 @@
 /**
- * Terminal Eighty CMS — Express Server
+ * Web World Wide CMS — Express Server
  *
  * Admin panel for managing the blog. Runs on the Pi, accessible via Cloudflare Tunnel.
  * Provides: post CRUD, media upload, git publish, auth (passkey + password), system health.
@@ -109,7 +109,7 @@ app.use(
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(cookieParser(process.env.SESSION_SECRET || 'terminal-eighty-secret'));
+app.use(cookieParser(process.env.SESSION_SECRET || 'web-world-wide-secret'));
 
 // Rate limiting
 const authLimiter = rateLimit({
@@ -221,7 +221,7 @@ app.get('*', (req, res) => {
 export { SITE_DIR };
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  ■ Terminal Eighty CMS`);
+  console.log(`\n  ■ Web World Wide CMS`);
   console.log(`  ├─ Admin: http://localhost:${PORT}`);
   console.log(`  ├─ Site:  ${SITE_DIR}`);
   console.log(`  └─ Ready.\n`);

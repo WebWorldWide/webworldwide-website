@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# Terminal Eighty Routine Maintenance Script
+# Web World Wide Routine Maintenance Script
 # Runs via cron to clean up system resources and prevent disk exhaustion
 # ==============================================================================
 

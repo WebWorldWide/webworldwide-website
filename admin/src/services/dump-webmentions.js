@@ -11,7 +11,7 @@
  * Shape per file:
  *
  *   {
- *     "target":   "https://terminaleighty.com/<slug>/",
+ *     "target":   "https://webworldwide.online/<slug>/",
  *     "count":    <int>,
  *     "replies":  [{ id, source, author:{name,url,avatar}, content, received_at }, ...],
  *     "likes":    [{ id, source, author:{...}, received_at }, ...],
@@ -50,7 +50,7 @@ const DEFAULT_SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', '..', '..
 /**
  * Pull `<slug>` from a target URL: the first non-empty path segment.
  * Posts use the permalink `posts = "/:slug/"` rule in hugo.toml so
- * `https://terminaleighty.com/<slug>/` is the canonical shape.
+ * `https://webworldwide.online/<slug>/` is the canonical shape.
  *
  * Returns null for URLs we can't bucket (homepage, taxonomies — we
  * don't write per-slug files for those; their mentions live in the

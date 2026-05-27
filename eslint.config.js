@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * ESLint 9 flat config for Terminal Eighty.
+ * ESLint 9 flat config for Web World Wide.
  *
  * Three lint surfaces:
  *   - admin/**\/*.js           Node 20 + ES modules ("type": "module" in admin)

@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # ==============================================================================
-# Terminal Eighty Auto-Update Script
+# Web World Wide Auto-Update Script
 # Runs via cron to pull latest GitHub changes and restart Docker containers
 # ==============================================================================
 
 # Variables
-REPO_DIR="/home/adam/terminal-eighty-blog"
+REPO_DIR="/home/adam/web-world-wide-online"
 DOCKER_DIR="$REPO_DIR/docker"
 
 # Navigate to repo

@@ -16,7 +16,7 @@
  *
  * Cron line (UTC):
  *
- *   5 * * * * cd /opt/terminal-eighty && node scripts/email-digest.mjs >>/var/log/t80-digest.log 2>&1
+ *   5 * * * * cd /opt/web-world-wide && node scripts/email-digest.mjs >>/var/log/t80-digest.log 2>&1
  */
 
 import { sendDigest } from '../admin/src/services/email.js';

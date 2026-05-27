@@ -3,7 +3,7 @@
 
   Renders the author identity using microformats2 `h-card` so that:
     - Bridgy Fed (https://fed.brid.gy) can map this domain to a
-      Fediverse actor at `@<preferredUsername>@terminaleighty.com`
+      Fediverse actor at `@<preferredUsername>@webworldwide.online`
       by walking `rel="me"` links + the `u-url` self-link.
     - Mastodon / IndieAuth flows discover the author identity.
     - In-reply-to / like / repost source pages can attribute the
@@ -64,7 +64,7 @@
       {{- with $social.email -}}<li><a rel="me" href="mailto:{{ . }}">Email</a></li>{{- end -}}
     </ul>
     {{- if not $compact -}}
-    {{- /* Bridgy Fed "Follow @blog@terminaleighty.com" link.
+    {{- /* Bridgy Fed "Follow @blog@webworldwide.online" link.
            The actor handle is derived from the apex domain — Bridgy
            Fed treats every web domain as `@<sub>@<domain>` where
            `<sub>` is configurable via the actor's preferredUsername

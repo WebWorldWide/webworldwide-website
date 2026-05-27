@@ -1,6 +1,6 @@
 # Ghost to Hugo Migration Tool
 
-This folder contains the official migration script to convert a Ghost blog export into Markdown files optimized for the **Terminal Eighty** Hugo architecture.
+This folder contains the official migration script to convert a Ghost blog export into Markdown files optimized for the **Web World Wide** Hugo architecture.
 
 ## What it does
 

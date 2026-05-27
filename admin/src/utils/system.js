@@ -153,7 +153,7 @@ export async function getBackupStatus() {
     const { readFileSync, statSync, existsSync } = await import('fs');
     const { join } = await import('path');
     const { homedir } = await import('os');
-    const markerDir = process.env.TE_STATE_DIR || join(homedir(), '.terminal-eighty');
+    const markerDir = process.env.TE_STATE_DIR || join(homedir(), '.web-world-wide');
     const marker = join(markerDir, '.last_backup');
     if (existsSync(marker)) {
       const iso = readFileSync(marker, 'utf-8').trim();
@@ -177,7 +177,7 @@ export async function getBackupStatus() {
   }
   try {
     const { stdout } = await execAsync(
-      'cat /var/log/terminal-eighty-backup.log || echo "No backup run yet"',
+      'cat /var/log/web-world-wide-backup.log || echo "No backup run yet"',
     );
     return { log: stdout.trim(), status: 'unknown' };
   } catch (_err) {

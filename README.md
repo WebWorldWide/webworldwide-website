@@ -1,11 +1,11 @@
-# Terminal Eighty Blog Architecture
+# Web World Wide Blog Architecture
 
-[![Quality](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/quality.yml/badge.svg)](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/quality.yml)
-[![E2E + a11y](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/e2e.yml/badge.svg)](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/e2e.yml)
-[![Lighthouse](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/lighthouse.yml)
-[![Deploy](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/deploy.yml/badge.svg)](https://github.com/AdamNolle/terminal-eighty-blog/actions/workflows/deploy.yml)
+[![Quality](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/quality.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/quality.yml)
+[![E2E + a11y](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/e2e.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/e2e.yml)
+[![Lighthouse](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/lighthouse.yml)
+[![Deploy](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/deploy.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/deploy.yml)
 
-Welcome to **Terminal Eighty**, a high-performance, $0/month, self-hosted blog stack designed for Raspberry Pi. It replaces bloated, database-heavy platforms (like Ghost or WordPress) with a hyper-fast static site generator and a lightweight Node.js admin panel.
+Welcome to **Web World Wide**, a high-performance, $0/month, self-hosted blog stack designed for Raspberry Pi. It replaces bloated, database-heavy platforms (like Ghost or WordPress) with a hyper-fast static site generator and a lightweight Node.js admin panel.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local development, the quality pipeline, and branch-protection setup.
 
@@ -15,8 +15,8 @@ A fresh clone runs the entire stack — Hugo, the admin CMS, Remark42, Umami,
 and Postgres — on a laptop in one command.
 
 ```bash
-git clone https://github.com/AdamNolle/terminal-eighty-blog
-cd terminal-eighty-blog
+git clone https://github.com/AdamNolle/web-world-wide-online
+cd web-world-wide-online
 npm install
 cp docker/.env.dev.example docker/.env.dev
 npm run db:seed       # creates admin user (admin / password) and 5 sample media rows
@@ -124,7 +124,7 @@ This stack stands on the shoulders of:
 SSH into your fresh Raspberry Pi OS Lite and run:
 
 ```bash
-wget https://raw.githubusercontent.com/YourUser/terminal-eighty-blog/main/scripts/bootstrap.sh
+wget https://raw.githubusercontent.com/YourUser/web-world-wide-online/main/scripts/bootstrap.sh
 chmod +x bootstrap.sh
 ./bootstrap.sh
 ```
@@ -139,6 +139,6 @@ Follow the prompts to enter your GitHub PAT and Cloudflare Token. The script wil
 
 ## Backups
 
-The `bootstrap.sh` script automatically sets up daily automated backups of your SQLite Auth DB, PostgreSQL analytics, and Remark42 comments. These are encrypted using `age` and pushed to a private `terminal-eighty-backups` repository.
+The `bootstrap.sh` script automatically sets up daily automated backups of your SQLite Auth DB, PostgreSQL analytics, and Remark42 comments. These are encrypted using `age` and pushed to a private `www-blog-backups` repository.
 
 Enjoy your blazingly fast, fully-owned piece of the internet!

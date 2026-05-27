@@ -28,7 +28,7 @@
  *                         REQUIRED for any admin write; the client refuses
  *                         to construct an admin JWT without it.
  *   REMARK42_SITE_ID    — site identifier configured in Remark42.
- *                         Default: `terminaleighty` (matches docker-compose).
+ *                         Default: `webworldwide` (matches docker-compose).
  *   REMARK42_ADMIN_USER — username we publish replies as.
  *                         Default: `admin`.
  *   REMARK42_ADMIN_ID   — user-id used in the JWT `user.id` claim.
@@ -47,7 +47,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
 const DEFAULT_URL = 'http://localhost:8081';
-const DEFAULT_SITE_ID = 'terminaleighty';
+const DEFAULT_SITE_ID = 'webworldwide';
 const DEFAULT_ADMIN = 'admin';
 const FETCH_TIMEOUT_MS = Number(process.env.REMARK42_FETCH_TIMEOUT_MS || 8000);
 

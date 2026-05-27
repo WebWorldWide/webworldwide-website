@@ -2,7 +2,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright config for Terminal Eighty.
+ * Playwright config for Web World Wide.
  *
  * Test suites:
  *   - test/playwright/site.spec.js     Hugo public-site smoke tests

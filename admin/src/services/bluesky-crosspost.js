@@ -67,7 +67,7 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
   }
 
   const siteDir = opts.siteDir || process.env.SITE_DIR || SITE_DIR_DEFAULT;
-  const baseUrl = opts.baseUrl || process.env.PUBLIC_BASE_URL || 'https://terminaleighty.com';
+  const baseUrl = opts.baseUrl || process.env.PUBLIC_BASE_URL || 'https://webworldwide.online';
   const postsDir = join(siteDir, 'content', 'posts');
 
   // Authenticate once for the whole batch.

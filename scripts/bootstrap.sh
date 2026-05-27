@@ -1,5 +1,5 @@
 #!/bin/bash
-# Terminal Eighty — Pi Bootstrap Script
+# Web World Wide — Pi Bootstrap Script
 # Run this on a fresh Raspberry Pi OS Lite 64-bit
 
 set -e
@@ -31,7 +31,7 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # 4. Clone repository
-APP_DIR="/opt/terminal-eighty"
+APP_DIR="/opt/web-world-wide"
 if [ ! -d "$APP_DIR" ]; then
     echo ">> Please enter your GitHub Username:"
     read -p "Username: " GITHUB_USER
@@ -39,16 +39,16 @@ if [ ! -d "$APP_DIR" ]; then
     echo ">> Please enter your GitHub PAT (Personal Access Token):"
     read -p "Token: " GITHUB_TOKEN
     
-    # We clone into /opt/terminal-eighty
-    sudo git clone https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/terminal-eighty-blog.git $APP_DIR
+    # We clone into /opt/web-world-wide
+    sudo git clone https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/web-world-wide-online.git $APP_DIR
     sudo chown -R $USER:$USER $APP_DIR
 fi
 
 # 4.5. Clone Backup Repository & Setup Encryption
-BACKUP_DIR="/opt/terminal-eighty-backups"
+BACKUP_DIR="/opt/www-blog-backups"
 if [ ! -d "$BACKUP_DIR" ]; then
     echo ">> Cloning private backup repository..."
-    sudo git clone https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/terminal-eighty-backups.git $BACKUP_DIR
+    sudo git clone https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/www-blog-backups.git $BACKUP_DIR
     sudo chown -R $USER:$USER $BACKUP_DIR
     
     # Generate Age Keypair for backups
@@ -69,8 +69,8 @@ if [ ! -d "$BACKUP_DIR" ]; then
         
         # We need git name/email to commit the public key if not set
         cd $BACKUP_DIR
-        git config user.name "Terminal Eighty Pi"
-        git config user.email "pi@terminaleighty.com"
+        git config user.name "Web World Wide Pi"
+        git config user.email "pi@webworldwide.online"
         git add public.key
         git commit -m "Add age public key for environment backups"
         git push origin main
@@ -110,6 +110,6 @@ echo ">> Setting up automated backups..."
 
 echo -e "\n✅ BOOTSTRAP COMPLETE"
 echo "  The system is now running. Wait 1-2 minutes for containers to initialize."
-echo "  Access the CMS at: https://admin.terminaleighty.com"
+echo "  Access the CMS at: https://admin.webworldwide.online"
 echo "  Note: You may need to log out and log back in for Docker groups to apply."
 echo ""

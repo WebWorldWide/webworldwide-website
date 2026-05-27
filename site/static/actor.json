@@ -3,17 +3,17 @@
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/v1"
   ],
-  "id": "https://terminaleighty.com/actor.json",
+  "id": "https://webworldwide.online/actor.json",
   "type": "Person",
   "preferredUsername": "blog",
-  "name": "Terminal Eighty",
-  "summary": "Tech it like I talk (write) it.",
-  "url": "https://terminaleighty.com",
-  "inbox": "https://terminaleighty.com/inbox",
-  "outbox": "https://terminaleighty.com/outbox",
+  "name": "Web World Wide",
+  "summary": "My World on the Web",
+  "url": "https://webworldwide.online",
+  "inbox": "https://webworldwide.online/inbox",
+  "outbox": "https://webworldwide.online/outbox",
   "publicKey": {
-    "id": "https://terminaleighty.com/actor.json#main-key",
-    "owner": "https://terminaleighty.com/actor.json",
+    "id": "https://webworldwide.online/actor.json#main-key",
+    "owner": "https://webworldwide.online/actor.json",
     "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu...[placeholder]...QIDAQAB\n-----END PUBLIC KEY-----\n"
   }
 }

@@ -359,7 +359,7 @@ router.get('/', async (req, res) => {
 
 router.get('/blocks', async (req, res) => {
   const reconcile = req.query.reconcile !== '0';
-  const siteFilter = process.env.REMARK42_SITE_ID || 'terminaleighty';
+  const siteFilter = process.env.REMARK42_SITE_ID || 'webworldwide';
 
   // Reconcile with upstream best-effort. The local table is the source
   // of truth for the UI; out-of-band changes (admin used Remark42's own
@@ -416,7 +416,7 @@ router.post('/blocks', async (req, res) => {
   }
 
   const id = nanoid();
-  const siteFilter = process.env.REMARK42_SITE_ID || 'terminaleighty';
+  const siteFilter = process.env.REMARK42_SITE_ID || 'webworldwide';
   try {
     db()
       .prepare(
@@ -679,7 +679,7 @@ router.post('/:id/spam', async (req, res) => {
     await remark42.markSpam({ id, userId, postUrl, ttl: '8760h' });
 
     // Mirror the block locally so the block-list view reflects it.
-    const siteFilter = process.env.REMARK42_SITE_ID || 'terminaleighty';
+    const siteFilter = process.env.REMARK42_SITE_ID || 'webworldwide';
     try {
       db()
         .prepare(

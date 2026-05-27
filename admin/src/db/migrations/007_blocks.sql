@@ -21,14 +21,14 @@
 --     across (site_id, user_id) so a future multi-site install can
 --     keep blocks separate; the single-site case treats site_id as the
 --     literal string from REMARK42_SITE_ID env (default
---     `terminaleighty`).
+--     `webworldwide`).
 --   - `ttl_ms` is the Remark42-side expiry in epoch-ms. NULL = forever.
 --   - `created_by` records the admin username (or 'system' for blocks
 --     auto-applied by the "Mark spam" flow).
 
 CREATE TABLE IF NOT EXISTS blocks (
   id TEXT PRIMARY KEY,             -- nanoid; matches other admin tables
-  site_id TEXT NOT NULL,           -- Remark42 site id (e.g. 'terminaleighty')
+  site_id TEXT NOT NULL,           -- Remark42 site id (e.g. 'webworldwide')
   user_id TEXT NOT NULL,           -- Remark42 user identifier
   user_name TEXT,                  -- cached display name at block time
   reason TEXT,                     -- human-readable, surfaced in the UI

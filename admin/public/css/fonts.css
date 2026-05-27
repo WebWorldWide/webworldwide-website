@@ -1,7 +1,7 @@
 /* ============================================================
    Self-hosted variable fonts (Latin subset, 400-700)
    font-display: swap so text paints in fallback first.
-   Admin runs on its own origin (admin.terminaleighty.com),
+   Admin runs on its own origin (admin.webworldwide.online),
    so we ship these alongside the admin SPA — we can't reuse
    the public site's /fonts/ path cross-origin.
    ============================================================ */

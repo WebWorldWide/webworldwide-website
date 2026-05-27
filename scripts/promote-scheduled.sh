@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Terminal Eighty — Scheduled Publish Promoter
+# Web World Wide — Scheduled Publish Promoter
 #
 # Cron-friendly wrapper around `node admin/src/services/scheduler.js`.
 # Walks site/content/posts/*.md for entries with `draft: true` and a
@@ -8,8 +8,8 @@
 # commits + pushes. Hugo's next build then includes them.
 #
 # Install via crontab (run every 5 minutes):
-#   */5 * * * * /opt/terminal-eighty/scripts/promote-scheduled.sh \
-#     >> /var/log/terminal-eighty-scheduler.log 2>&1
+#   */5 * * * * /opt/web-world-wide/scripts/promote-scheduled.sh \
+#     >> /var/log/web-world-wide-scheduler.log 2>&1
 #
 # Honors:
 #   TE_REPO_DIR  path to the repo root (default: derive from script location)

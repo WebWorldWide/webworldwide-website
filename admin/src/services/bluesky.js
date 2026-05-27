@@ -12,7 +12,7 @@
  * Configuration (env vars)
  * ------------------------
  *   BLUESKY_HANDLE        — full handle of the posting account.
- *                           e.g. `blog.terminaleighty.com`.
+ *                           e.g. `blog.webworldwide.online`.
  *   BLUESKY_APP_PASSWORD  — app-password generated at
  *                           https://bsky.app/settings/app-passwords —
  *                           NOT the main account password.

@@ -213,7 +213,7 @@ if (imageUrls.size > 0) {
       mkdirSync(dirname(targetPath), { recursive: true });
       console.log(`   Downloading ${url}...`);
       try {
-        execSync(`curl -s -o "${targetPath}" "https://terminaleighty.com/content${url}"`);
+        execSync(`curl -s -o "${targetPath}" "https://webworldwide.online/content${url}"`);
       } catch (_e) {
         console.error(`   ❌ Failed to download ${url}`);
       }
@@ -233,7 +233,7 @@ if (imageUrls.size > 0) {
     console.log('   Or download them manually using these commands:');
     imageUrls.forEach((url) => {
       console.log(
-        `   curl --create-dirs -o ${imagesDir}${url.replace('/images/', '/')} https://terminaleighty.com/content${url}`,
+        `   curl --create-dirs -o ${imagesDir}${url.replace('/images/', '/')} https://webworldwide.online/content${url}`,
       );
     });
   }

@@ -260,7 +260,7 @@ router.post('/:filename/preview', (req, res) => {
     const slug = String(data.slug || src.replace(/\.md$/, ''));
 
     const secret =
-      process.env.SITE_SECRET || process.env.SESSION_SECRET || 'terminal-eighty-secret';
+      process.env.SITE_SECRET || process.env.SESSION_SECRET || 'web-world-wide-secret';
     const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
     const token = signJwtHS256({ slug, exp }, secret);
 
@@ -268,7 +268,7 @@ router.post('/:filename/preview', (req, res) => {
       process.env.SITE_BASE_URL ||
       (req.headers['x-forwarded-host']
         ? `https://${req.headers['x-forwarded-host']}`
-        : 'https://terminaleighty.com');
+        : 'https://webworldwide.online');
     const url = `${base.replace(/\/$/, '')}/drafts/${encodeURIComponent(slug)}/?token=${token}`;
 
     logActivity({ req, action: 'post.preview', target: src, meta: { slug, exp } });

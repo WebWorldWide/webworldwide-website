@@ -1,4 +1,4 @@
-# Contributing to Terminal Eighty
+# Contributing to Web World Wide
 
 Thanks for the interest. This is a personal blog stack, but the quality bar applies
 to every contribution — including future-me.
@@ -672,8 +672,8 @@ them up. The editor sidebar's **Schedule** panel surfaces this — a
 To install the cron on the Pi (one-time):
 
 ```bash
-*/5 * * * * /opt/terminal-eighty/scripts/promote-scheduled.sh \
-    >> /var/log/terminal-eighty-scheduler.log 2>&1
+*/5 * * * * /opt/web-world-wide/scripts/promote-scheduled.sh \
+    >> /var/log/web-world-wide-scheduler.log 2>&1
 ```
 
 The `--dry-run` flag prints what would change without writing.
@@ -681,7 +681,7 @@ The `--dry-run` flag prints what would change without writing.
 ### Draft preview links
 
 `POST /api/posts/<filename>/preview` returns a 7-day signed HMAC-SHA256
-JWT URL of the shape `https://terminaleighty.com/drafts/<slug>/?token=…`.
+JWT URL of the shape `https://webworldwide.online/drafts/<slug>/?token=…`.
 The secret is `SITE_SECRET` (falls back to `SESSION_SECRET`).
 
 **Verification choice (deliberate for Phase 5e):** the JWT is issued by
@@ -772,7 +772,7 @@ with optional `?action=...` and `?since=...` filters.
 
 ### Backup status
 
-`scripts/backup.sh` writes a `~/.terminal-eighty/.last_backup`
+`scripts/backup.sh` writes a `~/.web-world-wide/.last_backup`
 timestamp on success. The dashboard reads it via `getBackupStatus` and
 colour-codes the line:
 
@@ -867,7 +867,7 @@ Phase 8 can layer `u-bookmark-of` on top without changing this file.
 
 ## Phase 8 — Fediverse federation via Bridgy Fed
 
-Terminal Eighty federates as `@blog@terminaleighty.com` to all of
+Web World Wide federates as `@blog@webworldwide.online` to all of
 ActivityPub-land WITHOUT running its own ActivityPub server. The trick
 is [Bridgy Fed](https://fed.brid.gy) — it bridges any IndieWeb-shaped
 site (microformats2 + webmentions + webfinger) onto the Fediverse.
@@ -885,12 +885,12 @@ Three pieces of plumbing make the site federation-discoverable:
 2. **`/.well-known/webfinger`.** Hugo renders this from
    `layouts/index.webfinger` via a custom output format that maps
    `application/jrd+json` → no file suffix. The response declares
-   `acct:blog@terminaleighty.com` and points `rel=self` at
-   `https://fed.brid.gy/web/terminaleighty.com`, so any Fediverse
+   `acct:blog@webworldwide.online` and points `rel=self` at
+   `https://fed.brid.gy/web/webworldwide.online`, so any Fediverse
    server resolving the handle delegates the inbox/outbox to Bridgy
    Fed.
 3. **`<link rel="webmention" …>` in `<head>`.** Advertises
-   `https://admin.terminaleighty.com/webmention` so senders (Bridgy
+   `https://admin.webworldwide.online/webmention` so senders (Bridgy
    Fed, Webmention.io, mention.tech, …) can deliver replies.
 
 ### Webmention receiver
@@ -940,8 +940,8 @@ comments block.
 On the Pi, install the cron alongside the scheduled-posts cron:
 
 ```bash
-*/5 * * * * /opt/terminal-eighty/scripts/dump-webmentions.sh \
-    >> /var/log/terminal-eighty-webmentions.log 2>&1
+*/5 * * * * /opt/web-world-wide/scripts/dump-webmentions.sh \
+    >> /var/log/web-world-wide-webmentions.log 2>&1
 ```
 
 `scripts/maintenance.sh` also runs the dumper as a daily safety net.
@@ -952,21 +952,21 @@ After this phase ships, do these manually on
 [fed.brid.gy](https://fed.brid.gy):
 
 1. Sign in (the site OAuth's against a domain you control — sign in
-   with your IndieAuth-on-terminaleighty.com identity, or use a
+   with your IndieAuth-on-webworldwide.online identity, or use a
    bootstrap site like silo.computer if the IndieAuth piece is not
    live yet).
-2. Visit `https://fed.brid.gy/web/terminaleighty.com` and click
+2. Visit `https://fed.brid.gy/web/webworldwide.online` and click
    **Federate this site to the Fediverse**.
 3. Confirm the discovery checklist: Bridgy Fed shows ✅ for h-card,
    webfinger, and webmention endpoint. If any fail, hit the
    "Re-fetch" button after the next `hugo --gc --minify`.
 4. From any Mastodon / Pixelfed / Akkoma / etc. account, search for
-   `@blog@terminaleighty.com` — it should appear with the h-card
+   `@blog@webworldwide.online` — it should appear with the h-card
    avatar + bio. Click **Follow**.
 5. Post a reply to any post page (Mastodon will fetch the post page
    and convert the reply into a `Create Note` activity targeted at
    our actor). Bridgy Fed forwards it as a webmention to
-   `https://admin.terminaleighty.com/webmention`.
+   `https://admin.webworldwide.online/webmention`.
 
 ### Adding a new social `rel="me"` link
 
@@ -974,22 +974,22 @@ Edit `site/data/author.json`:
 
 ```json
 {
-  "name": "Terminal Eighty",
-  "bio": "Tech it like I talk (write) it.",
-  "avatar": "https://terminaleighty.com/images/avatar.png",
-  "url": "https://terminaleighty.com",
+  "name": "Web World Wide",
+  "bio": "My World on the Web",
+  "avatar": "https://webworldwide.online/images/avatar.png",
+  "url": "https://webworldwide.online",
   "social": {
-    "bluesky": "https://bsky.app/profile/terminaleighty.com",
-    "mastodon": "https://mastodon.social/@terminaleighty",
+    "bluesky": "https://bsky.app/profile/webworldwide.online",
+    "mastodon": "https://mastodon.social/@webworldwide",
     "github": "https://github.com/AdamNolle",
-    "youtube": "https://www.youtube.com/@TerminalEighty"
+    "youtube": "https://www.youtube.com/@web_world_wide"
   }
 }
 ```
 
 The `h-card.html` partial picks every entry up automatically and
 emits a `rel="me"` link in the footer h-card on every page. The
-remote profile MUST link back to `terminaleighty.com` (any `rel="me"`
+remote profile MUST link back to `webworldwide.online` (any `rel="me"`
 or plain `<a href>`) for the verification loop to close — Bridgy Fed
 won't trust an unverified social identity.
 
@@ -1037,7 +1037,7 @@ Add these to `.env` (and the production secrets file):
 ```bash
 # Remark42 admin proxy
 REMARK42_URL=http://remark42:8080         # internal Docker hostname
-REMARK42_SITE_ID=terminaleighty
+REMARK42_SITE_ID=webworldwide
 REMARK42_SECRET=<same as the Remark42 container's SECRET>
 REMARK42_ADMIN_USER=admin
 REMARK42_ADMIN_ID=admin
@@ -1070,7 +1070,7 @@ SMTP_PORT=465
 SMTP_SECURE=true
 SMTP_USER=robot@example.com
 SMTP_PASS=<app-password>
-SMTP_FROM="Terminal Eighty <robot@example.com>"
+SMTP_FROM="Web World Wide <robot@example.com>"
 DIGEST_TO=adam@example.com
 DIGEST_WINDOW_MS=3600000     # last hour
 ```
@@ -1078,7 +1078,7 @@ DIGEST_WINDOW_MS=3600000     # last hour
 Then add the cron:
 
 ```cron
-5 * * * * cd /opt/terminal-eighty && node scripts/email-digest.mjs >>/var/log/t80-digest.log 2>&1
+5 * * * * cd /opt/web-world-wide && node scripts/email-digest.mjs >>/var/log/t80-digest.log 2>&1
 ```
 
 Or rely on `scripts/maintenance.sh` (which already calls
@@ -1125,7 +1125,7 @@ Every time you hit **Publish** in the CMS, the admin now:
 2. Add to `docker/.env`:
 
    ```bash
-   BLUESKY_HANDLE=blog.terminaleighty.com
+   BLUESKY_HANDLE=blog.webworldwide.online
    BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
    ```
 

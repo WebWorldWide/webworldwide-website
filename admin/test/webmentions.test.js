@@ -71,8 +71,8 @@ before(async () => {
   process.env.AUTH_DB_PATH = join(tempDir, 'auth.db');
   process.env.SESSION_SECRET = 'test';
   process.env.NODE_ENV = 'test';
-  // Tests register mentions against terminaleighty.com and example.com.
-  process.env.WEBMENTION_HOSTS = 'terminaleighty.com,example.com';
+  // Tests register mentions against webworldwide.online and example.com.
+  process.env.WEBMENTION_HOSTS = 'webworldwide.online,example.com';
   siteDir = join(tempDir, 'site');
   mkdirSync(join(siteDir, 'data', 'webmentions'), { recursive: true });
   process.env.SITE_DIR = siteDir;
@@ -146,15 +146,15 @@ test('normaliseUrl strips fragment + trailing slash', skipOpts(), () => {
 
 test('normaliseUrl tolerates already-normalised URLs', skipOpts(), () => {
   assert.equal(
-    normaliseUrl('https://terminaleighty.com/hello'),
-    'https://terminaleighty.com/hello',
+    normaliseUrl('https://webworldwide.online/hello'),
+    'https://webworldwide.online/hello',
   );
 });
 
 // ── parseSource (pure) ───────────────────────────────────────────────
 
 test('parseSource detects in-reply-to + author from h-entry', skipOpts(), () => {
-  const target = 'https://terminaleighty.com/hello/';
+  const target = 'https://webworldwide.online/hello/';
   const html = `<!doctype html><html><body>
     <article class="h-entry">
       <div class="p-author h-card">
@@ -176,7 +176,7 @@ test('parseSource detects in-reply-to + author from h-entry', skipOpts(), () => 
 });
 
 test('parseSource detects like-of', skipOpts(), () => {
-  const target = 'https://terminaleighty.com/hello/';
+  const target = 'https://webworldwide.online/hello/';
   const html = `<article class="h-entry">
     <a class="u-like-of" href="${target}">★</a>
     <span class="p-author h-card"><a class="p-name u-url" href="https://bob.example/">Bob</a></span>
@@ -188,7 +188,7 @@ test('parseSource detects like-of', skipOpts(), () => {
 });
 
 test('parseSource detects repost-of', skipOpts(), () => {
-  const target = 'https://terminaleighty.com/hello/';
+  const target = 'https://webworldwide.online/hello/';
   const html = `<article class="h-entry">
     <a class="u-repost-of" href="${target}">re</a>
   </article>`;
@@ -197,7 +197,7 @@ test('parseSource detects repost-of', skipOpts(), () => {
 });
 
 test('parseSource detects bookmark-of', skipOpts(), () => {
-  const target = 'https://terminaleighty.com/hello/';
+  const target = 'https://webworldwide.online/hello/';
   const html = `<article class="h-entry">
     <a class="u-bookmark-of" href="${target}">bookmark</a>
   </article>`;
@@ -206,7 +206,7 @@ test('parseSource detects bookmark-of', skipOpts(), () => {
 });
 
 test('parseSource falls back to plain mention with link', skipOpts(), () => {
-  const target = 'https://terminaleighty.com/hello/';
+  const target = 'https://webworldwide.online/hello/';
   const html = `<!doctype html><html><body>
     <p>I read <a href="${target}">this thing</a> and liked it.</p>
   </body></html>`;
@@ -216,7 +216,7 @@ test('parseSource falls back to plain mention with link', skipOpts(), () => {
 });
 
 test('parseSource flags no-link source as not linking', skipOpts(), () => {
-  const target = 'https://terminaleighty.com/hello/';
+  const target = 'https://webworldwide.online/hello/';
   const html = `<!doctype html><html><body><p>No reference here.</p></body></html>`;
   const out = parseSource(html, 'https://eve.example/diary/2', target);
   assert.equal(out.linksToTarget, false);
@@ -239,7 +239,7 @@ test('POST rejects http target with 400', skipOpts(), async () => {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       source: 'https://alice.example/notes/1',
-      target: 'http://terminaleighty.com/hello/',
+      target: 'http://webworldwide.online/hello/',
     }).toString(),
   });
   assert.equal(res.status, 400);
@@ -262,8 +262,8 @@ test('POST rejects source==target with 400', skipOpts(), async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      source: 'https://terminaleighty.com/hello/',
-      target: 'https://terminaleighty.com/hello/',
+      source: 'https://webworldwide.online/hello/',
+      target: 'https://webworldwide.online/hello/',
     }).toString(),
   });
   assert.equal(res.status, 400);
@@ -275,7 +275,7 @@ test(
   'POST /webmention accepted source links back → approved after validate',
   skipOpts(),
   async () => {
-    const target = 'https://terminaleighty.com/hello-world/';
+    const target = 'https://webworldwide.online/hello-world/';
     const source = 'https://alice.example/posts/1';
     resetFetch();
     registerFetch(
@@ -313,7 +313,7 @@ test(
 );
 
 test('validateMention rejects when source body has no back-link', skipOpts(), async () => {
-  const target = 'https://terminaleighty.com/hello-world/';
+  const target = 'https://webworldwide.online/hello-world/';
   const source = 'https://eve.example/no-link';
   resetFetch();
   registerFetch(source, () => new Response('<p>Nope.</p>', { status: 200 }));
@@ -329,7 +329,7 @@ test('validateMention rejects when source body has no back-link', skipOpts(), as
 });
 
 test('validateMention rejects when source fetch fails', skipOpts(), async () => {
-  const target = 'https://terminaleighty.com/hello-world/';
+  const target = 'https://webworldwide.online/hello-world/';
   const source = 'https://fails.example/404';
   resetFetch();
   // default fakeFetch returns 404 for unregistered URLs.
@@ -352,7 +352,7 @@ test('admin approve + feed surfaces the mention', skipOpts(), async () => {
   const list = await (await fetch(`${adminUrl}/api/webmentions`)).json();
   assert.ok(list.length > 0);
   const reply = list.find(
-    (r) => r.target === 'https://terminaleighty.com/hello-world/' && r.type === 'reply',
+    (r) => r.target === 'https://webworldwide.online/hello-world/' && r.type === 'reply',
   );
   assert.ok(reply, 'expected reply row from earlier test');
 
@@ -364,7 +364,7 @@ test('admin approve + feed surfaces the mention', skipOpts(), async () => {
 
   // Feed now lists it.
   const feedRes = await fetch(
-    `${publicUrl}/webmention/feed?target=${encodeURIComponent('https://terminaleighty.com/hello-world/')}`,
+    `${publicUrl}/webmention/feed?target=${encodeURIComponent('https://webworldwide.online/hello-world/')}`,
   );
   assert.equal(feedRes.status, 200);
   const feed = await feedRes.json();
@@ -380,7 +380,7 @@ test('admin reject hides from feed', skipOpts(), async () => {
   const r = await fetch(`${adminUrl}/api/webmentions/${reply.id}/reject`, { method: 'POST' });
   assert.equal(r.status, 200);
   const feedRes = await fetch(
-    `${publicUrl}/webmention/feed?target=${encodeURIComponent('https://terminaleighty.com/hello-world/')}`,
+    `${publicUrl}/webmention/feed?target=${encodeURIComponent('https://webworldwide.online/hello-world/')}`,
   );
   const feed = await feedRes.json();
   assert.equal(feed.count, 0);
@@ -399,8 +399,8 @@ test('admin delete removes the row entirely', skipOpts(), async () => {
 
 test('dumpWebmentions groups approved rows by slug', skipOpts(), async () => {
   // Seed two approved replies on different posts.
-  const target1 = 'https://terminaleighty.com/post-a/';
-  const target2 = 'https://terminaleighty.com/post-b/';
+  const target1 = 'https://webworldwide.online/post-a/';
+  const target2 = 'https://webworldwide.online/post-b/';
   resetFetch();
   for (const [source, target] of [
     ['https://alice.example/wm1', target1],
@@ -439,9 +439,9 @@ test('dumpWebmentions groups approved rows by slug', skipOpts(), async () => {
 });
 
 test('slugFromTarget extracts first path segment', skipOpts(), () => {
-  assert.equal(slugFromTarget('https://terminaleighty.com/hello-world/'), 'hello-world');
-  assert.equal(slugFromTarget('https://terminaleighty.com/hello-world'), 'hello-world');
-  assert.equal(slugFromTarget('https://terminaleighty.com/'), '__home__');
+  assert.equal(slugFromTarget('https://webworldwide.online/hello-world/'), 'hello-world');
+  assert.equal(slugFromTarget('https://webworldwide.online/hello-world'), 'hello-world');
+  assert.equal(slugFromTarget('https://webworldwide.online/'), '__home__');
   // Garbage path bucket → null (skipped by dumper).
-  assert.equal(slugFromTarget('https://terminaleighty.com/!bad/'), null);
+  assert.equal(slugFromTarget('https://webworldwide.online/!bad/'), null);
 });

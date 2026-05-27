@@ -1,4 +1,4 @@
-# Terminal Eighty redesign — full-stack rebuild summary
+# Web World Wide redesign — full-stack rebuild summary
 
 `redesign/full-stack` branch, ready to merge into `main` after Phase 12.
 

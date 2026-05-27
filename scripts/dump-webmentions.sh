@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Terminal Eighty — Webmention dump + commit
+# Web World Wide — Webmention dump + commit
 #
 # Cron-friendly wrapper around `node admin/src/services/dump-webmentions.js`.
 # Reads approved rows from the CMS SQLite DB and writes one JSON file per
@@ -8,8 +8,8 @@
 # and pushes so the next Hugo build picks them up.
 #
 # Install via crontab (Pi, every 5 minutes):
-#   */5 * * * * /opt/terminal-eighty/scripts/dump-webmentions.sh \
-#     >> /var/log/terminal-eighty-webmentions.log 2>&1
+#   */5 * * * * /opt/web-world-wide/scripts/dump-webmentions.sh \
+#     >> /var/log/web-world-wide-webmentions.log 2>&1
 #
 # Honors:
 #   TE_REPO_DIR  path to the repo root (default: derive from script location)
@@ -50,8 +50,8 @@ if git -C "$REPO_DIR" diff --quiet --exit-code -- "$SITE_DIR/data/webmentions/";
 fi
 
 git -C "$REPO_DIR" add "$SITE_DIR/data/webmentions/"
-git -C "$REPO_DIR" -c user.name='Terminal Eighty Bot' \
-                    -c user.email='bot@terminaleighty.com' \
+git -C "$REPO_DIR" -c user.name='Web World Wide Bot' \
+                    -c user.email='bot@webworldwide.online' \
                     commit -m "Sync approved webmentions $(date -Iseconds)"
 
 # Push is best-effort — a failure (offline, auth issue) shouldn't fail

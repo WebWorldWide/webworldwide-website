@@ -71,11 +71,11 @@ before(async () => {
   process.env.SESSION_SECRET = 'test';
   process.env.NODE_ENV = 'test';
   process.env.REMARK42_URL = 'http://remark42.test';
-  process.env.REMARK42_SITE_ID = 'terminaleighty';
+  process.env.REMARK42_SITE_ID = 'webworldwide';
   process.env.REMARK42_SECRET = 'test-secret-please-rotate';
   process.env.REMARK42_ADMIN_USER = 'admin';
   process.env.REMARK42_ADMIN_ID = 'admin';
-  process.env.WEBMENTION_HOSTS = 'terminaleighty.com';
+  process.env.WEBMENTION_HOSTS = 'webworldwide.online';
   mkdirSync(join(tempDir, 'site', 'content', 'posts'), { recursive: true });
   process.env.SITE_DIR = join(tempDir, 'site');
 
@@ -151,8 +151,8 @@ test('adminJwt + verifyJwt round-trip with admin claim', skipOpts(), () => {
   const decoded = remark42.verifyJwt(tok);
   assert.ok(decoded);
   assert.equal(decoded.user.admin, true);
-  assert.equal(decoded.user.site_id, 'terminaleighty');
-  assert.equal(decoded.aud, 'terminaleighty');
+  assert.equal(decoded.user.site_id, 'webworldwide');
+  assert.equal(decoded.aud, 'webworldwide');
 });
 
 test('verifyJwt rejects a tampered token', skipOpts(), () => {
@@ -172,13 +172,13 @@ test('normaliseComment maps a Remark42 record to the unified shape', skipOpts(),
     orig: 'Hi',
     time: '2026-05-17T09:00:00Z',
     user: { id: 'alice', name: 'Alice', picture: 'https://a.example/me.png', admin: false },
-    locator: { url: 'https://terminaleighty.com/post-a/', site: 'terminaleighty' },
+    locator: { url: 'https://webworldwide.online/post-a/', site: 'webworldwide' },
     score: 3,
   });
   assert.equal(out.id, 'r1');
   assert.equal(out.source, 'remark42');
   assert.equal(out.author.name, 'Alice');
-  assert.equal(out.postUrl, 'https://terminaleighty.com/post-a/');
+  assert.equal(out.postUrl, 'https://webworldwide.online/post-a/');
   assert.equal(out.status, 'visible');
   assert.equal(out.score, 3);
 });
@@ -195,7 +195,7 @@ test('lastComments hits /api/v1/last/N and parses array body', skipOpts(), async
             text: '<p>Nice</p>',
             time: '2026-05-17T10:00:00Z',
             user: { id: 'bob', name: 'Bob' },
-            locator: { url: 'https://terminaleighty.com/post-a/', site: 'terminaleighty' },
+            locator: { url: 'https://webworldwide.online/post-a/', site: 'webworldwide' },
           },
         ]),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -301,7 +301,7 @@ test('GET /api/comments status=pending returns only webmention rows', skipOpts()
     () =>
       new Response(
         `<article class="h-entry">
-          <a class="u-in-reply-to" href="https://terminaleighty.com/hello-world/">re</a>
+          <a class="u-in-reply-to" href="https://webworldwide.online/hello-world/">re</a>
           <div class="e-content">Nice</div>
         </article>`,
         { status: 200 },
@@ -312,7 +312,7 @@ test('GET /api/comments status=pending returns only webmention rows', skipOpts()
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       source: 'https://alice.example/post-1',
-      target: 'https://terminaleighty.com/hello-world/',
+      target: 'https://webworldwide.online/hello-world/',
     }).toString(),
   });
   assert.equal(wmRes.status, 202);
@@ -342,7 +342,7 @@ test('GET /api/comments status=all merges Remark42 + webmentions', skipOpts(), a
             text: '<p>Greetings</p>',
             time: new Date().toISOString(),
             user: { id: 'bob', name: 'Bob' },
-            locator: { url: 'https://terminaleighty.com/hello-world/', site: 'terminaleighty' },
+            locator: { url: 'https://webworldwide.online/hello-world/', site: 'webworldwide' },
           },
         ]),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -354,7 +354,7 @@ test('GET /api/comments status=all merges Remark42 + webmentions', skipOpts(), a
     () =>
       new Response(
         `<article class="h-entry">
-          <a class="u-in-reply-to" href="https://terminaleighty.com/another/">re</a>
+          <a class="u-in-reply-to" href="https://webworldwide.online/another/">re</a>
         </article>`,
         { status: 200 },
       ),
@@ -364,7 +364,7 @@ test('GET /api/comments status=all merges Remark42 + webmentions', skipOpts(), a
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       source: 'https://carol.example/note-1',
-      target: 'https://terminaleighty.com/another/',
+      target: 'https://webworldwide.online/another/',
     }).toString(),
   });
 
@@ -389,7 +389,7 @@ test('POST /api/comments/:id/reply forwards to Remark42 with admin JWT', skipOpt
         text: '<p>thanks</p>',
         time: new Date().toISOString(),
         user: { id: 'admin', name: 'admin', admin: true },
-        locator: { url: 'https://terminaleighty.com/hello-world/', site: 'terminaleighty' },
+        locator: { url: 'https://webworldwide.online/hello-world/', site: 'webworldwide' },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
@@ -398,7 +398,7 @@ test('POST /api/comments/:id/reply forwards to Remark42 with admin JWT', skipOpt
   const res = await fetch(`${adminUrl}/api/comments/parent-1/reply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: 'thanks', postUrl: 'https://terminaleighty.com/hello-world/' }),
+    body: JSON.stringify({ text: 'thanks', postUrl: 'https://webworldwide.online/hello-world/' }),
   });
   assert.equal(res.status, 201);
   assert.ok(postedUrl);
@@ -442,7 +442,7 @@ test('POST /api/comments/:id/spam deletes + blocks + mirrors locally', skipOpts(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      postUrl: 'https://terminaleighty.com/hello-world/',
+      postUrl: 'https://webworldwide.online/hello-world/',
       userId: 'spammer',
       userName: 'Spammer',
     }),
@@ -496,7 +496,7 @@ test('webmention POST broadcasts on the webmentions SSE channel', skipOpts(), as
     () =>
       new Response(
         `<article class="h-entry">
-            <a class="u-in-reply-to" href="https://terminaleighty.com/sse-target/">re</a>
+            <a class="u-in-reply-to" href="https://webworldwide.online/sse-target/">re</a>
           </article>`,
         { status: 200 },
       ),
@@ -506,7 +506,7 @@ test('webmention POST broadcasts on the webmentions SSE channel', skipOpts(), as
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       source: 'https://dave.example/note-9',
-      target: 'https://terminaleighty.com/sse-target/',
+      target: 'https://webworldwide.online/sse-target/',
     }).toString(),
   });
 

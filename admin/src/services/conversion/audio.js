@@ -13,7 +13,7 @@
  *   4. Opus (96 kbps) — libopus `application=audio`, same loudnorm
  *      params applied.
  *   5. Waveform PNG — ffmpeg's `showwavespic` filter renders a 1200×120
- *      preview in the Terminal Eighty accent green. (PNG, not SVG —
+ *      preview in the Web World Wide accent green. (PNG, not SVG —
  *      ffmpeg can't emit SVG; the file extension reflects reality.)
  *
  * conversions_json shape:
@@ -46,7 +46,7 @@ const TARGET_TP = -1.5;
 /** Waveform image dimensions. */
 const WAVEFORM_WIDTH = 1200;
 const WAVEFORM_HEIGHT = 120;
-/** Terminal Eighty accent green. */
+/** Web World Wide accent green. */
 const WAVEFORM_COLOR = '7AFF9B';
 
 /**

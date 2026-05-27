@@ -1,7 +1,7 @@
 {
-  "name": "Terminal Eighty CMS",
+  "name": "Web World Wide CMS",
   "short_name": "Terminal 80",
-  "description": "Admin dashboard for Terminal Eighty blog",
+  "description": "Admin dashboard for Web World Wide blog",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
