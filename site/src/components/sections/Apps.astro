@@ -1,0 +1,59 @@
+---
+/**
+ * Apps section — 4 extruded 3D app icons with drag-to-spin.
+ * Hydrated by src/scripts/app-spinners.ts.
+ *
+ * `data-icon` points at the image; `data-fallback` JSON has label/bg/ink
+ * for placeholder cards. `data-status="soon"` softens the status pip color.
+ */
+import { siteConfig } from '@/lib/site-config';
+const apps = siteConfig.apps;
+---
+<section class="section" id="apps">
+  <div class="section-inner">
+    <span class="eyebrow reveal">01 — Apps</span>
+    <h2 class="section-title reveal">Things I'm <em>building</em>.</h2>
+
+    <div class="apps-float reveal">
+      <a class="floating-app" href={apps.fileid || '#'} target={apps.fileid ? '_blank' : '_self'} rel={apps.fileid ? 'noopener' : ''} aria-label="FileID — open">
+        <div class="drift">
+          <div class="app-halo" aria-hidden="true"></div>
+          <div class="spinner" data-spin data-icon="/assets/fileid.png" role="button" aria-label="FileID app — drag to spin"></div>
+          <div class="app-shadow" aria-hidden="true"></div>
+        </div>
+        <div class="caption">FileID<span class="status">★ live</span></div>
+      </a>
+
+      <a class="floating-app" href={apps.doc_finder || '#'} aria-label="Document Finder — coming soon" data-status="soon">
+        <div class="drift">
+          <div class="app-halo" aria-hidden="true"></div>
+          <div class="spinner" data-spin data-icon="/assets/doc-finder.png" role="button" aria-label="Document Finder — drag to spin"></div>
+          <div class="app-shadow" aria-hidden="true"></div>
+        </div>
+        <div class="caption">Document Finder<span class="status">coming soon</span></div>
+      </a>
+
+      <a class="floating-app" href="#apps" aria-label="Untitled app — in the lab" data-status="soon">
+        <div class="drift">
+          <div class="app-halo" aria-hidden="true"></div>
+          <div class="spinner" data-spin data-fallback='{"label":"?","bg":"linear-gradient(135deg,#ffd58b,#ff8a3d)","ink":"#0e2960"}' role="button" aria-label="Untitled — drag to spin"></div>
+          <div class="app-shadow" aria-hidden="true"></div>
+        </div>
+        <div class="caption">Untitled<span class="status">in the lab</span></div>
+      </a>
+
+      <a class="floating-app" href="#apps" aria-label="Untitled app — in the lab" data-status="soon">
+        <div class="drift">
+          <div class="app-halo" aria-hidden="true"></div>
+          <div class="spinner" data-spin data-fallback='{"label":"!","bg":"linear-gradient(135deg,#a0e8c8,#3ec25d)","ink":"#0e2960"}' role="button" aria-label="Untitled — drag to spin"></div>
+          <div class="app-shadow" aria-hidden="true"></div>
+        </div>
+        <div class="caption">Untitled<span class="status">in the lab</span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+  import('../../scripts/app-spinners.ts');
+</script>

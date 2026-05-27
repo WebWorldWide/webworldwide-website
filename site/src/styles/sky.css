@@ -1,0 +1,48 @@
+/* ============================================================
+   Sky background + pixel cloud puffs
+   Same engine on site/ (public) and admin/ (dimmer there).
+   ============================================================ */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sky);
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-deep) 0%, var(--sky) 38%, #2e7af2 100%);
+}
+
+.sky-puffs {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-clouds);
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.72;
+}
+
+.puff {
+  position: absolute;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: puffDrift linear infinite;
+  will-change: transform;
+}
+@keyframes puffDrift {
+  from { transform: translate3d(calc(-1 * var(--w, 200px) - 8vw), 0, 0); }
+  to   { transform: translate3d(calc(100vw + 8vw), 0, 0); }
+}
+
+.puff-bob {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  animation: puffBob ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes puffBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* Dimmer cloud opacity on the post-detail surface so reading copy stays primary. */
+body[data-cloud-dim] .sky-puffs { opacity: 0.55; }

@@ -1,6 +1,10 @@
 {
-  "!(**/node_modules/**)*.js": ["eslint --fix", "prettier --write"],
-  "!(**/node_modules/**)*.css": ["stylelint --fix", "prettier --write"],
-  "!(**/node_modules/**)*.md": ["markdownlint-cli2 --fix"],
-  "!(**/node_modules/**)*.{json,html}": ["prettier --write"]
+  "{admin,migrate,scripts,test}/**/*.{js,mjs,cjs}": ["eslint --fix --no-warn-ignored", "prettier --write"],
+  "*.{js,mjs,cjs}": ["eslint --fix --no-warn-ignored", "prettier --write"],
+  "site/**/*.{js,mjs,cjs,ts,tsx,astro}": ["prettier --write"],
+  "{admin,migrate,scripts,test}/**/*.{ts,tsx}": ["prettier --write"],
+  "admin/public/css/**/*.css": ["stylelint --fix --allow-empty-input", "prettier --write"],
+  "site/src/**/*.css": ["prettier --write"],
+  "**/*.md": ["markdownlint-cli2 --fix"],
+  "**/*.{json,html,yml,yaml}": ["prettier --write"]
 }

@@ -1,0 +1,49 @@
+---
+/**
+ * Top nav pill — globe canvas + section links.
+ *
+ * The globe canvas is a decorative animation (aria-hidden); the link
+ * wrapping it has the accessible name "Web World Wide home" for SR users.
+ *
+ * `currentPath` highlights the active section. Pass it from the parent
+ * layout (e.g. Astro.url.pathname).
+ */
+interface Props {
+  currentPath?: string;
+}
+const { currentPath = '' } = Astro.props;
+
+function isCurrent(path: string): boolean {
+  if (path === '/') return currentPath === '/';
+  if (path === '/blog/') return currentPath.startsWith('/blog');
+  return currentPath.startsWith(path);
+}
+---
+<nav class="topbar" aria-label="Primary">
+  <div class="topbar-pill">
+    <a
+      class="globe-nav"
+      href="/"
+      aria-label="Web World Wide home"
+    >
+      <canvas data-globe aria-hidden="true"></canvas>
+    </a>
+    <a class={`nav-link${isCurrent('/#apps') ? ' is-current' : ''}`} href="/#apps">Apps</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a class={`nav-link${isCurrent('/blog/') ? ' is-current' : ''}`} href="/blog/" aria-current={isCurrent('/blog/') ? 'page' : undefined}>Blog</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a class={`nav-link${isCurrent('/#videos') ? ' is-current' : ''}`} href="/#videos">Videos</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a class={`nav-link${isCurrent('/#socials') ? ' is-current' : ''}`} href="/#socials">Socials</a>
+  </div>
+</nav>
+
+<script>
+  // Lazy-load Three.js globe after first paint. requestIdleCallback if
+  // available, otherwise setTimeout fallback.
+  import('../scripts/globe-nav.ts').then((mod) => {
+    const start = () => mod.initGlobes('canvas[data-globe]');
+    if ('requestIdleCallback' in window) (window as any).requestIdleCallback(start);
+    else setTimeout(start, 100);
+  });
+</script>

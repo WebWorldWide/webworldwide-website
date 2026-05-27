@@ -1,0 +1,85 @@
+/* ============================================================
+   Top nav — pill with globe canvas + section links
+   ============================================================ */
+.topbar {
+  position: fixed;
+  top: 14px;
+  left: 0;
+  right: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 14px;
+  pointer-events: none;
+}
+
+.topbar-pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--paper);
+  border: var(--border-strong);
+  border-radius: var(--r-pill);
+  padding: 5px 10px 5px 5px;
+  box-shadow: var(--shadow-button);
+}
+
+.globe-nav {
+  pointer-events: auto;
+  width: 50px;
+  height: 50px;
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: inset 0 0 0 2px var(--paper), 2px 2px 0 var(--ink);
+  /* Keep the link itself a proper hit target. */
+  display: inline-block;
+}
+.globe-nav canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+}
+
+.topbar-pill a.nav-link {
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+  /* WCAG 2.5.5 — min 44x44 hit target */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.topbar-pill a.nav-link:hover { background: var(--cherry); color: var(--paper); }
+.topbar-pill a.nav-link.is-current { background: var(--ink); color: var(--sun); }
+.topbar-pill a.nav-link:focus-visible { outline-offset: -3px; }
+
+.topbar-pill .sep {
+  width: 2px;
+  height: 18px;
+  background: var(--ink);
+  margin: 0 2px;
+}
+
+@media (max-width: 620px) {
+  .topbar-pill a.nav-link {
+    font-size: 15px;
+    padding: 8px 10px;
+    letter-spacing: 0.05em;
+  }
+  .topbar-pill .sep { display: none; }
+  .topbar-pill { padding: 4px 8px 4px 4px; gap: 0; }
+  .globe-nav { width: 42px; height: 42px; }
+}

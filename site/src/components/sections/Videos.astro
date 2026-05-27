@@ -1,0 +1,38 @@
+---
+/**
+ * Videos / YouTube section — cinematic film frame + subscribe CTA.
+ */
+import { siteConfig } from '@/lib/site-config';
+const { youtube, youtube_handle } = siteConfig.social;
+---
+<section class="section" id="videos">
+  <div class="section-inner">
+    <span class="eyebrow reveal">02 — Videos</span>
+    <h2 class="section-title reveal">On <em>YouTube</em>.</h2>
+
+    <div class="yt-wrap reveal">
+      <a class="film-frame" href={youtube} target="_blank" rel="noopener" aria-label="Watch on YouTube — Web World Wide channel">
+        <div class="film-bg" aria-hidden="true"></div>
+        <div class="film-clouds" id="film-clouds" aria-hidden="true"></div>
+
+        <div class="film-handle"><span class="rec-dot" aria-hidden="true"></span> {youtube_handle}</div>
+        <div class="film-meta"><span>EP. 001</span><span class="tc">00:00 / —:——</span></div>
+
+        <div class="film-content">
+          <span class="film-play" aria-hidden="true">
+            <span class="play-tri"></span>
+          </span>
+        </div>
+        <div class="film-title">first transmission, arriving soon</div>
+      </a>
+
+      <div class="yt-cta-row">
+        <a class="subscribe-btn" href={youtube} target="_blank" rel="noopener">
+          <span class="yt-glyph" aria-hidden="true"></span>
+          <span>Subscribe</span>
+        </a>
+        <span class="yt-handle-line">{youtube_handle}</span>
+      </div>
+    </div>
+  </div>
+</section>

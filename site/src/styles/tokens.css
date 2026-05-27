@@ -1,0 +1,96 @@
+/* ============================================================
+   Web World Wide — design tokens
+   Shared across site/ (public) and admin/ (CMS) via the same
+   token names. Don't rename without updating both.
+   ============================================================ */
+:root {
+  /* Sky palette */
+  --sky: #1E68F0;
+  --sky-deep: #1450c8;
+  --sky-far: #a8c8f0;
+  --cloud: #ffffff;
+
+  /* Status / accent palette */
+  --sun: #68dba8;          /* mint — secondary / success */
+  --sun-deep: #3aa982;     /* deep mint — OK pill */
+  --cherry: #ff8a3d;       /* sunset coral — primary action */
+  --cherry-deep: #d96815;  /* deeper coral — high-contrast body text */
+  --grass: #3ec25d;
+
+  /* Admin-specific accents (reused on site for parity) */
+  --warn: #d68f1e;
+  --warn-soft: rgba(214, 143, 30, 0.16);
+  --danger: #d94a3a;
+  --danger-soft: rgba(217, 74, 58, 0.14);
+  --ok: var(--sun-deep);
+  --ok-soft: rgba(58, 169, 130, 0.14);
+
+  /* Ink (navy text + borders) */
+  --ink: #0e2960;
+  --ink-soft: #2a4a90;
+  --ink-mute: #5a72b0;
+  --ink-faint: #92a3c8;
+
+  /* Paper */
+  --paper: #ffffff;
+  --paper-warm: #fffaf2;
+
+  /* Rules */
+  --line: rgba(14, 41, 96, 0.18);
+  --line-strong: rgba(14, 41, 96, 0.42);
+
+  /* Glass */
+  --glass: rgba(255, 255, 255, 0.74);
+  --glass-strong: rgba(255, 255, 255, 0.85);
+  --glass-soft: rgba(255, 255, 255, 0.45);
+  --glass-warm: rgba(255, 250, 242, 0.88);
+
+  /* Shadows */
+  --shadow-card: 8px 8px 0 var(--ink);
+  --shadow-card-sm: 5px 5px 0 var(--ink);
+  --shadow-card-xs: 3px 3px 0 var(--ink);
+  --shadow-button: 4px 4px 0 var(--ink);
+
+  /* Borders */
+  --border-strong: 3px solid var(--ink);
+  --border-soft: 2px solid var(--ink);
+
+  /* Radii */
+  --r-card: 6px;
+  --r-pill: 999px;
+  --r-button: 3px;
+
+  /* Type stacks */
+  --font-serif: "Cormorant Garamond", "Apple Garamond", "ITC Garamond", Garamond, serif;
+  --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-pixel: "VT323", ui-monospace, "Courier New", monospace;
+
+  /* Type scale (clamp() so it scales with viewport) */
+  --fs-mast: clamp(56px, 9vw, 124px);
+  --fs-feat: clamp(34px, 5.2vw, 64px);
+  --fs-post-title: clamp(38px, 5.4vw, 64px);
+  --fs-deck: clamp(20px, 2.2vw, 26px);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 28px;
+  --space-7: 36px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* Z-layers */
+  --z-sky: -5;
+  --z-clouds: -3;
+  --z-content: 1;
+  --z-nav: 60;
+  --z-modal: 200;
+  --z-toast: 300;
+
+  /* Motion */
+  --easing-pop: cubic-bezier(0.4, 1.6, 0.5, 1);
+  --easing-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

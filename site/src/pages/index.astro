@@ -1,28 +1,32 @@
 ---
 /**
- * Home page — placeholder for Phase 3.
- * Phase 4 replaces this with the full WWW design (wordmark warp,
- * MarioBlock, Crystal, AppCards, YouTube section, socials, etc.).
+ * Home page — Web World Wide brand site.
+ *
+ * Sections:
+ *   - Hero (wordmark warp → ring + central globe)
+ *   - Apps (drag-to-spin extruded 3D icons)
+ *   - Videos (YouTube cinematic film frame)
+ *   - Socials (9 brand tiles)
+ *
+ * All animations honor prefers-reduced-motion via their initializers.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
+import Hero from '@components/sections/Hero.astro';
+import Apps from '@components/sections/Apps.astro';
+import Videos from '@components/sections/Videos.astro';
+import Socials from '@components/sections/Socials.astro';
 
-const posts = (await getCollection('posts'))
-  .filter((p) => !p.data.draft)
-  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
-  .slice(0, 5);
+import '@styles/home.css';
 ---
-<BaseLayout title="Home" description="Web World Wide — My World on the Web">
-  <h1>Web World Wide</h1>
-  <p><em>My World on the Web</em></p>
-  <h2>Recent dispatches</h2>
-  <ul>
-    {posts.map((p) => (
-      <li>
-        <a href={`/blog/${p.data.slug ?? p.id.replace(/\.md$/, '')}/`}>{p.data.title}</a>
-        <small> — {p.data.date.toISOString().slice(0, 10)}</small>
-      </li>
-    ))}
-  </ul>
-  <p><a href="/blog/">All dispatches →</a></p>
+<BaseLayout title="Home" description="Web World Wide — My World on the Web. Apps, blog, YouTube, and elsewhere.">
+  <Hero />
+  <Apps />
+  <Videos />
+  <Socials />
 </BaseLayout>
+
+<script>
+  // Boot home-page client behaviors: reveals, parallax, anchor scroll,
+  // section title cascade, film-frame clouds.
+  import('../scripts/home.ts');
+</script>

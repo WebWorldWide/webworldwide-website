@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline — Web World Wide</title>
+<style>
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    background: #1E68F0;
+    color: #fff;
+    font-family: Garamond, "Cormorant Garamond", serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+  .card {
+    background: rgba(255,255,255,0.85);
+    color: #0e2960;
+    border: 3px solid #0e2960;
+    box-shadow: 8px 8px 0 #0e2960;
+    padding: 40px;
+    max-width: 460px;
+    border-radius: 6px;
+  }
+  h1 { font-size: 48px; margin: 0 0 12px; font-weight: 500; }
+  p { margin: 8px 0; font-style: italic; color: #2a4a90; }
+  a {
+    display: inline-block;
+    margin-top: 18px;
+    background: #ff8a3d;
+    color: #fff;
+    border: 2px solid #0e2960;
+    padding: 10px 20px;
+    text-decoration: none;
+    font-family: "VT323", monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    box-shadow: 4px 4px 0 #0e2960;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>You're offline.</h1>
+    <p>The dispatch couldn't reach you over the wire.</p>
+    <p>Try again when the signal returns.</p>
+    <a href="/">Retry</a>
+  </div>
+</body>
+</html>

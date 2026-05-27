@@ -1,31 +1,59 @@
 ---
 /**
- * BaseLayout — minimal shell for Phase 3 plumbing.
+ * BaseLayout — shared shell for every public page.
  *
- * Phase 4 replaces the inner markup with the full pixel-sky design
- * (sky backdrop, nav globe, clouds, fonts). The skeleton here is just
- * enough to confirm Astro builds correctly with content collections,
- * RSS, sitemap, and redirects working end-to-end.
+ * Owns:
+ *  - <head> meta (title, description, OG, RSS link, canonical, favicon)
+ *  - Skip link (WCAG)
+ *  - SkyBackdrop (clouds engine)
+ *  - Nav (top pill with globe + section links)
+ *  - <main id="main"> slot
+ *
+ * Global styles imported via tokens.css + base.css + fonts.css + sky.css
+ * + nav.css. Astro inlines critical CSS automatically on build.
  */
-import { readFileSync } from 'node:fs';
-import TOML from '@iarna/toml';
+import SkyBackdrop from '@components/SkyBackdrop.astro';
+import Nav from '@components/Nav.astro';
+import { siteConfig } from '@/lib/site-config';
 
-const siteToml = TOML.parse(
-  readFileSync(new URL('../../site.toml', import.meta.url), 'utf-8')
-) as unknown as {
-  site: { url: string; title: string; description: string };
-};
+import '@styles/fonts.css';
+import '@styles/tokens.css';
+import '@styles/base.css';
+import '@styles/sky.css';
+import '@styles/nav.css';
+
+const siteToml = siteConfig;
 
 interface Props {
   title?: string;
   description?: string;
   canonical?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  bodyClass?: string;
+  bodyData?: Record<string, string | boolean | undefined>;
 }
 
-const { title, description, canonical } = Astro.props;
-const pageTitle = title ? `${title} — ${siteToml.site.title}` : siteToml.site.title;
+const {
+  title,
+  description,
+  canonical,
+  ogImage = '/og-image.png',
+  ogType = 'website',
+  bodyClass = '',
+  bodyData = {}
+} = Astro.props;
+
+const siteTitle = siteToml.site.title;
+const pageTitle = title ? `${title} — ${siteTitle}` : siteTitle;
 const pageDesc = description ?? siteToml.site.description;
 const canonicalURL = canonical ?? Astro.url.toString();
+const currentPath = Astro.url.pathname;
+const dataAttrs = Object.fromEntries(
+  Object.entries(bodyData)
+    .filter(([, v]) => v !== undefined && v !== false)
+    .map(([k, v]) => [`data-${k}`, v === true ? '' : String(v)])
+);
 ---
 <!doctype html>
 <html lang="en">
@@ -34,38 +62,41 @@ const canonicalURL = canonical ?? Astro.url.toString();
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{pageTitle}</title>
     <meta name="description" content={pageDesc} />
-    <link rel="canonical" href={canonicalURL} />
-    <link rel="alternate" type="application/rss+xml" title={`${siteToml.site.title} RSS`} href="/rss.xml" />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
     <meta name="theme-color" content="#1E68F0" />
-    <meta property="og:type" content="website" />
+    <link rel="canonical" href={canonicalURL} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="alternate" type="application/rss+xml" title={`${siteTitle} RSS`} href="/rss.xml" />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={siteTitle} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDesc} />
     <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={new URL(ogImage, siteToml.site.url).toString()} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDesc} />
+    <meta name="twitter:image" content={new URL(ogImage, siteToml.site.url).toString()} />
+
+    <slot name="head" />
   </head>
-  <body>
+  <body class={bodyClass} {...dataAttrs}>
     <a href="#main" class="skip-link">Skip to content</a>
+    <SkyBackdrop />
+    <Nav currentPath={currentPath} />
     <main id="main"><slot /></main>
+    <slot name="after-main" />
+
+    <script is:inline>
+      // Register service worker for offline + asset caching. Only in
+      // production (dev server reloads aggressively).
+      if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
-
-<style is:global>
-  /* Placeholder global styles. Replaced by the WWW token + design CSS in Phase 4. */
-  :root { --sky: #1E68F0; --ink: #0e2960; }
-  html, body { margin: 0; padding: 0; }
-  body { background: var(--sky); color: var(--ink); font-family: system-ui, sans-serif; }
-
-  /* WCAG: visible skip link on focus */
-  .skip-link {
-    position: absolute;
-    top: -100px;
-    left: 0;
-    background: var(--ink);
-    color: #fff;
-    padding: 8px 16px;
-    z-index: 9999;
-    text-decoration: none;
-    border: 2px solid var(--sky);
-  }
-  .skip-link:focus { top: 0; }
-</style>

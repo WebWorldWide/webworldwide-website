@@ -1,0 +1,111 @@
+---
+/**
+ * Socials — 9 brand tiles (YouTube, GitHub, X, Bluesky, Mastodon, Reddit,
+ * Instagram, Threads, Email). Each tile is a real anchor with a brand color
+ * top stripe + filled-path SVG icon. URLs come from site.toml.
+ */
+import { siteConfig } from '@/lib/site-config';
+const s = siteConfig.social;
+
+type Tile = {
+  name: string;
+  handle: string;
+  href: string;
+  brand: string;
+  /** Inline SVG icon markup — sized 24x24 viewBox, white fill */
+  icon: string;
+};
+
+const tiles: Tile[] = [
+  {
+    name: 'YouTube',
+    handle: '@web_world_wide',
+    href: s.youtube,
+    brand: '#ff0033',
+    icon: `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M23.5 6.5a3 3 0 0 0-2.1-2.1C19.6 4 12 4 12 4s-7.6 0-9.4.4A3 3 0 0 0 .5 6.5 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.5 3 3 0 0 0 2.1 2.1C4.4 20 12 20 12 20s7.6 0 9.4-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.5zM9.6 15.5v-7l6.4 3.5z"/></svg>`
+  },
+  {
+    name: 'GitHub',
+    handle: 'github.com/WebWorldWide',
+    href: s.github,
+    brand: '#1a1a1a',
+    icon: `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.19 1.18.92-.26 1.91-.39 2.89-.39.98 0 1.97.13 2.89.39 2.22-1.49 3.19-1.18 3.19-1.18.63 1.59.23 2.77.11 3.06.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.13v3.15c0 .31.21.67.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>`
+  },
+  {
+    name: 'X',
+    handle: '@web_world_wide',
+    href: s.twitter,
+    brand: '#000000',
+    icon: `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>`
+  },
+  {
+    name: 'Bluesky',
+    handle: '@webworldwide.online',
+    href: s.bluesky,
+    brand: '#0085ff',
+    icon: `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M5.2 3.5c2.4 1.8 5 5.4 5.9 7.3.9-1.9 3.5-5.5 5.9-7.3 1.7-1.3 4.5-2.3 4.5 1 0 .6-.4 5.3-.6 6.1-.7 2.5-3.2 3.2-5.5 2.8 4 .7 5 3 2.8 5.2-4.2 4.4-6-1.1-6.4-2.5-.1-.3-.2-.5-.2-.3 0-.2-.1 0-.2.3-.4 1.4-2.2 6.9-6.4 2.5-2.2-2.2-1.2-4.5 2.8-5.2-2.3.4-4.8-.3-5.5-2.8C1.2 9.8.8 5.1.8 4.5c0-3.3 2.8-2.3 4.4-1z"/></svg>`
+  },
+  {
+    name: 'Mastodon',
+    handle: '@web_world_wide',
+    href: s.mastodon,
+    brand: '#6364ff',
+    icon: `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M21.327 8.566c0-4.339-2.843-5.61-2.843-5.61-1.433-.658-3.894-.935-6.451-.956h-.063c-2.557.021-5.016.298-6.45.956 0 0-2.843 1.272-2.843 5.611 0 .993-.019 2.181.012 3.441.103 4.243.778 8.425 4.701 9.463 1.809.479 3.362.579 4.612.51 2.268-.126 3.541-.809 3.541-.809l-.075-1.646s-1.621.511-3.441.449c-1.804-.062-3.707-.194-3.999-2.41a4.547 4.547 0 0 1-.04-.621s1.77.433 4.014.536c1.372.063 2.658-.08 3.965-.236 2.506-.299 4.688-1.843 4.962-3.254.434-2.223.398-5.424.398-5.424zm-3.353 5.59h-2.081V9.057c0-1.075-.452-1.62-1.357-1.62-1 0-1.501.647-1.501 1.927v2.791h-2.069V9.364c0-1.28-.501-1.927-1.502-1.927-.905 0-1.357.546-1.357 1.62v5.099H6.026c0-5.448 0-6.612.005-6.625 0 0 .375-2.072 2.832-2.072 1.421 0 2.502.535 3.224 1.591l.518.874.519-.874c.723-1.056 1.804-1.591 3.221-1.591 2.458 0 2.833 2.072 2.833 2.072l.001 6.625z"/></svg>`
+  },
+  {
+    name: 'Reddit',
+    handle: 'u/web_world_wide',
+    href: s.reddit,
+    brand: '#ff4500',
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="4.5" r="1.6" fill="#fff"/><path d="M18 6 L14.5 10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="12" cy="13" r="8" fill="#fff"/><circle cx="4.5" cy="13" r="2.2" fill="#fff"/><circle cx="19.5" cy="13" r="2.2" fill="#fff"/><circle cx="9.2" cy="12.4" r="1.5" fill="#ff4500"/><circle cx="14.8" cy="12.4" r="1.5" fill="#ff4500"/><path d="M8.5 15.5 Q12 18 15.5 15.5" stroke="#ff4500" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>`
+  },
+  {
+    name: 'Instagram',
+    handle: '@web_world_wide',
+    href: s.instagram,
+    brand: 'linear-gradient(135deg,#feda75,#fa7e1e 35%,#d62976 65%,#962fbf 85%,#4f5bd5)',
+    icon: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#fff" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#fff"/></svg>`
+  },
+  {
+    name: 'Threads',
+    handle: '@web_world_wide',
+    href: s.threads,
+    brand: '#000000',
+    icon: `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.02c.03-3.575.879-6.43 2.525-8.482C5.846 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.74-1.757-.504-.586-1.286-.883-2.323-.89h-.043c-.937 0-2.205.218-2.594.917l-1.756-1.18c.572-1.024 1.594-1.778 2.797-2.045a7.84 7.84 0 0 1 1.594-.193c1.66.012 2.998.518 3.971 1.503.961.97 1.59 2.353 1.866 4.115.197.097.391.197.582.301 2.082 1.118 3.323 2.929 3.443 5.038.157 2.764-1.097 5.234-3.523 6.962-1.748 1.21-3.834 1.789-6.197 1.789z"/></svg>`
+  },
+  {
+    name: 'Email',
+    handle: s.email,
+    href: `mailto:${s.email}`,
+    brand: '#3aa982',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`
+  }
+];
+---
+<section class="section" id="socials">
+  <div class="section-inner">
+    <span class="eyebrow reveal">03 — Socials</span>
+    <h2 class="section-title reveal">Find me <em>elsewhere</em>.</h2>
+
+    <div class="elsewhere-grid reveal" role="list">
+      {tiles.map((t) => (
+        <a
+          class="elsewhere-tile"
+          role="listitem"
+          href={t.href}
+          target={t.href.startsWith('mailto:') ? undefined : '_blank'}
+          rel={t.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+          style={`--brand:${t.brand}`}
+          aria-label={`${t.name} — ${t.handle}`}
+        >
+          <span class="icon-box" aria-hidden="true" set:html={t.icon}></span>
+          <span class="text">
+            <span class="name">{t.name}</span>
+            <span class="handle">{t.handle}</span>
+          </span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>

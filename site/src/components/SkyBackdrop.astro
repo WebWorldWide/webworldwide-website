@@ -1,0 +1,18 @@
+---
+/**
+ * Sky backdrop — fixed sky gradient + pixel cloud puffs.
+ *
+ * The puffs container is hydrated by site/src/scripts/clouds.ts which
+ * generates inline SVG <div>s. The script auto-runs on DOMContentLoaded.
+ *
+ * Renders behind everything via z-index: -5 / -3 in sky.css. Decorative,
+ * fully aria-hidden.
+ */
+---
+<div class="sky" aria-hidden="true"></div>
+<div class="sky-puffs" id="skyPuffs" aria-hidden="true"></div>
+
+<script>
+  // Eager-import so clouds appear on first paint.
+  import('../scripts/clouds.ts');
+</script>

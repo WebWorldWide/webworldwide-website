@@ -1,14 +1,9 @@
 import rss from '@astrojs/rss';
 import { getCollection } from 'astro:content';
 import type { APIContext } from 'astro';
-import { readFileSync } from 'node:fs';
-import TOML from '@iarna/toml';
+import { siteConfig } from '@/lib/site-config';
 
-const siteToml = TOML.parse(
-  readFileSync(new URL('../../site.toml', import.meta.url), 'utf-8')
-) as unknown as {
-  site: { title: string; description: string; url: string };
-};
+const siteToml = siteConfig;
 
 export async function GET(context: APIContext) {
   const posts = (await getCollection('posts'))
