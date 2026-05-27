@@ -1,0 +1,28 @@
+---
+/**
+ * Home page — placeholder for Phase 3.
+ * Phase 4 replaces this with the full WWW design (wordmark warp,
+ * MarioBlock, Crystal, AppCards, YouTube section, socials, etc.).
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 5);
+---
+<BaseLayout title="Home" description="Web World Wide — My World on the Web">
+  <h1>Web World Wide</h1>
+  <p><em>My World on the Web</em></p>
+  <h2>Recent dispatches</h2>
+  <ul>
+    {posts.map((p) => (
+      <li>
+        <a href={`/blog/${p.data.slug ?? p.id.replace(/\.md$/, '')}/`}>{p.data.title}</a>
+        <small> — {p.data.date.toISOString().slice(0, 10)}</small>
+      </li>
+    ))}
+  </ul>
+  <p><a href="/blog/">All dispatches →</a></p>
+</BaseLayout>

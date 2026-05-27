@@ -1,0 +1,60 @@
+# Web World Wide — user-editable site parameters
+#
+# This file is read by both `astro.config.mjs` (at build time) and the admin
+# CMS's settings route (at runtime). It exists so user-facing config — analytics
+# URLs, social handles, tagline, author — can change without touching the Astro
+# build config. The admin's TOML round-trip test asserts this stays parseable.
+
+[site]
+url = "https://webworldwide.online"
+title = "Web World Wide"
+description = "My World on the Web"
+tagline = "My World on the Web"
+author = "the operator"
+copyright = "Web World Wide"
+locale = "en-US"
+default_language = "en"
+
+[blog]
+posts_per_page = 10
+permalink = "/blog/:slug/"
+masthead_name = "The Dispatch."
+masthead_kicker = "Dispatch"
+
+[social]
+youtube = "https://www.youtube.com/@web_world_wide"
+youtube_handle = "@web_world_wide"
+github = "https://github.com/WebWorldWide"
+twitter = "https://x.com/web_world_wide"
+bluesky = "https://bsky.app/profile/webworldwide.online"
+mastodon = "https://mastodon.social/@web_world_wide"
+reddit = "https://www.reddit.com/user/web_world_wide"
+instagram = "https://www.instagram.com/web_world_wide"
+threads = "https://www.threads.net/@web_world_wide"
+email = "hello@webworldwide.online"
+
+[comments]
+# Remark42 self-hosted commenting (deployed alongside the admin Pi via Docker)
+provider = "remark42"
+url = "https://comments.webworldwide.online"
+site_id = "webworldwide"
+
+[analytics]
+# Umami self-hosted privacy-friendly analytics
+provider = "umami"
+url = "https://analytics.webworldwide.online"
+site_id = ""  # Fill after Umami setup
+
+[rss]
+url = "/rss.xml"
+
+[fediverse]
+# Bridgy Fed bridges this site to Mastodon/etc. The webfinger handle for
+# the blog is `blog@<site.url host>`.
+enabled = true
+handle_user = "blog"
+
+[apps]
+# Linked products on the home page Apps section.
+fileid = "https://claude.ai/design/p/51500a82-3faf-4144-9a89-94e738dbb888?file=index.html"
+doc_finder = ""  # Empty = renders as "SOON" tile

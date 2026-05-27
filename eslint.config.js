@@ -1,15 +1,16 @@
 // @ts-check
 /**
- * ESLint 9 flat config for Web World Wide.
+ * ESLint 9 flat config — root (admin / migrate / scripts).
  *
- * Three lint surfaces:
- *   - admin/**\/*.js           Node 20 + ES modules ("type": "module" in admin)
- *   - site/assets/js/*.js     Browser, IIFE-wrapped (Phase 11: moved
- *                              from static/js/ so Hugo can fingerprint
- *                              + SRI through the resources pipeline).
- *                              site/static/js/ pattern remains so any
- *                              legacy file would still be linted.
+ * site/ has its own eslint.config.mjs because it ships React + Astro,
+ * which need eslint-plugin-astro + eslint-plugin-react + eslint-plugin-jsx-a11y
+ * not relevant outside site/. Root lint stays focused on:
+ *
+ *   - admin/**\/*.js           Node 20 + ES modules (admin Express backend)
+ *   - admin/public/**\/*.js    Browser, IIFE-wrapped (admin frontend)
  *   - migrate/**\/*.js         Node 20 CLI tooling
+ *   - scripts/**\/*.{js,mjs}   Node 20 dev/maintenance scripts
+ *   - test/playwright/**       Playwright e2e suites
  *
  * Test files get vitest/node-test globals so describe/it/expect resolve.
  */
@@ -27,21 +28,18 @@ const sharedRules = {
   'prefer-const': 'error',
   eqeqeq: ['error', 'always'],
   'no-implicit-coercion': 'error',
-  'security/detect-object-injection': 'warn',
+  'security/detect-object-injection': 'warn'
 };
 
 export default [
-  // Global ignores
+  // Global ignores. site/ is excluded because it has its own eslint config.
   {
     ignores: [
       'node_modules/**',
       '**/node_modules/**',
-      'site/public/**',
-      'site/resources/**',
+      'site/**',
       'admin/data/**',
-      // admin/public/ lints below as a browser-IIFE block (Phase 2).
-      // The bundled editor (Phase 3a) is generated; we lint its
-      // source (admin/public/js/editor.entry.js) instead.
+      'admin/uploads/**',
       'admin/public/js/editor.bundle.js',
       'admin/public/js/editor.bundle.js.map',
       'Blog/**',
@@ -51,10 +49,10 @@ export default [
       'test-results/**',
       '.lighthouseci/**',
       'docker/**',
-    ],
+      'dist/**'
+    ]
   },
 
-  // Base recommended
   js.configs.recommended,
   promise.configs['flat/recommended'],
   jsdoc.configs['flat/recommended'],
@@ -66,7 +64,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'script',
-      globals: { ...globals.serviceworker },
+      globals: { ...globals.serviceworker }
     },
     rules: {
       ...sharedRules,
@@ -74,14 +72,11 @@ export default [
       'promise/always-return': 'off',
       'promise/no-nesting': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Admin browser frontend (Phase 2 — plain script IIFEs).
-  // editor.entry.js is the Phase 3a bundle source and is *not* an
-  // IIFE — esbuild consumes it as an ES module — so it gets its own
-  // block below.
+  // Admin browser frontend (plain script IIFEs).
   {
     files: ['admin/public/js/**/*.js'],
     ignores: ['admin/public/js/editor.entry.js', 'admin/public/js/editor.bundle.js'],
@@ -91,32 +86,27 @@ export default [
       sourceType: 'script',
       globals: {
         ...globals.browser,
-        // CDN-loaded library; auth.js guards against `undefined`.
         SimpleWebAuthnBrowser: 'readonly',
-        // common.js publishes to window.TE; other modules consume it.
-        TE: 'readonly',
-      },
+        WWW: 'readonly'
+      }
     },
     rules: {
       ...sharedRules,
-      // The /* global TE */ comment at the top of each module is the
-      // canonical way to declare consumption. No further config needed.
       'jsdoc/require-jsdoc': 'off',
       'jsdoc/require-param-description': 'off',
       'jsdoc/require-returns-description': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Phase 3a TipTap + CodeMirror bundle source. ES module input to
-  // esbuild; bundled into editor.bundle.js (linted-out).
+  // TipTap + CodeMirror bundle source (ES module input to esbuild).
   {
     files: ['admin/public/js/editor.entry.js'],
     plugins: { security },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.browser },
+      globals: { ...globals.browser }
     },
     rules: {
       ...sharedRules,
@@ -127,11 +117,11 @@ export default [
       'jsdoc/require-returns': 'off',
       'jsdoc/require-returns-description': 'off',
       'jsdoc/tag-lines': 'off',
-      'jsdoc/no-multi-asterisks': 'off',
-    },
+      'jsdoc/no-multi-asterisks': 'off'
+    }
   },
 
-  // Admin (Node, ESM)
+  // Admin Express backend (Node ESM).
   {
     files: ['admin/**/*.js'],
     ignores: ['admin/public/**'],
@@ -139,104 +129,62 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node },
+      globals: { ...globals.node }
     },
     rules: {
       ...sharedRules,
-      'n/no-missing-import': 'off', // Node ESM + bare specifiers
+      'n/no-missing-import': 'off',
       'n/no-unpublished-import': 'off',
       'jsdoc/require-jsdoc': 'off',
       'jsdoc/require-param-description': 'off',
       'jsdoc/require-returns-description': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Site browser JS (Phase 11: canonical path is site/assets/js/ —
-  // the static/js/ glob is kept so a stale file in the legacy location
-  // would still be linted, never silently shipped.)
-  {
-    files: ['site/assets/js/**/*.js', 'site/static/js/**/*.js'],
-    plugins: { security },
-    languageOptions: {
-      ecmaVersion: 2024,
-      sourceType: 'script',
-      globals: { ...globals.browser },
-    },
-    rules: {
-      ...sharedRules,
-      'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
-  },
-
-  // Migrate CLI
+  // Migrate CLI.
   {
     files: ['migrate/**/*.js'],
     plugins: { security, n },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node },
+      globals: { ...globals.node }
     },
     rules: {
       ...sharedRules,
       'n/no-missing-import': 'off',
       'n/no-unpublished-import': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Root-level JS configs (eslint.config.js, vitest.config.js, playwright.config.js)
+  // Root-level JS configs.
   {
-    files: ['*.js'],
+    files: ['*.js', '*.mjs'],
     plugins: { security },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node },
+      globals: { ...globals.node }
     },
     rules: {
       ...sharedRules,
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Phase 8.5 maintenance script — top-level Node ESM CLI under scripts/.
-  // Picks up scripts/*.mjs only (no recursion into scripts/dev/).
+  // scripts/ — Node CLI tooling (maintenance + dev experience).
   {
-    files: ['scripts/*.mjs'],
-    plugins: { security, n },
-    languageOptions: {
-      ecmaVersion: 2024,
-      sourceType: 'module',
-      globals: { ...globals.node },
-    },
-    rules: {
-      ...sharedRules,
-      'n/no-missing-import': 'off',
-      'n/no-unpublished-import': 'off',
-      'jsdoc/require-jsdoc': 'off',
-      'jsdoc/require-param-description': 'off',
-      'jsdoc/require-returns-description': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
-  },
-
-  // Phase 5d dev scripts — Node ESM CLI tools under scripts/dev/.
-  // Test files in scripts/dev/__tests__/ are picked up by the Vitest
-  // block below via the explicit pattern; this entry covers the
-  // executable .mjs scripts and the shared _lib.mjs module.
-  {
-    files: ['scripts/dev/**/*.{js,mjs}'],
+    files: ['scripts/**/*.{js,mjs}'],
     ignores: ['scripts/dev/__tests__/**'],
     plugins: { security, n },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node },
+      globals: { ...globals.node }
     },
     rules: {
       ...sharedRules,
@@ -246,79 +194,76 @@ export default [
       'jsdoc/require-param-description': 'off',
       'jsdoc/require-returns-description': 'off',
       'jsdoc/tag-lines': 'off',
-      'jsdoc/no-undefined-types': 'off',
-    },
+      'jsdoc/no-undefined-types': 'off'
+    }
   },
 
-  // Phase 5d dev-script Vitest tests.
+  // scripts/dev/__tests__ — Vitest.
   {
     files: ['scripts/dev/__tests__/**/*.{test,spec}.js'],
     plugins: { security },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node },
+      globals: { ...globals.node }
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Tests — Vitest (site + admin frontend) + their setup helpers
+  // admin frontend Vitest tests.
   {
-    files: ['site/test/**/*.js', 'admin/test/**/*.vitest.{test,spec}.js'],
+    files: ['admin/test/**/*.vitest.{test,spec}.js'],
     plugins: { security },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.browser, ...globals.node },
+      globals: { ...globals.browser, ...globals.node }
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'promise/param-names': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Tests — Node built-in test runner (admin backend)
+  // admin backend node:test runner.
   {
     files: ['admin/test/**/*.test.js'],
     plugins: { security },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node },
+      globals: { ...globals.node }
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
+      'jsdoc/tag-lines': 'off'
+    }
   },
 
-  // Playwright tests
+  // Playwright e2e.
   {
     files: ['test/playwright/**/*.spec.js'],
     plugins: { security },
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      // Playwright callbacks that run inside page.evaluate execute in
-      // the browser context, so we need browser globals (window,
-      // document) alongside Node globals (process, etc.).
-      globals: { ...globals.node, ...globals.browser },
+      globals: { ...globals.node, ...globals.browser }
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off',
-    },
-  },
+      'jsdoc/tag-lines': 'off'
+    }
+  }
 ];

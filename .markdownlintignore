@@ -2,8 +2,9 @@ node_modules/
 **/node_modules/
 .planning/
 Blog/
-site/public/
-site/resources/
+site/dist/
+site/.astro/
+site/.legacy/
 coverage/
 playwright-report/
 test-results/

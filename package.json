@@ -2,45 +2,46 @@
   "name": "web-world-wide-online",
   "version": "1.0.0",
   "private": true,
-  "description": "Web World Wide — self-hosted Hugo blog + Node admin CMS. This root package orchestrates lint, test, and CI for the whole monorepo.",
+  "description": "Web World Wide — Astro static site + Node admin CMS. This root package orchestrates lint, test, and CI across the monorepo (site/, admin/, migrate/).",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
-    "lint": "npm-run-all --aggregate-output --continue-on-error --parallel lint:js lint:css lint:md lint:prettier lint:types lint:html-admin",
+    "lint": "npm-run-all --aggregate-output --continue-on-error --parallel lint:js lint:css lint:md lint:prettier lint:types lint:html-admin lint:site",
     "lint:js": "eslint .",
     "lint:js:fix": "eslint . --fix",
-    "lint:css": "stylelint \"site/assets/css/*.css\" \"admin/public/css/*.css\"",
-    "lint:css:fix": "stylelint \"site/assets/css/*.css\" \"admin/public/css/*.css\" --fix",
-    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#admin/node_modules\" \"#migrate/node_modules\" \"#.planning\" \"#Blog\" \"#site/public\" \"#site/resources\" \"#coverage\" \"#playwright-report\" \"#test-results\" \"#.lighthouseci\"",
-    "lint:prettier": "prettier --check \"**/*.{js,css,json,md}\" --ignore-path .prettierignore",
-    "lint:prettier:fix": "prettier --write \"**/*.{js,css,json,md}\" --ignore-path .prettierignore",
+    "lint:css": "stylelint \"admin/public/css/**/*.css\"",
+    "lint:css:fix": "stylelint \"admin/public/css/**/*.css\" --fix",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#admin/node_modules\" \"#site/node_modules\" \"#migrate/node_modules\" \"#.planning\" \"#Blog\" \"#site/dist\" \"#site/.astro\" \"#site/.legacy\" \"#coverage\" \"#playwright-report\" \"#test-results\" \"#.lighthouseci\"",
+    "lint:prettier": "prettier --check \"**/*.{js,mjs,css,json,md,yaml,yml}\" --ignore-path .prettierignore",
+    "lint:prettier:fix": "prettier --write \"**/*.{js,mjs,css,json,md,yaml,yml}\" --ignore-path .prettierignore",
     "lint:types": "tsc --noEmit -p tsconfig.json",
     "lint:html-admin": "htmlhint --config .htmlhintrc \"admin/public/*.html\"",
-    "lint:html-site": "htmlhint --config .htmlhintrc.site \"site/public/**/*.html\"",
+    "lint:html-site": "htmlhint --config .htmlhintrc.site \"site/dist/**/*.html\"",
     "lint:shell": "shellcheck scripts/*.sh || echo 'shellcheck not installed locally — runs in CI'",
+    "lint:site": "npm --prefix site run lint",
     "fix": "npm-run-all --sequential lint:prettier:fix lint:js:fix lint:css:fix",
     "test": "npm-run-all --continue-on-error --sequential test:site test:admin",
-    "test:site": "vitest run --config vitest.config.js",
-    "test:admin": "cd admin && npm test",
+    "test:site": "npm --prefix site run test",
+    "test:admin": "npm --prefix admin run test",
     "test:e2e": "playwright test --config=playwright.config.js",
+    "test:e2e:install": "playwright install --with-deps",
     "test:lighthouse": "lhci autorun --config=lighthouserc.json",
-    "build": "npm run build:editor && npm run build:redirects && cd site && hugo --gc --minify --printPathWarnings",
-    "build:editor": "cd admin && npm run build:editor",
-    "build:redirects": "node scripts/dev/build-redirects.mjs",
-    "build:check": "npm run build:redirects && cd site && hugo --gc --minify --printPathWarnings && cd .. && npm run lint:html-site",
-    "dev:site": "cd site && hugo server -D --port 1414 --bind 127.0.0.1",
-    "dev:admin": "cd admin && npm run dev",
-    "dev:hugo": "cd site && hugo server --port 1313 --bind 127.0.0.1 --buildDrafts --buildFuture",
+    "test:a11y": "pa11y-ci --config .pa11yci.json",
+    "build": "npm --prefix site run build",
+    "build:check": "npm run build && npm run lint:html-site",
+    "dev:site": "npm --prefix site run dev",
+    "dev:admin": "npm --prefix admin run dev",
     "dev:docker": "docker compose -f docker/docker-compose.dev.yml up",
     "dev:docker:detach": "docker compose -f docker/docker-compose.dev.yml up -d",
     "dev:stop": "docker compose -f docker/docker-compose.dev.yml down",
-    "dev:all": "run-p -l dev:docker dev:hugo dev:admin",
+    "dev:all": "run-p -l dev:docker dev:site dev:admin",
     "dev:check": "node scripts/dev/check.mjs",
     "db:seed": "node scripts/dev/seed.mjs",
     "db:reset": "node scripts/dev/reset.mjs",
-    "prepare": "husky || true && npm run build:editor --silent || true"
+    "preview": "npm --prefix site run preview",
+    "prepare": "husky || true && npm --prefix admin run build:editor --silent || true"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
@@ -61,7 +62,9 @@
     "lint-staged": "^15.2.10",
     "markdownlint-cli2": "^0.15.0",
     "npm-run-all2": "^7.0.1",
+    "pa11y-ci": "^3.1.0",
     "prettier": "^3.3.3",
+    "shellcheck": "^3.1.0",
     "stylelint": "^16.10.0",
     "stylelint-config-standard": "^36.0.1",
     "stylelint-no-unsupported-browser-features": "^8.0.4",
@@ -70,8 +73,11 @@
     "vitest": "^2.1.5"
   },
   "lint-staged": {
-    "*.js": [
+    "*.{js,mjs,cjs}": [
       "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{ts,tsx,astro}": [
       "prettier --write"
     ],
     "*.css": [
@@ -81,7 +87,7 @@
     "*.md": [
       "markdownlint-cli2 --fix"
     ],
-    "*.{json,html}": [
+    "*.{json,html,yml,yaml}": [
       "prettier --write"
     ]
   }
