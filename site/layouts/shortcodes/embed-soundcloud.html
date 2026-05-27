@@ -1,0 +1,20 @@
+{{/*
+  embed-soundcloud — Phase 7 click-to-load SoundCloud placeholder.
+
+  Params:
+    url    — Canonical soundcloud.com URL (required)
+    title  — Accessible / visible label (optional)
+*/}}
+{{- $url := .Get "url" -}}
+{{- $title := .Get "title" | default "SoundCloud track" -}}
+<figure class="embed embed-soundcloud" data-provider="soundcloud">
+  <button type="button" class="embed-placeholder embed-placeholder-text"
+          data-embed-href="https://w.soundcloud.com/player/?url={{ $url | urlquery }}&auto_play=true&show_artwork=true"
+          data-embed-type="iframe"
+          aria-label="Play SoundCloud: {{ $title }}">
+    <span class="embed-play-icon" aria-hidden="true">&#9836;</span>
+    <span class="embed-meta">{{ $title }}</span>
+    <span class="embed-host">soundcloud.com</span>
+  </button>
+  <noscript><a href="{{ $url }}" rel="noopener external">{{ $title }}</a></noscript>
+</figure>

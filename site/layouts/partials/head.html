@@ -1,0 +1,170 @@
+{{- /* Meta + OG + Twitter + JSON-LD + preloads. Called from baseof.html. */ -}}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#07090A" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#F3F4F1" media="(prefers-color-scheme: light)" />
+
+{{- /* Phase 11 — Content Security Policy.
+
+       The site is mostly first-party — fonts, JS, CSS all self-hosted +
+       fingerprinted. The script-src `'unsafe-inline'` is the cost of
+       the FOUC theme script in baseof.html and the JSON-LD blob below;
+       both are server-generated, never user-input. Moving to a nonce
+       would require runtime header injection, which the static-host
+       deploy (GitHub Pages today, Caddy on the Pi tomorrow) can't
+       reliably set per-request.
+
+       The host allowlists below correspond to:
+         - script-src:  Remark42 (comments embed), Umami (analytics),
+                        embed.bsky.app (Bluesky thread iframe loader),
+                        gist.github.com (GitHub Gist <script src>),
+                        cdn.jsdelivr.net (TikTok's embed.js).
+         - frame-src:   every click-to-load embed provider (see
+                        layouts/shortcodes/embed-*.html for the full
+                        list — Phase 7/9 set this in stone).
+         - img-src:     `https:` so YouTube + Vimeo thumbnails + any
+                        og-card image load (we render Hugo's <img
+                        srcset> for all of those — the only first-party
+                        path for hot-loop content).
+         - connect-src: analytics only — comments/webmentions use the
+                        Remark42 iframe (same-origin from the iframe's
+                        POV), no XHR from the host page.
+         - media-src:   self (audio + video attachments only).
+
+       Update CONTRIBUTING.md → Performance → CSP whenever the
+       allowlist changes. The hosts below MUST stay in sync with
+       site/layouts/shortcodes/embed-*.html. */ -}}
+{{- $remarkOrigin := site.Params.remark42URL | default "" -}}
+{{- $analyticsOrigin := site.Params.umamiURL | default "" -}}
+{{- $cspScript := "'self' 'unsafe-inline' https://gist.github.com https://embed.bsky.app https://www.tiktok.com https://cdn.jsdelivr.net" -}}
+{{- $cspFrame := "https://embed.bsky.app https://www.youtube-nocookie.com https://player.vimeo.com https://www.tiktok.com https://w.soundcloud.com https://open.spotify.com https://codepen.io" -}}
+{{- $cspConnect := "'self'" -}}
+{{- with $remarkOrigin -}}
+  {{- $cspScript = printf "%s %s" $cspScript . -}}
+  {{- $cspFrame = printf "%s %s" $cspFrame . -}}
+  {{- $cspConnect = printf "%s %s" $cspConnect . -}}
+{{- end -}}
+{{- with $analyticsOrigin -}}
+  {{- $cspScript = printf "%s %s" $cspScript . -}}
+  {{- $cspConnect = printf "%s %s" $cspConnect . -}}
+{{- end -}}
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src {{ $cspScript }}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; frame-src {{ $cspFrame }}; media-src 'self'; connect-src {{ $cspConnect }}; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" />
+
+{{- $pageTitle := cond .IsHome site.Title (printf "%s — %s" .Title site.Title) -}}
+<title>{{ $pageTitle }}</title>
+
+{{- $desc := "" -}}
+{{- with .Description -}}{{- $desc = . -}}{{- else -}}
+  {{- with .Summary -}}{{- $desc = . | plainify | htmlUnescape | truncate 200 -}}{{- else -}}
+    {{- $desc = site.Params.tagline | default "" -}}
+  {{- end -}}
+{{- end -}}
+<meta name="description" content="{{ $desc }}" />
+<link rel="canonical" href="{{ .Permalink }}" />
+
+{{/* Open Graph */}}
+<meta property="og:title" content="{{ $pageTitle }}" />
+<meta property="og:description" content="{{ $desc }}" />
+<meta property="og:type" content="{{ if and .IsPage (eq .Section "posts") }}article{{ else }}website{{ end }}" />
+<meta property="og:url" content="{{ .Permalink }}" />
+<meta property="og:site_name" content="{{ site.Title }}" />
+<meta property="og:locale" content="{{ site.Language.Lang | default "en" | replaceRE "-" "_" }}" />
+
+{{/* Social card image: prefer page-level cover, then site default. Fall back to summary card when no image. */}}
+{{- $img := "" -}}
+{{- if .Params.cover -}}{{- $img = .Params.cover | absURL -}}
+{{- else if site.Params.defaultImage -}}{{- $img = site.Params.defaultImage | absURL -}}
+{{- end -}}
+{{ with $img }}
+<meta property="og:image" content="{{ . }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="{{ . }}" />
+{{ else }}
+<meta name="twitter:card" content="summary" />
+{{ end }}
+<meta name="twitter:title" content="{{ $pageTitle }}" />
+<meta name="twitter:description" content="{{ $desc }}" />
+
+{{/* RSS / sitemap */}}
+{{- range .AlternativeOutputFormats -}}
+  {{- if eq .Name "RSS" }}
+<link rel="alternate" type="{{ .MediaType.Type }}" title="{{ site.Title }}" href="{{ .Permalink }}" />
+  {{- end -}}
+{{- end }}
+<link rel="alternate" type="application/rss+xml" title="{{ site.Title }} — All posts" href="{{ "/index.xml" | relURL }}" />
+<link rel="sitemap" type="application/xml" href="{{ "/sitemap.xml" | relURL }}" />
+
+{{- /* Phase 8 — Webmention + Pingback endpoint discovery. Site-wide
+       so any page (post, list, taxonomy) can receive a webmention.
+       Sender clients (Bridgy Fed, indieweb.org's mention.tech,
+       Webmention.io, etc.) discover the endpoint via this `<link>`
+       OR a matching `Link:` header — we ship the `<link>` form so
+       it survives GitHub Pages (no custom headers available there).
+       The endpoint is hosted on the admin's subdomain, behind Caddy
+       (see `docker/Caddyfile` — Phase 8 added the route). */ -}}
+{{- $webmentionEndpoint := site.Params.webmentionURL | default "https://admin.terminaleighty.com/webmention" }}
+<link rel="webmention" href="{{ $webmentionEndpoint }}" />
+
+{{/* Favicon */}}
+<link rel="icon" type="image/png" href="{{ "images/logo.png" | relURL }}" />
+
+{{- /* Phase 11 — inline critical CSS first (above-the-fold tokens,
+       reset, layout, header, lava). Keeps first paint render-blocking
+       only on the ~3 KB inlined chunk; the full screen.css loads
+       asynchronously below. */ -}}
+{{ partial "critical-css.html" . }}
+
+{{- /* Self-hosted JetBrains Mono + main stylesheets. CSS goes through
+       the assets pipeline so we get content-hashed filenames + SRI
+       integrity attributes. The main stylesheet uses the rel=preload
+       swap trick so it doesn't block first paint — critical-css.html
+       above already paints the masthead and lava. */ -}}
+{{- $fontsCSS := resources.Get "css/fonts.css" -}}
+{{- $screenCSS := resources.Get "css/screen.css" -}}
+{{- if $screenCSS -}}
+  {{- $screenCSS = $screenCSS | resources.Fingerprint -}}
+  {{- if $fontsCSS -}}
+    {{- $fontsCSS = $fontsCSS | resources.Fingerprint -}}
+  {{- end -}}
+  <link rel="preload" as="font" type="font/woff2" href="{{ "fonts/JetBrainsMono-Variable-Latin.woff2" | relURL }}" crossorigin />
+  {{- if $fontsCSS }}
+  <link rel="stylesheet" href="{{ $fontsCSS.RelPermalink }}" integrity="{{ $fontsCSS.Data.Integrity }}" />
+  {{- end }}
+  {{- /* Deferred main stylesheet: preload as style, then promote to a
+         live stylesheet on load. The <noscript> fallback ensures the
+         page still styles for users without JS (search-engine
+         crawlers, lynx, etc.). */ -}}
+  <link rel="preload" as="style" href="{{ $screenCSS.RelPermalink }}" integrity="{{ $screenCSS.Data.Integrity }}" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="{{ $screenCSS.RelPermalink }}" integrity="{{ $screenCSS.Data.Integrity }}" /></noscript>
+{{- else -}}
+  {{/* Fallback: serve from /static directly (no fingerprint) */}}
+  <link rel="preload" as="font" type="font/woff2" href="{{ "fonts/JetBrainsMono-Variable-Latin.woff2" | relURL }}" crossorigin />
+  <link rel="stylesheet" href="{{ "css/fonts.css" | relURL }}" />
+  <link rel="preload" as="style" href="{{ "css/screen.css" | relURL }}" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="{{ "css/screen.css" | relURL }}" /></noscript>
+{{- end -}}
+
+{{/* JSON-LD: BlogPosting only for individual posts in the "posts" section.
+     Build the dict server-side and jsonify the whole thing so Hugo's HTML
+     minifier doesn't mangle inline JSON-as-text. */}}
+{{ if and .IsPage (eq .Section "posts") }}
+{{- $author := site.Params.author | default site.Title -}}
+{{- $ld := dict
+  "@context" "https://schema.org"
+  "@type" "BlogPosting"
+  "headline" .Title
+  "datePublished" (.Date.Format "2006-01-02T15:04:05Z07:00")
+  "author" (dict "@type" "Person" "name" $author)
+  "publisher" (dict "@type" "Organization" "name" site.Title)
+  "description" $desc
+  "url" .Permalink
+  "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
+-}}
+{{- with .Lastmod -}}
+  {{- $ld = merge $ld (dict "dateModified" (.Format "2006-01-02T15:04:05Z07:00")) -}}
+{{- end -}}
+{{- with .Params.tags -}}
+  {{- $ld = merge $ld (dict "keywords" (delimit . ", ")) -}}
+{{- end -}}
+<script type="application/ld+json">{{ $ld | jsonify (dict "indent" "") | safeJS }}</script>
+{{ end }}

@@ -1,0 +1,1829 @@
+/* ============================================================
+   Editor page styles (editor.html)
+   Phase 2: provides the shell; Phase 3 wires TipTap into
+   #editor-root and adds rich-text styles here.
+   ============================================================ */
+
+.editor-layout {
+  display: grid;
+  /* Phase 3d: 3-column track (main · aux for TOC/SEO · frontmatter).
+     When both aux panels close the column collapses — see the Phase 3d
+     block at the end of this file for the override. */
+  grid-template-columns: minmax(0, 1fr) 260px 340px;
+  gap: 16px;
+  align-items: stretch;
+  min-height: calc(100vh - 130px);
+}
+
+.editor-pane {
+  background: var(--glass-tint);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+}
+.editor-pane::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 5%,
+    var(--glass-highlight) 50%,
+    transparent 95%
+  );
+  pointer-events: none;
+}
+
+.editor-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--glass-border);
+  flex-wrap: wrap;
+}
+.ed-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  color: var(--warn);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  background: var(--warn-soft);
+  font-weight: 600;
+}
+.ed-pill.pub {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+}
+.ed-saved {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ed-saved .pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+  display: inline-block;
+}
+.editor-head-r {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ed-title-wrap {
+  padding: 30px 40px 14px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.ed-title {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: var(--serif);
+  font-size: 42px;
+  font-weight: 600;
+  letter-spacing: -0.024em;
+  color: var(--fg);
+  line-height: 1.06;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.ed-title::placeholder {
+  color: var(--fg-mute);
+}
+.ed-slug {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fg-mute);
+}
+.ed-slug .root {
+  color: var(--fg-mute);
+}
+.ed-slug input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+/* Phase 3a: TipTap WYSIWYG + CodeMirror source view mount here.
+   The pre-rendered <textarea id="editor-fallback"> is replaced
+   (and hidden) by the bundle's mount() the moment editor.bundle.js
+   loads. If the bundle never loads, the textarea stays visible
+   and serves as a no-JS / no-build fallback. */
+.ed-body {
+  padding: 24px 40px 32px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+#editor-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+#editor-fallback {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--fg);
+  padding: 0;
+  min-height: 320px;
+}
+#editor-fallback::placeholder {
+  color: var(--fg-mute);
+}
+/* The bundle keeps a hidden textarea inside #editor-root as the
+   Markdown source-of-truth. Force it out of the flow so it never
+   contributes scroll-height. */
+#editor-fallback[hidden],
+#editor-root .te-editor #editor-fallback {
+  display: none !important;
+}
+
+/* ============================================================
+   Phase 3a editor chrome
+   ============================================================ */
+
+.te-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 320px;
+  gap: 12px;
+}
+
+.te-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--glass-border);
+  flex-wrap: wrap;
+}
+.te-editor-toolbar-spacer {
+  flex: 1;
+}
+
+.te-editor-mode-toggle {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 2px;
+  background: var(--glass-tint);
+}
+.te-editor-mode-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: 120ms;
+}
+.te-editor-mode-btn:hover {
+  color: var(--fg);
+}
+.te-editor-mode-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.te-editor-mode-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.te-editor-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  position: relative;
+}
+.te-editor-wysiwyg,
+.te-editor-source {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+
+/* ─── ProseMirror (TipTap WYSIWYG) ───────────────────────────── */
+.ProseMirror {
+  flex: 1;
+  outline: none;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--fg);
+  padding: 0;
+  min-height: 280px;
+}
+.ProseMirror:focus {
+  outline: none;
+}
+.ProseMirror p {
+  margin: 0 0 14px;
+}
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.18;
+  color: var(--fg);
+  margin: 28px 0 10px;
+}
+.ProseMirror h1 {
+  font-size: 32px;
+}
+.ProseMirror h2 {
+  font-size: 26px;
+}
+.ProseMirror h3 {
+  font-size: 21px;
+}
+.ProseMirror h4 {
+  font-size: 18px;
+}
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+.ProseMirror blockquote {
+  margin: 0 0 14px;
+  padding: 4px 0 4px 16px;
+  border-left: 3px solid var(--accent);
+  color: var(--fg-dim);
+  font-style: italic;
+}
+.ProseMirror hr {
+  border: 0;
+  border-top: 1px dashed var(--glass-border);
+  margin: 22px 0;
+}
+.ProseMirror code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-border);
+}
+.ProseMirror pre {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 12px 14px;
+  border-radius: 5px;
+  background: var(--bg-deep, var(--glass-tint));
+  border: 1px solid var(--glass-border);
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+.ProseMirror pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.ProseMirror a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 26px;
+  margin: 0 0 14px;
+}
+.ProseMirror li {
+  margin: 4px 0;
+}
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 4px;
+}
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  gap: 8px;
+}
+.ProseMirror ul[data-type="taskList"] li > label {
+  user-select: none;
+  margin-top: 4px;
+}
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+  margin: 8px 0;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--fg-mute);
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+
+/* ─── CodeMirror 6 (source view) ─────────────────────────────── */
+.cm-editor {
+  flex: 1;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-border);
+}
+.cm-editor.cm-focused {
+  outline: none;
+  border-color: var(--accent);
+}
+.cm-editor .cm-scroller {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+  padding: 10px 12px;
+}
+.cm-editor .cm-content {
+  caret-color: var(--accent);
+  color: var(--fg);
+}
+.cm-editor .cm-cursor {
+  border-left-color: var(--accent);
+}
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground {
+  background: var(--accent-soft) !important;
+}
+/* Light-theme tweak: CM6's default selection is hard to see on light. */
+[data-theme="light"] .cm-editor .cm-selectionBackground,
+[data-theme="light"] .cm-editor.cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+}
+
+/* `.editor-foot` styles live in the Phase 3d block at the end of this
+   file; this comment is a breadcrumb for grep-ers who land here first. */
+
+/* Right-side panels (frontmatter / SEO / media / publish) */
+.ed-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  min-width: 0;
+}
+.ed-panel {
+  background: var(--glass-tint);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+.ed-panel summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-bottom: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--fg);
+  user-select: none;
+}
+.ed-panel summary::-webkit-details-marker {
+  display: none;
+}
+.ed-panel summary .chev {
+  color: var(--fg-mute);
+  transition: transform 120ms;
+}
+.ed-panel[open] summary {
+  border-bottom-color: var(--glass-border);
+}
+.ed-panel[open] summary .chev {
+  transform: rotate(90deg);
+}
+.ed-panel .body {
+  padding: 14px 16px;
+}
+
+/* Social preview card inside SEO panel */
+.social-preview {
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--sans);
+}
+.social-preview .domain {
+  padding: 10px 12px 4px;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.social-preview .title {
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.social-preview .desc {
+  padding: 4px 12px 12px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Media drop zone within editor sidebar */
+.ed-dropzone {
+  border: 1px dashed var(--line-strong);
+  border-radius: 4px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: 120ms;
+  color: var(--fg-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--glass-tint);
+}
+.ed-dropzone:hover,
+.ed-dropzone.drag {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.ed-dropzone .ico {
+  font-family: var(--serif);
+  font-size: 22px;
+  color: var(--accent);
+  margin-bottom: 2px;
+  display: block;
+}
+
+.recent-media {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+.recent-media .thumb {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--bg-deep);
+  border: 1px solid var(--glass-border);
+  border-radius: 3px;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+.recent-media .thumb:hover {
+  border-color: var(--accent);
+}
+.recent-media .thumb .badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-family: var(--mono);
+  font-size: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--accent);
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Phase 5 will add real status badges; mark slot for now */
+.recent-media .thumb .badge.processing {
+  color: var(--warn);
+}
+.recent-media .thumb .badge.error {
+  color: var(--danger);
+}
+
+/* Word count / metrics in topbar */
+.editor-metrics {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  letter-spacing: 0.04em;
+}
+.editor-metrics b {
+  color: var(--fg-dim);
+  font-weight: 500;
+}
+
+@media (max-width: 1100px) {
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+  .ed-side {
+    order: 2;
+  }
+}
+@media (max-width: 800px) {
+  .ed-title-wrap {
+    padding: 18px 18px 12px;
+  }
+  .ed-body {
+    padding: 14px 18px 20px;
+  }
+  .ed-title {
+    font-size: 30px;
+  }
+}
+
+/* ============================================================
+   Phase 3b: rich toolbar, slash menu, link dialog
+   ============================================================ */
+
+/* Rich toolbar — sits between the mode toggle group and the
+   flex spacer, so it stays left-aligned while the mode toggle
+   floats right. Buttons are grouped with thin dividers. */
+.te-editor-toolbar-rich {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.te-editor-toolbar-rich.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.te-tb-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.te-tb-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--glass-border);
+  margin: 0 6px;
+  display: inline-block;
+}
+
+/* Toolbar buttons themselves. Square-ish, monospace, glyph-only at
+   typical sizes; the visible glyph is decorative and aria-hidden so
+   only the aria-label is announced. */
+.te-tb-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-dim);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 120ms,
+    color 120ms,
+    border-color 120ms;
+}
+.te-tb-btn:hover {
+  background: var(--glass-tint);
+  color: var(--fg);
+}
+.te-tb-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.te-tb-btn.is-active,
+.te-tb-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.te-tb-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.te-tb-btn.te-tb-bold .te-tb-glyph {
+  font-weight: 700;
+  font-family: var(--serif);
+}
+.te-tb-btn.te-tb-italic .te-tb-glyph {
+  font-style: italic;
+  font-family: var(--serif);
+}
+.te-tb-btn.te-tb-underline .te-tb-glyph {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: var(--serif);
+}
+.te-tb-btn.te-tb-strike .te-tb-glyph {
+  text-decoration: line-through;
+  font-family: var(--serif);
+}
+.te-tb-btn.is-placeholder {
+  opacity: 0.7;
+}
+.te-tb-glyph {
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0;
+}
+
+/* Underline mark inside the WYSIWYG body. */
+.ProseMirror u {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ─── Slash menu ──────────────────────────────────────────────
+   Floating absolutely-positioned listbox. Sized so 6-7 rows fit
+   comfortably; longer menus scroll. */
+.te-slash-menu {
+  position: absolute;
+  z-index: 300;
+  min-width: 240px;
+  max-width: 320px;
+  background: var(--bg, var(--glass-tint));
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  box-shadow: var(--glass-shadow, 0 4px 20px rgba(0, 0, 0, 0.18));
+  padding: 4px;
+  font-family: var(--sans);
+  max-height: 320px;
+  overflow: auto;
+  /* Solid background so the floating list reads over the editor.
+     Use the deepest glass surface available for theme parity. */
+  background-color: var(--bg-deep, var(--bg, #fff));
+}
+.te-slash-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.te-slash-group {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  padding: 8px 8px 4px;
+  user-select: none;
+}
+.te-slash-item {
+  appearance: none;
+  display: flex;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13px;
+}
+.te-slash-item .te-slash-label {
+  flex: 0 0 auto;
+  font-weight: 500;
+}
+.te-slash-item .te-slash-hint {
+  flex: 1 1 auto;
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  text-align: right;
+}
+.te-slash-item.is-active,
+.te-slash-item:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.te-slash-item.is-active .te-slash-hint,
+.te-slash-item:hover .te-slash-hint {
+  color: color-mix(in srgb, var(--accent) 70%, var(--fg-mute));
+}
+.te-slash-item.is-placeholder {
+  opacity: 0.55;
+  font-style: italic;
+}
+.te-slash-empty {
+  padding: 12px 10px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fg-mute);
+}
+
+/* ─── Link dialog ─────────────────────────────────────────────
+   Centered modal with a focus trap. The trap, Esc-close, and
+   restored-focus are wired in editor.entry.js — the CSS here is
+   purely presentational. */
+.te-link-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  padding: 20px;
+}
+.te-link-dialog[hidden] {
+  display: none;
+}
+.te-link-card {
+  background: var(--bg, var(--glass-tint));
+  background-color: var(--bg-deep, var(--bg, #fff));
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  box-shadow: var(--glass-shadow, 0 12px 40px rgba(0, 0, 0, 0.32));
+  padding: 18px 18px 14px;
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.te-link-card h3 {
+  margin: 0 0 4px;
+  font-family: var(--serif);
+  font-size: 17px;
+  color: var(--fg);
+}
+.te-link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.te-link-field label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.te-link-field input {
+  appearance: none;
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 7px 9px;
+  outline: none;
+}
+.te-link-field input:focus {
+  border-color: var(--accent);
+}
+.te-link-error {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--danger, #c00);
+}
+.te-link-foot {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  justify-content: flex-end;
+  align-items: center;
+}
+.te-link-foot button {
+  appearance: none;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.te-link-foot button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.te-link-foot button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.te-link-foot .te-link-ok {
+  background: var(--accent);
+  color: var(--bg, #fff);
+  border-color: var(--accent);
+}
+.te-link-foot .te-link-ok:hover {
+  filter: brightness(1.1);
+  color: var(--bg, #fff);
+}
+.te-link-foot .te-link-remove[hidden] {
+  display: none;
+}
+
+/* ============================================================
+   Phase 3c: tables, math, callouts, footnotes, code-highlight
+   ============================================================ */
+
+/* ─── Tables ───────────────────────────────────────────────── */
+.ProseMirror table,
+.ProseMirror .te-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 18px;
+  font-family: var(--sans, var(--serif));
+  font-size: 14.5px;
+  table-layout: fixed;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.ProseMirror table th,
+.ProseMirror table td {
+  border: 1px solid var(--glass-border);
+  padding: 8px 10px;
+  vertical-align: top;
+  text-align: left;
+  min-width: 60px;
+  position: relative;
+}
+.ProseMirror table th {
+  background: var(--glass-tint);
+  font-weight: 600;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.ProseMirror table tr:nth-child(2n) td {
+  background: color-mix(in srgb, var(--glass-tint) 50%, transparent);
+}
+.ProseMirror table .selectedCell {
+  background: var(--accent-soft) !important;
+}
+/* The table toolbar group only renders when the cursor is in a table. */
+.te-tb-table-group.is-hidden,
+.te-tb-code-group.is-hidden {
+  display: none;
+}
+.te-tb-table-group.is-visible,
+.te-tb-code-group.is-visible {
+  display: inline-flex;
+}
+
+/* ─── Code blocks (lowlight syntax-highlight) ──────────────── */
+.ProseMirror pre.te-code-block,
+.ProseMirror pre code.hljs {
+  position: relative;
+}
+.ProseMirror pre.te-code-block::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  pointer-events: none;
+}
+/* Highlight.js token colours — neutral palette that works in both
+   themes. Phase 11 may tune these against a proper Chroma palette. */
+.ProseMirror pre .hljs-keyword,
+.ProseMirror pre .hljs-selector-tag,
+.ProseMirror pre .hljs-built_in,
+.ProseMirror pre .hljs-name,
+.ProseMirror pre .hljs-tag {
+  color: var(--accent);
+}
+.ProseMirror pre .hljs-string,
+.ProseMirror pre .hljs-title,
+.ProseMirror pre .hljs-section,
+.ProseMirror pre .hljs-attribute,
+.ProseMirror pre .hljs-literal,
+.ProseMirror pre .hljs-template-tag,
+.ProseMirror pre .hljs-template-variable,
+.ProseMirror pre .hljs-type,
+.ProseMirror pre .hljs-addition {
+  color: color-mix(in srgb, var(--accent) 70%, var(--fg));
+}
+.ProseMirror pre .hljs-comment,
+.ProseMirror pre .hljs-quote,
+.ProseMirror pre .hljs-deletion,
+.ProseMirror pre .hljs-meta {
+  color: var(--fg-mute);
+  font-style: italic;
+}
+.ProseMirror pre .hljs-number,
+.ProseMirror pre .hljs-regexp,
+.ProseMirror pre .hljs-symbol,
+.ProseMirror pre .hljs-variable,
+.ProseMirror pre .hljs-link {
+  color: var(--warn, color-mix(in srgb, var(--accent) 50%, #c80));
+}
+.ProseMirror pre .hljs-doctag,
+.ProseMirror pre .hljs-strong {
+  font-weight: 700;
+}
+.ProseMirror pre .hljs-emphasis {
+  font-style: italic;
+}
+/* Language select inside the toolbar. */
+.te-tb-lang-label {
+  display: inline-flex;
+  align-items: center;
+}
+.te-tb-lang {
+  appearance: none;
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-border);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 24px 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.te-tb-lang:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ─── Math ─────────────────────────────────────────────────── */
+.ProseMirror .te-math {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition:
+    background-color 120ms,
+    color 120ms;
+}
+.ProseMirror .te-math-inline {
+  display: inline-block;
+  vertical-align: baseline;
+  font-family: var(--mono);
+}
+.ProseMirror .te-math-block {
+  display: block;
+  text-align: center;
+  margin: 14px 0;
+  padding: 12px;
+  font-family: var(--mono);
+}
+.ProseMirror .te-math:hover {
+  background: var(--accent-soft);
+}
+.ProseMirror .te-math.is-editing {
+  background: var(--glass-tint);
+  outline: 1px dashed var(--accent);
+  cursor: text;
+  padding: 4px 6px;
+}
+.ProseMirror .te-math-selected {
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent);
+}
+.te-math-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+  resize: vertical;
+  padding: 0;
+  min-height: 1em;
+}
+
+/* ─── Callouts (admonitions) ───────────────────────────────── */
+.ProseMirror aside.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 12px 14px 4px 14px;
+  margin: 14px 0;
+  font-family: var(--sans, var(--serif));
+  font-size: 14.5px;
+  color: var(--fg);
+  position: relative;
+}
+.ProseMirror aside.callout .callout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.ProseMirror aside.callout .callout-label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow, transparent);
+  display: inline-block;
+}
+.ProseMirror aside.callout.callout-tip {
+  border-left-color: var(--ok, var(--accent));
+  background: var(--ok-soft, var(--accent-soft));
+}
+.ProseMirror aside.callout.callout-tip .callout-label,
+.ProseMirror aside.callout.callout-tip .callout-label::before {
+  color: var(--ok, var(--accent));
+  background: var(--ok, var(--accent));
+}
+.ProseMirror aside.callout.callout-tip .callout-label {
+  background: transparent;
+}
+.ProseMirror aside.callout.callout-warn {
+  border-left-color: var(--warn, #c80);
+  background: var(--warn-soft, color-mix(in srgb, #c80 14%, transparent));
+}
+.ProseMirror aside.callout.callout-warn .callout-label {
+  color: var(--warn, #c80);
+}
+.ProseMirror aside.callout.callout-warn .callout-label::before {
+  background: var(--warn, #c80);
+}
+.ProseMirror aside.callout.callout-danger {
+  border-left-color: var(--danger, #c44);
+  background: var(--danger-soft, color-mix(in srgb, #c44 14%, transparent));
+}
+.ProseMirror aside.callout.callout-danger .callout-label {
+  color: var(--danger, #c44);
+}
+.ProseMirror aside.callout.callout-danger .callout-label::before {
+  background: var(--danger, #c44);
+}
+.ProseMirror aside.callout .callout-body > p:last-child {
+  margin-bottom: 8px;
+}
+
+/* ─── Footnotes ────────────────────────────────────────────── */
+.ProseMirror sup.footnote-ref {
+  font-family: var(--mono);
+  font-size: 0.72em;
+  line-height: 0;
+  position: relative;
+  top: -0.5em;
+  color: var(--accent);
+}
+.ProseMirror sup.footnote-ref a {
+  color: inherit;
+  text-decoration: none;
+}
+.ProseMirror sup.footnote-ref a::before {
+  content: "[";
+  letter-spacing: 0;
+}
+.ProseMirror ol.footnote-list {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+  font-family: var(--sans, var(--serif));
+  font-size: 13.5px;
+  color: var(--fg-dim);
+  counter-reset: footnote;
+  list-style: none;
+  padding-left: 22px;
+}
+.ProseMirror ol.footnote-list li[data-footnote-item] {
+  position: relative;
+  margin-bottom: 6px;
+}
+.ProseMirror ol.footnote-list li[data-footnote-item]::before {
+  content: "[" attr(data-label) "]";
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 11px;
+  position: absolute;
+  left: -24px;
+  top: 1px;
+}
+
+/* ============================================================
+   Phase 3d: productivity layer
+   Find/replace, TOC sidebar, status bar, autosave pip,
+   SEO preview, drag-handle.
+   ============================================================ */
+
+/* ─── Layout: TOC + SEO aux column ──────────────────────────── */
+/*
+   Phase 3d adds a thin aux column between the editor pane and the
+   frontmatter sidebar. The aux column hosts the TOC sidebar and the
+   SEO preview snippet, each in its own collapsible panel. Both
+   panels persist their open/closed state to localStorage; the column
+   is fully removed from the grid track when both are closed.
+
+   The 3-column track is set on `.editor-layout` near the top of this
+   file; the override below collapses to 2 columns when both panels
+   are closed.
+*/
+.editor-layout[data-toc-open="false"][data-seo-open="false"] {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.editor-layout[data-toc-open="false"][data-seo-open="false"] .ed-aux {
+  display: none;
+}
+@media (max-width: 1180px) {
+  .editor-layout,
+  .editor-layout[data-toc-open="false"][data-seo-open="false"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ed-aux,
+  .ed-side {
+    display: none;
+  }
+}
+
+.ed-aux {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.ed-aux[hidden] {
+  display: none;
+}
+
+.ed-aux-panel {
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.ed-aux-panel[hidden] {
+  display: none;
+}
+.ed-aux-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  border-bottom: 1px solid var(--glass-border);
+}
+.ed-aux-head > span:first-child {
+  flex: 1;
+}
+.ed-aux-close {
+  background: transparent;
+  border: 0;
+  color: var(--fg-mute);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.ed-aux-close:hover,
+.ed-aux-close:focus-visible {
+  color: var(--fg);
+  background: var(--glass-highlight);
+  outline: 0;
+}
+.ed-aux-empty {
+  margin: 14px;
+  color: var(--fg-mute);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ─── TOC sidebar ──────────────────────────────────────────── */
+.ed-toc-body {
+  padding: 6px 6px 12px;
+  overflow-y: auto;
+  max-height: calc(100vh - 240px);
+}
+.ed-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ed-toc-item {
+  margin: 0;
+}
+.ed-toc-link {
+  display: block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: var(--fg-dim);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+  border-left: 2px solid transparent;
+}
+.ed-toc-link:hover,
+.ed-toc-link:focus-visible {
+  background: var(--glass-highlight);
+  color: var(--fg);
+  outline: 0;
+}
+.ed-toc-link.is-current {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.ed-toc-item.ed-toc-level-1 .ed-toc-link {
+  padding-left: 10px;
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 13.5px;
+}
+.ed-toc-item.ed-toc-level-2 .ed-toc-link {
+  padding-left: 22px;
+}
+.ed-toc-item.ed-toc-level-3 .ed-toc-link {
+  padding-left: 34px;
+}
+.ed-toc-item.ed-toc-level-4 .ed-toc-link {
+  padding-left: 46px;
+}
+.ed-toc-item.ed-toc-level-5 .ed-toc-link {
+  padding-left: 58px;
+  font-size: 12px;
+}
+.ed-toc-item.ed-toc-level-6 .ed-toc-link {
+  padding-left: 70px;
+  font-size: 12px;
+}
+
+/* ─── SEO preview ───────────────────────────────────────────── */
+.ed-seo-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.serp-card {
+  background: var(--fg-on-accent, #fff);
+  color: #202124;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: arial, sans-serif;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="dark"] .serp-card {
+  background: #2c2c2c;
+  color: #dadce0;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+.serp-url {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #5f6368;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+:root[data-theme="dark"] .serp-url {
+  color: #9aa0a6;
+}
+.serp-url-sep {
+  opacity: 0.6;
+}
+.serp-title {
+  color: #1a0dab;
+  font-size: 18px;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  word-break: break-word;
+}
+:root[data-theme="dark"] .serp-title {
+  color: #8ab4f8;
+}
+.serp-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #4d5156;
+  word-break: break-word;
+}
+:root[data-theme="dark"] .serp-desc {
+  color: #bdc1c6;
+}
+.ed-seo-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ed-seo-meta li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.ed-seo-bar {
+  grid-column: 1 / -1;
+  display: block;
+  height: 4px;
+  background: var(--glass-highlight);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.ed-seo-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 120ms ease-out;
+}
+.ed-seo-bar.is-over .ed-seo-bar-fill {
+  background: var(--warn, #c80);
+}
+.ed-seo-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.ed-seo-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+}
+
+/* ─── Editor status bar (foot) refresh ──────────────────────── */
+.editor-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  border-top: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  letter-spacing: 0.04em;
+}
+.editor-foot-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.editor-foot-sep {
+  opacity: 0.5;
+}
+.editor-foot-r {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ─── Autosave pip ─────────────────────────────────────────── */
+.autosave-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  background: transparent;
+  border: 1px solid transparent;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+.autosave-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-mute);
+  display: inline-block;
+}
+.autosave-indicator[data-state="idle"] {
+  color: var(--fg-mute);
+}
+.autosave-indicator[data-state="dirty"] {
+  color: var(--warn, #c80);
+}
+.autosave-indicator[data-state="dirty"] .autosave-pip {
+  background: var(--warn, #c80);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--warn, #c80) 60%, transparent);
+}
+.autosave-indicator[data-state="saving"] {
+  color: var(--fg-dim);
+}
+.autosave-indicator[data-state="saving"] .autosave-pip {
+  background: var(--accent);
+  animation: te-autosave-spin 900ms linear infinite;
+  box-shadow: 0 0 6px var(--accent-glow, transparent);
+}
+.autosave-indicator[data-state="saved"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+}
+.autosave-indicator[data-state="saved"] .autosave-pip {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow, transparent);
+}
+.autosave-indicator[data-state="error"] {
+  color: var(--danger, #c44);
+  border-color: color-mix(in srgb, var(--danger, #c44) 40%, transparent);
+  background: var(--danger-soft, color-mix(in srgb, #c44 14%, transparent));
+  cursor: pointer;
+}
+.autosave-indicator[data-state="error"] .autosave-pip {
+  background: var(--danger, #c44);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--danger, #c44) 60%, transparent);
+}
+@keyframes te-autosave-spin {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+}
+
+/* ─── Find & Replace modal ──────────────────────────────────── */
+.te-find-modal {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 200;
+  background: var(--glass-tint, #1f1f1f);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 320px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.te-find-modal[hidden] {
+  display: none;
+}
+.te-find-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.te-find-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--glass-highlight);
+  color: var(--fg);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.te-find-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.te-find-input[aria-invalid="true"] {
+  border-color: var(--danger, #c44);
+}
+.te-find-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--fg-dim);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.te-find-btn:hover,
+.te-find-btn:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: 0;
+}
+.te-find-close {
+  margin-left: 4px;
+}
+.te-find-count {
+  color: var(--fg-mute);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.te-find-row-opts {
+  gap: 8px;
+}
+.te-find-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--fg-mute);
+  cursor: pointer;
+}
+.te-find-opt input {
+  margin: 0;
+  cursor: pointer;
+}
+.te-find-err {
+  color: var(--danger, #c44);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* ProseMirror find-match decoration */
+.ProseMirror .te-find-match {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.ProseMirror .te-find-match-active {
+  background: color-mix(in srgb, var(--warn, #c80) 56%, transparent);
+  outline: 1px solid var(--warn, #c80);
+}
+
+/* ─── Drag handle (Phase 3d) ────────────────────────────────── */
+/*
+   tiptap-extension-global-drag-handle injects a single absolutely
+   positioned <div class="drag-handle"> that follows the hovered
+   block. We style it as a slim grab handle in the left margin of the
+   editor; it disappears unless the cursor is over a block.
+*/
+.drag-handle {
+  position: fixed;
+  opacity: 0;
+  width: 22px;
+  height: 22px;
+  z-index: 50;
+  cursor: grab;
+  border-radius: 4px;
+  background-color: transparent;
+  background-image: radial-gradient(circle, var(--fg-mute) 1.2px, transparent 1.4px);
+  background-size: 6px 6px;
+  background-position: center;
+  background-repeat: repeat;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease;
+}
+.drag-handle:hover {
+  opacity: 1;
+  background-color: var(--glass-highlight);
+}
+.ProseMirror:hover ~ .drag-handle,
+.ProseMirror:focus ~ .drag-handle,
+.drag-handle.show {
+  opacity: 0.55;
+}
+.drag-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+.ProseMirror.dragging {
+  cursor: grabbing;
+}
+.ProseMirror .ProseMirror-selectednode.is-dragging,
+.ProseMirror [data-dragging="true"] {
+  opacity: 0.45;
+}
+/* Drop-cursor line shown while dragging */
+.prosemirror-dropcursor-block,
+.ProseMirror-dropcursor {
+  background: var(--accent) !important;
+  height: 2px !important;
+  border-radius: 1px;
+  box-shadow: 0 0 4px var(--accent-glow, transparent);
+}
+
+/* ============================================================
+   Phase 5e — Mobile authoring
+   Below 768 px we collapse the rich toolbar to a sticky bottom
+   action bar so writers on a phone still have one-tap access to
+   the heavy-rotation block actions (bold, italic, link, list, H2).
+   Tap targets are bumped to 44 × 44 per WCAG.
+   ============================================================ */
+@media (max-width: 768px) {
+  .te-editor-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .te-editor-toolbar-rich {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--glass-border);
+    padding: 6px 10px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.35);
+  }
+  .te-editor-toolbar-rich .te-tb-divider {
+    margin: 0 4px;
+  }
+  .te-tb-btn {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .ed-body {
+    /* Leave room for the sticky toolbar so the cursor isn't hidden */
+    padding-bottom: 80px;
+  }
+}
+
+/* Phase 5e — editor sidebar additions */
+.ed-publish-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+#preview-link-out {
+  margin-top: 8px;
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg);
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* ── Phase 7: paste-to-embed picker ─────────────────────────── */
+/* Floats above the WYSIWYG view when a single bare URL is pasted.
+   Three buttons: Insert embed (primary), Insert link, Cancel. */
+.te-embed-paste {
+  display: none;
+  background: var(--bg-elev, #111);
+  border: 1px solid var(--line, currentColor);
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  max-width: 520px;
+}
+.te-embed-paste-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.te-embed-paste-msg {
+  color: var(--fg-dim, currentColor);
+  padding: 0 6px;
+}
+.te-embed-paste-btn {
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid var(--line, currentColor);
+  background: transparent;
+  color: var(--fg, currentColor);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.te-embed-paste-btn:hover,
+.te-embed-paste-btn:focus-visible {
+  border-color: var(--accent, currentColor);
+  color: var(--accent, currentColor);
+  outline: none;
+}
+.te-embed-paste-btn.primary {
+  background: var(--accent, currentColor);
+  color: var(--accent-on, #000);
+  border-color: var(--accent, currentColor);
+}
+.te-embed-paste-btn.primary:hover,
+.te-embed-paste-btn.primary:focus-visible {
+  background: var(--bg, transparent);
+  color: var(--accent, currentColor);
+}
+.te-embed-paste-btn.ghost {
+  padding: 5px 8px;
+  border-color: transparent;
+  color: var(--fg-mute, currentColor);
+}
+.te-embed-paste-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

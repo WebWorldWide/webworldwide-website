@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <script>
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Editor — Terminal Eighty // Admin</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+    <link rel="stylesheet" href="/css/editor.css" />
+    <link rel="stylesheet" href="/css/media.css" />
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+  </head>
+  <body data-page="editor">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <div class="backdrop" aria-hidden="true">
+      <div class="lava-blob a"></div>
+      <div class="lava-blob b"></div>
+    </div>
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <div class="shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="side-brand" href="/index.html">
+          <span class="tmark s32" aria-hidden="true"></span>
+          <span class="name">
+            TERMINAL<b>EIGHTY</b>
+            <span>· ADMIN · REV 2.0</span>
+          </span>
+        </a>
+        <nav class="side-group" aria-label="Workspace">
+          <div class="side-group-label">Workspace</div>
+          <a class="side-item" href="/index.html"
+            ><span class="ico" aria-hidden="true">⌂</span><span>Dashboard</span><span></span
+          ></a>
+          <a class="side-item active" aria-current="page" href="/editor.html"
+            ><span class="ico" aria-hidden="true">≡</span><span>Editor</span><span></span
+          ></a>
+          <a class="side-item" href="/index.html#media"
+            ><span class="ico" aria-hidden="true">▦</span><span>Media</span><span></span
+          ></a>
+        </nav>
+        <nav class="side-group" aria-label="System">
+          <div class="side-group-label">System</div>
+          <a class="side-item" href="/index.html#stats"
+            ><span class="ico" aria-hidden="true">∿</span><span>Stats</span><span></span
+          ></a>
+          <a class="side-item" href="/index.html#settings"
+            ><span class="ico" aria-hidden="true">◐</span><span>Settings</span><span></span
+          ></a>
+        </nav>
+        <div class="side-foot">
+          <div class="row">
+            <span><span class="pip"></span>EDITING</span
+            ><span><b id="editor-side-status">Draft</b></span>
+          </div>
+          <div class="row"><span>WORDS</span><span id="editor-side-words">0</span></div>
+          <div class="row"><span>READ</span><span id="editor-side-read">0 min</span></div>
+        </div>
+      </aside>
+
+      <main id="main" class="main" tabindex="-1">
+        <header class="topbar">
+          <div class="crumb">
+            <a
+              href="/index.html"
+              style="
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                color: inherit;
+                text-decoration: none;
+              "
+            >
+              <span class="tmark s24" aria-hidden="true"></span>
+              <span>Posts</span>
+            </a>
+            <span aria-hidden="true">/</span>
+            <span><b id="crumb-editor">New post</b></span>
+          </div>
+          <div class="topbar-spacer"></div>
+          <span class="editor-metrics" aria-live="polite"
+            ><b id="editor-words">0 words</b> · <span id="editor-read">0 min</span></span
+          >
+          <span class="ed-saved" id="save-status" aria-live="polite"></span>
+          <div class="topbar-actions">
+            <button
+              type="button"
+              class="btn ghost"
+              id="btn-toc-toggle"
+              title="Toggle table of contents"
+              aria-pressed="true"
+              aria-label="Toggle table of contents"
+            >
+              <span aria-hidden="true">≡</span>
+            </button>
+            <button
+              type="button"
+              class="btn ghost"
+              id="btn-seo-toggle"
+              title="Toggle SEO preview"
+              aria-pressed="false"
+              aria-label="Toggle SEO preview"
+            >
+              <span aria-hidden="true">⌕</span>
+            </button>
+            <button
+              type="button"
+              class="btn ghost"
+              id="btn-theme"
+              title="Toggle theme"
+              aria-pressed="false"
+              aria-label="Toggle theme"
+            >
+              <span id="btn-theme-glyph" aria-hidden="true">☾</span>
+            </button>
+            <button type="button" class="btn" id="btn-save">Save draft</button>
+            <button type="button" class="btn solid" id="btn-publish">Save & publish</button>
+          </div>
+        </header>
+
+        <div id="stage" class="stage">
+          <div class="editor-layout" data-toc-open="true" data-seo-open="false">
+            <!-- ============ EDITOR PANE ============ -->
+            <section class="editor-pane" aria-label="Post body">
+              <div class="editor-head">
+                <span class="ed-pill" id="ed-status-pill">DRAFT</span>
+                <span class="ed-saved"
+                  ><span class="pip" aria-hidden="true"></span
+                  ><span id="ed-saved-text">Unsaved</span></span
+                >
+                <div class="editor-head-r">
+                  <button
+                    type="button"
+                    class="btn ghost"
+                    id="btn-preview"
+                    title="Preview (Phase 3)"
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    class="btn danger ghost"
+                    id="btn-delete"
+                    style="display: none"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div class="ed-title-wrap">
+                <label class="sr-only" for="post-title">Post title</label>
+                <input
+                  class="ed-title"
+                  id="post-title"
+                  placeholder="Untitled post"
+                  autocomplete="off"
+                  spellcheck="true"
+                />
+                <div class="ed-slug">
+                  <span class="root">terminaleighty.com/posts/</span>
+                  <label class="sr-only" for="post-slug">Slug</label>
+                  <input id="post-slug" placeholder="post-slug" autocomplete="off" />
+                </div>
+              </div>
+
+              <div class="ed-body">
+                <!--
+                  Phase 3a: TipTap (WYSIWYG) + CodeMirror (Markdown source).
+                  Bundled via admin/scripts/build-editor.mjs to editor.bundle.js.
+                  The bundle's mount() takes over this element, inserts its own
+                  toolbar + ProseMirror + CM6 surfaces, and appends a hidden
+                  <textarea id="editor-fallback"> as the Markdown source-of-truth
+                  for editor.js / media.js consumers. If JS fails to load, the
+                  <noscript> message + the prerendered <textarea> stay usable.
+                -->
+                <div id="editor-root" data-phase="3a">
+                  <noscript>
+                    <p style="color: var(--danger); font-family: var(--mono); font-size: 12px">
+                      JavaScript required to edit posts.
+                    </p>
+                  </noscript>
+                  <label class="sr-only" for="editor-fallback">Post body (Markdown)</label>
+                  <textarea
+                    id="editor-fallback"
+                    placeholder="Write your post in Markdown…"
+                    spellcheck="true"
+                    autocomplete="off"
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="editor-foot" role="status" aria-label="Editor status">
+                <span class="editor-foot-stats">
+                  <span><span id="foot-words">0</span> words</span>
+                  <span class="editor-foot-sep" aria-hidden="true">·</span>
+                  <span><span id="foot-chars">0</span> chars</span>
+                  <span class="editor-foot-sep" aria-hidden="true">·</span>
+                  <span><span id="foot-read">0 min</span> read</span>
+                </span>
+                <div class="editor-foot-r">
+                  <span
+                    class="autosave-indicator"
+                    id="autosave-indicator"
+                    data-state="idle"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    <span class="autosave-pip" aria-hidden="true"></span>
+                    <span class="autosave-text" id="autosave-text">Ready</span>
+                  </span>
+                  <span id="foot-file" style="color: var(--fg-mute)"></span>
+                </div>
+              </div>
+            </section>
+
+            <!-- ============ TOC + SEO AUX COLUMN ============ -->
+            <aside class="ed-aux" aria-label="Editor panels" id="ed-aux">
+              <section
+                class="ed-aux-panel ed-aux-toc"
+                id="ed-toc-panel"
+                aria-label="Table of contents"
+              >
+                <header class="ed-aux-head">
+                  <span>Table of contents</span>
+                  <button
+                    type="button"
+                    class="ed-aux-close"
+                    id="ed-toc-close"
+                    title="Hide table of contents"
+                    aria-label="Hide table of contents"
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </header>
+                <nav class="ed-toc-body" id="ed-toc-body" aria-label="Table of contents">
+                  <p class="ed-aux-empty" id="ed-toc-empty">
+                    Headings will appear here as you add them.
+                  </p>
+                </nav>
+              </section>
+
+              <section
+                class="ed-aux-panel ed-aux-seo"
+                id="ed-seo-panel"
+                aria-label="SEO preview"
+                hidden
+              >
+                <header class="ed-aux-head">
+                  <span>SEO preview</span>
+                  <button
+                    type="button"
+                    class="ed-aux-close"
+                    id="ed-seo-close"
+                    title="Hide SEO preview"
+                    aria-label="Hide SEO preview"
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </header>
+                <div class="ed-seo-body" aria-label="SEO preview">
+                  <div
+                    class="serp-card"
+                    id="serp-card"
+                    role="img"
+                    aria-label="Google search preview"
+                  >
+                    <div class="serp-url">
+                      <span id="serp-domain">terminaleighty.com</span>
+                      <span class="serp-url-sep" aria-hidden="true">›</span>
+                      <span id="serp-slug">post-slug</span>
+                    </div>
+                    <div class="serp-title" id="serp-title">Untitled post</div>
+                    <div class="serp-desc" id="serp-desc">Description appears here.</div>
+                  </div>
+                  <ul class="ed-seo-meta" aria-label="SEO checks">
+                    <li>
+                      <span class="ed-seo-label">Title</span>
+                      <span class="ed-seo-count"><span id="seo-title-len">0</span>/60</span>
+                      <span class="ed-seo-bar" aria-hidden="true">
+                        <span class="ed-seo-bar-fill" id="seo-title-bar"></span>
+                      </span>
+                    </li>
+                    <li>
+                      <span class="ed-seo-label">Description</span>
+                      <span class="ed-seo-count"><span id="seo-desc-len">0</span>/160</span>
+                      <span class="ed-seo-bar" aria-hidden="true">
+                        <span class="ed-seo-bar-fill" id="seo-desc-bar"></span>
+                      </span>
+                    </li>
+                  </ul>
+                  <p class="ed-seo-hint" id="seo-hint">
+                    Description falls back to the first 160 characters of the post body when empty.
+                  </p>
+                </div>
+              </section>
+            </aside>
+
+            <!-- ============ FRONTMATTER SIDEBAR ============ -->
+            <aside class="ed-side" aria-label="Post settings">
+              <details class="ed-panel" open>
+                <summary>
+                  <span>Frontmatter</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
+                <div class="body">
+                  <div class="field">
+                    <label for="post-date">Publish date</label>
+                    <input type="datetime-local" id="post-date" />
+                  </div>
+                  <div class="field">
+                    <label for="post-draft">Status</label>
+                    <select id="post-draft">
+                      <option value="true">Draft</option>
+                      <option value="false">Published</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="post-tags"
+                      >Tags
+                      <span style="text-transform: none; color: var(--fg-mute)"
+                        >(comma-separated)</span
+                      ></label
+                    >
+                    <input
+                      type="text"
+                      id="post-tags"
+                      placeholder="tech, thoughts, code"
+                      autocomplete="off"
+                      list="tag-suggestions"
+                    />
+                    <datalist id="tag-suggestions"></datalist>
+                  </div>
+                  <div class="field">
+                    <label for="post-series">Series</label>
+                    <input
+                      type="text"
+                      id="post-series"
+                      placeholder="(none)"
+                      autocomplete="off"
+                      list="series-suggestions"
+                    />
+                    <datalist id="series-suggestions"></datalist>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Phase 5e: Schedule -->
+              <details class="ed-panel">
+                <summary>
+                  <span>Schedule</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
+                <div class="body">
+                  <div class="field">
+                    <label for="post-publish-at">Publish at (UTC)</label>
+                    <input type="datetime-local" id="post-publish-at" />
+                    <span id="publish-at-badge" class="ed-publish-badge" hidden></span>
+                  </div>
+                  <p
+                    style="
+                      margin: 4px 0 0;
+                      color: var(--fg-mute);
+                      font-size: 10.5px;
+                      letter-spacing: 0.06em;
+                    "
+                  >
+                    Drafts with a future publish_at flip live automatically.
+                  </p>
+                </div>
+              </details>
+
+              <!-- Phase 5e: Cover image -->
+              <details class="ed-panel">
+                <summary>
+                  <span>Cover image</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
+                <div class="body">
+                  <div class="field">
+                    <label for="post-cover">Image URL</label>
+                    <input type="text" id="post-cover" placeholder="/images/2026/05/example.jpg" />
+                  </div>
+                  <div class="field">
+                    <label for="post-cover-alt">Alt text</label>
+                    <input type="text" id="post-cover-alt" placeholder="What's in the image" />
+                  </div>
+                  <button
+                    type="button"
+                    class="btn"
+                    id="btn-pick-cover"
+                    style="justify-content: center"
+                  >
+                    Pick from library
+                  </button>
+                  <div id="cover-preview" hidden style="margin-top: 10px">
+                    <img
+                      id="cover-preview-img"
+                      alt=""
+                      style="max-width: 100%; border-radius: 4px; border: 1px solid var(--line)"
+                    />
+                  </div>
+                </div>
+              </details>
+
+              <!-- Phase 5e: Custom CSS / JS — admin-only, see CONTRIBUTING. -->
+              <details class="ed-panel">
+                <summary>
+                  <span>Custom CSS / JS</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
+                <div class="body">
+                  <div class="field">
+                    <label for="post-custom-css">Custom CSS</label>
+                    <textarea
+                      id="post-custom-css"
+                      rows="4"
+                      placeholder="/* scoped to this post only */"
+                    ></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="post-custom-js">Custom JS</label>
+                    <textarea
+                      id="post-custom-js"
+                      rows="4"
+                      placeholder="// runs once on this post"
+                    ></textarea>
+                  </div>
+                  <p style="margin: 4px 0 0; color: var(--fg-mute); font-size: 10.5px">
+                    Trust model: only authenticated admin can set these.
+                  </p>
+                </div>
+              </details>
+
+              <!-- Phase 5e: Preview link -->
+              <details class="ed-panel">
+                <summary>
+                  <span>Draft preview</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
+                <div class="body">
+                  <button
+                    type="button"
+                    class="btn"
+                    id="btn-preview-link"
+                    style="justify-content: center"
+                  >
+                    Generate preview link
+                  </button>
+                  <input
+                    type="text"
+                    id="preview-link-out"
+                    readonly
+                    placeholder="(7-day signed URL appears here)"
+                  />
+                </div>
+              </details>
+
+              <details class="ed-panel" open>
+                <summary><span>SEO</span><span class="chev" aria-hidden="true">›</span></summary>
+                <div class="body">
+                  <div class="field">
+                    <label for="post-desc">Meta description</label>
+                    <textarea
+                      id="post-desc"
+                      rows="3"
+                      placeholder="A short summary for search engines and social cards."
+                    ></textarea>
+                  </div>
+                  <div class="field">
+                    <label>Social preview</label>
+                    <div class="social-preview" aria-hidden="true">
+                      <div class="domain">terminaleighty.com</div>
+                      <div class="title" id="sp-title">Post title</div>
+                      <div class="desc" id="sp-desc">Description appears here…</div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="ed-panel">
+                <summary><span>Media</span><span class="chev" aria-hidden="true">›</span></summary>
+                <div class="body">
+                  <div
+                    class="ed-dropzone"
+                    id="ed-dropzone"
+                    tabindex="0"
+                    role="button"
+                    aria-label="Upload image"
+                  >
+                    <span class="ico" aria-hidden="true">↥</span>
+                    <span>Drop file or click to upload</span>
+                  </div>
+                  <input
+                    type="file"
+                    id="ed-file-input"
+                    accept="image/*,video/*"
+                    style="display: none"
+                  />
+                  <div class="recent-media" id="ed-recent-media" aria-live="polite"></div>
+                  <p
+                    style="
+                      margin: 10px 0 0;
+                      color: var(--fg-mute);
+                      font-size: 10.5px;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                    "
+                  >
+                    Phase 5 adds processing status
+                  </p>
+                </div>
+              </details>
+
+              <details class="ed-panel" open>
+                <summary>
+                  <span>Publish</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
+                <div class="body" style="display: flex; flex-direction: column; gap: 10px">
+                  <button type="button" class="btn" id="btn-save-2" style="justify-content: center">
+                    Save draft
+                  </button>
+                  <button
+                    type="button"
+                    class="btn solid"
+                    id="btn-publish-2"
+                    style="justify-content: center"
+                  >
+                    Save & publish
+                  </button>
+                  <p
+                    style="
+                      margin: 4px 0 0;
+                      color: var(--fg-mute);
+                      font-size: 10.5px;
+                      letter-spacing: 0.06em;
+                    "
+                  >
+                    ⌘S saves. Autosave every 10s after typing stops. ⌘F finds / replaces.
+                  </p>
+                </div>
+              </details>
+            </aside>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/dropzone.js"></script>
+    <script src="/js/media.js"></script>
+    <!-- TipTap + CodeMirror bundle. Built by admin/scripts/build-editor.mjs. -->
+    <script src="/js/editor.bundle.js"></script>
+    <script src="/js/editor.js"></script>
+  </body>
+</html>

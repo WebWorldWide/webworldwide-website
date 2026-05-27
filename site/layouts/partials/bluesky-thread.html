@@ -1,0 +1,54 @@
+{{/*
+  bluesky-thread.html — Phase 9 Bluesky thread embed.
+
+  Reads `.Params.bluesky_uri` (set by the CMS publish hook after the
+  post is cross-posted to Bluesky). Renders a click-to-load
+  placeholder following the same pattern as the embed-* shortcodes:
+  the heavy iframe / embed.js loader only fires on user activation,
+  so Lighthouse stays in the green and no Bluesky trackers run for
+  drive-by readers.
+
+  The placeholder is a real `<button>` so it's keyboard- and AT-
+  reachable from day one. The official Bluesky embed iframe lives at
+  https://embed.bsky.app/embed?uri=at://… and is loaded by
+  site/static/js/embed-loader.js (data-embed-type="bluesky-thread"
+  handler) on click. Replies in the BSky thread render naturally
+  below the post; comments stay on Bluesky.
+
+  AT URI parsing:
+    at://<handle-or-did>/app.bsky.feed.post/<rkey>
+    split → ["<handle>", "app.bsky.feed.post", "<rkey>"]
+    handle = index 0
+    rkey   = index 2
+*/}}
+{{ with .Params.bluesky_uri }}
+  {{ $atUri := . }}
+  {{ $parts := split (replace $atUri "at://" "") "/" }}
+  {{ if ge (len $parts) 3 }}
+    {{ $handle := index $parts 0 }}
+    {{ $postId := index $parts 2 }}
+    {{ $webUrl := printf "https://bsky.app/profile/%s/post/%s" $handle $postId }}
+    <section class="bluesky-thread" data-provider="bluesky" aria-label="Bluesky discussion">
+      <h2 class="bluesky-thread-heading">Discussion on Bluesky</h2>
+      {{/* Hugo's URL-attr safety pass turns `at://...` into ZgotmplZ
+           because the at: scheme isn't on its allow-list. The URI is
+           always one we just parsed out of front-matter (we control
+           every byte that lands in `bluesky_uri`), so `safeURL` is
+           safe here. */}}
+      <button type="button" class="embed-placeholder embed-placeholder-text"
+              data-embed-href="{{ $webUrl }}"
+              data-embed-uri="{{ $atUri | safeURL }}"
+              data-embed-type="bluesky-thread"
+              aria-label="Load Bluesky thread discussion for this post">
+        <span class="embed-play-icon" aria-hidden="true">&#9742;</span>
+        <span class="embed-meta">View thread on Bluesky</span>
+        <span class="embed-host">bsky.app</span>
+      </button>
+      <noscript>
+        <p class="bluesky-thread-noscript">
+          <a href="{{ $webUrl }}" rel="noopener external">View thread on Bluesky</a>
+        </p>
+      </noscript>
+    </section>
+  {{ end }}
+{{ end }}

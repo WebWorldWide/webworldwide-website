@@ -1,0 +1,26 @@
+{{/*
+  embed-mastodon — Phase 7 click-to-load Mastodon status placeholder.
+
+  Params:
+    url    — Canonical status URL (required)
+    host   — Mastodon instance host (required — per-instance oEmbed)
+    user   — Handle without `@` (required for the visible label)
+    id     — Numeric status id (required for the embed target)
+    title  — Accessible / visible label (optional)
+*/}}
+{{- $url := .Get "url" -}}
+{{- $host := .Get "host" -}}
+{{- $user := .Get "user" -}}
+{{- $id := .Get "id" -}}
+{{- $title := .Get "title" | default (printf "Toot by @%s@%s" $user $host) -}}
+<figure class="embed embed-mastodon" data-provider="mastodon">
+  <button type="button" class="embed-placeholder embed-placeholder-text"
+          data-embed-href="https://{{ $host }}/@{{ $user }}/{{ $id }}/embed"
+          data-embed-type="iframe"
+          aria-label="Load Mastodon post: {{ $title }}">
+    <span class="embed-play-icon" aria-hidden="true">&#9742;</span>
+    <span class="embed-meta">{{ $title }}</span>
+    <span class="embed-host">{{ $host }}</span>
+  </button>
+  <noscript><a href="{{ $url }}" rel="noopener external">{{ $title }}</a></noscript>
+</figure>

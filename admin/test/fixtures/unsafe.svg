@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     onload="alert('xss-via-onload')">
+  <title>Unsafe SVG fixture</title>
+  <script type="application/javascript">alert('xss-via-script')</script>
+  <foreignObject width="24" height="24">
+    <iframe xmlns="http://www.w3.org/1999/xhtml" src="javascript:alert(1)"></iframe>
+  </foreignObject>
+  <a xlink:href="javascript:alert(1)" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <circle cx="12" cy="12" r="10" fill="red" onclick="alert(2)"/>
+  </a>
+</svg>

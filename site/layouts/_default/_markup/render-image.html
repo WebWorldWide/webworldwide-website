@@ -1,0 +1,51 @@
+{{- /*
+  render-image.html — Phase 11 goldmark image render hook.
+
+  Hugo calls this for every markdown image (`![alt](src "title")`)
+  inside a regular content file. We do three things every image needs
+  for a green Lighthouse score:
+
+    1. `loading="lazy"`  — defer below-the-fold images.
+    2. `decoding="async"` — non-blocking decode.
+    3. `width` / `height` — emitted when the image is a Hugo page
+       resource (bundled image in the post directory) so the browser
+       reserves layout space and CLS stays at 0.
+
+  For images referenced by absolute URL (the common case — the admin
+  writes /images/yyyy/mm/<file>.png paths to the static media library)
+  we can't measure intrinsic dimensions at build time without a network
+  round-trip. The attachment-image partial (Phase 6) carries the
+  dimensions in `site/data/media.json` for those — but markdown's
+  `![]()` syntax doesn't go through that partial. Authors should
+  prefer the attachment / gallery shortcodes for media library
+  uploads; raw markdown image syntax is a fallback path.
+
+  Inputs (from goldmark):
+    .Destination   src URL
+    .Title         optional title attribute
+    .Text          alt text (rendered markdown)
+    .PlainText     alt text (plain text)
+    .Page          the owning page (for .Resources.GetMatch)
+*/ -}}
+{{- $dest := .Destination -}}
+{{- $alt := .PlainText | default .Text -}}
+{{- $title := .Title -}}
+{{- $img := "" -}}
+{{- if and .Page (not (or (hasPrefix $dest "http://") (hasPrefix $dest "https://") (hasPrefix $dest "//"))) -}}
+  {{- $img = .Page.Resources.GetMatch (path.Base $dest) -}}
+{{- end -}}
+{{- if $img -}}
+  <img src="{{ $img.RelPermalink }}"
+       alt="{{ $alt }}"
+       {{ with $title }}title="{{ . }}"{{ end }}
+       width="{{ $img.Width }}"
+       height="{{ $img.Height }}"
+       loading="lazy"
+       decoding="async" />
+{{- else -}}
+  <img src="{{ $dest }}"
+       alt="{{ $alt }}"
+       {{ with $title }}title="{{ . }}"{{ end }}
+       loading="lazy"
+       decoding="async" />
+{{- end -}}

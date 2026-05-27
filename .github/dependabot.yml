@@ -1,0 +1,54 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Chicago
+    open-pull-requests-limit: 5
+    labels: [dependencies, root]
+    groups:
+      eslint:
+        patterns: ["eslint*", "@eslint/*"]
+      stylelint:
+        patterns: ["stylelint*"]
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
+      playwright:
+        patterns: ["@playwright/*", "@axe-core/*"]
+      lighthouse:
+        patterns: ["@lhci/*"]
+      types:
+        patterns: ["@types/*", "typescript"]
+
+  - package-ecosystem: npm
+    directory: /admin
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Chicago
+    open-pull-requests-limit: 5
+    labels: [dependencies, admin]
+    groups:
+      express:
+        patterns: ["express*", "cookie-parser", "cors", "helmet", "csrf-csrf"]
+      webauthn:
+        patterns: ["@simplewebauthn/*"]
+
+  - package-ecosystem: npm
+    directory: /migrate
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    labels: [dependencies, migrate]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies, ci]

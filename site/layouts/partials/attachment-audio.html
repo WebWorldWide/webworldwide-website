@@ -1,0 +1,32 @@
+{{/*
+  attachment-audio — Phase 6 audio attachment.
+
+  Renders the Phase 5b waveform image as a visual "poster" above an
+  <audio controls> element with MP3 + Opus sources. Falls back to the
+  original file's URL if conversions haven't landed yet.
+*/}}
+{{- $m := .media -}}
+{{- $caption := .caption -}}
+{{- $conv := default (dict) $m.conversions -}}
+{{- $mp3 := default $m.original_url (index $conv "mp3-128") -}}
+{{- $opus := index $conv "opus-96" -}}
+{{- $waveform := index $conv "waveform" -}}
+<figure class="attachment attachment-audio">
+  {{- with $waveform -}}
+    <img class="attachment-audio-waveform" src="{{ . }}" alt="Audio waveform for {{ $m.original_filename }}" loading="lazy" decoding="async" />
+  {{- end -}}
+  <audio controls preload="metadata">
+    {{- with $opus -}}
+      <source src="{{ . }}" type="audio/ogg; codecs=opus" />
+    {{- end -}}
+    <source src="{{ $mp3 }}" type="audio/mpeg" />
+    <p>Your browser does not support embedded audio. <a href="{{ $m.original_url }}" download="{{ $m.original_filename }}">Download the file</a>.</p>
+  </audio>
+  {{- if $caption -}}
+    <figcaption>{{ $caption }}</figcaption>
+  {{- end -}}
+  <p class="attachment-download">
+    <a href="{{ $m.original_url }}" download="{{ $m.original_filename }}">Download original</a>
+    <span class="attachment-meta">{{ $m.original_filename }}</span>
+  </p>
+</figure>

@@ -1,0 +1,51 @@
+{{- /*
+  index.webfinger.json — Phase 8 Bridgy Fed handshake.
+
+  Rendered to `/.well-known/webfinger` (no extension; the output
+  format declared in hugo.toml drops it). Returns a Webfinger JRD
+  (JSON Resource Descriptor, RFC 7033) so that any Fediverse server
+  resolving `@blog@terminaleighty.com` finds the Bridgy Fed actor
+  and delegates inbox/outbox/follow there.
+
+  Spec: https://fed.brid.gy/docs#how-web
+        https://datatracker.ietf.org/doc/html/rfc7033
+
+  We deliberately do NOT filter on `?resource=` here — GitHub Pages
+  serves the same static file for every querystring. Bridgy Fed
+  documents this as the supported pattern for static sites: respond
+  unconditionally with the actor's JRD. Mastodon, Pixelfed, etc.
+  ignore the extra rel entries that don't match what they asked for.
+
+  The actor handle (`preferredUsername`) is hard-coded to `blog` to
+  match site/static/actor.json. If you ever change it, update both.
+*/ -}}
+{{- $host := replace site.BaseURL "https://" "" | strings.TrimRight "/" -}}
+{{- $bridgyHandle := printf "acct:blog@%s" $host -}}
+{{- $bridgyActor := printf "https://fed.brid.gy/web/%s" $host -}}
+{{- $profileURL := site.BaseURL -}}
+{{- $jrd := dict
+  "subject" $bridgyHandle
+  "aliases" (slice $profileURL $bridgyActor)
+  "links" (slice
+    (dict
+      "rel" "http://webfinger.net/rel/profile-page"
+      "type" "text/html"
+      "href" $profileURL
+    )
+    (dict
+      "rel" "self"
+      "type" "application/activity+json"
+      "href" $bridgyActor
+    )
+    (dict
+      "rel" "http://schemas.google.com/g/2010#updates-from"
+      "type" "application/atom+xml"
+      "href" (printf "%sindex.xml" $profileURL)
+    )
+    (dict
+      "rel" "http://ostatus.org/schema/1.0/subscribe"
+      "template" (printf "%s?url={uri}" $bridgyActor)
+    )
+  )
+-}}
+{{- $jrd | jsonify (dict "indent" "  ") -}}

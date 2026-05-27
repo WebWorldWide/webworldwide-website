@@ -1,0 +1,12 @@
+{{ define "main" }}
+<article class="page">
+  <div class="page-eyebrow">
+    <span class="about-pip" aria-hidden="true"></span>
+    [/{{ .File.BaseFileName | default (lower .Title) }}]
+  </div>
+  <h1 class="page-title">{{ .Title }}</h1>
+  <div class="prose">
+    {{ .Content }}
+  </div>
+</article>
+{{ end }}

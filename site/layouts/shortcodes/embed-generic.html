@@ -1,0 +1,26 @@
+{{/*
+  embed-generic — Phase 7 server-rendered Open Graph card.
+
+  Used for any URL that doesn't match a first-class provider above. No
+  iframe; no JS dependency. Hugo's `urls.Parse` extracts the host for
+  the dim domain label.
+
+  Params:
+    url          — Canonical URL the card links to (required)
+    title        — OG / Twitter title (required)
+    description  — OG / Twitter description (optional)
+    image        — OG / Twitter image URL (optional)
+*/}}
+{{- $url := .Get "url" -}}
+{{- $title := .Get "title" -}}
+{{- $desc := .Get "description" -}}
+{{- $image := .Get "image" -}}
+{{- $host := (urls.Parse $url).Host -}}
+<a class="embed embed-generic og-card" href="{{ $url }}" rel="noopener external" data-provider="generic">
+  {{ with $image }}<img class="og-card-image" src="{{ . }}" alt="" loading="lazy" decoding="async">{{ end }}
+  <div class="og-card-body">
+    <span class="og-card-title">{{ $title }}</span>
+    {{ with $desc }}<span class="og-card-desc">{{ . | truncate 200 }}</span>{{ end }}
+    <span class="og-card-domain">{{ $host }}</span>
+  </div>
+</a>

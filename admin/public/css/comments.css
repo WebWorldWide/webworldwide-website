@@ -1,0 +1,651 @@
+/* ============================================================
+   Phase 8.5 — Comments moderation page (/#comments)
+   ============================================================ */
+
+.te-cm-shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+}
+
+/* ---- Left rail: status filter ------------------------------ */
+
+.te-cm-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 10px;
+  height: fit-content;
+  position: sticky;
+  top: 12px;
+}
+
+.te-cm-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-dim);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.te-cm-nav-item:hover,
+.te-cm-nav-item:focus-visible {
+  background: var(--glass-tint);
+  color: var(--fg);
+  outline: none;
+}
+
+.te-cm-nav-item[aria-current="page"],
+.te-cm-nav-item.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.te-cm-nav-item .count {
+  font-size: 10.5px;
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-border);
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--fg-mute);
+}
+
+.te-cm-nav-item.active .count {
+  background: var(--accent-on);
+  color: var(--accent);
+}
+
+/* ---- Right side: comments table --------------------------- */
+
+.te-cm-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.te-cm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.te-cm-toolbar input[type="search"],
+.te-cm-toolbar select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  min-width: 120px;
+}
+
+.te-cm-toolbar input[type="search"]:focus,
+.te-cm-toolbar select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.te-cm-toolbar .te-cm-spacer {
+  flex: 1;
+}
+
+.te-cm-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.te-cm-live .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fg-mute);
+}
+
+.te-cm-live[data-state="live"] .dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.te-cm-live[data-state="down"] .dot {
+  background: var(--danger);
+}
+
+/* ---- Row ------------------------------------------------- */
+
+.te-cm-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.te-cm-row {
+  display: grid;
+  grid-template-columns: 24px minmax(120px, 200px) minmax(0, 1fr) 90px 120px;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.te-cm-row:hover {
+  background: var(--glass-tint);
+}
+
+.te-cm-row.unread {
+  border-left: 2px solid var(--accent);
+}
+
+.te-cm-row.selected {
+  background: var(--accent-soft);
+}
+
+.te-cm-row-head {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  background: var(--glass-tint);
+  cursor: default;
+}
+
+.te-cm-row-head:hover {
+  background: var(--glass-tint);
+}
+
+.te-cm-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+}
+
+.te-cm-author {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.te-cm-author .name {
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.te-cm-author .badge {
+  display: inline-block;
+  font-size: 9.5px;
+  padding: 0 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--glass-border);
+  color: var(--fg-mute);
+  width: fit-content;
+}
+
+.te-cm-author .badge.remark42 {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.te-cm-author .badge.webmention {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.te-cm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.te-cm-body .post {
+  color: var(--fg-mute);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.te-cm-body .excerpt {
+  color: var(--fg-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.te-cm-status {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-mute);
+  align-self: center;
+}
+
+/*
+  Phase 10 color-independence: every status pairs a glyph with the
+  color so users with monochrome vision (or in print) still get the
+  signal. The glyphs are pure CSS so we don't have to update the
+  comments.js render path. Decorative pseudo-elements only — the
+  status text itself ("spam", "pending", "deleted", "pinned") still
+  carries the semantic information for screen readers.
+*/
+.te-cm-status::before {
+  display: inline-block;
+  margin-right: 4px;
+  font-weight: 700;
+}
+.te-cm-status.s-visible::before {
+  content: "✓ ";
+  color: var(--accent);
+}
+.te-cm-status.s-pinned {
+  color: var(--accent);
+}
+.te-cm-status.s-pinned::before {
+  content: "★ ";
+}
+.te-cm-status.s-spam,
+.te-cm-status.s-deleted {
+  color: var(--danger);
+}
+.te-cm-status.s-spam::before {
+  content: "⨯ ";
+}
+.te-cm-status.s-deleted::before {
+  content: "− ";
+}
+.te-cm-status.s-pending {
+  color: var(--warn);
+}
+.te-cm-status.s-pending::before {
+  content: "… ";
+}
+
+.te-cm-ts {
+  color: var(--fg-mute);
+  font-size: 11px;
+  text-align: right;
+  align-self: center;
+}
+
+.te-cm-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--fg-mute);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.te-cm-error {
+  padding: 16px;
+  border-left: 2px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 12px;
+  margin: 12px 16px 0;
+  border-radius: 2px;
+}
+
+/* ---- Drawer ---------------------------------------------- */
+
+.te-cm-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(620px, 100vw);
+  background: var(--bg-elev);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -20px 0 60px -20px rgba(0, 0, 0, 0.6);
+  z-index: 60;
+  transform: translateX(100%);
+  transition: transform 180ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.te-cm-drawer.open {
+  transform: translateX(0);
+}
+
+.te-cm-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.te-cm-drawer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.te-cm-detail-header {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.te-cm-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  object-fit: cover;
+}
+
+.te-cm-detail-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.te-cm-detail-name b {
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.te-cm-detail-name a {
+  color: var(--fg-mute);
+  font-size: 11px;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.te-cm-detail-content {
+  border-left: 2px solid var(--glass-border);
+  padding: 0 12px;
+  color: var(--fg-dim);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.te-cm-detail-content code {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.te-cm-detail-meta {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--fg-mute);
+  font-family: var(--mono);
+  font-size: 11px;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 12px;
+}
+
+.te-cm-detail-meta a {
+  color: var(--accent);
+}
+
+.te-cm-reply {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.te-cm-reply textarea {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 4px;
+  min-height: 96px;
+  resize: vertical;
+}
+
+.te-cm-reply textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.te-cm-reply .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.te-cm-reply .row .hint {
+  color: var(--fg-mute);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.te-cm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--glass-border);
+  background: var(--bg-card);
+}
+
+/* ---- Bulk-action bar ------------------------------------- */
+
+.te-cm-bulk-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.45);
+  z-index: 70;
+}
+
+.te-cm-bulk-bar[hidden] {
+  display: none;
+}
+
+/* ---- Footer pagination ----------------------------------- */
+
+.te-cm-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+
+.te-cm-pager button {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--fg-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.te-cm-pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.te-cm-pager button:not(:disabled):hover,
+.te-cm-pager button:not(:disabled):focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+/* ---- Inbox widget on dashboard --------------------------- */
+
+.te-cm-inbox {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+
+.te-cm-inbox-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms;
+}
+
+.te-cm-inbox-card:hover,
+.te-cm-inbox-card:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.te-cm-inbox-card .label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-mute);
+}
+
+.te-cm-inbox-card .val {
+  font-family: var(--mono);
+  font-size: 28px;
+  color: var(--fg);
+  line-height: 1;
+}
+
+.te-cm-inbox-card .val.has-new {
+  color: var(--accent);
+}
+
+.te-cm-inbox-card .sub {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+}
+
+/* ---- Sidebar comments badge ------------------------------ */
+
+.side-item .badge.cm {
+  background: var(--accent);
+  color: var(--accent-on);
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.side-item .badge.cm.zero {
+  display: none;
+}
+
+/* ---- Responsive ----------------------------------------- */
+
+@media (max-width: 900px) {
+  .te-cm-shell {
+    grid-template-columns: 1fr;
+  }
+  .te-cm-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .te-cm-row {
+    grid-template-columns: 24px 1fr 80px;
+    grid-template-areas:
+      "check author ts"
+      "body body body"
+      "status status status";
+  }
+  .te-cm-check {
+    grid-area: check;
+  }
+  .te-cm-author {
+    grid-area: author;
+  }
+  .te-cm-body {
+    grid-area: body;
+    white-space: normal;
+  }
+  .te-cm-body .excerpt {
+    white-space: normal;
+  }
+  .te-cm-ts {
+    grid-area: ts;
+  }
+  .te-cm-status {
+    grid-area: status;
+  }
+  .te-cm-drawer {
+    width: 100vw;
+  }
+}

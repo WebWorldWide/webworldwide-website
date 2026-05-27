@@ -1,0 +1,174 @@
+name: Quality
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Bumped to Node 22 (LTS) because the Node 22+ test runner evaluates
+  # `skip` lazily — the skipOpts getter pattern the admin tests use to
+  # defer "is ffmpeg / better-sqlite3 available" decisions to `before()`
+  # only works under the new semantics. Node 20 evaluates skip at test
+  # registration and would run the body of a self-skipping test.
+  NODE_VERSION: "22"
+
+jobs:
+  lint:
+    name: Lint (${{ matrix.task }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - lint:js
+          - lint:css
+          - lint:md
+          - lint:prettier
+          - lint:types
+          - lint:html-admin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run ${{ matrix.task }}
+        run: npm run ${{ matrix.task }}
+
+  lint-html-site:
+    name: Lint (lint:html-site, depends on hugo build)
+    runs-on: ubuntu-latest
+    env:
+      HUGO_VERSION: 0.161.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Hugo
+        run: |
+          wget -O "${{ runner.temp }}/hugo.deb" "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          sudo dpkg -i "${{ runner.temp }}/hugo.deb"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Cache Hugo modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/hugo_cache
+          key: hugo-${{ runner.os }}-${{ hashFiles('site/hugo.toml') }}
+          restore-keys: |
+            hugo-${{ runner.os }}-
+
+      - name: Build Hugo (so htmlhint has output to scan)
+        env:
+          HUGO_CACHEDIR: ${{ runner.temp }}/hugo_cache
+        run: cd site && hugo --gc --minify --printPathWarnings
+
+      - name: Lint generated HTML
+        run: npm run lint:html-site
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: scripts
+          # Only fail on warning+; the `note`-level findings (mostly
+          # SC2086 "quote variables" + SC2162 "read -r") are noise that
+          # would require touching every bootstrap script. Phase 13 can
+          # circle back if they bite us; the rule is opt-in.
+          severity: warning
+
+  test-site:
+    name: Test (site / Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            admin/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      # The dev-script tests (scripts/dev/__tests__) + the admin frontend
+      # Vitest suite both load native modules out of admin/node_modules —
+      # better-sqlite3 and bcrypt. The committed admin/node_modules ships
+      # whichever platform the latest committer ran `npm install` on, so
+      # we always re-install on Linux here to pick up Linux prebuilds.
+      - name: Install admin dependencies (Linux prebuilt binaries)
+        working-directory: admin
+        run: npm ci
+
+      - name: Run site Vitest suite
+        run: npm run test:site
+
+  test-admin:
+    name: Test (admin / node --test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            admin/package-lock.json
+
+      - name: Install system deps (ffmpeg + poppler for conversion tests)
+        # Phase 5b/5c conversion tests shell out to ffmpeg/ffprobe and
+        # pdftoppm. The fluent-ffmpeg availability probe misreports when
+        # the binaries are missing, so the tests can crash with ENOENT
+        # instead of self-skipping — install upfront here.
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg poppler-utils
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install admin dependencies (prebuilt better-sqlite3)
+        working-directory: admin
+        run: npm ci
+
+      - name: Run admin tests
+        run: npm run test:admin

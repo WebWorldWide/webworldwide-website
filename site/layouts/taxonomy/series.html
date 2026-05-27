@@ -1,0 +1,31 @@
+{{ define "main" }}
+{{- /* /series/<name>/ — the term page for one series. Lists posts in
+       publication order (oldest first) so readers consume the series
+       linearly. */ -}}
+{{- $posts := .Pages.ByDate -}}
+<section class="masthead" aria-label="Series">
+  <p class="masthead-tag">
+    <b>// Series</b> &mdash; <b>{{ .Title }}</b>
+  </p>
+  <span class="masthead-status">
+    <span class="pip" aria-hidden="true"></span>
+    <b>{{ len $posts }}</b> {{ if eq (len $posts) 1 }}post{{ else }}posts{{ end }}
+  </span>
+</section>
+
+<div class="divider">
+  <div class="divider-inner">
+    <span class="divider-num">[01]</span>
+    <span class="divider-title">// {{ .Title | upper }} &middot; READING ORDER</span>
+    <div class="divider-line"></div>
+    <span class="divider-action">{{ len $posts }} ENTRIES</span>
+  </div>
+</div>
+
+<div class="list series-reading-order">
+  {{- range $i, $p := $posts -}}
+    {{- $p.Scratch.Set "rowIndex" (add $i 1) -}}
+    {{- partial "post-card.html" $p -}}
+  {{- end -}}
+</div>
+{{ end }}

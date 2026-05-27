@@ -1,0 +1,37 @@
+{{ define "main" }}
+{{- /* /series/ — the taxonomy index. Lists every series with a post
+       count. Hugo also uses this layout as the fallback for term pages
+       if `taxonomy/series.html` doesn't exist, so check `.Kind` and
+       branch. */ -}}
+{{- if eq .Kind "term" }}
+  {{- /* Defer to the per-term layout */ -}}
+  {{ partial "series-term-page.html" . }}
+{{- else }}
+<section class="masthead" aria-label="Series index">
+  <p class="masthead-tag">
+    <b>// Series</b> &mdash; ordered collections of posts.
+  </p>
+</section>
+
+<div class="divider">
+  <div class="divider-inner">
+    <span class="divider-num">[00]</span>
+    <span class="divider-title">// ALL SERIES</span>
+    <div class="divider-line"></div>
+    <span class="divider-action">{{ len .Data.Terms }} SERIES</span>
+  </div>
+</div>
+
+<div class="list series-list">
+  {{- range $name, $taxonomy := .Data.Terms }}
+  <a class="post-card series-card" href="{{ printf "/series/%s/" ($name | urlize) | relURL }}">
+    <span class="card-num">›</span>
+    <span class="card-title-wrap">
+      <span class="card-title">{{ $name }}</span>
+      <span class="card-sub">{{ len $taxonomy.Pages }} {{ if eq (len $taxonomy.Pages) 1 }}post{{ else }}posts{{ end }}</span>
+    </span>
+  </a>
+  {{- end }}
+</div>
+{{- end }}
+{{ end }}

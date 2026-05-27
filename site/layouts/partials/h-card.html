@@ -1,0 +1,79 @@
+{{- /*
+  h-card.html — Phase 8 Fediverse identity block.
+
+  Renders the author identity using microformats2 `h-card` so that:
+    - Bridgy Fed (https://fed.brid.gy) can map this domain to a
+      Fediverse actor at `@<preferredUsername>@terminaleighty.com`
+      by walking `rel="me"` links + the `u-url` self-link.
+    - Mastodon / IndieAuth flows discover the author identity.
+    - In-reply-to / like / repost source pages can attribute the
+      author of a post (when a Fediverse server fetches one of our
+      h-entry post pages).
+
+  Inputs:
+    - site/data/author.json (the source of truth for name / bio /
+      avatar / social URLs). Phase 5e introduced the file; this
+      partial is the first rendering consumer.
+    - site.Title + site.BaseURL as fallbacks.
+
+  Usage:
+    {{ partial "h-card.html" (dict "compact" true) }}    site-footer mode
+    {{ partial "h-card.html" (dict "compact" false) }}   post-page byline mode
+    {{ partial "h-card.html" . }}                        also OK — default = compact
+
+  The `compact` mode hides the bio + Fediverse follow link so the
+  footer stays one row tall on desktop. The non-compact mode adds
+  the bio + a prominent "Follow on the Fediverse" link.
+
+  rel="me" — every social link gets it so IndieAuth + Bridgy Fed
+  verify the identity loop (profile-on-domain ↔ social-on-other-host).
+*/ -}}
+
+{{- $author := site.Data.author | default dict -}}
+{{- $name := $author.name | default site.Params.author | default site.Title -}}
+{{- $url := $author.url | default site.BaseURL -}}
+{{- $bio := $author.bio | default "" -}}
+{{- $avatar := $author.avatar | default "" -}}
+{{- $social := $author.social | default dict -}}
+
+{{- /* `compact` defaults to true: the typical caller is the footer.
+       Post pages opt out by passing `(dict "compact" false)`. */ -}}
+{{- $compact := true -}}
+{{- if reflect.IsMap . -}}
+  {{- if isset . "compact" -}}{{- $compact = .compact -}}{{- end -}}
+{{- end -}}
+
+<div class="h-card{{ if $compact }} h-card--compact{{ end }}">
+  {{- with $avatar -}}
+  <img class="u-photo" src="{{ . }}" alt="" width="40" height="40" loading="lazy" decoding="async" />
+  {{- end }}
+  <div class="h-card-body">
+    <a class="p-name u-url" href="{{ $url }}" rel="me">{{ $name }}</a>
+    {{- if and (not $compact) $bio -}}
+    <p class="p-note">{{ $bio }}</p>
+    {{- end -}}
+    {{- /* rel="me" social links — Bridgy Fed reads these to confirm
+           the domain ↔ Fediverse account mapping. The h-x-* classes
+           below are conventions used by the Mastodon profile parser
+           but not strictly part of microformats2. */ -}}
+    <ul class="h-card-social" aria-label="Social profiles">
+      {{- with $social.bluesky -}}<li><a rel="me" href="{{ . }}">Bluesky</a></li>{{- end -}}
+      {{- with $social.mastodon -}}<li><a rel="me" href="{{ . }}">Mastodon</a></li>{{- end -}}
+      {{- with $social.github -}}<li><a rel="me" href="{{ . }}">GitHub</a></li>{{- end -}}
+      {{- with $social.youtube -}}<li><a rel="me" href="{{ . }}">YouTube</a></li>{{- end -}}
+      {{- with $social.email -}}<li><a rel="me" href="mailto:{{ . }}">Email</a></li>{{- end -}}
+    </ul>
+    {{- if not $compact -}}
+    {{- /* Bridgy Fed "Follow @blog@terminaleighty.com" link.
+           The actor handle is derived from the apex domain — Bridgy
+           Fed treats every web domain as `@<sub>@<domain>` where
+           `<sub>` is configurable via the actor's preferredUsername
+           (see site/static/actor.json — Phase 8 keeps it as "blog"). */ -}}
+    <p class="h-card-follow">
+      <a rel="me" href="https://fed.brid.gy/web/{{ replace site.BaseURL "https://" "" | strings.TrimRight "/" }}">
+        Follow @blog@{{ replace site.BaseURL "https://" "" | strings.TrimRight "/" }} on the Fediverse
+      </a>
+    </p>
+    {{- end -}}
+  </div>
+</div>

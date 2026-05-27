@@ -1,0 +1,88 @@
+{
+  "name": "terminal-eighty-blog",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Terminal Eighty — self-hosted Hugo blog + Node admin CMS. This root package orchestrates lint, test, and CI for the whole monorepo.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "lint": "npm-run-all --aggregate-output --continue-on-error --parallel lint:js lint:css lint:md lint:prettier lint:types lint:html-admin",
+    "lint:js": "eslint .",
+    "lint:js:fix": "eslint . --fix",
+    "lint:css": "stylelint \"site/assets/css/*.css\" \"admin/public/css/*.css\"",
+    "lint:css:fix": "stylelint \"site/assets/css/*.css\" \"admin/public/css/*.css\" --fix",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#admin/node_modules\" \"#migrate/node_modules\" \"#.planning\" \"#Blog\" \"#site/public\" \"#site/resources\" \"#coverage\" \"#playwright-report\" \"#test-results\" \"#.lighthouseci\"",
+    "lint:prettier": "prettier --check \"**/*.{js,css,json,md}\" --ignore-path .prettierignore",
+    "lint:prettier:fix": "prettier --write \"**/*.{js,css,json,md}\" --ignore-path .prettierignore",
+    "lint:types": "tsc --noEmit -p tsconfig.json",
+    "lint:html-admin": "htmlhint --config .htmlhintrc \"admin/public/*.html\"",
+    "lint:html-site": "htmlhint --config .htmlhintrc.site \"site/public/**/*.html\"",
+    "lint:shell": "shellcheck scripts/*.sh || echo 'shellcheck not installed locally — runs in CI'",
+    "fix": "npm-run-all --sequential lint:prettier:fix lint:js:fix lint:css:fix",
+    "test": "npm-run-all --continue-on-error --sequential test:site test:admin",
+    "test:site": "vitest run --config vitest.config.js",
+    "test:admin": "cd admin && npm test",
+    "test:e2e": "playwright test --config=playwright.config.js",
+    "test:lighthouse": "lhci autorun --config=lighthouserc.json",
+    "build": "npm run build:editor && npm run build:redirects && cd site && hugo --gc --minify --printPathWarnings",
+    "build:editor": "cd admin && npm run build:editor",
+    "build:redirects": "node scripts/dev/build-redirects.mjs",
+    "build:check": "npm run build:redirects && cd site && hugo --gc --minify --printPathWarnings && cd .. && npm run lint:html-site",
+    "dev:site": "cd site && hugo server -D --port 1414 --bind 127.0.0.1",
+    "dev:admin": "cd admin && npm run dev",
+    "dev:hugo": "cd site && hugo server --port 1313 --bind 127.0.0.1 --buildDrafts --buildFuture",
+    "dev:docker": "docker compose -f docker/docker-compose.dev.yml up",
+    "dev:docker:detach": "docker compose -f docker/docker-compose.dev.yml up -d",
+    "dev:stop": "docker compose -f docker/docker-compose.dev.yml down",
+    "dev:all": "run-p -l dev:docker dev:hugo dev:admin",
+    "dev:check": "node scripts/dev/check.mjs",
+    "db:seed": "node scripts/dev/seed.mjs",
+    "db:reset": "node scripts/dev/reset.mjs",
+    "prepare": "husky || true && npm run build:editor --silent || true"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@eslint/js": "^9.15.0",
+    "@lhci/cli": "^0.14.0",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^25.8.0",
+    "@vitest/coverage-v8": "^2.1.5",
+    "eslint": "^9.15.0",
+    "eslint-plugin-jsdoc": "^50.5.0",
+    "eslint-plugin-n": "^17.13.2",
+    "eslint-plugin-promise": "^7.1.0",
+    "eslint-plugin-security": "^3.0.1",
+    "globals": "^15.12.0",
+    "htmlhint": "^1.1.4",
+    "husky": "^9.1.7",
+    "jsdom": "^25.0.1",
+    "lint-staged": "^15.2.10",
+    "markdownlint-cli2": "^0.15.0",
+    "npm-run-all2": "^7.0.1",
+    "prettier": "^3.3.3",
+    "stylelint": "^16.10.0",
+    "stylelint-config-standard": "^36.0.1",
+    "stylelint-no-unsupported-browser-features": "^8.0.4",
+    "stylelint-order": "^6.0.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.css": [
+      "stylelint --fix",
+      "prettier --write"
+    ],
+    "*.md": [
+      "markdownlint-cli2 --fix"
+    ],
+    "*.{json,html}": [
+      "prettier --write"
+    ]
+  }
+}

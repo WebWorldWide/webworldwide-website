@@ -1,0 +1,33 @@
+{
+  "printWidth": 100,
+  "singleQuote": true,
+  "semi": true,
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": ["*.md"],
+      "options": {
+        "proseWrap": "preserve",
+        "singleQuote": false
+      }
+    },
+    {
+      "files": ["*.json"],
+      "options": {
+        "singleQuote": false
+      }
+    },
+    {
+      "files": ["*.html"],
+      "options": {
+        "singleQuote": false
+      }
+    },
+    {
+      "files": ["*.css"],
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ]
+}

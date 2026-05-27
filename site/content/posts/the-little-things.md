@@ -1,0 +1,24 @@
+---
+title: "The Little Things"
+date: 2026-01-01T16:00:04.000Z
+slug: "the-little-things"
+draft: false
+tags: []
+---
+![LG Freedom II Phone](/images/2026/01/image.png)
+
+Remember when everything was small? Cellphones were little flippy things that would float in your pocket. The Nintendo DS or GameBoy were these tiny little game consoles that you could bring with you anywhere. Everything now is big!
+
+If you need an example, look at the Nintendo Switch 2 with one of its most noticeable features being that it is much larger than the original Nintendo Switch. I can't even pretend that even I wasn't happy about a bigger screen, but it slowly kills the small form factor more. Heck, the iPhone mini only lasted about two generations before it was killed from low demand. The Steam Deck is big, our phones are huge; everything is just big and bright. It makes it an easy sell. People are naturally attracted to bigger (insert joke here), so it makes sense they want the bigger product. It feels like you are getting more for your dollar. Add a bright and distracting screen, and the product might as well sell itself at this point. People just like bigger screens; it just appeals to them more. I can't really say I blame them, though. You can do a lot more with a bigger screen. If your eyes are bad, it's easier to see what is going on with a bigger screen too.
+
+The past. Previously, everything had to be small. Nintendo DS Lite, sliding phones to save space, the PSP. Everything was small and engineered to be small. Holding one of these pieces of technology was something to really behold. It felt so good to have something so powerful in such a small package. But things had to be small back then. Your phone couldn't be every single device. You had a game console, an MP3 player, the phone itself, and maybe more. Now you can have a big phone because that is all you have to begin with; there isn't anything else that is coming with you in the modern day.
+
+Tech minimalists decry the modern state of affairs. Instead, they try to break the phone back down to the days of the past. The problem is that this stuff is way too big! Things in the past had to be as portable as possible, but we were able to condense (ironically) and shrink things into one device. So we made that one device big and easy to use. This is why small phones don't work. People don't want their 'everything device' to be small and cramped and not able to easily do what they want. The modern flip phone is basically a tablet that can be folded in half for portability.
+
+I have my thoughts on the whole splitting tech up, but it is sad we don't have a small option anymore. We have reached a point where devices are so big that it is hard to carry around even one device. Which in itself is quite insane. The very jeans I am wearing right now have an outline in my pants of my iPhone. It is actually embarrassing to wear these jeans out and about because you can just see the ghost of my iPhone on my pants. It makes me wonder if I have a phone that is too large, or if I have a phone that is so glued to me at all times that it has left a permanent impression on me.
+
+When thinking about how to be able to shrink things, you have to be able to do it in a way that doesn't take away from the user experience. The Steam Deck is so large because modern-day games need a big screen to see what is going on. Whereas a GameBoy from the 90s didn't need a big display. The games were much more simple and thrived on a smaller screen. That is why devices keep getting bigger. We demand to be able to do more, which just isn't possible on small devices of the past. Imagine trying to get what can be done on a MacBook Pro 16in to that of a netbook (considering processing power was equal). The netbook would only ever be considered for browsing and email. The large MacBook is a desktop replacement; it can edit video, software develop, etc., all because of that extra screen space.
+
+Believe me, I am just as sad as anyone because of the way screens have exploded in size. But it's not that bad either. Since devices have gotten bigger, screens have drastically improved to keep up with the need for higher fidelity, and batteries have had to innovate to meet the power demands. The same could be said of something small too. But people will always be obsessed with big and bright.
+
+I think small should come back; it is the complement to big, after all. Big devices exist, and so should small ones. In a perfect world, I could own both and use the one that would suit me best in certain situations depending on what I am doing. But alas, it isn't possible, and I don't just mean financially. Maybe people will change their minds. If screens can be removed from the equation, then devices would be forced to be as small as possible. The screen is what keeps making the world go bigger.

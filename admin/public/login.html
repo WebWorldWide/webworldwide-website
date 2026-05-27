@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <script>
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sign in — Terminal Eighty // Admin</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+    <link rel="stylesheet" href="/css/login.css" />
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+  </head>
+  <body data-page="login">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="backdrop" aria-hidden="true">
+      <div class="lava-blob a"></div>
+      <div class="lava-blob b"></div>
+    </div>
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <button
+      type="button"
+      class="btn ghost theme-mini"
+      id="btn-theme"
+      title="Toggle theme"
+      aria-pressed="false"
+      aria-label="Toggle theme"
+    >
+      <span id="btn-theme-glyph" aria-hidden="true">☾</span>
+    </button>
+
+    <main class="auth-card" id="main" tabindex="-1">
+      <div class="auth-brand">
+        <span class="tmark s32" aria-hidden="true"></span>
+        <span class="name">
+          TERMINAL<b>EIGHTY</b>
+          <span>· ADMIN · REV 2.0</span>
+        </span>
+      </div>
+
+      <!-- Setup panel (first-time only) -->
+      <section class="auth-panel" id="setup-panel" aria-labelledby="setup-title">
+        <h1 class="auth-title" id="setup-title">Create admin account</h1>
+        <p class="auth-sub">First-time setup</p>
+
+        <form id="setup-form" novalidate>
+          <div class="field">
+            <label for="setup-user">Username</label>
+            <input type="text" id="setup-user" autocomplete="username" required minlength="2" />
+          </div>
+          <div class="field">
+            <label for="setup-pass"
+              >Password
+              <span style="text-transform: none; color: var(--fg-mute)">(min 8 chars)</span></label
+            >
+            <div class="pw-wrap">
+              <input
+                type="password"
+                id="setup-pass"
+                autocomplete="new-password"
+                required
+                minlength="8"
+              />
+              <button
+                type="button"
+                class="pw-toggle"
+                data-target="setup-pass"
+                aria-label="Show password"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn solid submit">Create account</button>
+        </form>
+
+        <p class="auth-foot">
+          After creating your account you can register a passkey from the dashboard.
+        </p>
+      </section>
+
+      <!-- Login panel (returning user) -->
+      <section class="auth-panel" id="login-panel" aria-labelledby="login-title">
+        <h1 class="auth-title" id="login-title">Sign in</h1>
+        <p class="auth-sub">Terminal Eighty CMS</p>
+
+        <button type="button" class="btn solid auth-passkey" id="btn-passkey-login">
+          <span class="ico" aria-hidden="true">⌥</span>Use passkey
+        </button>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button
+          type="button"
+          class="auth-toggle"
+          id="toggle-password-form"
+          aria-expanded="false"
+          aria-controls="login-form"
+        >
+          Sign in with password
+        </button>
+
+        <form class="auth-form" id="login-form" novalidate>
+          <div class="field">
+            <label for="login-user">Username</label>
+            <input type="text" id="login-user" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="login-pass">Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="login-pass" autocomplete="current-password" required />
+              <button
+                type="button"
+                class="pw-toggle"
+                data-target="login-pass"
+                aria-label="Show password"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn submit">Sign in</button>
+        </form>
+
+        <div class="auth-error" id="auth-error" role="alert"></div>
+      </section>
+    </main>
+
+    <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+  </body>
+</html>

@@ -1,0 +1,51 @@
+{{/*
+  attachment — Phase 6 file-attachment renderer.
+
+  Looks up a media record from `site.Data.media` (written at publish
+  time by admin/src/services/publish-media-data.js) and dispatches to a
+  per-type partial. Always renders a "Download Original" affordance.
+
+  Usage:
+    {{< attachment id="abc123" >}}
+    {{< attachment id="abc123" caption="My caption" >}}
+
+  Type dispatch:
+    - image/*                → attachment-image
+    - video/*                → attachment-video
+    - audio/*                → attachment-audio
+    - application/pdf        → attachment-pdf
+    - archives (zip/etc)     → attachment-archive
+    - code (preview-html)    → attachment-code
+    - anything else          → attachment-file (generic card)
+
+  Missing-id case renders an inline note rather than failing the build —
+  a typo in a post slug should not block publishing.
+  ---
+  Insert via the editor's slash menu ("Attachment"), or hand-author
+  with a media id copied from the media library.
+*/}}
+{{- $id := .Get "id" -}}
+{{- $caption := .Get "caption" -}}
+{{- $media := index site.Data.media $id -}}
+{{- if $media -}}
+  {{- $mime := lower (default "" $media.mime_type) -}}
+  {{- $top := index (split $mime "/") 0 -}}
+  {{- $ctx := dict "media" $media "caption" $caption -}}
+  {{- if eq $top "image" -}}
+    {{ partial "attachment-image.html" $ctx }}
+  {{- else if eq $top "video" -}}
+    {{ partial "attachment-video.html" $ctx }}
+  {{- else if eq $top "audio" -}}
+    {{ partial "attachment-audio.html" $ctx }}
+  {{- else if eq $mime "application/pdf" -}}
+    {{ partial "attachment-pdf.html" $ctx }}
+  {{- else if or (hasPrefix $mime "application/zip") (hasPrefix $mime "application/x-zip") (eq $mime "application/x-tar") (eq $mime "application/gzip") (eq $mime "application/x-7z-compressed") (eq $mime "application/x-rar-compressed") (eq $mime "application/vnd.rar") -}}
+    {{ partial "attachment-archive.html" $ctx }}
+  {{- else if and $media.conversions (isset $media.conversions "preview-html") -}}
+    {{ partial "attachment-code.html" $ctx }}
+  {{- else -}}
+    {{ partial "attachment-file.html" $ctx }}
+  {{- end -}}
+{{- else -}}
+  <p class="attachment-missing" role="note">[Missing attachment: {{ $id }}]</p>
+{{- end -}}

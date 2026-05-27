@@ -1,0 +1,155 @@
+{{- /*
+  webmentions.html — Phase 8 Fediverse + IndieWeb replies.
+
+  Build-time renderer. Reads `site/data/webmentions/<slug>.json` (one
+  file per post, written by `admin/src/services/dump-webmentions.js`
+  on the Pi cron). No runtime fetch → no impact on Lighthouse or LCP.
+
+  File shape (kept in lockstep with dump-webmentions.js):
+
+    {
+      "target":   "https://terminaleighty.com/<slug>/",
+      "count":    <int>,
+      "replies":  [{ id, source, author:{name,url,avatar}, content, received_at }, ...],
+      "likes":    [...],
+      "reposts":  [...],
+      "bookmarks":[...],
+      "mentions": [...]
+    }
+
+  Renders nothing if the file is missing or `count == 0`. That's the
+  desired baseline state for any post with no inbound mentions yet.
+
+  Mode:
+    The build-time path is the default and what Lighthouse audits.
+    A `data-webmention-target` attribute is also emitted so a future
+    "Refresh" enhancement could swap in fresher data from
+    `https://admin.terminaleighty.com/webmention/feed?target=…` via JS.
+    Phase 8 ships the static path only.
+*/ -}}
+
+{{- $slug := "" -}}
+{{- if and .IsPage (eq .Section "posts") -}}
+  {{- $slug = .File.BaseFileName | default (.Slug | default .Title) -}}
+{{- end -}}
+
+{{- if $slug -}}
+{{- $key := lower $slug -}}
+{{- $wm := index (site.Data.webmentions | default dict) $key -}}
+{{- if and $wm (gt (int $wm.count) 0) -}}
+<section class="webmentions" aria-labelledby="webmentions-title" data-webmention-target="{{ .Permalink }}">
+  <h2 id="webmentions-title" class="webmentions-title">
+    <span class="webmentions-pip" aria-hidden="true"></span>
+    Replies from the Fediverse <span class="webmentions-count" aria-hidden="true">[{{ $wm.count }}]</span>
+  </h2>
+
+  {{- /* Likes + reposts — aggregated. Show count + small avatar
+         strip; clicking an avatar opens the source.  */ -}}
+  {{- $likes := $wm.likes | default slice -}}
+  {{- $reposts := $wm.reposts | default slice -}}
+  {{- if or (gt (len $likes) 0) (gt (len $reposts) 0) -}}
+  <div class="webmentions-reactions">
+    {{- if gt (len $likes) 0 -}}
+    <div class="webmentions-faces" aria-label="{{ len $likes }} likes">
+      <span class="webmentions-faces-label">Liked by {{ len $likes }}:</span>
+      {{- range first 12 $likes -}}
+        <a class="webmentions-face" href="{{ .source }}" rel="noopener external"
+           title="{{ with .author.name }}{{ . }}{{ else }}Anonymous{{ end }}">
+          {{- with .author.avatar -}}
+            <img src="{{ . }}" alt="" width="24" height="24" loading="lazy" decoding="async" />
+          {{- else -}}
+            <span class="webmentions-face-fallback" aria-hidden="true">
+              {{- with .author.name -}}{{ slicestr . 0 1 | upper }}{{- else -}}?{{- end -}}
+            </span>
+          {{- end -}}
+        </a>
+      {{- end -}}
+    </div>
+    {{- end -}}
+    {{- if gt (len $reposts) 0 -}}
+    <div class="webmentions-faces" aria-label="{{ len $reposts }} reposts">
+      <span class="webmentions-faces-label">Reshared by {{ len $reposts }}:</span>
+      {{- range first 12 $reposts -}}
+        <a class="webmentions-face" href="{{ .source }}" rel="noopener external"
+           title="{{ with .author.name }}{{ . }}{{ else }}Anonymous{{ end }}">
+          {{- with .author.avatar -}}
+            <img src="{{ . }}" alt="" width="24" height="24" loading="lazy" decoding="async" />
+          {{- else -}}
+            <span class="webmentions-face-fallback" aria-hidden="true">
+              {{- with .author.name -}}{{ slicestr . 0 1 | upper }}{{- else -}}?{{- end -}}
+            </span>
+          {{- end -}}
+        </a>
+      {{- end -}}
+    </div>
+    {{- end -}}
+  </div>
+  {{- end -}}
+
+  {{- /* Replies — full conversation thread. Each one has the
+         author + relative time + comment text (sanitised by the
+         receiver — Phase 8 stores plain-text via microformats
+         `e-content`.value, not raw HTML, so `safeHTML` is fine here). */ -}}
+  {{- $replies := $wm.replies | default slice -}}
+  {{- if gt (len $replies) 0 -}}
+  <ol class="webmentions-list">
+    {{- range $replies -}}
+    <li class="webmention webmention--reply" id="wm-{{ .id }}">
+      <div class="webmention-head">
+        {{- with .author.avatar -}}
+        <img class="webmention-avatar" src="{{ . }}" alt="" width="32" height="32"
+             loading="lazy" decoding="async" />
+        {{- else -}}
+        <span class="webmention-avatar webmention-avatar--fallback" aria-hidden="true">
+          {{- with .author.name -}}{{ slicestr . 0 1 | upper }}{{- else -}}?{{- end -}}
+        </span>
+        {{- end -}}
+        <div class="webmention-byline">
+          <span class="webmention-author">
+            {{- with .author.url -}}
+            <a href="{{ . }}" rel="noopener external">{{ $.author.name | default "Anonymous" }}</a>
+            {{- else -}}
+            {{ .author.name | default "Anonymous" }}
+            {{- end -}}
+          </span>
+          <a class="webmention-time" href="{{ .source }}" rel="noopener external">
+            <time datetime="{{ printf "%d" .received_at }}">
+              {{- /* `received_at` is epoch ms; format inline. */ -}}
+              {{- $t := time (printf "%d" (div .received_at 1000)) -}}
+              {{- $t.Format "Jan 2, 2006" -}}
+            </time>
+          </a>
+        </div>
+      </div>
+      {{- with .content -}}
+      <div class="webmention-content">{{ . }}</div>
+      {{- end -}}
+    </li>
+    {{- end -}}
+  </ol>
+  {{- end -}}
+
+  {{- /* Bookmarks / generic mentions — single line each, no body. */ -}}
+  {{- $bookmarks := $wm.bookmarks | default slice -}}
+  {{- $mentions := $wm.mentions | default slice -}}
+  {{- if or (gt (len $bookmarks) 0) (gt (len $mentions) 0) -}}
+  <ul class="webmentions-mentions" aria-label="Mentions and bookmarks">
+    {{- range $bookmarks -}}
+    <li class="webmention webmention--bookmark">
+      <a href="{{ .source }}" rel="noopener external">
+        {{ .author.name | default "A site" }} bookmarked this
+      </a>
+    </li>
+    {{- end -}}
+    {{- range $mentions -}}
+    <li class="webmention webmention--mention">
+      <a href="{{ .source }}" rel="noopener external">
+        {{ .author.name | default "A site" }} mentioned this
+      </a>
+    </li>
+    {{- end -}}
+  </ul>
+  {{- end -}}
+</section>
+{{- end -}}
+{{- end -}}

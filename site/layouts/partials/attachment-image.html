@@ -1,0 +1,46 @@
+{{/*
+  attachment-image — Phase 6 image attachment.
+
+  Renders a responsive <picture> with AVIF + WebP <source> sets, falls
+  back to the original (or `webp-640` if present) for the <img>. The
+  default size hint is 640px — the lightbox.js handler upgrades the
+  click target to the original on demand. `width`/`height` are emitted
+  whenever we know them, so the browser can reserve layout space
+  (CLS=0).
+
+  Inputs (via dict):
+    media   — the resolved entry from site.Data.media
+    caption — optional caption string (renders inside <figcaption>)
+*/}}
+{{- $m := .media -}}
+{{- $caption := .caption -}}
+{{- $conv := default (dict) $m.conversions -}}
+{{- $alt := default "" $m.original_filename -}}
+{{- $orig := $m.original_url -}}
+{{- $fallback := default $orig (index $conv "webp-640") -}}
+<figure class="attachment attachment-image">
+  <a class="attachment-image-link"
+     href="{{ $orig }}"
+     data-lightbox-src="{{ $orig }}"
+     data-lightbox-alt="{{ $alt }}"
+     download="{{ $m.original_filename }}"
+     aria-label="Open {{ $alt }} at full size">
+    <picture>
+      {{- with index $conv "avif-1024" -}}
+        <source type="image/avif" srcset="{{ index $conv "avif-320" | default . }} 320w, {{ index $conv "avif-640" | default . }} 640w, {{ index $conv "avif-1024" | default . }} 1024w{{ with index $conv "avif-1920" }}, {{ . }} 1920w{{ end }}" sizes="(max-width: 700px) 100vw, 700px" />
+      {{- end -}}
+      {{- with index $conv "webp-1024" -}}
+        <source type="image/webp" srcset="{{ index $conv "webp-320" | default . }} 320w, {{ index $conv "webp-640" | default . }} 640w, {{ index $conv "webp-1024" | default . }} 1024w{{ with index $conv "webp-1920" }}, {{ . }} 1920w{{ end }}" sizes="(max-width: 700px) 100vw, 700px" />
+      {{- end -}}
+      <img src="{{ $fallback }}"
+           alt="{{ $alt }}"
+           loading="lazy"
+           decoding="async"
+           {{ with $m.width }}width="{{ . }}"{{ end }}
+           {{ with $m.height }}height="{{ . }}"{{ end }} />
+    </picture>
+  </a>
+  {{- if $caption -}}
+    <figcaption>{{ $caption }}</figcaption>
+  {{- end -}}
+</figure>

@@ -1,0 +1,24 @@
+{{/*
+  embed-gist — Phase 7 click-to-load GitHub Gist placeholder.
+
+  Loads the standard gist.js script via the embed-loader on click. We
+  use a static stylesheet placeholder so the user has a visible target
+  even before the gist renders.
+
+  Params:
+    owner  — Gist owner login (required)
+    id     — Gist id (required)
+*/}}
+{{- $owner := .Get "owner" -}}
+{{- $id := .Get "id" -}}
+<figure class="embed embed-gist" data-provider="gist">
+  <button type="button" class="embed-placeholder embed-placeholder-text"
+          data-embed-href="https://gist.github.com/{{ $owner }}/{{ $id }}.js"
+          data-embed-type="script"
+          aria-label="Load GitHub Gist {{ $owner }}/{{ $id }}">
+    <span class="embed-play-icon" aria-hidden="true">&lt;/&gt;</span>
+    <span class="embed-meta">Gist by {{ $owner }}</span>
+    <span class="embed-host">gist.github.com</span>
+  </button>
+  <noscript><a href="https://gist.github.com/{{ $owner }}/{{ $id }}" rel="noopener external">View gist on GitHub</a></noscript>
+</figure>

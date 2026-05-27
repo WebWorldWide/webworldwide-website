@@ -1,0 +1,24 @@
+{{/*
+  embed-youtube — Phase 7 click-to-load YouTube placeholder.
+
+  Renders a button with `data-embed-href` pointing at the
+  youtube-nocookie embed URL. The Phase 7 `embed-loader.js` swaps the
+  button for a real `<iframe>` only after the user clicks — Lighthouse
+  scores stay high because no iframe ever loads on initial paint.
+
+  Params:
+    id     — YouTube video id (required)
+    title  — Accessible / visible label (optional; defaults from id)
+*/}}
+{{- $id := .Get "id" -}}
+{{- $title := .Get "title" | default (printf "YouTube video %s" $id) -}}
+<figure class="embed embed-youtube" data-provider="youtube">
+  <button type="button" class="embed-placeholder"
+          data-embed-href="https://www.youtube-nocookie.com/embed/{{ $id }}?autoplay=1"
+          data-embed-type="iframe"
+          aria-label="Play YouTube video: {{ $title }}">
+    <img class="embed-thumb" src="https://i.ytimg.com/vi/{{ $id }}/hqdefault.jpg" alt="" loading="lazy" decoding="async">
+    <span class="embed-play-icon" aria-hidden="true">&#9654;</span>
+    <span class="embed-meta">{{ $title }}</span>
+  </button>
+</figure>

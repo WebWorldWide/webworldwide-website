@@ -1,0 +1,83 @@
+baseURL = "https://terminaleighty.com"
+defaultContentLanguage = "en"
+
+[languages.en]
+  locale = "en-US"
+title = "Terminal Eighty"
+description = "Tech it like I talk (write) it."
+copyright = "Terminal Eighty"
+
+# Pagination
+[pagination]
+  pagerSize = 10
+
+# Taxonomies
+[taxonomies]
+  tag = "tags"
+  series = "series"
+
+# RSS output
+[outputFormats.RSS]
+  mediaType = "application/rss+xml"
+  baseName = "index"
+
+# Phase 8 — webfinger output. Bridgy Fed expects
+# `https://terminaleighty.com/.well-known/webfinger?resource=acct:blog@…`
+# to return a JRD JSON document that points at the Bridgy Fed actor.
+# Hugo renders this from `layouts/index.webfinger.json` to
+# `/.well-known/webfinger` (no extension).
+#
+# `notAlternative` keeps it out of `<link rel="alternate">` in <head>.
+# The empty `suffixes = []` on the media type below tells Hugo not to
+# append `.json` to the URL — the IANA spec for webfinger demands the
+# exact path `/.well-known/webfinger` with no file extension.
+[outputFormats.webfinger]
+  mediaType = "application/jrd+json"
+  baseName = "webfinger"
+  path = ".well-known"
+  isPlainText = true
+  notAlternative = true
+
+# Phase 8 — `application/jrd+json` with no filename suffix so the
+# output format above renders to `/webfinger`, not `/webfinger.json`.
+[mediaTypes."application/jrd+json"]
+  suffixes = []
+
+[outputs]
+  home = ["HTML", "RSS", "JSON", "webfinger"]
+
+# Minify HTML/CSS/JS output for production builds
+[minify]
+  minifyOutput = true
+
+# Image processing defaults (used by .Resize/.Fill/.Fit in future phases)
+[imaging]
+  quality = 82
+  resampleFilter = "lanczos"
+
+# Permalinks
+[permalinks]
+  posts = "/:slug/"
+
+# Markup
+[markup.goldmark.renderer]
+  unsafe = true
+
+[markup.highlight]
+  noClasses = false
+
+# Site params
+[params]
+  tagline = "Tech it like I talk (write) it."
+  author = "Terminal Eighty"
+  postsPerPage = 10
+  # Remark42 configuration
+  remark42URL = "https://comments.terminaleighty.com"
+  remark42SiteID = "terminaleighty"
+  # Umami analytics
+  umamiURL = "https://analytics.terminaleighty.com"
+  umamiSiteID = ""  # Fill after Umami setup
+  # Social
+  youtubeURL = "https://www.youtube.com/@TerminalEighty"
+  rssURL = "index.xml"
+

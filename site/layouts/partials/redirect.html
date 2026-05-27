@@ -1,0 +1,20 @@
+{{- /* redirect.html — invoked by alias.html (Hugo's built-in alias
+       generator) and the redirects emitter. Produces a tiny HTML page
+       with a meta-refresh + JS fallback + canonical link.
+
+       Accepts a context dict: { Permalink, Code }. */ -}}
+{{- $to := .Permalink -}}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <link rel="canonical" href="{{ $to }}" />
+    <meta http-equiv="refresh" content="0; url={{ $to }}" />
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <p>Redirecting to <a href="{{ $to }}">{{ $to }}</a>…</p>
+    <script>window.location.replace({{ $to | jsonify }});</script>
+  </body>
+</html>

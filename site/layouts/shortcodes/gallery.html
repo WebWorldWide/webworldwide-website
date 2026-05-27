@@ -1,0 +1,65 @@
+{{/*
+  gallery — render a responsive image grid with lightbox-capable links.
+
+  Accepts (in order of precedence):
+    - urls="…,…"        explicit comma-separated image URLs
+    - ids="…,…"         media-library IDs (resolved to /images/yyyy/mm/<filename>)
+                        Note: the admin emits a `urls` form by default — ids
+                        require a server-side resolver only present in newer
+                        builds. Prefer urls for stability.
+    - .Params.gallery   page-level fallback: an array of URLs in front-matter
+    - inner content     comma- or newline-separated URLs inside the block
+
+  Each image is wrapped in <a> with data-gallery so the Phase 6 lightbox.js
+  can hijack clicks. Until Phase 6 ships, the links are normal full-size
+  navigations — no broken state in the meantime.
+  ---
+  Usage:
+    {{< gallery urls="/images/2025/06/a.jpg,/images/2025/06/b.jpg" >}}
+
+    Or, with a `gallery:` array in front-matter:
+
+    ---
+    gallery:
+      - /images/2025/06/a.jpg
+      - /images/2025/06/b.jpg
+    ---
+    {{< gallery >}}
+*/}}
+{{- $urlsParam := .Get "urls" -}}
+{{- $idsParam := .Get "ids" -}}
+{{- $pageList := .Page.Params.gallery -}}
+{{- $inner := .Inner | strings.TrimSpace -}}
+
+{{- $items := slice -}}
+{{- if $urlsParam -}}
+  {{- range split $urlsParam "," -}}
+    {{- $u := . | strings.TrimSpace -}}
+    {{- if $u -}}{{- $items = $items | append $u -}}{{- end -}}
+  {{- end -}}
+{{- else if $pageList -}}
+  {{- range $pageList -}}{{- $items = $items | append . -}}{{- end -}}
+{{- else if $inner -}}
+  {{- range split (replace $inner "\n" ",") "," -}}
+    {{- $u := . | strings.TrimSpace -}}
+    {{- if $u -}}{{- $items = $items | append $u -}}{{- end -}}
+  {{- end -}}
+{{- else if $idsParam -}}
+  {{- /* Best-effort id → url: we just emit /images/<id> and let the
+         lightbox layer fail loudly. Real resolution requires a media
+         registry that Phase 5e doesn't ship for static templates. */ -}}
+  {{- range split $idsParam "," -}}
+    {{- $id := . | strings.TrimSpace -}}
+    {{- if $id -}}{{- $items = $items | append (printf "/images/%s" $id) -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if gt (len $items) 0 -}}
+<div class="gallery" role="list" data-gallery="post-{{ .Page.RelPermalink | urlize }}">
+  {{- range $i, $url := $items -}}
+  <a class="gallery-item" role="listitem" href="{{ $url }}" data-gallery-href="{{ $url }}" data-gallery-index="{{ $i }}">
+    <img src="{{ $url }}" alt="" loading="lazy" decoding="async" />
+  </a>
+  {{- end -}}
+</div>
+{{- end -}}

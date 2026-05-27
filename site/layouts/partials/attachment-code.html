@@ -1,0 +1,44 @@
+{{/*
+  attachment-code — Phase 6 source-file attachment.
+
+  Embeds the Phase 5c pre-rendered Shiki HTML directly into the page
+  (read from disk via `os.ReadFile`; the URL is anchored at `/` which
+  maps to `static/`). Includes a language badge and a Download Original
+  link. If the preview file is missing we fall back to a plain link card.
+*/}}
+{{- $m := .media -}}
+{{- $caption := .caption -}}
+{{- $conv := default (dict) $m.conversions -}}
+{{- $previewUrl := index $conv "preview-html" -}}
+{{- $language := default "text" (index $conv "language") -}}
+{{- $lines := index $conv "line_count" -}}
+<figure class="attachment attachment-code" data-language="{{ $language }}">
+  <header class="attachment-code-head">
+    <span class="attachment-name">{{ $m.original_filename }}</span>
+    <span class="attachment-sub">
+      <span class="attachment-lang-badge">{{ $language }}</span>
+      {{- with $lines }} · {{ . }} line{{ if ne . 1 }}s{{ end }}{{ end -}}
+    </span>
+  </header>
+  {{- $diskPath := printf "static%s" $previewUrl -}}
+  {{- $html := "" -}}
+  {{- if $previewUrl -}}
+    {{- /* readFile is rooted at the Hugo project (site/), so
+           "static/..." resolves correctly. Wrap in `with` so a
+           missing file doesn't break the build. */ -}}
+    {{- if fileExists $diskPath -}}
+      {{- $html = readFile $diskPath -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $html -}}
+    <div class="attachment-code-preview">{{ $html | safeHTML }}</div>
+  {{- else -}}
+    <pre class="attachment-code-preview attachment-code-empty"><code>{{ $m.original_filename }} ({{ $language }})</code></pre>
+  {{- end -}}
+  {{- if $caption -}}
+    <figcaption>{{ $caption }}</figcaption>
+  {{- end -}}
+  <p class="attachment-download">
+    <a href="{{ $m.original_url }}" download="{{ $m.original_filename }}">Download original</a>
+  </p>
+</figure>

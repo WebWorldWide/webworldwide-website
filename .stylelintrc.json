@@ -1,0 +1,51 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "plugins": ["stylelint-order", "stylelint-no-unsupported-browser-features"],
+  "rules": {
+    "color-no-invalid-hex": true,
+    "declaration-no-important": [true, { "severity": "warning" }],
+    "selector-class-pattern": [
+      "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
+      {
+        "message": "Class names must be kebab-case (BEM-friendly)",
+        "severity": "warning"
+      }
+    ],
+    "no-duplicate-selectors": true,
+    "plugin/no-unsupported-browser-features": null,
+    "comment-empty-line-before": null,
+    "rule-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "no-descending-specificity": null,
+    "alpha-value-notation": null,
+    "color-function-notation": null,
+    "hue-degree-notation": null,
+    "value-keyword-case": null,
+    "property-no-vendor-prefix": null,
+    "value-no-vendor-prefix": null,
+    "media-feature-range-notation": null,
+    "selector-not-notation": null,
+    "shorthand-property-no-redundant-values": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "color-hex-length": null,
+    "no-empty-source": null,
+    "selector-pseudo-class-no-unknown": null,
+    "at-rule-no-deprecated": null,
+    "import-notation": null,
+    "declaration-block-single-line-max-declarations": null,
+    "at-rule-empty-line-before": null,
+    "custom-property-empty-line-before": null,
+    "length-zero-no-unit": null,
+    "number-max-precision": null,
+    "font-family-no-missing-generic-family-keyword": null,
+    "selector-pseudo-element-no-unknown": null
+  },
+  "ignoreFiles": [
+    "site/public/**",
+    "site/resources/**",
+    "admin/node_modules/**",
+    "node_modules/**",
+    "Blog/**",
+    ".planning/**"
+  ]
+}

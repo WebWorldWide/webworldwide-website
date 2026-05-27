@@ -1,0 +1,209 @@
+/* ============================================================
+   Login / setup page styles (login.html)
+   Centered card on the standard admin backdrop.
+   ============================================================ */
+
+.auth-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  background: var(--glass-tint);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  box-shadow: var(--glass-shadow);
+  padding: 32px 28px 28px;
+  overflow: hidden;
+}
+.auth-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 5%,
+    var(--glass-highlight) 50%,
+    transparent 95%
+  );
+  pointer-events: none;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.auth-brand .name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  line-height: 1.2;
+}
+.auth-brand .name b {
+  color: var(--accent);
+}
+.auth-brand .name span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--fg-mute);
+  font-weight: 500;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+.auth-title {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  color: var(--fg);
+}
+.auth-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--fg-mute);
+  margin: 0 0 24px;
+  text-transform: uppercase;
+}
+
+.auth-passkey {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  justify-content: center;
+}
+.auth-passkey .ico {
+  font-family: var(--serif);
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+
+.auth-toggle {
+  background: transparent;
+  border: 0;
+  color: var(--fg-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 8px 0;
+  width: 100%;
+  text-align: center;
+  margin-top: 6px;
+}
+.auth-toggle:hover {
+  color: var(--accent);
+}
+
+.auth-form {
+  display: none;
+}
+.auth-form.open {
+  display: block;
+}
+.auth-form .submit {
+  width: 100%;
+  justify-content: center;
+  padding: 11px 14px;
+  font-size: 12px;
+}
+
+.auth-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: 4px;
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  display: none;
+}
+.auth-error.show {
+  display: block;
+}
+
+/* Hide whichever panel is inactive */
+.auth-panel {
+  display: none;
+}
+.auth-panel.active {
+  display: block;
+}
+
+/* Password show/hide toggle */
+.pw-wrap {
+  position: relative;
+}
+.pw-wrap input {
+  padding-right: 56px;
+}
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: var(--fg-mute);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.pw-toggle:hover {
+  color: var(--accent);
+}
+
+.auth-foot {
+  margin-top: 28px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+}
+
+.theme-mini {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+}

@@ -1,0 +1,66 @@
+/* ============================================================
+   Phase 5e — Activity page + widget
+   ============================================================ */
+
+.te-activity-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.te-act-row {
+  display: grid;
+  grid-template-columns: 110px 100px 180px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.te-act-head {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  background: var(--glass-tint);
+}
+
+.te-act-when {
+  color: var(--fg-mute);
+}
+.te-act-who {
+  color: var(--fg-dim);
+}
+.te-act-action code {
+  color: var(--accent);
+  background: transparent;
+}
+.te-act-target {
+  color: var(--fg-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .te-act-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "action target" "who when";
+    gap: 4px;
+  }
+  .te-act-when {
+    grid-area: when;
+    text-align: right;
+  }
+  .te-act-who {
+    grid-area: who;
+  }
+  .te-act-action {
+    grid-area: action;
+  }
+  .te-act-target {
+    grid-area: target;
+    text-align: right;
+  }
+}

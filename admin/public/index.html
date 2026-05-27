@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <!-- FOUC theme script — must run before any paint -->
+    <script>
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Terminal Eighty // Admin</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+    <link rel="stylesheet" href="/css/dashboard.css" />
+    <link rel="stylesheet" href="/css/media.css" />
+    <link rel="stylesheet" href="/css/settings.css" />
+    <link rel="stylesheet" href="/css/taxonomies.css" />
+    <link rel="stylesheet" href="/css/redirects.css" />
+    <link rel="stylesheet" href="/css/activity.css" />
+    <link rel="stylesheet" href="/css/comments.css" />
+    <!-- WebAuthn browser library (CDN — passkey registration). Wrapped
+       in try/catch in auth.js so an ad-blocker doesn't crash the page. -->
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+  </head>
+  <body data-page="dashboard">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Backdrop layers -->
+    <div class="backdrop" aria-hidden="true">
+      <div class="lava-blob a"></div>
+      <div class="lava-blob b"></div>
+    </div>
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <div class="shell">
+      <!-- ============ SIDEBAR ============ -->
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="side-brand" href="/index.html">
+          <span class="tmark s32" aria-hidden="true"></span>
+          <span class="name">
+            TERMINAL<b>EIGHTY</b>
+            <span>· ADMIN · REV 2.0</span>
+          </span>
+        </a>
+
+        <nav class="side-group" aria-label="Workspace">
+          <div class="side-group-label">Workspace</div>
+          <a class="side-item" href="/index.html" aria-current="page" data-route="dashboard">
+            <span class="ico" aria-hidden="true">⌂</span><span>Dashboard</span><span></span>
+          </a>
+          <a class="side-item" href="/index.html#posts" data-route="posts">
+            <span class="ico" aria-hidden="true">≡</span><span>Posts</span
+            ><span class="badge ok" id="side-badge-posts">—</span>
+          </a>
+          <a class="side-item" href="/index.html#media" data-route="media">
+            <span class="ico" aria-hidden="true">▦</span><span>Media</span><span></span>
+          </a>
+          <a class="side-item" href="/index.html#tags" data-route="tags">
+            <span class="ico" aria-hidden="true">#</span><span>Tags</span><span></span>
+          </a>
+          <a class="side-item" href="/index.html#comments" data-route="comments">
+            <span class="ico" aria-hidden="true">»</span><span>Comments</span
+            ><span class="badge cm zero" id="side-badge-comments">0</span>
+          </a>
+        </nav>
+
+        <nav class="side-group" aria-label="System">
+          <div class="side-group-label">System</div>
+          <a class="side-item" href="/index.html#activity" data-route="activity">
+            <span class="ico" aria-hidden="true">∿</span><span>Activity</span><span></span>
+          </a>
+          <a class="side-item" href="/index.html#redirects" data-route="redirects">
+            <span class="ico" aria-hidden="true">↪</span><span>Redirects</span><span></span>
+          </a>
+          <a class="side-item" href="/index.html#shortcodes" data-route="shortcodes">
+            <span class="ico" aria-hidden="true">⟨⟩</span><span>Shortcodes</span><span></span>
+          </a>
+          <a class="side-item" href="/index.html#settings" data-route="settings">
+            <span class="ico" aria-hidden="true">◐</span><span>Settings</span><span></span>
+          </a>
+          <button type="button" class="side-item" id="btn-open-terminal" data-route="terminal">
+            <span class="ico" aria-hidden="true">_</span><span>Terminal</span><span></span>
+          </button>
+        </nav>
+
+        <div class="side-foot">
+          <div class="row">
+            <span><span class="pip" id="side-pip"></span>SYSTEM</span
+            ><span><b id="side-system">…</b></span>
+          </div>
+          <div class="row"><span>UPTIME</span><span class="uptime" id="side-uptime">—</span></div>
+          <div class="row"><span>CPU</span><span id="side-cpu">—</span></div>
+          <div class="row">
+            <span>BUILD</span><span><b>v2.0</b></span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============ MAIN ============ -->
+      <main id="main" class="main" tabindex="-1">
+        <header class="topbar">
+          <div class="crumb">
+            <span class="tmark s24" aria-hidden="true"></span>
+            <span>· <b id="crumb-section">Dashboard</b></span>
+          </div>
+          <div class="topbar-spacer"></div>
+          <div class="topbar-search" role="search">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <label for="topbar-search-input" class="sr-only">Search posts</label>
+            <input id="topbar-search-input" placeholder="Search posts…" autocomplete="off" />
+            <span class="kbd">⌘K</span>
+          </div>
+          <div class="topbar-actions">
+            <button
+              type="button"
+              class="btn ghost"
+              id="btn-theme"
+              title="Toggle theme"
+              aria-pressed="false"
+              aria-label="Toggle theme"
+            >
+              <span id="btn-theme-glyph" aria-hidden="true">☾</span>
+            </button>
+            <a
+              class="btn"
+              href="https://terminaleighty.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              >View site →</a
+            >
+            <button type="button" class="btn" id="btn-publish">Publish site</button>
+            <button type="button" class="btn solid" id="btn-new-post">+ New Post</button>
+            <button
+              type="button"
+              class="btn ghost"
+              id="btn-logout"
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              ⏏
+            </button>
+          </div>
+        </header>
+
+        <div id="stage" class="stage">
+          <div id="view-dashboard">
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Dashboard</h1>
+                <div class="sec-sub" id="dash-sub">Loading…</div>
+              </div>
+              <div class="sec-actions">
+                <a class="btn" href="/editor.html">+ Draft</a>
+                <button type="button" class="btn primary" id="btn-publish-2">Publish</button>
+              </div>
+            </div>
+
+            <!-- Posts table -->
+            <div class="panel" id="posts-panel">
+              <div class="panel-head">
+                <span class="panel-title"><span class="ind">▾</span>Posts</span>
+                <div class="panel-head-r">
+                  <span id="posts-total">—</span>
+                </div>
+              </div>
+
+              <div class="tabs" role="tablist" aria-label="Filter posts by status">
+                <button type="button" class="tab" role="tab" data-tab="all" aria-selected="true">
+                  All <span class="count" id="tab-count-all">—</span>
+                </button>
+                <button type="button" class="tab" role="tab" data-tab="draft" aria-selected="false">
+                  Draft <span class="count" id="tab-count-draft">—</span>
+                </button>
+                <button
+                  type="button"
+                  class="tab"
+                  role="tab"
+                  data-tab="scheduled"
+                  aria-selected="false"
+                >
+                  Scheduled <span class="count" id="tab-count-scheduled">—</span>
+                </button>
+                <button
+                  type="button"
+                  class="tab"
+                  role="tab"
+                  data-tab="published"
+                  aria-selected="false"
+                >
+                  Published <span class="count" id="tab-count-published">—</span>
+                </button>
+              </div>
+
+              <div class="posts-toolbar">
+                <label class="search">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                  <span class="sr-only">Filter posts</span>
+                  <input
+                    type="search"
+                    id="posts-search"
+                    placeholder="Filter by title, slug, or tag…"
+                    autocomplete="off"
+                  />
+                </label>
+                <label class="posts-selectall">
+                  <input type="checkbox" id="posts-select-all" />
+                  <span>Select all</span>
+                </label>
+                <span class="count" id="posts-visible">—</span>
+              </div>
+
+              <!--
+                The header is a CSS-grid column legend, not a real table
+                row. Marking it role="row" without a role="grid" parent
+                trips axe (aria-required-parent + aria-required-children),
+                and the contents are aria-hidden anyway because the posts
+                table rendered into #posts-rows below carries its own
+                accessible labels per row. We leave the visible glyphs
+                here for sighted users and skip the role.
+              -->
+              <div class="row-grid head" aria-hidden="true">
+                <span class="r-link">
+                  <span class="r-num">№</span>
+                  <span class="r-title-wrap">Title</span>
+                  <span class="r-status" style="text-align: right">Tags</span>
+                  <span class="r-date">Date</span>
+                </span>
+                <span class="r-actions"></span>
+              </div>
+              <div id="posts-rows">
+                <div class="posts-empty" id="posts-loading">Loading posts…</div>
+              </div>
+              <div class="posts-foot">
+                <span id="posts-foot-text">—</span>
+                <a href="/editor.html">+ New post →</a>
+              </div>
+            </div>
+
+            <!-- System health + security side panels -->
+            <div class="dash-grid" style="margin-top: 24px">
+              <div class="panel health-panel" id="health-panel" aria-label="Pi system health">
+                <div class="panel-head">
+                  <span class="panel-title"><span class="ind">▾</span>Pi Health</span>
+                  <div class="panel-head-r">
+                    <span>UP <b id="health-uptime" style="color: var(--fg)">—</b></span>
+                    <button type="button" class="btn-mini" id="btn-refresh-health">Refresh</button>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="metric" id="metric-cpu">
+                    <span class="metric-label">CPU</span>
+                    <span class="metric-val" id="metric-cpu-val">—</span>
+                    <span class="metric-bar"><i id="metric-cpu-bar" style="width: 0%"></i></span>
+                  </div>
+                  <div class="metric" id="metric-ram">
+                    <span class="metric-label">RAM</span>
+                    <span class="metric-val" id="metric-ram-val">—</span>
+                    <span class="metric-bar"><i id="metric-ram-bar" style="width: 0%"></i></span>
+                  </div>
+                  <div class="metric" id="metric-temp">
+                    <span class="metric-label">TEMP</span>
+                    <span class="metric-val" id="metric-temp-val">—</span>
+                    <span class="metric-bar"><i id="metric-temp-bar" style="width: 0%"></i></span>
+                  </div>
+                  <div class="metric" id="metric-disk">
+                    <span class="metric-label">DISK</span>
+                    <span class="metric-val" id="metric-disk-val">—</span>
+                    <span class="metric-bar"><i id="metric-disk-bar" style="width: 0%"></i></span>
+                  </div>
+
+                  <h4 class="health-section-label">Docker containers</h4>
+                  <div id="docker-list">
+                    <div class="docker">
+                      <span class="ddot" aria-hidden="true"></span><span class="name">…</span
+                      ><span class="status">loading</span>
+                    </div>
+                  </div>
+
+                  <h4 class="health-section-label">Backup</h4>
+                  <div
+                    id="backup-status"
+                    style="font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim)"
+                  >
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel" id="security-panel" aria-label="Security">
+                <div class="panel-head">
+                  <span class="panel-title"><span class="ind">▾</span>Security</span>
+                  <span id="passkey-status" class="panel-head-r" aria-live="polite"></span>
+                </div>
+                <div class="panel-body">
+                  <p style="margin: 0 0 12px; color: var(--fg-dim)">
+                    Register a passkey on this device to sign in with Face ID or Touch ID next time.
+                  </p>
+                  <button type="button" class="btn primary" id="btn-register-passkey">
+                    Register passkey
+                  </button>
+                  <p style="margin: 14px 0 0; color: var(--fg-mute); font-size: 11px">
+                    Phase 2 ships with passkey + password. Comments link uses a separate session
+                    (Remark42).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 8.5: inbox (comments + pending mentions) widget -->
+            <div class="panel" id="inbox-widget" style="margin-top: 24px" aria-label="Inbox">
+              <div class="panel-head">
+                <span class="panel-title"><span class="ind">▾</span>Inbox</span>
+                <div class="panel-head-r">
+                  <a class="btn-mini" href="/index.html#comments">View all →</a>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="te-cm-inbox" id="inbox-grid">
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=visible">
+                    <span class="label">Comments (24h)</span>
+                    <span class="val" id="inbox-comments-24h">—</span>
+                    <span class="sub" id="inbox-comments-total">—</span>
+                  </a>
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=pending">
+                    <span class="label">Pending webmentions</span>
+                    <span class="val" id="inbox-webmentions-pending">—</span>
+                    <span class="sub" id="inbox-webmentions-total">—</span>
+                  </a>
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=spam">
+                    <span class="label">Marked spam</span>
+                    <span class="val" id="inbox-spam">—</span>
+                    <span class="sub">All time</span>
+                  </a>
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=blocked">
+                    <span class="label">Blocked users</span>
+                    <span class="val" id="inbox-blocked">—</span>
+                    <span class="sub">Active blocks</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 5e: recent activity widget -->
+            <div
+              class="panel"
+              id="activity-widget"
+              style="margin-top: 24px"
+              aria-label="Recent activity"
+            >
+              <div class="panel-head">
+                <span class="panel-title"><span class="ind">▾</span>Recent activity</span>
+                <div class="panel-head-r">
+                  <a class="btn-mini" href="/index.html#activity">View all →</a>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="activity-widget-body" class="te-activity-table">Loading…</div>
+              </div>
+            </div>
+          </div>
+          <!-- ============ MEDIA LIBRARY VIEW (Phase 4) ============ -->
+          <div id="view-media" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Media library</h1>
+                <div class="sec-sub" id="media-sub">Universal uploads · drag anywhere to add</div>
+              </div>
+              <div class="sec-actions">
+                <a class="btn" href="#dashboard">← Dashboard</a>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <span class="panel-title"><span class="ind">▾</span>Library</span>
+                <div class="panel-head-r">
+                  <span id="media-total" aria-live="polite"></span>
+                </div>
+              </div>
+
+              <div class="te-media-head">
+                <div class="te-media-chips" role="tablist" aria-label="Filter media by type">
+                  <button
+                    type="button"
+                    class="te-media-chip active"
+                    data-media-chip="all"
+                    aria-selected="true"
+                  >
+                    All <span class="count">0</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="te-media-chip"
+                    data-media-chip="image"
+                    aria-selected="false"
+                  >
+                    Image <span class="count">0</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="te-media-chip"
+                    data-media-chip="video"
+                    aria-selected="false"
+                  >
+                    Video <span class="count">0</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="te-media-chip"
+                    data-media-chip="audio"
+                    aria-selected="false"
+                  >
+                    Audio <span class="count">0</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="te-media-chip"
+                    data-media-chip="document"
+                    aria-selected="false"
+                  >
+                    Document <span class="count">0</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="te-media-chip"
+                    data-media-chip="archive"
+                    aria-selected="false"
+                  >
+                    Archive <span class="count">0</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="te-media-chip"
+                    data-media-chip="other"
+                    aria-selected="false"
+                  >
+                    Other <span class="count">0</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="te-media-toolbar">
+                <label class="sr-only" for="media-search">Search media</label>
+                <input
+                  id="media-search"
+                  type="search"
+                  placeholder="Search by filename…"
+                  autocomplete="off"
+                />
+                <label class="sr-only" for="media-sort">Sort media</label>
+                <select id="media-sort" aria-label="Sort media">
+                  <option value="date">Newest first</option>
+                  <option value="name">Name (A → Z)</option>
+                  <option value="size">Largest first</option>
+                </select>
+                <span class="te-media-spacer"></span>
+                <label
+                  style="
+                    display: inline-flex;
+                    gap: 6px;
+                    align-items: center;
+                    font-family: var(--mono, monospace);
+                    font-size: 11px;
+                    color: var(--fg-mute);
+                  "
+                >
+                  <input type="checkbox" id="media-select-all" />
+                  Select all
+                </label>
+                <span class="te-view-toggle" role="group" aria-label="Layout">
+                  <button
+                    type="button"
+                    data-media-view="grid"
+                    aria-pressed="true"
+                    aria-label="Grid view"
+                  >
+                    ▦
+                  </button>
+                  <button
+                    type="button"
+                    data-media-view="list"
+                    aria-pressed="false"
+                    aria-label="List view"
+                  >
+                    ≡
+                  </button>
+                </span>
+              </div>
+
+              <div id="media-library-dropzone" class="te-dz" aria-label="Upload to library">
+                <span class="te-dz-label">Drop files to upload, or click to choose</span>
+              </div>
+
+              <!--
+                role="list" + listitem children (set in media.js render).
+                A grid pattern would need row groups + arrow-key roving
+                tabindex semantics WCAG aria-grid expects; the cards
+                already implement keyboard nav via .te-media-thumb
+                buttons inside each card, which is the actually-focusable
+                target. Switching to list keeps axe happy without
+                changing the visible UI.
+              -->
+              <div id="media-grid" class="view-grid" role="list" aria-label="Uploaded media"></div>
+              <div id="media-empty" class="te-media-empty" hidden></div>
+            </div>
+          </div>
+          <!-- ============ /MEDIA LIBRARY VIEW ============ -->
+
+          <!-- ============ SETTINGS VIEW (Phase 5e) ============ -->
+          <div id="view-settings" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Settings</h1>
+                <div class="sec-sub">Site identity, social, analytics, author profile.</div>
+              </div>
+              <div class="sec-actions">
+                <button type="button" class="btn primary" id="btn-save-settings">Save</button>
+              </div>
+            </div>
+            <div id="settings-form" class="te-form-grid">Loading…</div>
+          </div>
+
+          <!-- ============ TAGS VIEW (Phase 5e) ============ -->
+          <div id="view-tags" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Tags</h1>
+                <div class="sec-sub">Rename, merge, or remove tags across every post.</div>
+              </div>
+              <div class="sec-actions"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <span class="panel-title"><span class="ind">▾</span>Tag index</span>
+                <span class="panel-head-r" id="tags-total">—</span>
+              </div>
+              <div id="tags-table" class="te-tag-table">Loading…</div>
+            </div>
+          </div>
+
+          <!-- ============ REDIRECTS VIEW (Phase 5e) ============ -->
+          <div id="view-redirects" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Redirects</h1>
+                <div class="sec-sub">
+                  Site-wide URL forwards. Emitted as meta-refresh pages at build time.
+                </div>
+              </div>
+              <div class="sec-actions">
+                <button type="button" class="btn primary" id="btn-redirect-new">
+                  + Add redirect
+                </button>
+              </div>
+            </div>
+            <div class="panel">
+              <div id="redirects-table" class="te-redirects-table">Loading…</div>
+            </div>
+          </div>
+
+          <!-- ============ ACTIVITY VIEW (Phase 5e) ============ -->
+          <div id="view-activity" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Activity</h1>
+                <div class="sec-sub">Every CMS mutation, newest first.</div>
+              </div>
+              <div class="sec-actions">
+                <button type="button" class="btn" id="btn-activity-refresh">Refresh</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div id="activity-table" class="te-activity-table">Loading…</div>
+            </div>
+          </div>
+
+          <!-- ============ COMMENTS VIEW (Phase 8.5) ============ -->
+          <div id="view-comments" hidden>
+            <div class="te-cm-empty">Loading comments…</div>
+          </div>
+
+          <!-- ============ SHORTCODES VIEW (Phase 5e) ============ -->
+          <div id="view-shortcodes" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">Shortcodes</h1>
+                <div class="sec-sub">
+                  Reference of every Hugo shortcode you can drop into a post.
+                </div>
+              </div>
+              <div class="sec-actions"></div>
+            </div>
+            <div class="panel">
+              <div id="shortcodes-list">Loading…</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Posts bulk action bar -->
+    <div
+      class="te-media-bulk-bar"
+      id="posts-bulk-bar"
+      role="region"
+      aria-label="Bulk post actions"
+      hidden
+    >
+      <span><b id="posts-bulk-count">0</b> selected</span>
+      <button type="button" class="btn" data-bulk-action="publish">Publish</button>
+      <button type="button" class="btn" data-bulk-action="unpublish">Draft</button>
+      <button type="button" class="btn" id="btn-bulk-add-tag">+ Tag</button>
+      <button type="button" class="btn danger" data-bulk-action="delete">Delete</button>
+      <button type="button" class="btn ghost" id="btn-bulk-clear">Clear</button>
+    </div>
+
+    <!-- New Post template picker -->
+    <div
+      class="modal"
+      id="template-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="template-modal-title"
+    >
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3 id="template-modal-title">[ Pick a template ]</h3>
+          <button
+            type="button"
+            class="btn ghost"
+            data-modal-close="template-modal"
+            aria-label="Cancel"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <ul class="te-template-list">
+            <li>
+              <a href="/editor.html"><b>Blank</b><span>Start from scratch.</span></a>
+            </li>
+            <li>
+              <a href="/editor.html?template=technical"
+                ><b>Technical</b><span>Problem → fix → why.</span></a
+              >
+            </li>
+            <li>
+              <a href="/editor.html?template=opinion"
+                ><b>Opinion</b><span>Take, argument, counter.</span></a
+              >
+            </li>
+            <li>
+              <a href="/editor.html?template=link"
+                ><b>Link</b><span>Bookmark with a paragraph.</span></a
+              >
+            </li>
+            <li>
+              <a href="/editor.html?template=photo"
+                ><b>Photo essay</b><span>Gallery + notes.</span></a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk action bar (shown by media.js when items are selected) -->
+    <div
+      class="te-media-bulk-bar"
+      id="media-bulk-bar"
+      role="region"
+      aria-label="Bulk media actions"
+      hidden
+    >
+      <span><b id="media-bulk-count">0</b> selected</span>
+      <button type="button" class="btn danger" id="media-bulk-delete">Delete selected</button>
+    </div>
+
+    <!-- Detail drawer -->
+    <aside
+      class="te-media-drawer"
+      id="media-drawer"
+      role="dialog"
+      aria-modal="false"
+      aria-hidden="true"
+      aria-labelledby="media-drawer-title"
+    >
+      <header class="te-media-drawer-head">
+        <span id="media-drawer-title">[ FILE DETAILS ]</span>
+        <button type="button" class="btn ghost" id="media-drawer-close" aria-label="Close details">
+          ✕
+        </button>
+      </header>
+      <div id="media-drawer-body" class="te-media-drawer-body"></div>
+    </aside>
+
+    <!-- Terminal modal -->
+    <div
+      class="modal"
+      id="terminal-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="terminal-modal-title"
+    >
+      <div class="modal-card" style="max-width: 820px">
+        <div class="modal-head">
+          <h3 id="terminal-modal-title">[ Terminal Session ]</h3>
+          <button
+            type="button"
+            class="btn ghost"
+            id="btn-close-terminal"
+            aria-label="Close terminal"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <pre class="terminal-output" id="terminal-output" aria-live="polite">
+Welcome to the Terminal Eighty Pi shell.
+Allowed commands run with timeout=15s. Type a command and press Enter.
+</pre
+          >
+          <form class="terminal-form" id="terminal-form" autocomplete="off">
+            <span class="terminal-prompt" aria-hidden="true">&gt;</span>
+            <label for="terminal-input" class="sr-only">Command</label>
+            <input type="text" id="terminal-input" placeholder="e.g. uptime" autocomplete="off" />
+            <button type="submit" class="btn primary">Run</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete-post confirm modal -->
+    <div
+      class="modal"
+      id="delete-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="delete-modal-title"
+    >
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3 id="delete-modal-title">[ Delete Post ]</h3>
+          <button
+            type="button"
+            class="btn ghost"
+            data-modal-close="delete-modal"
+            aria-label="Cancel"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Are you sure you want to delete <b id="delete-target-title">this post</b>? This action
+            is permanent.
+          </p>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn" data-modal-close="delete-modal">Cancel</button>
+          <button type="button" class="btn danger" id="btn-confirm-delete">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/terminal.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/dropzone.js"></script>
+    <script src="/js/media.js"></script>
+    <!-- Phase 5e -->
+    <script src="/js/posts-bulk.js"></script>
+    <script src="/js/settings.js"></script>
+    <script src="/js/taxonomies.js"></script>
+    <script src="/js/redirects.js"></script>
+    <script src="/js/activity.js"></script>
+    <script src="/js/shortcodes.js"></script>
+    <!-- Phase 8.5 -->
+    <script src="/js/comments.js"></script>
+    <script src="/js/router.js"></script>
+  </body>
+</html>

@@ -1,0 +1,144 @@
+/* ============================================================
+   Phase 5e — Redirects page (/#redirects)
+   ============================================================ */
+
+.te-redirects-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.te-redir-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.8fr 80px 100px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.te-redir-head {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  background: var(--glass-tint);
+}
+
+.te-redir-row code {
+  background: transparent;
+  color: var(--fg);
+}
+
+.te-redir-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .te-redir-row {
+    grid-template-columns: 1fr;
+    grid-template-areas: "from" "to" "code" "actions";
+    gap: 4px;
+  }
+  .te-redir-from {
+    grid-area: from;
+  }
+  .te-redir-to {
+    grid-area: to;
+  }
+  .te-redir-code {
+    grid-area: code;
+    color: var(--fg-mute);
+  }
+  .te-redir-actions {
+    grid-area: actions;
+    justify-content: flex-start;
+  }
+}
+
+/* Shortcodes cards */
+.te-sc-card {
+  border: 1px solid var(--glass-border);
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin: 0 16px 12px;
+}
+
+.te-sc-card h3 {
+  margin: 0 0 6px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.te-sc-doc {
+  color: var(--fg-dim);
+  font-size: 12.5px;
+}
+.te-sc-nodoc {
+  color: var(--fg-mute);
+  font-style: italic;
+}
+
+.te-sc-usage {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11.5px;
+  overflow-x: auto;
+}
+
+/* Template picker list */
+.te-template-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.te-template-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+.te-template-list a:hover,
+.te-template-list a:focus {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.te-template-list b {
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+}
+
+.te-template-list span {
+  color: var(--fg-mute);
+  font-size: 12px;
+}
+
+/* Posts table select-all in the toolbar */
+.posts-selectall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

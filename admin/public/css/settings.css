@@ -1,0 +1,71 @@
+/* ============================================================
+   Phase 5e — Settings page (/#settings)
+   ============================================================ */
+
+.te-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.te-form-group {
+  border: 1px solid var(--glass-border);
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 16px 18px;
+}
+
+.te-form-group h3 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+
+.te-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.te-field > span {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.te-field input,
+.te-field textarea {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+}
+
+.te-field input:focus,
+.te-field textarea:focus {
+  border-color: var(--accent);
+}
+
+.te-field textarea {
+  font-family: var(--mono);
+  font-size: 12px;
+  resize: vertical;
+  min-height: 56px;
+}
+
+@media (max-width: 900px) {
+  .te-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

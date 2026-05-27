@@ -1,0 +1,34 @@
+{{/*
+  attachment-video — Phase 6 video attachment.
+
+  <video controls preload="metadata"> with H.264 MP4 + VP9 WebM
+  <source>s and a poster image (all produced by Phase 5b). Falls back
+  to the original if conversions haven't completed yet (still
+  processing). Always offers a "Download original" link below.
+*/}}
+{{- $m := .media -}}
+{{- $caption := .caption -}}
+{{- $conv := default (dict) $m.conversions -}}
+{{- $mp4 := default $m.original_url (index $conv "h264-mp4") -}}
+{{- $webm := index $conv "vp9-webm" -}}
+{{- $poster := index $conv "poster" -}}
+<figure class="attachment attachment-video">
+  <video controls
+         preload="metadata"
+         {{ with $poster }}poster="{{ . }}"{{ end }}
+         {{ with $m.width }}width="{{ . }}"{{ end }}
+         {{ with $m.height }}height="{{ . }}"{{ end }}>
+    {{- with $webm -}}
+      <source src="{{ . }}" type="video/webm" />
+    {{- end -}}
+    <source src="{{ $mp4 }}" type="video/mp4" />
+    <p>Your browser does not support embedded video. <a href="{{ $m.original_url }}" download="{{ $m.original_filename }}">Download the file</a>.</p>
+  </video>
+  {{- if $caption -}}
+    <figcaption>{{ $caption }}</figcaption>
+  {{- end -}}
+  <p class="attachment-download">
+    <a href="{{ $m.original_url }}" download="{{ $m.original_filename }}">Download original</a>
+    <span class="attachment-meta">{{ $m.original_filename }}</span>
+  </p>
+</figure>

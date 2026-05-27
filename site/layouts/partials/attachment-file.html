@@ -1,0 +1,34 @@
+{{/*
+  attachment-file — Phase 6 generic file card.
+
+  Catch-all for MIME types we don't have a richer preview for. Renders
+  a glyph, filename, byte size, and a Download Original link. The
+  glyph is picked from a small static map keyed off the top-level
+  MIME bucket.
+*/}}
+{{- $m := .media -}}
+{{- $caption := .caption -}}
+{{- $mime := lower (default "" $m.mime_type) -}}
+{{- $type := default "other" $m.type -}}
+{{- $glyph := "FILE" -}}
+{{- if eq $type "image" -}}{{- $glyph = "IMG" -}}
+{{- else if eq $type "video" -}}{{- $glyph = "VID" -}}
+{{- else if eq $type "audio" -}}{{- $glyph = "AUD" -}}
+{{- else if eq $type "document" -}}{{- $glyph = "DOC" -}}
+{{- else if eq $type "archive" -}}{{- $glyph = "ZIP" -}}
+{{- else if hasPrefix $mime "text/" -}}{{- $glyph = "TXT" -}}
+{{- end -}}
+{{- $size := default 0 $m.size -}}
+<figure class="attachment attachment-file" data-type="{{ $type }}">
+  <a class="attachment-file-card" href="{{ $m.original_url }}" download="{{ $m.original_filename }}">
+    <span class="attachment-glyph" aria-hidden="true">{{ $glyph }}</span>
+    <span class="attachment-file-meta">
+      <span class="attachment-name">{{ $m.original_filename }}</span>
+      <span class="attachment-sub">{{ $mime }}{{ with $size }} · {{ . }} B{{ end }}</span>
+    </span>
+    <span class="attachment-download-cta" aria-hidden="true">Download</span>
+  </a>
+  {{- if $caption -}}
+    <figcaption>{{ $caption }}</figcaption>
+  {{- end -}}
+</figure>

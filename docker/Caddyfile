@@ -1,0 +1,28 @@
+# Caddyfile for internal routing behind Cloudflare Tunnel
+
+# Since Cloudflare terminates SSL, Caddy just routes HTTP traffic locally.
+# The `admin.terminaleighty.com` etc. are handled by Cloudflare routing here.
+
+http://{$DOMAIN_ADMIN} {
+    # Phase 8 — Webmention receiver. Public (no auth) endpoint that
+    # accepts pings forwarded by Bridgy Fed from the Fediverse. Mounts
+    # at /webmention on the same admin subdomain so the existing TLS +
+    # tunnel config covers it.
+    @webmention path /webmention /webmention/*
+    reverse_proxy @webmention cms:3000
+
+    reverse_proxy cms:3000
+}
+
+http://{$DOMAIN_COMMENTS} {
+    reverse_proxy remark42:8080
+}
+
+http://{$DOMAIN_ANALYTICS} {
+    reverse_proxy umami:3000
+}
+
+# Catch-all fallback (useful for local testing)
+:80 {
+    respond "Terminal Eighty internal proxy running." 200
+}

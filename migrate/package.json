@@ -1,0 +1,13 @@
+{
+  "name": "terminal-eighty-migrate",
+  "version": "1.0.0",
+  "description": "Migrate Ghost blog content to Hugo",
+  "main": "migrate.js",
+  "scripts": {
+    "migrate": "node migrate.js"
+  },
+  "dependencies": {
+    "turndown": "^7.1.3",
+    "node-fetch": "^3.3.2"
+  }
+}

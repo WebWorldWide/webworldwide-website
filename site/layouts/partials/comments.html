@@ -1,0 +1,49 @@
+{{ if .Site.Params.remark42URL }}
+{{/* Lazy-load Remark42 — only loads when user scrolls to comments */}}
+<div id="remark42-comments" style="margin-top: 40px;">
+    <div id="remark42"></div>
+</div>
+
+<script>
+(function() {
+    // Lazy-load: only initialize when scrolled into view
+    var loaded = false;
+    var observer = new IntersectionObserver(function(entries) {
+        if (entries[0].isIntersecting && !loaded) {
+            loaded = true;
+            observer.disconnect();
+            loadRemark42();
+        }
+    }, { rootMargin: '200px' });
+
+    var target = document.getElementById('remark42-comments');
+    if (target) observer.observe(target);
+
+    function loadRemark42() {
+        var remark_config = {
+            host: {{ .Site.Params.remark42URL | jsonify }},
+            site_id: {{ .Site.Params.remark42SiteID | jsonify }},
+            url: {{ .Permalink | jsonify }},
+            theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+            show_email_subscription: false,
+            show_rss_subscription: true,
+            simple_view: false,
+            no_footer: false
+        };
+
+        window.remark_config = remark_config;
+        window.REMARK42 = window.REMARK42 || {};
+        window.REMARK42.changeTheme = function(theme) {
+            if (window.REMARK42.changeTheme._orig) {
+                window.REMARK42.changeTheme._orig(theme);
+            }
+        };
+
+        var d = document, s = d.createElement('script');
+        s.src = remark_config.host + '/web/embed.js';
+        s.defer = true;
+        (d.head || d.body).appendChild(s);
+    }
+})();
+</script>
+{{ end }}

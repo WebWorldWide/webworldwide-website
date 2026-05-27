@@ -1,0 +1,6 @@
+{
+  "!(**/node_modules/**)*.js": ["eslint --fix", "prettier --write"],
+  "!(**/node_modules/**)*.css": ["stylelint --fix", "prettier --write"],
+  "!(**/node_modules/**)*.md": ["markdownlint-cli2 --fix"],
+  "!(**/node_modules/**)*.{json,html}": ["prettier --write"]
+}

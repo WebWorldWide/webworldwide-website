@@ -1,0 +1,29 @@
+# Default owner for everything not otherwise matched.
+*                              @AdamNolle
+
+# CI + quality scaffolding
+/.github/                      @AdamNolle
+/.husky/                       @AdamNolle
+/eslint.config.js              @AdamNolle
+/.stylelintrc.json             @AdamNolle
+/.prettierrc.json              @AdamNolle
+/.markdownlint.json            @AdamNolle
+/.htmlhintrc                   @AdamNolle
+/tsconfig.json                 @AdamNolle
+/vitest.config.js              @AdamNolle
+/playwright.config.js          @AdamNolle
+/lighthouserc.json             @AdamNolle
+/package.json                  @AdamNolle
+
+# Admin CMS
+/admin/                        @AdamNolle
+
+# Public site
+/site/                         @AdamNolle
+
+# Migration tooling
+/migrate/                      @AdamNolle
+
+# Deploy + ops scripts
+/scripts/                      @AdamNolle
+/docker/                       @AdamNolle

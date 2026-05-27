@@ -1,0 +1,51 @@
+{{- /* series-nav.html — rendered inside _default/single.html when the
+       page has a `series` front-matter field. Shows "Part N of M" plus
+       prev/next siblings within the same series, ordered by date.
+       Renders nothing if series is unset or has only one entry. */ -}}
+{{- with .Params.series -}}
+  {{- $name := . -}}
+  {{- $term := index site.Taxonomies.series ($name | urlize) -}}
+  {{- with $term -}}
+    {{- $pages := .Pages.ByDate -}}
+    {{- if gt (len $pages) 1 -}}
+      {{- $cur := $.Page -}}
+      {{- $idx := -1 -}}
+      {{- range $i, $p := $pages -}}
+        {{- if eq $p.RelPermalink $cur.RelPermalink -}}{{- $idx = $i -}}{{- end -}}
+      {{- end -}}
+      {{- if ge $idx 0 -}}
+        {{- $total := len $pages -}}
+        {{- $prev := "" -}}
+        {{- $next := "" -}}
+        {{- if gt $idx 0 -}}{{- $prev = index $pages (sub $idx 1) -}}{{- end -}}
+        {{- if lt $idx (sub $total 1) -}}{{- $next = index $pages (add $idx 1) -}}{{- end -}}
+<nav class="series-nav" aria-label="Series navigation">
+  <div class="series-nav-head">
+    <span class="series-nav-flag">SERIES</span>
+    <a class="series-nav-name" href="{{ printf "/series/%s/" ($name | urlize) | relURL }}">{{ $name }}</a>
+    <span class="series-nav-sep">·</span>
+    <span class="series-nav-pos">Part {{ add $idx 1 }} of {{ $total }}</span>
+  </div>
+  <div class="series-nav-pager">
+    {{- with $prev }}
+    <a class="series-nav-prev" rel="prev" href="{{ .Permalink }}">
+      <span class="series-nav-dir">← prev</span>
+      <span class="series-nav-title">{{ .Title }}</span>
+    </a>
+    {{- else }}
+    <span class="series-nav-prev disabled"><span class="series-nav-dir">←</span></span>
+    {{- end }}
+    {{- with $next }}
+    <a class="series-nav-next" rel="next" href="{{ .Permalink }}">
+      <span class="series-nav-dir">next →</span>
+      <span class="series-nav-title">{{ .Title }}</span>
+    </a>
+    {{- else }}
+    <span class="series-nav-next disabled"><span class="series-nav-dir">→</span></span>
+    {{- end }}
+  </div>
+</nav>
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

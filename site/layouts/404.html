@@ -1,0 +1,24 @@
+{{ define "main" }}
+{{- /* 404 page — Hugo writes this to /404.html at build time. Caddy
+       (and most static hosts) serve it for unmatched paths. Kept
+       intentionally bare so it loads even when the assets pipeline
+       has a hiccup — no JS-only behaviors below the H1. */ -}}
+<article class="page">
+  <div class="page-eyebrow">
+    <span class="about-pip" aria-hidden="true"></span>
+    [/404]
+  </div>
+  <h1 class="page-title">Not found</h1>
+  <div class="prose">
+    <p>
+      The terminal couldn&rsquo;t locate this address. It may have moved, been
+      renamed, or never existed.
+    </p>
+    <p>
+      Try the <a href="{{ "/" | relURL }}">home page</a>,
+      browse <a href="{{ "/posts/" | relURL }}">all posts</a>,
+      or jump to the <a href="{{ "/tags/" | relURL }}">tag index</a>.
+    </p>
+  </div>
+</article>
+{{ end }}

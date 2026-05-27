@@ -1,0 +1,99 @@
+name: terminal-eighty
+
+services:
+  # 1. Cloudflare Tunnel (Inbound traffic without port forwarding)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    # Cloudflared routes to Caddy
+
+  # 2. Caddy Reverse Proxy (Internal routing to services)
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - DOMAIN_ADMIN=${DOMAIN_ADMIN}
+      - DOMAIN_COMMENTS=${DOMAIN_COMMENTS}
+      - DOMAIN_ANALYTICS=${DOMAIN_ANALYTICS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # 3. Terminal Eighty CMS (Node.js Admin Panel)
+  cms:
+    build:
+      context: ../admin
+    container_name: cms
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - SESSION_SECRET=${CMS_SESSION_SECRET}
+      - RP_ID=${DOMAIN_ADMIN}
+      - ORIGIN=https://${DOMAIN_ADMIN}
+      - SITE_DIR=/app/site
+    volumes:
+      - ../site:/app/site          # So it can read/write Hugo files
+      - ../.git:/app/.git          # So it can commit/push
+      - cms_data:/app/data         # SQLite DB for auth
+      - /var/run/docker.sock:/var/run/docker.sock:ro # For health dashboard
+      - /sys/class/thermal:/sys/class/thermal:ro     # For Pi temp
+
+  # 4. Remark42 (Comments)
+  remark42:
+    image: umputun/remark42:latest
+    container_name: remark42
+    restart: unless-stopped
+    environment:
+      - REMARK_URL=https://${DOMAIN_COMMENTS}
+      - SECRET=${REMARK42_SECRET}
+      - SITE=terminaleighty
+      - AUTH_ANON=true             # No login required for users
+      - ADMIN_SHARED_ID=${REMARK42_ADMIN_ID}
+    volumes:
+      - remark_data:/srv/var
+
+  # 5. Umami (Analytics)
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: umami
+    restart: unless-stopped
+    environment:
+      - DATABASE_TYPE=postgresql
+      - DATABASE_URL=postgresql://umami:${UMAMI_DB_PASSWORD}@postgres:5432/umami
+      - APP_SECRET=${UMAMI_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 6. PostgreSQL (for Umami)
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=umami
+      - POSTGRES_USER=umami
+      - POSTGRES_PASSWORD=${UMAMI_DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  caddy_data:
+  caddy_config:
+  cms_data:
+  remark_data:
+  pg_data:

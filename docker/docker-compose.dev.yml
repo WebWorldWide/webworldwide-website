@@ -1,0 +1,70 @@
+# Local development stack — Remark42, Umami, Postgres only.
+#
+# Phase 5d: a fresh clone runs `npm run dev:all` and gets a working
+# end-to-end environment on a laptop. This compose file is **only** for
+# dev: secrets are throwaway, no Cloudflare tunnel, no Caddy, no CMS
+# (the admin runs natively via `node --watch` for fast iteration).
+#
+# Ports are deliberately offset from the production compose file so both
+# stacks could coexist on one host:
+#   - Postgres  5433  (prod uses 5432 internally)
+#   - Remark42  8081  (prod fronted by Caddy on 80/443)
+#   - Umami     3001  (prod fronted by Caddy on 80/443)
+#
+# Volumes are scoped to `*_data_dev` so a `docker volume prune` after a
+# dev session never touches production-shaped data.
+name: terminal-eighty-dev
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: t80-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: dev_only_password_change_me
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: t80-dev-umami
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://umami:dev_only_password_change_me@postgres:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: dev-only-app-secret-not-for-prod
+    ports:
+      - "3001:3000"
+
+  remark42:
+    image: umputun/remark42:latest
+    container_name: t80-dev-remark42
+    restart: unless-stopped
+    environment:
+      REMARK_URL: http://localhost:8081
+      SITE: terminaleighty
+      SECRET: dev-only-secret-not-for-prod
+      AUTH_ANON: "true"
+      ADMIN_PASSWD: admin
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+    ports:
+      - "8081:8080"
+    volumes:
+      - remark42_data_dev:/srv/var
+
+volumes:
+  postgres_data_dev:
+  remark42_data_dev:

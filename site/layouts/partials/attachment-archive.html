@@ -1,0 +1,52 @@
+{{/*
+  attachment-archive — Phase 6 archive (zip/tar/7z/rar) attachment.
+
+  Reads the Phase 5c tree JSON (URL stored in conversions.tree, file
+  lives under site/static so we can readFile it) and renders a
+  collapsible <details>/<summary> tree. Falls back to a generic file
+  card if the tree isn't available yet.
+*/}}
+{{- $m := .media -}}
+{{- $caption := .caption -}}
+{{- $conv := default (dict) $m.conversions -}}
+{{- $treeUrl := index $conv "tree" -}}
+{{- $totalFiles := index $conv "total_files" -}}
+{{- $totalSize := index $conv "total_size" -}}
+{{- $truncated := index $conv "truncated" -}}
+<figure class="attachment attachment-archive">
+  <details>
+    <summary>
+      <span class="attachment-glyph" aria-hidden="true">ZIP</span>
+      <span class="attachment-name">{{ $m.original_filename }}</span>
+      <span class="attachment-sub">
+        {{- with $totalFiles }}{{ . }} file{{ if ne . 1 }}s{{ end }}{{ end -}}
+        {{- with $totalSize }} · {{ . }} bytes{{ end -}}
+        {{- if $truncated }} · truncated{{ end -}}
+      </span>
+    </summary>
+    {{- $treeDiskPath := printf "static%s" $treeUrl -}}
+    {{- $entries := slice -}}
+    {{- if and $treeUrl (fileExists $treeDiskPath) -}}
+      {{- $json := readFile $treeDiskPath | transform.Unmarshal -}}
+      {{- with $json.entries -}}{{- $entries = . -}}{{- end -}}
+    {{- end -}}
+    {{- if $entries -}}
+      <ul class="attachment-archive-tree">
+        {{- range $entries -}}
+          <li>
+            <code>{{ .path }}</code>
+            {{- with .size }} <span class="attachment-sub">{{ . }} B</span>{{ end -}}
+          </li>
+        {{- end -}}
+      </ul>
+    {{- else -}}
+      <p class="attachment-sub">Archive contents unavailable.</p>
+    {{- end -}}
+  </details>
+  {{- if $caption -}}
+    <figcaption>{{ $caption }}</figcaption>
+  {{- end -}}
+  <p class="attachment-download">
+    <a href="{{ $m.original_url }}" download="{{ $m.original_filename }}">Download original</a>
+  </p>
+</figure>

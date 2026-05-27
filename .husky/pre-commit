@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Use --config so lint-staged does not walk the tree and pick up the
+# deprecated v7-format lint-staged block that ships in some transitive
+# node_modules packages (e.g. rxjs).
+npx lint-staged --config .lintstagedrc.json
