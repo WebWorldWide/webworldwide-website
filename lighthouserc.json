@@ -2,9 +2,9 @@
   "ci": {
     "collect": {
       "url": [
-        "http://localhost:1414/",
-        "http://localhost:1414/blog/",
-        "http://localhost:1414/blog/bye-bye-dji/"
+        "http://127.0.0.1:1414/",
+        "http://127.0.0.1:1414/blog/",
+        "http://127.0.0.1:1414/blog/bye-bye-dji/"
       ],
       "startServerCommand": "npm --prefix site run build && npm --prefix site run preview -- --port 1414 --host 127.0.0.1",
       "startServerReadyPattern": "Local\\s+http://",
