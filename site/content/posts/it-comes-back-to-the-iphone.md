@@ -5,7 +5,7 @@ slug: "it-comes-back-to-the-iphone"
 draft: false
 tags: ["culture", "tech", "opinion"]
 ---
-![Someone celebrating after buying an iPhone outside an Apple Store](/images/2025/12/image-12.png)
+![Someone celebrating after buying an iPhone outside an Apple Store](/images/2025/12/image-12.webp)
 
 The 2020s have been quite a wild ride. And I'm not even going to talk about everything going on in the world, just technological trends. During COVID, when we were banished to our online realms, we had the explosive growth of all things technology. But the central part that kept us all connected? The smartphone.
 

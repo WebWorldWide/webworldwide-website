@@ -11,7 +11,7 @@ So why do it if no one needs to read it? Well, I could say it's because I am not
 
 So what is up with the name "Terminal Eighty"? Well, I love computers and got really into Linux in college, hence my affinity for the terminal. Then "eighty" is just 80 spelled out, and Port 80 is the port on a computer through which external internet traffic flows. So it all just connects together. On top of that, I thought it sounded cool and futuristic. I like clean and minimal as much as the next person, but I love the terminal green text of the early internet age of computers. The first thing that comes to mind for me isn't *The Matrix* or even an old terminal, but *The Fairly OddParents* episode: "Information Stupor Highway."
 
-![Fairly OddParents — Information Stupor Highway](/images/2025/12/image.png)
+![Fairly OddParents — Information Stupor Highway](/images/2025/12/image.webp)
 
 I mean, watching Timmy literally fly around the wires of the internet was honestly quite surreal to watch in the 2000s on my family room TV. So the wonderful terminal green will always be with me as an identity for technological prowess, speed, and wonder—even if it basically is the Spotify logo.
 

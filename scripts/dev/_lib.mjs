@@ -13,16 +13,32 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Absolute path to the repo root (parent of scripts/dev/). */
 export const REPO_ROOT = resolve(__dirname, '..', '..');
 
-/** ANSI color helpers. */
-const ansi = (open, close) => (s) =>
-  process.stdout.isTTY ? `[${open}m${s}[${close}m` : String(s);
+/**
+ * Cross-platform "is this module the CLI entry point?" check. The naive
+ * `import.meta.url === ` + "`file://${process.argv[1]}`" + ` fails on Windows
+ * (backslashes + drive letter), which silently made `db:seed`/`db:reset`
+ * no-op there. pathToFileURL() normalizes both sides.
+ *
+ * @param {string} metaUrl - the caller's import.meta.url
+ * @returns {boolean}
+ */
+export function isMainModule(metaUrl) {
+  return Boolean(process.argv[1]) && metaUrl === pathToFileURL(process.argv[1]).href;
+}
+
+/**
+ * ANSI color helpers.
+ * @param open
+ * @param close
+ */
+const ansi = (open, close) => (s) => (process.stdout.isTTY ? `[${open}m${s}[${close}m` : String(s));
 
 export const c = {
   green: ansi(32, 39),

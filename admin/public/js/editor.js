@@ -399,7 +399,8 @@
       titleEl.value = data.title || '';
       slugEl.value = data.slug || filename.replace(/\.md$/, '');
       draftEl.value = data.draft ? 'true' : 'false';
-      descEl.value = data.description || '';
+      // The blog reads frontmatter `excerpt` for the hook line + SEO description.
+      descEl.value = data.excerpt || '';
       tagsEl.value = (data.tags || []).join(', ');
       if (data.date) {
         const d = new Date(data.date);
@@ -497,7 +498,7 @@
       slug: slugEl.value.trim() || slugify(titleEl.value),
       draft: draftEl.value === 'true',
       date: dateEl.value ? new Date(dateEl.value).toISOString() : new Date().toISOString(),
-      description: descEl.value.trim(),
+      excerpt: descEl.value.trim(),
       tags: tagsEl.value
         .split(',')
         .map((t) => t.trim())

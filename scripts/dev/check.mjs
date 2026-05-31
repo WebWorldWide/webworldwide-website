@@ -12,7 +12,7 @@
  */
 
 import net from 'node:net';
-import { loadDevEnv, makeLogger, c } from './_lib.mjs';
+import { loadDevEnv, makeLogger, c, isMainModule } from './_lib.mjs';
 
 const log = makeLogger('check', c.blue);
 
@@ -158,7 +158,7 @@ export async function runCheck(opts = {}) {
   return { rows, allOk };
 }
 
-const isMain = import.meta.url === `file://${process.argv[1]}`;
+const isMain = isMainModule(import.meta.url);
 if (isMain) {
   runCheck()
     .then(({ allOk }) => process.exit(allOk ? 0 : 1))

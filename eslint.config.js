@@ -28,7 +28,7 @@ const sharedRules = {
   'prefer-const': 'error',
   eqeqeq: ['error', 'always'],
   'no-implicit-coercion': 'error',
-  'security/detect-object-injection': 'warn'
+  'security/detect-object-injection': 'warn',
 };
 
 export default [
@@ -49,8 +49,8 @@ export default [
       'test-results/**',
       '.lighthouseci/**',
       'docker/**',
-      'dist/**'
-    ]
+      'dist/**',
+    ],
   },
 
   js.configs.recommended,
@@ -64,7 +64,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'script',
-      globals: { ...globals.serviceworker }
+      globals: { ...globals.serviceworker },
     },
     rules: {
       ...sharedRules,
@@ -72,8 +72,8 @@ export default [
       'promise/always-return': 'off',
       'promise/no-nesting': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // Admin browser frontend (plain script IIFEs).
@@ -87,16 +87,20 @@ export default [
       globals: {
         ...globals.browser,
         SimpleWebAuthnBrowser: 'readonly',
-        WWW: 'readonly'
-      }
+        // window.TE — the admin frontend namespace seeded by icons.js and
+        // extended by common.js (TE.icon/escape/openModal/…). WWW is the
+        // legacy alias kept until the last reference is renamed.
+        TE: 'readonly',
+        WWW: 'readonly',
+      },
     },
     rules: {
       ...sharedRules,
       'jsdoc/require-jsdoc': 'off',
       'jsdoc/require-param-description': 'off',
       'jsdoc/require-returns-description': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // TipTap + CodeMirror bundle source (ES module input to esbuild).
@@ -106,7 +110,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.browser }
+      globals: { ...globals.browser },
     },
     rules: {
       ...sharedRules,
@@ -117,8 +121,8 @@ export default [
       'jsdoc/require-returns': 'off',
       'jsdoc/require-returns-description': 'off',
       'jsdoc/tag-lines': 'off',
-      'jsdoc/no-multi-asterisks': 'off'
-    }
+      'jsdoc/no-multi-asterisks': 'off',
+    },
   },
 
   // Admin Express backend (Node ESM).
@@ -129,7 +133,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node }
+      globals: { ...globals.node },
     },
     rules: {
       ...sharedRules,
@@ -138,8 +142,8 @@ export default [
       'jsdoc/require-jsdoc': 'off',
       'jsdoc/require-param-description': 'off',
       'jsdoc/require-returns-description': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // Migrate CLI.
@@ -149,15 +153,15 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node }
+      globals: { ...globals.node },
     },
     rules: {
       ...sharedRules,
       'n/no-missing-import': 'off',
       'n/no-unpublished-import': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // Root-level JS configs.
@@ -167,13 +171,13 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node }
+      globals: { ...globals.node },
     },
     rules: {
       ...sharedRules,
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // scripts/ — Node CLI tooling (maintenance + dev experience).
@@ -184,7 +188,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node }
+      globals: { ...globals.node },
     },
     rules: {
       ...sharedRules,
@@ -194,8 +198,8 @@ export default [
       'jsdoc/require-param-description': 'off',
       'jsdoc/require-returns-description': 'off',
       'jsdoc/tag-lines': 'off',
-      'jsdoc/no-undefined-types': 'off'
-    }
+      'jsdoc/no-undefined-types': 'off',
+    },
   },
 
   // scripts/dev/__tests__ — Vitest.
@@ -205,14 +209,14 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node }
+      globals: { ...globals.node },
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // admin frontend Vitest tests.
@@ -222,15 +226,15 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.browser, ...globals.node }
+      globals: { ...globals.browser, ...globals.node },
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'promise/param-names': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // admin backend node:test runner.
@@ -240,14 +244,14 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node }
+      globals: { ...globals.node },
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
+      'jsdoc/tag-lines': 'off',
+    },
   },
 
   // Playwright e2e.
@@ -257,13 +261,13 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { ...globals.node, ...globals.browser }
+      globals: { ...globals.node, ...globals.browser },
     },
     rules: {
       ...sharedRules,
       'security/detect-object-injection': 'off',
       'jsdoc/require-jsdoc': 'off',
-      'jsdoc/tag-lines': 'off'
-    }
-  }
+      'jsdoc/tag-lines': 'off',
+    },
+  },
 ];

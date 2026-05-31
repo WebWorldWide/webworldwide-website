@@ -21,10 +21,10 @@
      `color: var(--accent)` inherits a passing contrast automatically.
      Use the brighter `--cherry` / `--sun` only for backgrounds (with
      ink-on-color text), large display text, or non-text decoration. */
-  --sun: #68dba8;
+  --sun: #28b083;
   --sun-deep: #3aa982;
   --sun-strong: #1e6d50;
-  --cherry: #ff8a3d;
+  --cherry: #ec5a2b;
   --cherry-deep: #d96815;
   --cherry-strong: #b04708;
   --grass: #3ec25d;
@@ -37,30 +37,35 @@
 
   /* Paper */
   --paper: #ffffff;
-  --paper-warm: #fffaf2;
+  --paper-warm: #eef3fb;
 
   /* Glass */
   --glass: rgba(255, 255, 255, 0.74);
   --glass-strong: rgba(255, 255, 255, 0.85);
   --glass-soft: rgba(255, 255, 255, 0.45);
-  --glass-warm: rgba(255, 250, 242, 0.88);
+  --glass-warm: rgba(238, 243, 251, 0.88);
 
   /* WCAG-friendly hairlines */
   --line-www: rgba(14, 41, 96, 0.18);
   --line-strong-www: rgba(14, 41, 96, 0.42);
 
-  /* Shadows / borders */
-  --shadow-card: 8px 8px 0 var(--ink);
-  --shadow-card-sm: 5px 5px 0 var(--ink);
-  --shadow-card-xs: 3px 3px 0 var(--ink);
-  --shadow-button: 4px 4px 0 var(--ink);
-  --border-strong: 3px solid var(--ink);
-  --border-soft: 2px solid var(--ink);
+  /* Shadows / borders — calmed for a legible daily-driver tool.
+     Was chunky hard-offset ink (8px 8px 0); now subtle elevation +
+     hairline borders so panels read as clean cards, not stickers. */
+  --shadow-card: 0 1px 3px rgba(14, 41, 96, 0.1), 0 1px 2px rgba(14, 41, 96, 0.06);
+  --shadow-card-sm: 0 1px 2px rgba(14, 41, 96, 0.08);
+  --shadow-card-xs: 0 1px 1px rgba(14, 41, 96, 0.06);
+  --shadow-button: 0 1px 2px rgba(14, 41, 96, 0.08);
+  --border-strong: 1px solid var(--line-strong-www);
+  --border-soft: 1px solid var(--line-www);
 
   /* Type stacks */
-  --font-serif: "Cormorant Garamond", "Apple Garamond", "ITC Garamond", Garamond, serif;
+  --font-serif: "Cormorant Garamond", "Apple Garamond", "ITC Garamond", Garamond, Georgia, serif;
   --font-mono-www: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-pixel: "VT323", ui-monospace, "Courier New", monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* VT323 pixel face retired for legibility — alias the pixel token to the
+     clean sans so every legacy var(--font-pixel) rule de-pixelates at once. */
+  --font-pixel: var(--font-sans);
 
   /* Map legacy admin tokens to WWW equivalents so existing rules
      (var(--bg), var(--fg), var(--accent)…) "just work". */
@@ -81,8 +86,8 @@
      display text, and decorative icons. */
   --accent: var(--cherry-strong);
   --accent-bg: var(--cherry);
-  --accent-soft: rgba(255, 138, 61, 0.12);
-  --accent-glow: rgba(255, 138, 61, 0.34);
+  --accent-soft: rgba(236, 90, 43, 0.12);
+  --accent-glow: rgba(236, 90, 43, 0.34);
   --accent-on: #ffffff;
   --selection: var(--cherry);
 
@@ -98,13 +103,11 @@
   --glass-tint: var(--glass);
   --glass-border: var(--ink);
   --glass-highlight: rgba(255, 255, 255, 0.6);
-  --glass-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
-    var(--shadow-card);
+  --glass-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.7) inset, var(--shadow-card);
 
   /* Override the admin's legacy font stacks so every var(--mono),
      var(--sans), var(--serif) downstream uses the WWW palette. */
   --mono: var(--font-mono-www);
-  --sans: var(--font-serif);
+  --sans: var(--font-sans);
   --serif: var(--font-serif);
 }

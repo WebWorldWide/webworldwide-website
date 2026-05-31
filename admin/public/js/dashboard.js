@@ -139,7 +139,7 @@
             <span class="r-date">${fmtDate(p.date)}</span>
           </a>
           <span class="r-actions">
-            <button type="button" class="btn-mini bad js-delete" data-filename="${fn}" data-title="${TE.escape(p.title || p.filename)}" aria-label="Delete ${title}">✕</button>
+            <button type="button" class="btn-mini bad js-delete" data-filename="${fn}" data-title="${TE.escape(p.title || p.filename)}" aria-label="Delete ${title}"><span class="ico" aria-hidden="true">${window.TE.icon('trash')}</span></button>
           </span>
         </div>
       `;

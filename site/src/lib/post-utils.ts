@@ -40,6 +40,18 @@ export function sortByDateDesc(a: PostEntry, b: PostEntry): number {
   return b.data.date.getTime() - a.data.date.getTime();
 }
 
+/**
+ * Single source of truth for "is this post live?". Used by the blog listing,
+ * the post detail route, and the RSS feed so the three surfaces never drift.
+ * A post is published unless it's a draft or scheduled for a future date
+ * (`publish_at` — a latent schema field the admin writes for scheduled posts).
+ */
+export function isPublished(post: PostEntry, now: Date = new Date()): boolean {
+  if (post.data.draft) return false;
+  if (post.data.publish_at && post.data.publish_at.getTime() > now.getTime()) return false;
+  return true;
+}
+
 /** Slim post summary shape passed to the ⌘K palette island. */
 export interface PostSummary {
   title: string;
@@ -86,15 +98,31 @@ export function coverImage(post: PostEntry, body: string): PostImage | null {
   return firstImage(body);
 }
 
-/** Fallback excerpt: first ~180 chars of body, stripping markdown noise. */
+/**
+ * Fallback excerpt: the first prose paragraph, trimmed to a sensible length on
+ * a complete-sentence (or at worst word) boundary — never cut mid-word. Returns
+ * '' when the post opens with no prose (e.g. just an image), so callers can omit
+ * the line rather than show a nonsensical fragment.
+ */
 export function deriveExcerpt(body: string): string {
-  const stripped = body
+  const cleaned = body
     .replace(/^---[\s\S]+?---/, '') // frontmatter
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // images
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → label
-    .replace(/[`*_>#-]/g, '')
+    .replace(/[`*_>#]/g, '') // md noise (keep hyphens/dashes in prose)
     .trim();
-  const first = stripped.split(/\n\n+/)[0] ?? '';
-  if (first.length <= 180) return first;
-  return first.slice(0, 177).trimEnd() + '…';
+  // First non-empty paragraph, whitespace collapsed to single spaces.
+  const para = (cleaned.split(/\n\n+/).find((p) => p.trim()) ?? '').replace(/\s+/g, ' ').trim();
+  if (!para) return '';
+  const LIMIT = 180;
+  if (para.length <= LIMIT) return para;
+  const window = para.slice(0, LIMIT);
+  const sentenceEnd = Math.max(
+    window.lastIndexOf('. '),
+    window.lastIndexOf('! '),
+    window.lastIndexOf('? '),
+  );
+  if (sentenceEnd >= 80) return window.slice(0, sentenceEnd + 1);
+  const wordEnd = window.lastIndexOf(' ');
+  return (wordEnd > 0 ? window.slice(0, wordEnd) : window).trimEnd() + '…';
 }

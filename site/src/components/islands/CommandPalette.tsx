@@ -33,22 +33,18 @@ export default function CommandPalette({ posts }: { posts: PostSummary[] }): JSX
   const inputRef = useRef<HTMLInputElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  // Track the trigger that opened the palette, for focus return.
+  // Open via click on a [data-open-cmdk] trigger; close via Escape. We
+  // deliberately do NOT bind a global open shortcut (e.g. ⌘K) — a website
+  // can't own a keystroke across every OS/browser, so search is click-driven.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
-        e.preventDefault();
-        setOpen((o) => {
-          if (!o) triggerRef.current = document.activeElement as HTMLElement | null;
-          return !o;
-        });
-      } else if (e.key === 'Escape' && open) {
+      if (e.key === 'Escape' && open) {
         e.preventDefault();
         setOpen(false);
       }
     }
     window.addEventListener('keydown', onKey);
-    // Also listen for clicks on any [data-open-cmdk] trigger.
+    // Listen for clicks on any [data-open-cmdk] trigger.
     function onTriggerClick(e: Event) {
       const tgt = e.target as HTMLElement | null;
       if (tgt && tgt.closest('[data-open-cmdk]')) {
@@ -187,7 +183,6 @@ export default function CommandPalette({ posts }: { posts: PostSummary[] }): JSX
                   </span>
                   <span className="cmdk-row-title">{p.title}</span>
                 </div>
-                <span className="cmdk-row-meta">{p.read} MIN</span>
               </li>
             ))
           )}

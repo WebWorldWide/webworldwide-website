@@ -17,11 +17,11 @@ and Postgres — on a laptop (Windows, macOS, or Linux) in two commands.
 **Requires**: Node 22+ and Docker. Start Docker before running the dev
 command.
 
-| Platform | Docker option(s) |
-| --- | --- |
-| Windows | Docker Desktop (with WSL2 backend recommended) |
-| macOS   | Docker Desktop, OrbStack, or Colima — any one works |
-| Linux   | Docker Engine (`apt install docker.io` or distro equivalent) — start with `sudo systemctl start docker` |
+| Platform | Docker option(s)                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------- |
+| Windows  | Docker Desktop (with WSL2 backend recommended)                                                          |
+| macOS    | Docker Desktop, OrbStack, or Colima — any one works                                                     |
+| Linux    | Docker Engine (`apt install docker.io` or distro equivalent) — start with `sudo systemctl start docker` |
 
 ```bash
 git clone https://github.com/AdamNolle/web-world-wide-online

@@ -46,7 +46,9 @@ for (const sub of SUBPACKAGES) {
     shell: true,
   });
   if (result.status !== 0) {
-    log.error(`${sub}/ install failed (exit ${result.status}). Run \`npm --prefix ${sub} install\` manually.`);
+    log.error(
+      `${sub}/ install failed (exit ${result.status}). Run \`npm --prefix ${sub} install\` manually.`,
+    );
     process.exit(result.status || 1);
   }
 }

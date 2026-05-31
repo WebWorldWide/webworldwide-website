@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Sign in — Web World Wide // Admin</title>
     <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="manifest" href="/manifest.json" />
     <link rel="stylesheet" href="/css/fonts.css" />
-    <link rel="preload" href="/fonts/vt323-400.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/cormorant-garamond-500.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/css/_www-tokens.css" />
     <link rel="stylesheet" href="/css/admin.css" />
     <link rel="stylesheet" href="/css/_www-overrides.css" />
@@ -17,21 +14,20 @@
          first paint. The passkey CTA is interactive within ~50ms of
          first render either way; defer is purely a latency win. -->
     <link rel="preconnect" href="https://unpkg.com" crossorigin />
-    <script defer src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+    <script
+      defer
+      src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"
+    ></script>
   </head>
   <body data-page="login">
     <a class="skip-link" href="#main">Skip to content</a>
-
-    <!-- WWW pixel-sky backdrop (same engine as the public site, dimmer) -->
-    <div class="sky" aria-hidden="true"></div>
-    <div class="sky-puffs" id="skyPuffs" aria-hidden="true"></div>
 
     <main class="auth-card" id="main" tabindex="-1">
       <div class="auth-brand">
         <span class="tmark s48" aria-hidden="true"></span>
         <span class="name">
-          WEB WORLD<b>WIDE</b>
-          <span>· ADMIN · REV 2.0</span>
+          Web World <b>Wide</b>
+          <span>Admin</span>
         </span>
       </div>
 
@@ -82,7 +78,7 @@
         <p class="auth-sub">Web World Wide CMS</p>
 
         <button type="button" class="btn btn-primary auth-passkey" id="btn-passkey-login">
-          <span class="ico" aria-hidden="true">⌥</span>Use passkey
+          <span class="ico" aria-hidden="true" data-icon="passkey"></span>Use passkey
         </button>
 
         <div class="auth-divider"><span>or</span></div>
@@ -125,8 +121,8 @@
 
     <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>
 
-    <script src="/js/clouds.js"></script>
     <script src="/js/a11y.js"></script>
+    <script src="/js/icons.js"></script>
     <script src="/js/common.js"></script>
     <script src="/js/auth.js"></script>
   </body>

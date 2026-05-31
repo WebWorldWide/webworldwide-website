@@ -93,6 +93,7 @@ const tiles: Tile[] = [
           rel="noopener noreferrer me"
           style={`--brand:${t.brand}`}
           aria-label={`${t.name} — ${t.handle}`}
+          data-umami-event={`social: ${t.name}`}
         >
           <span class="icon-box" aria-hidden="true" set:html={t.icon}></span>
           <span class="text">

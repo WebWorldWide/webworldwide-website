@@ -5,7 +5,7 @@ slug: "screen-time-wasted-time"
 draft: false
 tags: ["culture", "opinion", "tech"]
 ---
-![Wojack laying in bed with phone screen glowing. He looks upset.](/images/2025/12/image-13.png)
+![Wojack laying in bed with phone screen glowing. He looks upset.](/images/2025/12/image-13.webp)
 
 Cutting down screen time is this decade’s new diet regimen. But this isn't about cutting weight or maintaining your physical health; it's all about your mental health. However, I think screen time—like every diet—will eventually fade into obscurity.
 

@@ -1,0 +1,39 @@
+---
+/**
+ * Analytics — Umami tracker (privacy-friendly, self-hosted).
+ *
+ * Renders the Umami script ONLY when both the URL and site_id are set in
+ * site.toml ([analytics]) — so nothing loads until analytics is configured.
+ *
+ * What it captures:
+ *  - Page views on every load (Umami auto-tracks; this site is MPA so each
+ *    navigation is a fresh page view — full-funnel coverage with no SPA gaps).
+ *  - Click events on any element carrying a `data-umami-event` attribute.
+ *    Umami wires these listeners itself, so we just tag the CTAs (Socials,
+ *    Apps, YouTube, blog navigation) — no inline onclick handlers.
+ *
+ * Privacy / data quality:
+ *  - `data-do-not-track="true"` honors the visitor's browser DNT signal.
+ *  - `data-domains` restricts collection to the production host, so local
+ *    dev / preview hits never pollute the real numbers.
+ */
+import { siteConfig } from '@/lib/site-config';
+
+const a = siteConfig.analytics;
+const enabled = a?.provider === 'umami' && Boolean(a?.url) && Boolean(a?.site_id);
+const scriptSrc = enabled ? new URL('/script.js', a.url).href : '';
+const host = new URL(siteConfig.site.url).hostname;
+---
+
+{
+  enabled && (
+    <script
+      is:inline
+      defer
+      src={scriptSrc}
+      data-website-id={a.site_id}
+      data-domains={host}
+      data-do-not-track="true"
+    />
+  )
+}

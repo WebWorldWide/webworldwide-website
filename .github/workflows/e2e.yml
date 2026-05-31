@@ -5,7 +5,7 @@ on:
     branches: [main]
   schedule:
     # nightly at 07:13 UTC — off-the-hour to avoid GitHub cron contention
-    - cron: "13 7 * * *"
+    - cron: '13 7 * * *'
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ defaults:
     shell: bash
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: '22'
   HUGO_VERSION: 0.161.1
 
 jobs:

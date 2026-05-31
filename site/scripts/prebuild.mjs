@@ -68,11 +68,11 @@ if (existsSync(vanityPath)) {
 
 await writeFile(
   join(siteRoot, 'scripts', 'legacy-redirects.json'),
-  JSON.stringify(redirects, null, 2) + '\n'
+  JSON.stringify(redirects, null, 2) + '\n',
 );
 console.log(
   `[prebuild] wrote ${redirects.length} redirects (` +
-  `${redirects.length - vanityCount} legacy post + ${vanityCount} vanity).`
+    `${redirects.length - vanityCount} legacy post + ${vanityCount} vanity).`,
 );
 
 // ---- 2. Render webfinger from template ----

@@ -19,7 +19,7 @@ import { existsSync, rmSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { loadDevEnv, repoPath, makeLogger, c, hasFlag } from './_lib.mjs';
+import { loadDevEnv, repoPath, makeLogger, c, hasFlag, isMainModule } from './_lib.mjs';
 import { runSeed } from './seed.mjs';
 
 const log = makeLogger('reset', c.magenta);
@@ -141,7 +141,7 @@ export async function runReset(opts = {}) {
   return { db, uploads, seeded };
 }
 
-const isMain = import.meta.url === `file://${process.argv[1]}`;
+const isMain = isMainModule(import.meta.url);
 if (isMain) {
   runReset().catch((err) => {
     log.error(err.stack || err.message);
