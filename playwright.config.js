@@ -28,14 +28,14 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4321',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    video: 'retain-on-failure',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
-    { name: 'mobile-safari', use: { ...devices['iPhone 14'] } }
+    { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
   ],
   webServer: [
     {
@@ -44,7 +44,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       stdout: 'ignore',
-      stderr: 'pipe'
-    }
-  ]
+      stderr: 'pipe',
+    },
+  ],
 });

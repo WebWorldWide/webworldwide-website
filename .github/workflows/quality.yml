@@ -23,7 +23,7 @@ env:
   # defer "is ffmpeg / better-sqlite3 available" decisions to `before()`
   # only works under the new semantics. Node 20 evaluates skip at test
   # registration and would run the body of a self-skipping test.
-  NODE_VERSION: "22"
+  NODE_VERSION: '22'
 
 jobs:
   lint:

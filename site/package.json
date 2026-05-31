@@ -28,7 +28,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sharp": "^0.34.0",
-    "three": "^0.171.0",
+    "three": "^0.184.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -38,7 +38,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/three": "^0.171.0",
+    "@types/three": "^0.184.1",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",
     "@vitest/coverage-v8": "^2.1.5",

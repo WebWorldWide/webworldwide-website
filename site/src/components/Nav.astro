@@ -30,11 +30,11 @@ function isCurrent(path: string): boolean {
     </a>
     <a class={`nav-link${isCurrent('/#apps') ? ' is-current' : ''}`} href="/#apps">Apps</a>
     <span class="sep" aria-hidden="true"></span>
-    <a class={`nav-link${isCurrent('/blog/') ? ' is-current' : ''}`} href="/blog/" aria-current={isCurrent('/blog/') ? 'page' : undefined}>Blog</a>
-    <span class="sep" aria-hidden="true"></span>
     <a class={`nav-link${isCurrent('/#videos') ? ' is-current' : ''}`} href="/#videos">Videos</a>
     <span class="sep" aria-hidden="true"></span>
     <a class={`nav-link${isCurrent('/#socials') ? ' is-current' : ''}`} href="/#socials">Socials</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a class={`nav-link${isCurrent('/blog/') ? ' is-current' : ''}`} href="/blog/" aria-current={isCurrent('/blog/') ? 'page' : undefined}>Blog</a>
   </div>
 </nav>
 

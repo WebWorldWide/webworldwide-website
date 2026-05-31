@@ -11,7 +11,7 @@ The Apple iPod was a revolutionary device. Okay, but in all seriousness, it sold
 
 The iPod has seen a major resurgence in popularity recently. People are longing for the 2000s. With Gen Z now the newest in the adult world, the demand for things popular back then has skyrocketed. This also rides on the back of the general nostalgia for vintage media consumption with records and CDs. People owning their music and having a distraction-free experience, all the while still enjoying the convenience of having 1,000s of songs on them at all times. The iPod provides this experience. You can put your CD rips on there or purchase digital music from various stores.
 
-![YouTube search results for "ipod"](/images/2025/12/image-2.png)
+![YouTube search results for "ipod"](/images/2025/12/image-2.webp)
 
 **The good: Apple, the bad: tech addiction, and the ugly: Liquid Glass.**
 
@@ -19,7 +19,7 @@ Apple makes good stuff. They have some flops, but even the flops hit a nerve in 
 
 **The modern iPod**
 
-![Apple iPod Classic Silhouette Ad. Woman as a black silhouette dancing in front of green backgrounf with white iPod free frame.](/images/2025/12/image-5.png)
+![Apple iPod Classic Silhouette Ad. Woman as a black silhouette dancing in front of green backgrounf with white iPod free frame.](/images/2025/12/image-5.webp)
 
 [*Great ad and great song too ...*](https://www.youtube.com/watch?v=TaVFCdwT0hk)
 
@@ -33,7 +33,7 @@ A modern iPod would be the best parts of an iPhone: Bluetooth and WiFi. Without 
 
 Adding WiFi to the iPod is a risky decision. With the inclusion of 3rd party streaming apps, what could stop it from becoming an iPhone? Well, first Apple should make it clear it isn't an iPhone. This imaginary iPod OS should be much different from iOS. No notifications, no in-device browser; all the app can do is download itself and the data it needs to run. That is all it needs. This would give us all the convenience of modern devices without all the cruft that modern devices have put into our lives. Apple can and knows how to lock something down; I have no doubt they could do it here and do it right.
 
-![Steve Jobs giving his Keynote for the iPhone unveil. Standing infront three icons labeled: iPod, Phone, and Internet](/images/2025/12/image-3.png)
+![Steve Jobs giving his Keynote for the iPhone unveil. Standing infront three icons labeled: iPod, Phone, and Internet](/images/2025/12/image-3.webp)
 
 > *"An iPod, a phone, and a internet communicator" - Steve Jobs*
 

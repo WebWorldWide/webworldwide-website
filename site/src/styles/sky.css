@@ -27,8 +27,12 @@
   will-change: transform;
 }
 @keyframes puffDrift {
-  from { transform: translate3d(calc(-1 * var(--w, 200px) - 8vw), 0, 0); }
-  to   { transform: translate3d(calc(100vw + 8vw), 0, 0); }
+  from {
+    transform: translate3d(calc(-1 * var(--w, 200px) - 8vw), 0, 0);
+  }
+  to {
+    transform: translate3d(calc(100vw + 8vw), 0, 0);
+  }
 }
 
 .puff-bob {
@@ -40,9 +44,16 @@
   will-change: transform;
 }
 @keyframes puffBob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* Dimmer cloud opacity on the post-detail surface so reading copy stays primary. */
-body[data-cloud-dim] .sky-puffs { opacity: 0.55; }
+body[data-cloud-dim] .sky-puffs {
+  opacity: 0.55;
+}

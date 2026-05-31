@@ -5,7 +5,7 @@ slug: "bleak-buy-the-tech-store-soul-is-gone"
 draft: false
 tags: ["tech", "opinion", "culture"]
 ---
-![Patrick asking Squidward "May I take you hat, sir?" meme image.](/images/2025/12/image-6.png)
+![Patrick asking Squidward "May I take you hat, sir?" meme image.](/images/2025/12/image-6.webp)
 
 Tech stores suck. Is it high prices? No, they usually price match. Is it because online shopping is more convenient? No, because even if they don't have it, they can ship it fast and usually free of charge. Then what is the problem? The service. But before you either disagree or agree for very different reasons, it's not the people themselves that are the problem. Workers at modern retail are honestly very nice and happy to help; the problem is that they don't know what they are selling and how to sell it.
 
@@ -17,7 +17,7 @@ The Apple Section was close to the warehouse, so I could overhear and see many c
 
 The sales rep wasn't wrong; an iPad is more convenient, and I know why they were trying to sell it to them. To young people, an iPad is just easier. You click around on the screen with your dumb-as-a-rock app and you will be on your merry way. However, for older adults, an iPad is like handing them a PhD-level math problem and saying, "you got this." Watch any (non-tech adapted) adult fiddle with an iPad, and it is the most unnatural thing to witness. When we gave my Grandmother an iPhone, it would just confuse her beyond belief. I totally get why, too. If you go your entire life using technology through physical switches and buttons, and all of those switches and buttons correspond to something in the real world, then a glass sheet with these abstract app icons that don't interact with the real world is beyond confusing. All children born since like 2004 have pretty much grown up with a touchscreen, and guess who usually works at a Best Buy or Microcenter? Someone born around 2004.
 
-![iPad with Logitech Combo Keyboard/Cover Case. Apple Pencil also connected. ](/images/2025/12/image-7.png)
+![iPad with Logitech Combo Keyboard/Cover Case. Apple Pencil also connected. ](/images/2025/12/image-7.webp)
 
 Back at the Apple section, the sales rep would glaze the iPad saying, "it's so portable and easy to use and cheaper than a Mac!" and then when the customer would say, "but I need a keyboard," the next cheerful response would be, "oh well you can just buy this Apple keyboard accessory and then it’s just like a computer!" I praise that sales rep's enthusiasm and belief the customer will become a pro iPad user and no longer be bound to their office desk for their computing. I wasn't granted enough time to just hang around and hear the entire interaction, but given the fact we moved more iPads than MacBooks, I wondered if the sales rep was successful in their approach...
 
@@ -35,7 +35,7 @@ When working at Best Buy, they had trainings for people about certain products a
 
 Maybe that customer should avoid an OLED if all they watch is cable news 'cause the logo and banner at the bottom could burn in on the screen. Or maybe they should look at a MiniLED TV because they have a very bright room and the OLED could not keep up due to OLEDs' struggle with brightness compared to those TVs. Or maybe they should get an OLED TV because they play a lot of games and hate the ghosting on their current TV. Or that they watch only movies on the TV with a bunch of people, so viewing angles are really important.
 
-![Best Buy employee showing a customer a TV on dispaly.](/images/2025/12/image-8.png)
+![Best Buy employee showing a customer a TV on dispaly.](/images/2025/12/image-8.webp)
 
 These trainings would never cover that. Or from personal experience when watching my Mom get a new iMac, she asked the sales rep, "can I get a different mouse? I don't like this \[Apple Magic\] mouse," and they said "of course" and grabbed her the cheapest USB Logitech mouse, which is all she needed. However: *Macs only have USB-C and this mouse had a USB-A dongle with no Bluetooth, so how in the world would they connect it?* I informed the employee of this as kindly as possible and they were more or less like, "no, trust me." I said nothing and went to resolve this on my own. If there was a training video that made it clear that most mice use a USB-A dongle, making Mac compatibility an issue, then this could have been avoided (but if the Apple Magic mouse was better designed for the average person this could've been avoided as well, so...).
 

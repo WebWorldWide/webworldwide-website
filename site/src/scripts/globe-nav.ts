@@ -35,7 +35,7 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
   const mat = new T.LineBasicMaterial({
     color: opts.color ?? 0x000000,
     transparent: true,
-    opacity: opts.opacity ?? 1.0
+    opacity: opts.opacity ?? 1.0,
   });
 
   for (let i = 0; i < meridians; i++) {
@@ -72,15 +72,60 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
     }
   }
 
+  // Pause the render loop while the canvas is off-screen OR the tab is hidden,
+  // and stop cleanly if the GPU drops the WebGL context. A long-running render
+  // loop on a lost/backgrounded context is a known cause of tab memory growth
+  // and "the page crashed" over time.
+  let onScreen = true;
+  let lost = false;
+  let running = false;
+
+  const shouldRun = (): boolean => !reducedMotion && onScreen && !lost && !document.hidden;
+
   function tick() {
     resize();
     if (!reducedMotion) group.rotation.y += speed;
-    renderer.render(scene, camera);
-    if (!reducedMotion) requestAnimationFrame(tick);
+    if (!lost) renderer.render(scene, camera);
+    if (shouldRun()) {
+      requestAnimationFrame(tick);
+    } else {
+      running = false;
+    }
+  }
+  function start() {
+    if (running || !shouldRun()) return;
+    running = true;
+    requestAnimationFrame(tick);
   }
 
+  // WebGL context loss/restore — stop on loss (no render-on-dead-context spam),
+  // resume once the browser hands the context back.
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    lost = true;
+    running = false;
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    lost = false;
+    start();
+  });
+
   resize();
-  tick();
+  if (reducedMotion) {
+    tick(); // single frame, no loop
+  } else {
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        onScreen = entries[0]?.isIntersecting ?? true;
+        if (onScreen) start();
+      });
+      io.observe(canvas);
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) start();
+    });
+    start();
+  }
   window.addEventListener('resize', resize);
 }
 
