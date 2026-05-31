@@ -76,7 +76,7 @@ function attachSpinner(spinner: HTMLElement): void {
 
   let rotX = -8 + (Math.random() - 0.5) * 6;
   let rotY = Math.random() * 360;
-  let velY = reducedMotion() ? 0 : 14 + Math.random() * 8;
+  let velY = reducedMotion() ? 0 : 16 + Math.random() * 10;
   let velX = 0;
   let dragging = false;
   let lastX = 0;
@@ -85,11 +85,19 @@ function attachSpinner(spinner: HTMLElement): void {
   let moveSum = 0;
   let touched = false;
   let touchedAt = 0;
+  let hovering = false;
+  let scale = 1;
+
+  // Per-icon idle character, so the four don't tumble in lockstep.
+  const spinBase = 18 + Math.random() * 14; // idle Y-spin speed (deg/s)
+  const wobbleFreq = 0.5 + Math.random() * 0.5; // X-nod frequency
+  const wobblePhase = Math.random() * Math.PI * 2; // X-nod desync
+  const wobbleAmp = 10 + Math.random() * 8; // X-nod amplitude (deg)
 
   function apply(): void {
-    if (rotX > 60) rotX = 60;
-    if (rotX < -60) rotX = -60;
-    spinner.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    if (rotX > 72) rotX = 72;
+    if (rotX < -72) rotX = -72;
+    spinner.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${scale.toFixed(3)})`;
   }
   apply();
 
@@ -97,22 +105,43 @@ function attachSpinner(spinner: HTMLElement): void {
   function loop(now: number): void {
     const dt = Math.min(0.06, (now - lastFrame) / 1000);
     lastFrame = now;
+    // Ease the hover "pop" every frame, even mid-drag.
+    const targetScale = hovering && !reducedMotion() ? 1.07 : 1;
+    scale += (targetScale - scale) * Math.min(1, dt * 8);
     if (!dragging) {
-      const drag = Math.pow(0.96, dt * 60);
+      const drag = Math.pow(0.99, dt * 60); // gentle — flings keep spinning longer
       velY *= drag;
       velX *= drag;
       rotY += velY * dt;
       rotX += velX * dt;
-      const idle = touched && performance.now() - touchedAt > 2200;
-      if ((!touched || idle) && !reducedMotion()) {
-        velY += (16 - velY) * Math.min(1, dt * 0.5);
-        rotX += (-8 - rotX) * Math.min(1, dt * 0.9);
+      const idle = !touched || performance.now() - touchedAt > 1500;
+      if (idle && !reducedMotion()) {
+        const t = now / 1000;
+        const target = hovering ? spinBase * 2.6 : spinBase;
+        velY += (target - velY) * Math.min(1, dt * 0.8);
+        // Gentle multi-axis nod instead of resting at a fixed tilt.
+        const amp = hovering ? wobbleAmp * 1.6 : wobbleAmp;
+        const targetX = -6 + Math.sin(t * wobbleFreq + wobblePhase) * amp;
+        rotX += (targetX - rotX) * Math.min(1, dt * 1.1);
+        velX *= 0.9; // let the wobble own the X axis once settled
       }
-      apply();
     }
+    apply();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+
+  // Hover (mouse/pen): perk up — spin faster + pop in scale.
+  spinner.addEventListener('pointerenter', (e) => {
+    if (e.pointerType === 'touch') return;
+    hovering = true;
+    touched = true;
+    touchedAt = 0; // engage the lively idle immediately
+    if (!reducedMotion() && Math.abs(velY) < spinBase) velY += 36;
+  });
+  spinner.addEventListener('pointerleave', () => {
+    hovering = false;
+  });
 
   spinner.addEventListener('pointerdown', (e) => {
     dragging = true;
@@ -136,8 +165,8 @@ function attachSpinner(spinner: HTMLElement): void {
     rotX -= dy * 0.35;
     velY = (dx * 0.5) / (dt / 1000);
     velX = -(dy * 0.35) / (dt / 1000);
-    velY = Math.max(-1400, Math.min(1400, velY));
-    velX = Math.max(-700, Math.min(700, velX));
+    velY = Math.max(-2400, Math.min(2400, velY));
+    velX = Math.max(-1400, Math.min(1400, velX));
     moveSum += Math.abs(dx) + Math.abs(dy);
     lastX = e.clientX;
     lastY = e.clientY;
@@ -166,15 +195,24 @@ function attachSpinner(spinner: HTMLElement): void {
     switch (e.key) {
       case ' ':
         // toggle auto-spin
-        velY = velY === 0 ? 16 : 0;
+        velY = velY === 0 ? 24 : 0;
         touched = true;
         touchedAt = performance.now();
         break;
-      case 'ArrowLeft':  rotY -= 10; break;
-      case 'ArrowRight': rotY += 10; break;
-      case 'ArrowUp':    rotX -= 6; break;
-      case 'ArrowDown':  rotX += 6; break;
-      default: handled = false;
+      case 'ArrowLeft':
+        rotY -= 10;
+        break;
+      case 'ArrowRight':
+        rotY += 10;
+        break;
+      case 'ArrowUp':
+        rotX -= 6;
+        break;
+      case 'ArrowDown':
+        rotX += 6;
+        break;
+      default:
+        handled = false;
     }
     if (handled) {
       e.preventDefault();
@@ -193,7 +231,7 @@ function attachSpinner(spinner: HTMLElement): void {
           e.stopPropagation();
         }
       },
-      true
+      true,
     );
   }
 }

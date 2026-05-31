@@ -43,7 +43,9 @@
   gap: 12px;
 }
 .comment-submit {
-  background: var(--cherry);
+  /* WCAG: white on cherry (#ff8a3d) = 2.34:1 (fails). Use cherry-strong
+     (white on #b04708 = 5.05:1, passes 4.5:1 for normal text). */
+  background: var(--cherry-strong);
   color: #fff;
   border: 2px solid var(--ink);
   padding: 10px 20px;
@@ -62,7 +64,9 @@
   box-shadow: var(--shadow-card-sm);
 }
 .comment-submit:disabled {
-  opacity: 0.4;
+  /* 0.6 opacity (was 0.4) — keeps text readable; not-allowed cursor
+     reinforces the disabled state for sighted + non-color-perceiving users. */
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
   box-shadow: var(--shadow-card-xs);
@@ -94,7 +98,7 @@
   box-shadow: 2px 2px 0 var(--ink);
   border-radius: 50%;
 }
-.comment-avatar.is-me { background: var(--cherry); color: #fff; }
+.comment-avatar.is-me { background: var(--cherry-strong); color: #fff; }
 .comment-meta {
   display: flex;
   gap: 10px;

@@ -33,7 +33,7 @@
 }
 .cmdk-prompt {
   font-family: var(--font-mono);
-  color: var(--cherry);
+  color: var(--cherry-strong);
   font-weight: 700;
   font-size: 18px;
 }
@@ -83,7 +83,7 @@
 .cmdk-row.is-active,
 .cmdk-row:hover {
   background: rgba(255, 107, 157, 0.1);
-  border-left-color: var(--cherry);
+  border-left-color: var(--cherry-strong);
 }
 .cmdk-row-l {
   display: flex;
@@ -93,7 +93,7 @@
   flex: 1;
 }
 .cmdk-row-icon {
-  color: var(--cherry);
+  color: var(--cherry-strong);
   font-family: var(--font-mono);
   font-weight: 700;
   flex-shrink: 0;

@@ -31,7 +31,7 @@ const sharedRules = {
   'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
   'no-undef': 'error',
   'prefer-const': 'error',
-  eqeqeq: ['error', 'always']
+  eqeqeq: ['error', 'always'],
 };
 
 const a11yRules = {
@@ -40,15 +40,30 @@ const a11yRules = {
   // wrapped in onClick to call openPost. But still want anchor-is-valid to catch
   // bare # links without onClick.
   'jsx-a11y/anchor-is-valid': ['error', { specialLink: ['onClick'] }],
-  'jsx-a11y/no-autofocus': 'warn'
+  'jsx-a11y/no-autofocus': 'warn',
 };
 
 export default [
   {
-    ignores: ['dist/**', '.astro/**', 'node_modules/**', '.legacy/**', 'scripts/legacy-redirects.json']
+    ignores: [
+      'dist/**',
+      '.astro/**',
+      'node_modules/**',
+      '.legacy/**',
+      'scripts/legacy-redirects.json',
+      'src/env.d.ts', // Astro-generated (triple-slash reference is intentional)
+    ],
   },
 
   js.configs.recommended,
+
+  // Service worker (browser SW context — `self`, `caches`, `fetch`, etc.)
+  {
+    files: ['**/sw.js'],
+    languageOptions: {
+      globals: { ...globals.serviceworker, ...globals.browser },
+    },
+  },
 
   // Astro
   {
@@ -57,23 +72,28 @@ export default [
     languageOptions: {
       parser: astroParser,
       parserOptions: { parser: tsParser, extraFileExtensions: ['.astro'] },
-      globals: { ...globals.browser, ...globals.node, Astro: 'readonly' }
+      globals: { ...globals.browser, ...globals.node, Astro: 'readonly' },
     },
     rules: {
       ...sharedRules,
       ...astroPlugin.configs.recommended.rules,
-      ...a11yRules
-    }
+      ...a11yRules,
+    },
   },
 
   // TSX (React islands)
   {
     files: ['src/components/islands/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
-    plugins: { '@typescript-eslint': tsPlugin, react, 'react-hooks': reactHooks, 'jsx-a11y': jsxA11y },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+      react,
+      'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y,
+    },
     languageOptions: {
       parser: tsParser,
       parserOptions: { ecmaVersion: 2024, sourceType: 'module', ecmaFeatures: { jsx: true } },
-      globals: { ...globals.browser }
+      globals: { ...globals.browser },
     },
     settings: { react: { version: '18.3' } },
     rules: {
@@ -84,9 +104,15 @@ export default [
       ...a11yRules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
+      // TypeScript itself resolves identifiers/types; `no-undef` only yields
+      // false positives here (e.g. the `JSX`/`React` type namespaces).
+      'no-undef': 'off',
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }]
-    }
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
 
   // TS endpoints, content config, scripts
@@ -97,30 +123,40 @@ export default [
     languageOptions: {
       parser: tsParser,
       parserOptions: { ecmaVersion: 2024, sourceType: 'module' },
-      globals: { ...globals.node, ...globals.browser }
+      globals: { ...globals.node, ...globals.browser },
     },
     rules: {
       ...sharedRules,
       ...tsPlugin.configs.recommended.rules,
+      // TypeScript resolves identifiers/types; `no-undef` only false-positives.
+      'no-undef': 'off',
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }]
-    }
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
 
   // Vitest
   {
     files: ['src/__tests__/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.{ts,tsx}'],
-    plugins: { '@typescript-eslint': tsPlugin, react, 'react-hooks': reactHooks, 'jsx-a11y': jsxA11y },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+      react,
+      'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y,
+    },
     languageOptions: {
       parser: tsParser,
       parserOptions: { ecmaVersion: 2024, sourceType: 'module', ecmaFeatures: { jsx: true } },
-      globals: { ...globals.browser, ...globals.node }
+      globals: { ...globals.browser, ...globals.node },
     },
     rules: {
       ...sharedRules,
       'react/react-in-jsx-scope': 'off',
       'jsx-a11y/click-events-have-key-events': 'off',
-      'jsx-a11y/no-static-element-interactions': 'off'
-    }
-  }
+      'jsx-a11y/no-static-element-interactions': 'off',
+    },
+  },
 ];

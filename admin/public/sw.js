@@ -1,4 +1,6 @@
-const CACHE_NAME = 'web-world-wide-cms-v1';
+// Bumped to v2 with the WWW visual rebuild — old clients re-fetch the
+// new tokens.css + overrides.css + clouds.js on first hit.
+const CACHE_NAME = 'web-world-wide-cms-v2';
 
 // Only caching static assets, not API calls or HTML that needs auth
 const urlsToCache = [

@@ -17,15 +17,12 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
-  "include": [
-    "admin/**/*.js",
-    "migrate/**/*.js",
-    "scripts/**/*.{js,mjs}"
-  ],
+  "include": ["admin/**/*.js", "scripts/**/*.{js,mjs}"],
   "exclude": [
     "node_modules",
     "**/node_modules",
     "site",
+    "migrate",
     "admin/data",
     "admin/public",
     "admin/uploads",

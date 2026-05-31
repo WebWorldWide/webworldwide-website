@@ -1,4 +1,4 @@
-name: Deploy Hugo site to GitHub Pages
+name: Deploy Astro site to GitHub Pages
 
 # Quality gates run on every push/PR via quality.yml, e2e.yml, and lighthouse.yml.
 # Enforce a passing build on this branch before deploy by configuring
@@ -25,7 +25,7 @@ defaults:
     shell: bash
 
 env:
-  HUGO_VERSION: 0.161.1
+  NODE_VERSION: "22"
 
 jobs:
   build:
@@ -35,39 +35,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Hugo CLI
-        run: |
-          wget -O "${{ runner.temp }}/hugo.deb" "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
-          sudo dpkg -i "${{ runner.temp }}/hugo.deb"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
 
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
 
-      - name: Cache Hugo modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/hugo_cache
-          key: hugo-deploy-${{ runner.os }}-${{ hashFiles('site/hugo.toml') }}
-          restore-keys: |
-            hugo-deploy-${{ runner.os }}-
+      - name: Install root dependencies
+        run: npm ci --ignore-scripts
 
-      - name: Build with Hugo
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --ignore-scripts
+
+      # site/package.json's build script runs:
+      #   1. node scripts/prebuild.mjs   — generates legacy-redirects.json
+      #                                    and substitutes __SITE_HOST__ in
+      #                                    public/.well-known/webfinger.
+      #   2. astro check                  — typecheck pass.
+      #   3. astro build                  — emits site/dist/.
+      - name: Build with Astro
+        working-directory: site
         env:
-          HUGO_CACHEDIR: ${{ runner.temp }}/hugo_cache
-          HUGO_ENVIRONMENT: production
+          NODE_ENV: production
           TZ: America/Chicago
-        run: |
-          cd site
-          hugo \
-            --gc \
-            --minify \
-            --baseURL "${{ steps.pages.outputs.base_url }}/"
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./site/public
+          path: ./site/dist
 
   deploy:
     name: Deploy

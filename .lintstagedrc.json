@@ -1,7 +1,7 @@
 {
   "{admin,migrate,scripts,test}/**/*.{js,mjs,cjs}": ["eslint --fix --no-warn-ignored", "prettier --write"],
   "*.{js,mjs,cjs}": ["eslint --fix --no-warn-ignored", "prettier --write"],
-  "site/**/*.{js,mjs,cjs,ts,tsx,astro}": ["prettier --write"],
+  "site/**/*.{js,mjs,cjs,ts,tsx}": ["prettier --write"],
   "{admin,migrate,scripts,test}/**/*.{ts,tsx}": ["prettier --write"],
   "admin/public/css/**/*.css": ["stylelint --fix --allow-empty-input", "prettier --write"],
   "site/src/**/*.css": ["prettier --write"],

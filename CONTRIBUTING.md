@@ -7,53 +7,55 @@ to every contribution — including future-me.
 
 ```text
 .
-├── site/        Hugo static site (public-facing blog)
-│   ├── assets/  CSS pipeline
-│   ├── content/ Markdown posts
-│   ├── layouts/ Hugo Go templates
-│   └── static/  Static assets including site/static/js/app.js
+├── site/        Astro 5 static site (public-facing blog) + React islands
+│   ├── content/ Markdown posts (single source of truth for the schema)
+│   ├── public/  Static assets, fonts, webfinger template
+│   ├── scripts/ prebuild.mjs — generates legacy redirects + webfinger
+│   └── src/     Astro pages, components, islands, layouts
 ├── admin/       Express CMS (runs on the Pi, never deployed to Pages)
-├── migrate/     One-shot Ghost → Hugo migrator
-├── scripts/     Bootstrap, backup, restore, maintenance shell scripts
-├── docker/      Compose stack for the Pi
+├── migrate/     One-shot Ghost → Markdown migrator (legacy)
+├── scripts/     bootstrap.sh + dev helpers (preflight, check, seed, reset)
+├── docker/      Compose stacks (dev + prod) and .env templates
 └── test/        Cross-cutting Playwright + fixtures
 ```
 
 ## Local development
 
-You need Node 20 LTS or newer, Hugo extended ≥ 0.161, and Docker (for the
-full-stack mode below). macOS, Linux, and WSL are all supported.
+You need Node 22+ and Docker (Docker Desktop on Windows/macOS, Docker
+Engine on Linux). Windows, macOS, Linux, and WSL are all supported.
 
 ### Quickstart (full stack)
 
-The Phase 5d scripts boot Hugo + admin + Remark42 + Umami + Postgres in one
-command. Use this when you want to exercise the complete authoring loop.
+A fresh clone runs the entire stack — Astro + admin + Remark42 + Umami +
+Postgres — in two commands. The `postinstall` script cascades into
+`site/` and `admin/`, and the `predev` hook auto-creates `docker/.env.dev`
+from the example and verifies Docker is reachable.
 
 ```bash
-npm install
-cd admin && npm install && cd ..
-cp docker/.env.dev.example docker/.env.dev
-npm run db:seed          # admin user "admin" / "password" + 5 media fixtures
-npm run dev:all          # Docker + hugo + admin in parallel, colored logs
+npm install              # cascades into site/ and admin/ on first run
+npm run db:seed          # admin user "admin" / "password" + 5 media fixtures (optional)
+npm run dev              # preflight → Docker + Astro + admin in parallel
 ```
 
-| Script               | What it does                                                           |
-| -------------------- | ---------------------------------------------------------------------- |
-| `npm run dev:all`    | `run-p` over `dev:docker`, `dev:hugo`, `dev:admin` (the full stack)    |
-| `npm run dev:docker` | Foreground `docker compose up` against `docker/docker-compose.dev.yml` |
-| `npm run dev:hugo`   | `hugo server --buildDrafts --buildFuture` on port `1313`               |
-| `npm run dev:admin`  | `node --watch server.js` in `admin/` on port `3000`                    |
-| `npm run dev:check`  | Ping every service, print status table, exit non-zero on any failure   |
-| `npm run db:seed`    | Idempotent — creates admin user + media fixtures                       |
-| `npm run db:reset`   | Wipe dev DB + dev uploads, re-seed (prompts; pass `--yes` to skip)     |
-| `npm run dev:stop`   | `docker compose down`                                                  |
+| Script                  | What it does                                                           |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `npm run dev`           | Alias for `dev:all`. Runs preflight, then the full stack.              |
+| `npm run dev:all`       | `run-p` over `dev:docker`, `dev:site`, `dev:admin`                     |
+| `npm run dev:docker`    | Foreground `docker compose up` against `docker/docker-compose.dev.yml` |
+| `npm run dev:site`      | `astro dev --port 4321 --host 127.0.0.1`                               |
+| `npm run dev:admin`     | `node --watch server.js` in `admin/` on port `3000`                    |
+| `npm run dev:check`     | Ping every service, print status table, exit non-zero on any failure   |
+| `npm run dev:preflight` | Re-run preflight (Docker check + .env.dev auto-create) manually        |
+| `npm run db:seed`       | Idempotent — creates admin user + media fixtures                       |
+| `npm run db:reset`      | Wipe dev DB + dev uploads, re-seed (prompts; pass `--yes` to skip)     |
+| `npm run dev:stop`      | `docker compose down`                                                  |
 
 Service ports (deliberately offset from prod so both compose files could
 coexist on one host):
 
 | Service   | Dev URL                 | Notes                                                 |
 | --------- | ----------------------- | ----------------------------------------------------- |
-| Hugo      | <http://localhost:1313> | Drafts + future posts visible                         |
+| Astro     | <http://localhost:4321> | Drafts + future posts visible via `?token=` previews  |
 | Admin CMS | <http://localhost:3000> | `admin` / `password` after `npm run db:seed`          |
 | Remark42  | <http://localhost:8081> | Admin auth: user `admin`, password `admin`            |
 | Umami     | <http://localhost:3001> | Admin/admin on first visit; will prompt to change pwd |
@@ -93,11 +95,11 @@ the source oEmbed provider with a 5-second timeout.
 
 ### Light-loop alternative (no Docker)
 
-If you only need the admin + Hugo (no comments/analytics), the legacy
-two-terminal flow still works:
+If you only need the admin + the public site (no comments/analytics), the
+two-terminal flow works without Docker:
 
 ```bash
-npm run dev:site         # hugo server on http://127.0.0.1:1414
+npm run dev:site         # astro dev on http://localhost:4321
 npm run dev:admin        # admin CMS on http://localhost:3000
 ```
 
@@ -106,7 +108,7 @@ npm run dev:admin        # admin CMS on http://localhost:3000
 ```bash
 npm run lint             # parallel: ESLint, Stylelint, Prettier, markdownlint, htmlhint, tsc
 npm test                 # Vitest (site + dev scripts) + node --test (admin)
-npm run build            # production Hugo build into site/public/
+npm run build            # production Astro build into site/dist/
 npm run fix              # auto-fixable: prettier --write + eslint --fix + stylelint --fix
 ```
 
@@ -162,7 +164,7 @@ This is configured manually in GitHub, once per repo:
    - `Quality / Lint (lint:prettier)`
    - `Quality / Lint (lint:types)`
    - `Quality / Lint (lint:html-admin)`
-   - `Quality / Lint (lint:html-site, depends on hugo build)`
+   - `Quality / Lint (lint:html-site, depends on astro build)`
    - `Quality / Shellcheck`
    - `Quality / Test (site / Vitest)`
    - `Quality / Test (admin / node --test)`
@@ -197,7 +199,7 @@ Short, declarative, no period. Match the existing log: `Phase 1.5: lint, test, a
   and a real SQLite database. **Never mock `better-sqlite3`** — integration
   tests catch real schema mismatches.
 - **Cross-cutting site behavior** → add a `*.spec.js` file under
-  `test/playwright/`. The Hugo dev server starts automatically.
+  `test/playwright/`. The Astro dev server (port 4321) starts automatically.
 
 ## Adding new lint rules
 

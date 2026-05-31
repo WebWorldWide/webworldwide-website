@@ -67,10 +67,24 @@ before(async () => {
   app.use(express.json());
   app.use('/api/posts', postsRouter);
 
-  // seed three posts
-  writePost('one', { title: 'One', draft: false, tags: ['a', 'b'] }, 'first');
-  writePost('two', { title: 'Two', draft: true, tags: ['b'] }, 'second');
-  writePost('three', { title: 'Three', draft: false, tags: ['c'] }, 'third');
+  // seed three posts. `date` is required by the shared post schema —
+  // a bulk publish on a dated draft must pass schema validation, so the
+  // fixture sets it explicitly even on the draft.
+  writePost(
+    'one',
+    { title: 'One', date: '2024-01-01', draft: false, tags: ['a', 'b'] },
+    'first',
+  );
+  writePost(
+    'two',
+    { title: 'Two', date: '2024-01-02', draft: true, tags: ['b'] },
+    'second',
+  );
+  writePost(
+    'three',
+    { title: 'Three', date: '2024-01-03', draft: false, tags: ['c'] },
+    'third',
+  );
 
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', () => {

@@ -58,8 +58,32 @@ export function toSummary(post: PostEntry, body: string): PostSummary {
     url: `/blog/${slug}/`,
     date: post.data.date.toISOString(),
     read: readingTime(post, body),
-    excerpt: post.data.excerpt ?? deriveExcerpt(body)
+    excerpt: post.data.excerpt ?? deriveExcerpt(body),
   };
+}
+
+/** An image reference pulled from a post (frontmatter cover or first body image). */
+export interface PostImage {
+  src: string;
+  alt: string;
+}
+
+/** First markdown image in the body, or null if the post has none. */
+export function firstImage(body: string): PostImage | null {
+  const m = body.match(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/);
+  if (!m) return null;
+  return { src: m[2], alt: (m[1] ?? '').trim() };
+}
+
+/**
+ * The lead image for a post: frontmatter `cover` if set, otherwise the first
+ * image found in the body. Returns null when the post has no images at all.
+ */
+export function coverImage(post: PostEntry, body: string): PostImage | null {
+  if (post.data.cover) {
+    return { src: post.data.cover, alt: post.data.cover_alt ?? post.data.title };
+  }
+  return firstImage(body);
 }
 
 /** Fallback excerpt: first ~180 chars of body, stripping markdown noise. */

@@ -37,9 +37,9 @@ export interface SiteConfig {
     reddit: string;
     instagram: string;
     threads: string;
-    email: string;
+    email?: string;
   };
-  comments: { provider: string; url: string; site_id: string };
+  comments: { provider: string; url: string; url_dev?: string; site_id: string };
   analytics: { provider: string; url: string; site_id: string };
   rss: { url: string };
   fediverse: { enabled: boolean; handle_user: string };

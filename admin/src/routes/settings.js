@@ -1,12 +1,15 @@
 // @ts-check
 /**
- * settings.js — Phase 5e site-settings + author-profile editor.
+ * settings.js — site-settings + author-profile editor.
  *
  * GET  /api/settings                  → { hugo, author }
  * PATCH /api/settings/hugo            → { changes: { 'params.umamiSiteID': 'abc', … } }
  * PATCH /api/settings/author          → { name, bio, avatar, social: {...}, url }
  *
- * `hugo` is the parsed `site/hugo.toml` (object form, for the form UI).
+ * Migration note: the file we edit is now `site/site.toml` (user-editable
+ * params for the Astro site), not the old `site/hugo.toml`. We keep the
+ * API field name `hugo` and the activity-log action `settings.hugo` to
+ * avoid a breaking change for the admin frontend / database constraint.
  * Writes go through `toml-roundtrip.apply` so comments + ordering survive.
  * `author` lives in `site/data/author.json`. That file is created on
  * first PATCH if missing.
@@ -19,7 +22,10 @@ import { parse as parseToml, apply as applyToml, flatToChanges } from '../utils/
 import { logActivity } from '../services/activity.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
-const HUGO_TOML = join(SITE_DIR, 'hugo.toml');
+// Astro replaced Hugo in Phase 3: user-editable params live in site.toml.
+// `site/hugo.toml` no longer exists. The env-var fallback exists so a
+// staging deployment can still point at a different file if needed.
+const SETTINGS_TOML = process.env.SETTINGS_TOML || join(SITE_DIR, 'site.toml');
 const AUTHOR_JSON = join(SITE_DIR, 'data', 'author.json');
 
 const router = Router();
@@ -61,17 +67,19 @@ function readAuthor() {
 }
 
 /**
- * Read + parse hugo.toml. Surface a 500 when the file is broken — the
+ * Read + parse site.toml. Surface a 500 when the file is broken — the
  * settings UI is read-only until the user fixes it by hand.
  */
-function readHugo() {
-  const src = readFileSync(HUGO_TOML, 'utf-8');
+function readSettings() {
+  const src = readFileSync(SETTINGS_TOML, 'utf-8');
   return { src, parsed: parseToml(src) };
 }
 
 router.get('/', (req, res) => {
   try {
-    const { parsed } = readHugo();
+    const { parsed } = readSettings();
+    // Field name stays `hugo` for API compatibility — the admin frontend
+    // still references res.json.hugo.* paths everywhere.
     res.json({ hugo: parsed, author: readAuthor() });
   } catch (err) {
     console.error('[settings] read failed:', err);
@@ -85,7 +93,7 @@ router.patch('/hugo', (req, res) => {
     if (!changes || typeof changes !== 'object') {
       return res.status(400).json({ error: 'changes object required' });
     }
-    const src = readFileSync(HUGO_TOML, 'utf-8');
+    const src = readFileSync(SETTINGS_TOML, 'utf-8');
     const flat = flatToChanges(changes);
     if (!flat.length) {
       return res.json({ ok: true, changed: 0 });
@@ -98,16 +106,16 @@ router.patch('/hugo', (req, res) => {
     } catch (parseErr) {
       return res.status(400).json({ error: 'invalid_toml_after_edit', message: parseErr.message });
     }
-    writeFileSync(HUGO_TOML, next);
+    writeFileSync(SETTINGS_TOML, next);
     logActivity({
       req,
       action: 'settings.hugo',
-      target: 'hugo.toml',
+      target: 'site.toml',
       meta: { keys: flat.map((c) => `${c.section ? c.section + '.' : ''}${c.key}`) },
     });
     res.json({ ok: true, changed: flat.length });
   } catch (err) {
-    console.error('[settings] hugo patch failed:', err);
+    console.error('[settings] site.toml patch failed:', err);
     res.status(500).json({ error: 'write_failed', message: err.message });
   }
 });

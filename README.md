@@ -11,21 +11,40 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for local development, the quality pipeli
 
 ## Quickstart (local dev)
 
-A fresh clone runs the entire stack — Hugo, the admin CMS, Remark42, Umami,
-and Postgres — on a laptop in one command.
+A fresh clone runs the entire stack — Astro, the admin CMS, Remark42, Umami,
+and Postgres — on a laptop (Windows, macOS, or Linux) in two commands.
+
+**Requires**: Node 22+ and Docker. Start Docker before running the dev
+command.
+
+| Platform | Docker option(s) |
+| --- | --- |
+| Windows | Docker Desktop (with WSL2 backend recommended) |
+| macOS   | Docker Desktop, OrbStack, or Colima — any one works |
+| Linux   | Docker Engine (`apt install docker.io` or distro equivalent) — start with `sudo systemctl start docker` |
 
 ```bash
 git clone https://github.com/AdamNolle/web-world-wide-online
 cd web-world-wide-online
-npm install
-cp docker/.env.dev.example docker/.env.dev
-npm run db:seed       # creates admin user (admin / password) and 5 sample media rows
-npm run dev:all       # docker (Remark42 + Umami + Postgres) + hugo + admin in parallel
+npm install        # cascades into site/ and admin/ on first run
+npm run dev        # preflight → docker + astro + admin in parallel
 ```
+
+The same two commands work identically on Windows (PowerShell or Git
+Bash), macOS, and Linux. `npm run dev` shells through
+`npm-run-all2`/`run-p`, which uses platform-native parallel execution
+on all three; no bash-isms in any npm script.
+
+The first `npm install` takes a few minutes (pulls Astro, React, Three.js,
+TipTap, better-sqlite3 prebuilt binaries). Subsequent runs are fast.
+
+`npm run dev` runs a preflight that auto-creates `docker/.env.dev` from
+`.env.dev.example` and verifies Docker is reachable — if Docker isn't
+running it tells you so and exits cleanly.
 
 Open:
 
-- Public site: <http://localhost:1313>
+- Public site: <http://localhost:4321>
 - Admin: <http://localhost:3000> (log in: `admin` / `password`)
 - Comments (Remark42): <http://localhost:8081> (admin user: `admin`)
 - Analytics (Umami): <http://localhost:3001> (configure on first visit)
@@ -33,15 +52,17 @@ Open:
 Operational scripts:
 
 - `npm run dev:check` — ping every service, print a status table, non-zero on any failure
+- `npm run db:seed` — create the admin user (`admin`/`password`) and 5 sample media rows
 - `npm run db:reset` — wipe the local DB and dev uploads, then re-seed (prompts unless `--yes`)
 - `npm run dev:stop` — shut down the Docker services
+- `npm run dev:site` / `npm run dev:admin` — run just the Astro site or just the admin (no Docker)
 
 WebAuthn uses `rpID=localhost` in dev, so passkeys work without HTTPS on
 every browser. Register one from **Settings → Security** after first login.
 
 ## The Stack
 
-- **Site Generator**: Hugo (compiles Markdown into ultra-fast static HTML)
+- **Site Generator**: Astro 5 (compiles Markdown + React islands into ultra-fast static HTML)
 - **CMS Admin**: Custom Node.js/Express Dashboard with WebAuthn (Passkeys)
 - **Analytics**: Umami (Self-hosted privacy-friendly analytics via PostgreSQL)
 - **Comments**: Remark42 (Self-hosted privacy-focused commenting engine)
@@ -56,7 +77,7 @@ extend it.
 
 | Capability                      | What it gives you                                                                                             | Where it's documented                                                                                  |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Local development**           | One-command full stack (Hugo + admin + Remark42 + Umami + Postgres)                                           | [Local development](CONTRIBUTING.md#local-development)                                                 |
+| **Local development**           | One-command full stack (Astro + admin + Remark42 + Umami + Postgres)                                          | [Local development](CONTRIBUTING.md#local-development)                                                 |
 | **Passkey auth**                | WebAuthn passkeys for passwordless admin login (Touch ID / Face ID / Windows Hello)                           | [Passkeys in local dev](CONTRIBUTING.md#passkeys-in-local-dev)                                         |
 | **Block editor**                | TipTap + CodeMirror with slash commands, tables, callouts, math, footnotes, code highlighting, find & replace | [Editor shortcuts](CONTRIBUTING.md#editor-shortcuts)                                                   |
 | **Block types**                 | Headings, lists, blockquotes, tables, callouts, KaTeX math, footnotes, code blocks with syntax highlighting   | [Editor block types](CONTRIBUTING.md#editor-block-types)                                               |
@@ -80,7 +101,7 @@ that drive scheduled publish + webmention dump.
 
 This stack stands on the shoulders of:
 
-[Hugo](https://gohugo.io) (static site engine),
+[Astro](https://astro.build) (static site engine + React islands),
 [TipTap](https://tiptap.dev) + [ProseMirror](https://prosemirror.net) (editor),
 [CodeMirror](https://codemirror.net) (raw markdown / code panes),
 [KaTeX](https://katex.org) (math),
@@ -100,7 +121,7 @@ This stack stands on the shoulders of:
 1. You access the **Admin CMS** (`admin.yourdomain.com`) from your phone or laptop using Touch ID / Face ID.
 2. You write a post using the WYSIWYG editor and hit `Save`. The post is saved as a `.md` file on the Raspberry Pi.
 3. You click `[PUBLISH SITE]`. The CMS commits the markdown files to GitHub.
-4. GitHub Actions automatically compiles the Hugo site and deploys it to GitHub Pages for free, global CDN hosting.
+4. GitHub Actions automatically builds the Astro site and deploys it to GitHub Pages for free, global CDN hosting.
 5. Visitors view your ultra-fast site while Umami and Remark42 handle analytics and comments via the Cloudflare Tunnel.
 
 ## Setup Instructions
@@ -121,15 +142,29 @@ This stack stands on the shoulders of:
 
 ### 3. Pi Bootstrap
 
-SSH into your fresh Raspberry Pi OS Lite and run:
+SSH into your fresh Raspberry Pi OS Lite (64-bit) and run:
 
 ```bash
-wget https://raw.githubusercontent.com/YourUser/web-world-wide-online/main/scripts/bootstrap.sh
-chmod +x bootstrap.sh
-./bootstrap.sh
+sudo apt-get update -y && sudo apt-get install -y git
+sudo git clone https://github.com/AdamNolle/web-world-wide-online.git /opt/web-world-wide
+sudo /opt/web-world-wide/scripts/bootstrap.sh
 ```
 
-Follow the prompts to enter your GitHub PAT and Cloudflare Token. The script will install Docker, configure your environment secrets, and boot the entire stack!
+The script is idempotent — re-running on an already-set-up Pi prints "all
+phases healthy" in under 30 seconds. On a fresh Pi it:
+
+1. Verifies arch, OS, disk, network connectivity (fail-fast).
+2. Installs Docker, Node 22, and required apt packages.
+3. Sets up a 2 GB swapfile.
+4. Prompts for your **Cloudflare Tunnel token** and **GitHub PAT** (with `--cf-token=` and `--gh-pat=` flag overrides for scripted runs).
+5. Validates the Cloudflare token against the Cloudflare API in under 5 seconds.
+6. Generates random secrets, creates `docker/.env`, brings the stack up.
+7. Installs systemd boot-check + cron jobs (backups, auto-update, maintenance).
+8. Polls every service with backoff until all healthy, then prints a status table.
+9. Generates the age-encrypted backup keypair and pushes the public key to `www-blog-backups` (creates the repo automatically if your PAT has `repo` scope).
+10. Prints the age private key **last** — save it to a password manager before closing the SSH session.
+
+Expected runtime on a Pi 5 with good network: under 6 minutes from `sudo ./bootstrap.sh` to passkey-registration prompt.
 
 ### 4. Admin Setup
 

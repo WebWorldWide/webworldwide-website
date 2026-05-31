@@ -39,11 +39,25 @@ export default defineConfig({
   },
 
   vite: {
-    ssr: { noExternal: ['three'] }
+    build: {
+      // Keep Three.js in its own chunk so the rest of the app stays cacheable
+      // when we bump the version. The tree-shake at three-globe-deps.ts cuts
+      // this from ~690 KB → ~465 KB; this `manualChunks` keeps that chunk
+      // stable across deploys for browser cache hits.
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/three/')) return 'three-vendor';
+          }
+        }
+      }
+    }
   },
 
   build: {
     format: 'directory',
+    // Inline small (<4KB) stylesheets so the first paint never blocks on a
+    // separate CSS request. Larger sheets stay external for caching.
     inlineStylesheets: 'auto',
     assets: '_assets'
   }

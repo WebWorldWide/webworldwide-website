@@ -39,6 +39,7 @@ jobs:
           - lint:prettier
           - lint:types
           - lint:html-admin
+          - lint:site
     steps:
       - uses: actions/checkout@v4
 
@@ -47,49 +48,51 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      # lint:site shells into site/ which needs its own deps (Astro,
+      # eslint-plugin-astro, jsx-a11y, etc.). Skip otherwise to keep
+      # the matrix jobs fast.
+      - name: Install site dependencies
+        if: matrix.task == 'lint:site'
+        working-directory: site
+        run: npm ci --ignore-scripts
 
       - name: Run ${{ matrix.task }}
         run: npm run ${{ matrix.task }}
 
   lint-html-site:
-    name: Lint (lint:html-site, depends on hugo build)
+    name: Lint (lint:html-site, depends on astro build)
     runs-on: ubuntu-latest
-    env:
-      HUGO_VERSION: 0.161.1
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Hugo
-        run: |
-          wget -O "${{ runner.temp }}/hugo.deb" "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
-          sudo dpkg -i "${{ runner.temp }}/hugo.deb"
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
-      - name: Cache Hugo modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/hugo_cache
-          key: hugo-${{ runner.os }}-${{ hashFiles('site/hugo.toml') }}
-          restore-keys: |
-            hugo-${{ runner.os }}-
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --ignore-scripts
 
-      - name: Build Hugo (so htmlhint has output to scan)
+      - name: Build Astro (so htmlhint has output to scan)
+        working-directory: site
         env:
-          HUGO_CACHEDIR: ${{ runner.temp }}/hugo_cache
-        run: cd site && hugo --gc --minify --printPathWarnings
+          NODE_ENV: production
+        run: npm run build
 
       - name: Lint generated HTML
         run: npm run lint:html-site
@@ -122,10 +125,15 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
+            site/package-lock.json
             admin/package-lock.json
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Install site dependencies (vitest, jsdom, testing-library)
+        working-directory: site
+        run: npm ci --ignore-scripts
 
       # The dev-script tests (scripts/dev/__tests__) + the admin frontend
       # Vitest suite both load native modules out of admin/node_modules —

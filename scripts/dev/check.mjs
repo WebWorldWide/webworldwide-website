@@ -29,7 +29,7 @@ const log = makeLogger('check', c.blue);
 
 /** @type {ServiceSpec[]} */
 export const SERVICES = [
-  { name: 'Hugo', kind: 'http', url: 'http://localhost:1313/', expectStatus: 200 },
+  { name: 'Astro', kind: 'http', url: 'http://localhost:4321/', expectStatus: 200 },
   { name: 'Admin', kind: 'http', url: 'http://localhost:3000/auth/status', expectStatus: 200 },
   { name: 'Remark42', kind: 'http', url: 'http://localhost:8081/api/v1/ping', expectStatus: 200 },
   { name: 'Umami', kind: 'http', url: 'http://localhost:3001/api/heartbeat', expectStatus: 200 },
