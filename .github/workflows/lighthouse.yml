@@ -44,6 +44,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # lhci builds + previews the Astro site (`npm --prefix site run build`),
+      # which runs site/scripts/prebuild.mjs (imports @iarna/toml) — needs
+      # site/ deps installed.
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --ignore-scripts
+
       - name: Cache Hugo modules
         uses: actions/cache@v4
         with:

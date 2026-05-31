@@ -46,6 +46,13 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
+      # The Playwright webServer runs `npm --prefix site run dev`, which
+      # executes site/scripts/prebuild.mjs (imports @iarna/toml) and starts
+      # the Astro dev server — both need site/ deps installed.
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --ignore-scripts
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
