@@ -13,7 +13,7 @@ const ENTRANCE_BASE = 400;
 const ENTRANCE_STAGGER = 70;
 const ENTRANCE_DUR = 900;
 const WARP_STAGGER = 70;
-const DWELL = 2200;
+const DWELL = 1100;
 
 export function initWordmarkWarp(): void {
   const wm = document.querySelector<HTMLElement>('.wordmark');
@@ -52,11 +52,26 @@ export function initWordmarkWarp(): void {
   });
   void wm.offsetHeight;
 
-  const ringIdx: number[] = [];
+  // Seam separator: an extra "•" that only appears once the letters form the
+  // ring. Without it the loop reads "…WideWeb…" (the last word runs into the
+  // first); with it the three words stay separated all the way around. It is
+  // hidden during the linear cascade so the heading reads "Web • World • Wide".
+  const seam = document.createElement('span');
+  seam.className = 'ch seam';
+  seam.textContent = '•';
+  seam.setAttribute('aria-hidden', 'true');
+  seam.style.opacity = '0';
+  seam.style.transform = 'translate(-50%, -50%)';
+  wm.appendChild(seam);
+
+  // Glyphs that sit on the ring: every non-space character, then the seam
+  // bullet at the end of the loop.
+  const ringSpans: HTMLElement[] = [];
   chars.forEach((c, i) => {
-    if (c !== ' ') ringIdx.push(i);
+    if (c !== ' ') ringSpans.push(spans[i]);
   });
-  const M = ringIdx.length;
+  ringSpans.push(seam);
+  const M = ringSpans.length;
 
   function computeRadius(): number {
     const r = area!.getBoundingClientRect();
@@ -65,17 +80,12 @@ export function initWordmarkWarp(): void {
 
   function placeOnRing(): void {
     const R = computeRadius();
-    ringIdx.forEach((origI, j) => {
-      const s = spans[origI];
+    ringSpans.forEach((s, j) => {
       const theta = (j / M) * Math.PI * 2 - Math.PI / 2;
       const tx = R * Math.cos(theta);
       const ty = R * Math.sin(theta);
       const rotDeg = ((theta + Math.PI / 2) * 180) / Math.PI;
-      if (j === 0) {
-        // Stagger only the first call; resize calls update without transition.
-      }
-      s.style.transform =
-        `translate(-50%, -50%) translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) rotate(${rotDeg.toFixed(2)}deg)`;
+      s.style.transform = `translate(-50%, -50%) translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) rotate(${rotDeg.toFixed(2)}deg)`;
     });
   }
 
@@ -84,6 +94,7 @@ export function initWordmarkWarp(): void {
     spans.forEach((s) => {
       s.style.opacity = '1';
     });
+    seam.style.opacity = '1';
     placeOnRing();
     chars.forEach((c, i) => {
       if (c === ' ') spans[i].style.opacity = '0';
@@ -96,25 +107,28 @@ export function initWordmarkWarp(): void {
 
   // PHASE 1: cascade entrance
   spans.forEach((s, i) => {
-    setTimeout(() => {
-      s.style.transition = 'transform .9s cubic-bezier(.2, 1.2, .3, 1), opacity .6s ease-out';
-      s.style.opacity = '1';
-      s.style.transform = `translate(-50%, -50%) translate(${linearXs[i]}px, 0px) rotate(0deg)`;
-    }, ENTRANCE_BASE + i * ENTRANCE_STAGGER);
+    setTimeout(
+      () => {
+        s.style.transition = 'transform .9s cubic-bezier(.2, 1.2, .3, 1), opacity .6s ease-out';
+        s.style.opacity = '1';
+        s.style.transform = `translate(-50%, -50%) translate(${linearXs[i]}px, 0px) rotate(0deg)`;
+      },
+      ENTRANCE_BASE + i * ENTRANCE_STAGGER,
+    );
   });
 
   // PHASE 2: warp to circle
   const WARP_DELAY = ENTRANCE_BASE + (chars.length - 1) * ENTRANCE_STAGGER + ENTRANCE_DUR + DWELL;
   setTimeout(() => {
     const R = computeRadius();
-    ringIdx.forEach((origI, j) => {
-      const s = spans[origI];
+    ringSpans.forEach((s, j) => {
       const theta = (j / M) * Math.PI * 2 - Math.PI / 2;
       const tx = R * Math.cos(theta);
       const ty = R * Math.sin(theta);
       const rotDeg = ((theta + Math.PI / 2) * 180) / Math.PI;
       setTimeout(() => {
         s.style.transition = 'transform 1.4s cubic-bezier(.55, .0, .2, 1.04), opacity .6s ease-out';
+        s.style.opacity = '1';
         s.style.transform = `translate(-50%, -50%) translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) rotate(${rotDeg.toFixed(2)}deg)`;
       }, j * WARP_STAGGER);
     });

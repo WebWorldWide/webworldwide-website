@@ -1,20 +1,20 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
-    <!-- FOUC theme script — must run before any paint -->
-    <script>
-      try {
-        var t = localStorage.getItem("theme");
-        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
-      } catch (e) {}
-    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Web World Wide // Admin</title>
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="manifest" href="/manifest.json" />
+    <!-- Preload the two fonts the topbar + sidebar use immediately so
+         text isn't FOUC-swapped at first paint. Other faces still load
+         on-demand via fonts.css with font-display: swap. -->
+    <link rel="preload" href="/fonts/vt323-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/cormorant-garamond-500.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/_www-tokens.css" />
     <link rel="stylesheet" href="/css/admin.css" />
+    <link rel="stylesheet" href="/css/_www-overrides.css" />
     <link rel="stylesheet" href="/css/dashboard.css" />
     <link rel="stylesheet" href="/css/media.css" />
     <link rel="stylesheet" href="/css/settings.css" />
@@ -23,19 +23,19 @@
     <link rel="stylesheet" href="/css/activity.css" />
     <link rel="stylesheet" href="/css/comments.css" />
     <!-- WebAuthn browser library (CDN — passkey registration). Wrapped
-       in try/catch in auth.js so an ad-blocker doesn't crash the page. -->
-    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+       in try/catch in auth.js so an ad-blocker doesn't crash the page.
+       `defer` so it parses in parallel with HTML and never blocks the
+       first paint; the global preconnect above warms the TLS handshake. -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
+    <script defer src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
   </head>
   <body data-page="dashboard">
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <!-- Backdrop layers -->
-    <div class="backdrop" aria-hidden="true">
-      <div class="lava-blob a"></div>
-      <div class="lava-blob b"></div>
-    </div>
-    <div class="scanlines" aria-hidden="true"></div>
-    <div class="grain" aria-hidden="true"></div>
+    <!-- WWW pixel-sky backdrop (same engine as the public site, dimmer) -->
+    <div class="sky" aria-hidden="true"></div>
+    <div class="sky-puffs" id="skyPuffs" aria-hidden="true"></div>
 
     <div class="shell">
       <!-- ============ SIDEBAR ============ -->
@@ -43,7 +43,7 @@
         <a class="side-brand" href="/index.html">
           <span class="tmark s32" aria-hidden="true"></span>
           <span class="name">
-            TERMINAL<b>EIGHTY</b>
+            WEB WORLD<b>WIDE</b>
             <span>· ADMIN · REV 2.0</span>
           </span>
         </a>
@@ -791,6 +791,8 @@ Allowed commands run with timeout=15s. Type a command and press Enter.
 
     <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>
 
+    <script src="/js/clouds.js"></script>
+    <script src="/js/a11y.js"></script>
     <script src="/js/common.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/terminal.js"></script>

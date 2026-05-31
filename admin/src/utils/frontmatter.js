@@ -1,4 +1,15 @@
 import matter from 'gray-matter';
+import {
+  validatePost as validatePostSchema,
+  postSchema,
+} from '../../../site/src/content/postSchema.mjs';
+
+/**
+ * Re-exports the single source of truth schema + validator from
+ * site/src/content/postSchema.mjs. Admin and Astro use the same Zod
+ * definition — adding a field means editing postSchema.mjs only.
+ */
+export { postSchema, validatePostSchema };
 
 /**
  * Parse frontmatter and content from a markdown string.
@@ -37,6 +48,26 @@ export function serializePost(data, content) {
 
   // js-yaml options (passed through by gray-matter to safeDump):
   //   lineWidth: -1 — never wrap long strings (URLs in front-matter
-  //     would otherwise fold across newlines and break Hugo's parser).
+  //     would otherwise fold across newlines and break parsers).
   return matter.stringify(content, data, /** @type {any} */ ({ lineWidth: -1 }));
+}
+
+/**
+ * Validate a frontmatter object for publish. Drafts (data.draft === true)
+ * always pass — the writer is mid-authoring and the editor handles
+ * incomplete state. Non-drafts get the full Zod check; any failure
+ * surfaces as a structured error list the editor can render.
+ *
+ * @param {Record<string, unknown>} data
+ * @returns {{ ok: boolean, errors?: Array<{ path: string, message: string }> }}
+ */
+export function validateForPublish(data) {
+  if (data && data.draft === true) {
+    return { ok: true };
+  }
+  const result = validatePostSchema(data);
+  if (result.ok) {
+    return { ok: true };
+  }
+  return { ok: false, errors: result.errors };
 }

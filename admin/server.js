@@ -131,8 +131,33 @@ const webmentionLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Static files (admin UI)
-app.use(express.static(join(__dirname, 'public')));
+// Static files (admin UI).
+//
+// Cache strategy:
+//   - HTML files (admin pages, manifest, sw.js): no-cache + must-revalidate
+//     so a deploy lands immediately on the next request.
+//   - Fonts (woff2): 1 year, immutable. Filenames are stable for the life
+//     of the design system; if we change a font we change the filename.
+//   - Everything else (CSS/JS/images): 1 hour. Admin assets aren't
+//     hash-fingerprinted yet, so we can't go higher without risking
+//     stale clients after a push.
+//
+// The static() max-age option only sets the default; setHeaders runs
+// after and can override per-path. We use it for the HTML + font split.
+app.use(
+  express.static(join(__dirname, 'public'), {
+    maxAge: '1h',
+    etag: true,
+    lastModified: true,
+    setHeaders(res, path) {
+      if (path.endsWith('.html') || path.endsWith('manifest.json') || path.endsWith('sw.js')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      } else if (path.endsWith('.woff2') || path.endsWith('.woff') || path.endsWith('.ttf')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }),
+);
 
 // Phase 4: serve uploaded originals straight off the site's static
 // tree. In production these are also baked into Hugo's output by the

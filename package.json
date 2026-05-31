@@ -31,6 +31,8 @@
     "test:a11y": "pa11y-ci --config .pa11yci.json",
     "build": "npm --prefix site run build",
     "build:check": "npm run build && npm run lint:html-site",
+    "dev": "node scripts/dev/preflight.mjs && run-p -l dev:site dev:admin",
+    "dev:full": "node scripts/dev/preflight.mjs --require-docker && run-p -l dev:docker dev:site dev:admin",
     "dev:site": "npm --prefix site run dev",
     "dev:admin": "npm --prefix admin run dev",
     "dev:docker": "docker compose -f docker/docker-compose.dev.yml up",
@@ -38,9 +40,11 @@
     "dev:stop": "docker compose -f docker/docker-compose.dev.yml down",
     "dev:all": "run-p -l dev:docker dev:site dev:admin",
     "dev:check": "node scripts/dev/check.mjs",
+    "dev:preflight": "node scripts/dev/preflight.mjs",
     "db:seed": "node scripts/dev/seed.mjs",
     "db:reset": "node scripts/dev/reset.mjs",
     "preview": "npm --prefix site run preview",
+    "postinstall": "node scripts/dev/postinstall.mjs",
     "prepare": "husky || true && npm --prefix admin run build:editor --silent || true"
   },
   "devDependencies": {

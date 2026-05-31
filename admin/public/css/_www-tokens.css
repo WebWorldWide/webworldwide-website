@@ -1,0 +1,110 @@
+/* ============================================================
+   Web World Wide — admin token overrides
+   ------------------------------------------------------------
+   Loads FIRST in the admin <link rel="stylesheet"> order, so
+   every var() reference downstream resolves to the WWW palette.
+   Matches site/src/styles/tokens.css — single source of truth.
+   ============================================================ */
+
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  /* Sky palette */
+  --sky: #1e68f0;
+  --sky-deep: #1450c8;
+  --sky-far: #a8c8f0;
+  --cloud: #ffffff;
+
+  /* Status / accents.
+     `*-strong` variants are WCAG AA-compliant for body text on white
+     (≥ 4.5:1). Used by `--accent` below so every admin rule that does
+     `color: var(--accent)` inherits a passing contrast automatically.
+     Use the brighter `--cherry` / `--sun` only for backgrounds (with
+     ink-on-color text), large display text, or non-text decoration. */
+  --sun: #68dba8;
+  --sun-deep: #3aa982;
+  --sun-strong: #1e6d50;
+  --cherry: #ff8a3d;
+  --cherry-deep: #d96815;
+  --cherry-strong: #b04708;
+  --grass: #3ec25d;
+
+  /* Ink */
+  --ink: #0e2960;
+  --ink-soft: #2a4a90;
+  --ink-mute: #5a72b0;
+  --ink-faint: #92a3c8;
+
+  /* Paper */
+  --paper: #ffffff;
+  --paper-warm: #fffaf2;
+
+  /* Glass */
+  --glass: rgba(255, 255, 255, 0.74);
+  --glass-strong: rgba(255, 255, 255, 0.85);
+  --glass-soft: rgba(255, 255, 255, 0.45);
+  --glass-warm: rgba(255, 250, 242, 0.88);
+
+  /* WCAG-friendly hairlines */
+  --line-www: rgba(14, 41, 96, 0.18);
+  --line-strong-www: rgba(14, 41, 96, 0.42);
+
+  /* Shadows / borders */
+  --shadow-card: 8px 8px 0 var(--ink);
+  --shadow-card-sm: 5px 5px 0 var(--ink);
+  --shadow-card-xs: 3px 3px 0 var(--ink);
+  --shadow-button: 4px 4px 0 var(--ink);
+  --border-strong: 3px solid var(--ink);
+  --border-soft: 2px solid var(--ink);
+
+  /* Type stacks */
+  --font-serif: "Cormorant Garamond", "Apple Garamond", "ITC Garamond", Garamond, serif;
+  --font-mono-www: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-pixel: "VT323", ui-monospace, "Courier New", monospace;
+
+  /* Map legacy admin tokens to WWW equivalents so existing rules
+     (var(--bg), var(--fg), var(--accent)…) "just work". */
+  --bg: var(--sky);
+  --bg-elev: var(--paper);
+  --bg-card: var(--paper);
+  --bg-deep: var(--sky-deep);
+  --line: var(--line-www);
+  --line-strong: var(--line-strong-www);
+  --fg: var(--ink);
+  --fg-dim: var(--ink-soft);
+  --fg-mute: var(--ink-mute);
+
+  /* --accent points to the AA-compliant strong cherry so every
+     `color: var(--accent)` rule in the admin (80+ across all CSS
+     files) automatically meets contrast on white surfaces. The
+     bright `--cherry` is still available for backgrounds, large
+     display text, and decorative icons. */
+  --accent: var(--cherry-strong);
+  --accent-bg: var(--cherry);
+  --accent-soft: rgba(255, 138, 61, 0.12);
+  --accent-glow: rgba(255, 138, 61, 0.34);
+  --accent-on: #ffffff;
+  --selection: var(--cherry);
+
+  --warn: #d68f1e;
+  --warn-soft: rgba(214, 143, 30, 0.16);
+  --warn-glow: rgba(214, 143, 30, 0.32);
+  --danger: #d94a3a;
+  --danger-soft: rgba(217, 74, 58, 0.14);
+  --danger-glow: rgba(217, 74, 58, 0.3);
+  --ok: var(--sun-deep);
+  --ok-soft: rgba(58, 169, 130, 0.14);
+
+  --glass-tint: var(--glass);
+  --glass-border: var(--ink);
+  --glass-highlight: rgba(255, 255, 255, 0.6);
+  --glass-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
+    var(--shadow-card);
+
+  /* Override the admin's legacy font stacks so every var(--mono),
+     var(--sans), var(--serif) downstream uses the WWW palette. */
+  --mono: var(--font-mono-www);
+  --sans: var(--font-serif);
+  --serif: var(--font-serif);
+}

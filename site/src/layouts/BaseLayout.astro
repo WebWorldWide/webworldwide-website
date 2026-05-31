@@ -45,10 +45,21 @@ const {
 } = Astro.props;
 
 const siteTitle = siteToml.site.title;
-const pageTitle = title ? `${title} — ${siteTitle}` : siteTitle;
+// The browser tab always reads the site name ("Web World Wide") no matter the
+// page. The per-page title still flows into og:/twitter: tags so social shares
+// and search results keep the specific post/page name.
+const documentTitle = siteTitle;
+const shareTitle = title ? `${title} — ${siteTitle}` : siteTitle;
 const pageDesc = description ?? siteToml.site.description;
 const canonicalURL = canonical ?? Astro.url.toString();
 const currentPath = Astro.url.pathname;
+// Resource hints — only preconnect the origins this page will actually
+// touch. Comments are only on /blog/<slug>/ pages; analytics fires on
+// every page. dns-prefetch is cheap (one DNS roundtrip) so include
+// both even when preconnect skipped.
+const isPostPage = currentPath.startsWith('/blog/') && currentPath !== '/blog/';
+const commentsOrigin = siteToml.comments?.url ? new URL(siteToml.comments.url).origin : null;
+const analyticsOrigin = siteToml.analytics?.url ? new URL(siteToml.analytics.url).origin : null;
 const dataAttrs = Object.fromEntries(
   Object.entries(bodyData)
     .filter(([, v]) => v !== undefined && v !== false)
@@ -60,7 +71,7 @@ const dataAttrs = Object.fromEntries(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{pageTitle}</title>
+    <title>{documentTitle}</title>
     <meta name="description" content={pageDesc} />
     <meta name="theme-color" content="#1E68F0" />
     <link rel="canonical" href={canonicalURL} />
@@ -69,14 +80,26 @@ const dataAttrs = Object.fromEntries(
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title={`${siteTitle} RSS`} href="/rss.xml" />
 
+    {/* Resource hints — warm DNS + TLS for third-party origins so the
+        first comment-iframe or analytics ping doesn't pay the full
+        handshake. dns-prefetch is harmless on origins we never hit. */}
+    {analyticsOrigin && <link rel="preconnect" href={analyticsOrigin} crossorigin />}
+    {analyticsOrigin && <link rel="dns-prefetch" href={analyticsOrigin} />}
+    {isPostPage && commentsOrigin && <link rel="preconnect" href={commentsOrigin} crossorigin />}
+    {isPostPage && commentsOrigin && <link rel="dns-prefetch" href={commentsOrigin} />}
+    {/* Pre-resolve YouTube — used by the home Videos section and any
+        embed in a post. Cheap dns-prefetch only (no TLS warm-up). */}
+    <link rel="dns-prefetch" href="https://www.youtube.com" />
+    <link rel="dns-prefetch" href="https://i.ytimg.com" />
+
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={siteTitle} />
-    <meta property="og:title" content={pageTitle} />
+    <meta property="og:title" content={shareTitle} />
     <meta property="og:description" content={pageDesc} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:image" content={new URL(ogImage, siteToml.site.url).toString()} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:title" content={shareTitle} />
     <meta name="twitter:description" content={pageDesc} />
     <meta name="twitter:image" content={new URL(ogImage, siteToml.site.url).toString()} />
 

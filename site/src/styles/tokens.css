@@ -10,11 +10,19 @@
   --sky-far: #a8c8f0;
   --cloud: #ffffff;
 
-  /* Status / accent palette */
+  /* Status / accent palette.
+     `*-strong` variants are WCAG AA-compliant for body text on white
+     (≥ 4.5:1). Use the brighter `--cherry` / `--sun` only for:
+       - backgrounds (with ink-on-color text, 5.37:1)
+       - large display text (≥ 24px / ≥ 18.66px bold — 3:1)
+       - non-text decoration (icon shapes, dividers — 3:1)
+     For ANY body text or small UI label on white, use `*-strong`. */
   --sun: #68dba8;          /* mint — secondary / success */
-  --sun-deep: #3aa982;     /* deep mint — OK pill */
-  --cherry: #ff8a3d;       /* sunset coral — primary action */
-  --cherry-deep: #d96815;  /* deeper coral — high-contrast body text */
+  --sun-deep: #3aa982;     /* deep mint — OK pill (3:1 on white) */
+  --sun-strong: #1e6d50;   /* mint for body text (6.16:1 on white) */
+  --cherry: #ff8a3d;       /* sunset coral — primary action backgrounds */
+  --cherry-deep: #d96815;  /* deeper coral — large display text (3.52:1) */
+  --cherry-strong: #b04708; /* coral for body text + small UI (5.5:1 on white) */
   --grass: #3ec25d;
 
   /* Admin-specific accents (reused on site for parity) */

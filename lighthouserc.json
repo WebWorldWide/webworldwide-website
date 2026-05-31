@@ -3,11 +3,11 @@
     "collect": {
       "url": [
         "http://localhost:1414/",
-        "http://localhost:1414/bye-bye-dji/",
-        "http://localhost:1414/tags/tech/"
+        "http://localhost:1414/blog/",
+        "http://localhost:1414/blog/bye-bye-dji/"
       ],
-      "startServerCommand": "cd site && hugo server -D --port 1414 --bind 127.0.0.1",
-      "startServerReadyPattern": "Web Server is available",
+      "startServerCommand": "npm --prefix site run build && npm --prefix site run preview -- --port 1414 --host 127.0.0.1",
+      "startServerReadyPattern": "Local\\s+http://",
       "numberOfRuns": 3,
       "settings": {
         "formFactor": "mobile",
@@ -32,7 +32,7 @@
     "assert": {
       "assertions": {
         "categories:performance": ["error", { "minScore": 0.95 }],
-        "_comment_a11y_b_p": "0.95 (was 1.0) — Lighthouse penalises Chrome-only-warning audits like 'csp-xss' and 'image-aspect-ratio' that are genuinely hard to hit 100% on a Hugo static site. 0.95 is still excellent and matches what the perf budget already accepts.",
+        "_comment_a11y_b_p": "0.95 (was 1.0) — Lighthouse penalises Chrome-only-warning audits like 'csp-xss' and 'image-aspect-ratio' that are hard to hit 100% on a static site. 0.95 is still excellent and matches the perf budget.",
         "categories:accessibility": ["error", { "minScore": 0.95 }],
         "categories:best-practices": ["error", { "minScore": 0.95 }],
         "categories:seo": ["error", { "minScore": 1.0 }]

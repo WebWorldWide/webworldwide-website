@@ -51,7 +51,7 @@ before(async () => {
   siteDir = join(tempDir, 'site');
   mkdirSync(join(siteDir, 'content', 'posts'), { recursive: true });
   mkdirSync(join(siteDir, 'data'), { recursive: true });
-  writeFileSync(join(siteDir, 'hugo.toml'), SAMPLE_TOML);
+  writeFileSync(join(siteDir, 'site.toml'), SAMPLE_TOML);
   process.env.SITE_DIR = siteDir;
 
   try {
@@ -105,7 +105,7 @@ test('TOML round-trip preserves comments + ordering', skipOpts(), async () => {
     body: JSON.stringify({ changes: { 'params.umamiSiteID': 'umami-123' } }),
   });
   assert.equal(res.status, 200);
-  const updated = readFileSync(join(siteDir, 'hugo.toml'), 'utf-8');
+  const updated = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
   // Comment line "# Pagination" survives
   assert.match(updated, /# Pagination/);
   // Order preserved — pagination still before taxonomies
@@ -119,14 +119,14 @@ test('TOML round-trip preserves comments + ordering', skipOpts(), async () => {
 });
 
 test('TOML round-trip with no changes is a no-op', skipOpts(), async () => {
-  const before = readFileSync(join(siteDir, 'hugo.toml'), 'utf-8');
+  const before = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
   const res = await fetch(`${baseUrl}/api/settings/hugo`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ changes: {} }),
   });
   assert.equal(res.status, 200);
-  const after = readFileSync(join(siteDir, 'hugo.toml'), 'utf-8');
+  const after = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
   assert.equal(before, after);
 });
 

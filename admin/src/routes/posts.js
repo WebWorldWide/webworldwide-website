@@ -15,7 +15,7 @@ import { Router } from 'express';
 import { readdirSync, readFileSync, writeFileSync, unlinkSync, statSync } from 'fs';
 import path, { join } from 'path';
 import crypto from 'crypto';
-import { parsePost, serializePost } from '../utils/frontmatter.js';
+import { parsePost, serializePost, validateForPublish } from '../utils/frontmatter.js';
 import { invalidatePostRefs } from '../utils/postRefs.js';
 import { logActivity } from '../services/activity.js';
 
@@ -103,7 +103,7 @@ router.post('/bulk', (req, res) => {
     }
 
     /** @type {string[]} */ const ok = [];
-    /** @type {{ filename: string, error: string }[]} */ const errors = [];
+    /** @type {Array<{ filename: string, error: string, details?: unknown }>} */ const errors = [];
 
     for (const raw of filenames) {
       const filename = path.basename(String(raw || ''));
@@ -128,6 +128,16 @@ router.post('/bulk', (req, res) => {
 
         if (action === 'publish') {
           data.draft = false;
+          // Validate against the shared schema before flipping live.
+          const check = validateForPublish(data);
+          if (!check.ok) {
+            errors.push({
+              filename,
+              error: 'schema_validation_failed',
+              details: check.errors,
+            });
+            continue;
+          }
         } else if (action === 'unpublish') {
           data.draft = true;
         } else if (action === 'add-tag') {
@@ -327,6 +337,14 @@ router.post('/', (req, res) => {
       }
     }
 
+    // Single-source-of-truth schema check (shared with Astro build).
+    // Drafts pass unconditionally; non-drafts must satisfy the Zod schema
+    // so a publish never lands a post that the next CI build would reject.
+    const check = validateForPublish(data);
+    if (!check.ok) {
+      return res.status(400).json({ error: 'schema_validation_failed', errors: check.errors });
+    }
+
     const fileContent = serializePost(data, content || '');
     writeFileSync(join(postsDir, filename), fileContent);
     invalidatePostRefs();
@@ -354,6 +372,13 @@ router.put('/:filename', (req, res) => {
     // the scheduler will simply pick it up on its next tick).
     if (data.publish_at && !data.draft) {
       // publish_at only matters for drafts; ignore for live posts.
+    }
+
+    // Single-source-of-truth schema check (shared with Astro build).
+    // Drafts pass unconditionally; non-drafts must satisfy the Zod schema.
+    const check = validateForPublish(data);
+    if (!check.ok) {
+      return res.status(400).json({ error: 'schema_validation_failed', errors: check.errors });
     }
 
     const fileContent = serializePost(data, content || '');

@@ -1,0 +1,348 @@
+/* ============================================================
+   Web World Wide — admin visual-language overrides
+   ------------------------------------------------------------
+   Loads AFTER admin.css. Re-skins the existing SaaS chrome
+   (sidebar, topbar, panels, buttons) in the WWW vocabulary:
+     - Chunky 3px ink borders + 8px hard offset shadow on cards
+     - Glass surfaces with backdrop blur, light tone
+     - Cormorant Garamond serif body, VT323 pixel labels
+     - Pixel-sky backdrop with drifting clouds (same engine as
+       site/), at admin opacity 0.55 per design
+   Existing layout / class names are preserved — this only swaps
+   the visual treatment.
+   ============================================================ */
+
+/* SKY BACKDROP — admin uses the same engine as site/ at dimmer opacity */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-deep) 0%, var(--sky) 38%, #2e7af2 100%);
+}
+.sky-puffs {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.55;
+}
+.puff {
+  position: absolute;
+  image-rendering: pixelated;
+  animation: puffDrift linear infinite;
+  will-change: transform;
+}
+@keyframes puffDrift {
+  from { transform: translate3d(calc(-1 * var(--w, 200px) - 8vw), 0, 0); }
+  to   { transform: translate3d(calc(100vw + 8vw), 0, 0); }
+}
+.puff-bob {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  animation: puffBob ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes puffBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* BODY — light theme, serif body, sky behind */
+html {
+  background: var(--sky);
+}
+body {
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  isolation: isolate;
+}
+
+/* Suppress the dark theme's lava blobs + scanlines (we use clouds instead) */
+.lava-blob,
+.scanlines,
+.grain { display: none !important; }
+
+/* SHELL — keep grid but lift content above the sky */
+.shell { position: relative; z-index: 1; }
+
+/* SIDEBAR — glass card with chunky border + offset shadow */
+.sidebar {
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-right: var(--border-strong);
+  border-radius: 0;
+  box-shadow: 8px 0 0 var(--ink);
+  padding: 18px 14px;
+}
+.side-brand {
+  border-bottom: 1px dashed var(--line-strong);
+}
+.side-brand .name {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.side-brand .name b { color: var(--cherry-strong); font-weight: 700; }
+.side-brand .name span {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+}
+
+.side-group-label {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+}
+
+.side-item {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 2px solid transparent;
+  border-radius: 4px;
+  /* WCAG 2.5.5 Target Size (Enhanced AAA, also good AA practice). */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.side-item:hover {
+  background: rgba(255, 138, 61, 0.1);
+  color: var(--ink);
+  border-color: var(--cherry-strong);
+}
+.side-item[aria-current="page"],
+.side-item.active {
+  background: var(--ink);
+  color: var(--sun);
+  border-color: var(--ink);
+  box-shadow: var(--shadow-card-xs);
+}
+
+/* TOPBAR */
+.topbar {
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: var(--border-strong);
+  box-shadow: 0 8px 0 var(--ink);
+  z-index: 5;
+}
+.crumb {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.crumb b { color: var(--ink); }
+
+.topbar-search {
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: var(--shadow-card-xs);
+  color: var(--ink-soft);
+  font-family: var(--font-serif);
+  font-style: italic;
+  padding: 8px 14px;
+}
+.topbar-search input {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+/* PANELS — chunky border + hard offset shadow */
+.panel {
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.panel::after {
+  /* keep the existing top-edge highlight */
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.85), transparent);
+}
+
+/* KPI cards */
+.kpi {
+  background: var(--paper);
+  border: var(--border-soft);
+  box-shadow: var(--shadow-card-sm);
+  border-radius: 4px;
+}
+
+/* SECTION HEADS */
+.sec-head { color: var(--ink); }
+.sec-title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 28px;
+  color: var(--ink);
+}
+
+/* BUTTONS — WWW pill / paper-card variants */
+.btn {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 10px 18px;
+  border-radius: 3px;
+  box-shadow: var(--shadow-card-xs);
+  cursor: pointer;
+  min-height: 44px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+.btn:hover,
+.btn:focus-visible {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ink);
+  background: var(--sun);
+}
+.btn-primary {
+  background: var(--cherry);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: var(--cherry-deep);
+  color: var(--paper);
+}
+.btn-mini {
+  font-size: 13px;
+  padding: 6px 12px;
+  min-height: 32px;
+}
+
+/* FORM CONTROLS */
+.field input,
+.field textarea,
+.field select {
+  background: var(--paper-warm);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  border-radius: 3px;
+  padding: 10px 12px;
+  min-height: 44px;
+  outline: 0;
+}
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: var(--cherry-strong);
+}
+.field label {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* STATUS DOTS / PIPS */
+.log-dot,
+.ddot,
+.pip {
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  image-rendering: pixelated;
+}
+
+/* TABLES */
+.row-grid {
+  background: var(--paper);
+  border: var(--border-soft);
+  box-shadow: var(--shadow-card-xs);
+  border-radius: 4px;
+}
+
+/* LOGO MARK — replace dark Terminal mark with WWW W */
+.tmark {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-card-xs);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tmark::after {
+  content: "W";
+  position: static;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-style: italic;
+  color: var(--cherry-strong);
+  font-size: 18px;
+  line-height: 1;
+}
+.tmark.s48::after { font-size: 30px; }
+.tmark.s32::after { font-size: 22px; }
+.tmark.s24::after { font-size: 16px; }
+
+/* FOCUS STYLES — WWW cherry-strong outline + halo.
+   `!important` so any `outline: 0` / `outline: none` on a specific
+   selector (admin.css line 152 :focus, line 248 .field input, plus
+   a few legacy outline:0 in dashboard.css/editor.css/comments.css)
+   never wins against keyboard focus. WCAG 2.4.7 + 2.4.13 — focus
+   must be visible regardless of widget-specific styling. */
+:focus-visible {
+  outline: 3px solid var(--cherry-strong) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px rgba(176, 71, 8, 0.28) !important;
+}
+
+/* SKIP LINK */
+.skip-link {
+  background: var(--ink);
+  color: var(--paper);
+  border: 3px solid var(--cherry-strong);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  box-shadow: var(--shadow-card-xs);
+}
+
+/* A11y — reduced transparency */
+@media (prefers-reduced-transparency: reduce) {
+  .panel, .sidebar, .topbar, .topbar-search {
+    background-color: var(--paper) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .panel, .sidebar, .topbar {
+    background-color: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+  }
+}

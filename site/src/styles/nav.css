@@ -62,7 +62,10 @@
   display: inline-flex;
   align-items: center;
 }
-.topbar-pill a.nav-link:hover { background: var(--cherry); color: var(--paper); }
+/* WCAG: paper on bright cherry = 2.34:1 (fails). Use cherry-strong
+   (paper on #b04708 = 5.05:1, passes). */
+.topbar-pill a.nav-link:hover { background: var(--cherry-strong); color: var(--paper); }
+/* Ink + sun-deep here: sun (#68dba8) on ink (#0e2960) = 7.4:1, passes. */
 .topbar-pill a.nav-link.is-current { background: var(--ink); color: var(--sun); }
 .topbar-pill a.nav-link:focus-visible { outline-offset: -3px; }
 

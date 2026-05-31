@@ -1,6 +1,6 @@
 /**
- * MastheadTyping — types out "The Dispatch." letter by letter into a
- * blinking cursor. The "The " prefix lands normally; "Dispatch." comes in
+ * MastheadTyping — types out "The Blog." letter by letter into a
+ * blinking cursor. The "The " prefix lands normally; "Blog." comes in
  * italic + cherry to match the design's mast-title em treatment.
  *
  * A11y: the visible animation is decorative; the <h1> in the parent has
@@ -9,16 +9,14 @@
 import { useEffect, useState } from 'react';
 
 const HEAD = 'The ';
-const TAIL = 'Dispatch.';
+const TAIL = 'Blog.';
 const FULL = HEAD + TAIL;
 
 export default function MastheadTyping(): JSX.Element {
   const [typed, setTyped] = useState(0);
-  const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
     const mq = matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(mq.matches);
     if (mq.matches) {
       setTyped(FULL.length);
       return;
