@@ -12,10 +12,9 @@ const apps = siteConfig.apps;
 <section class="section" id="apps">
   <div class="section-inner">
     <span class="eyebrow reveal">01 — Apps</span>
-    <h2 class="section-title reveal">Things I'm <em>building</em>.</h2>
 
     <div class="apps-float reveal">
-      <a class="floating-app" href={apps.fileid || '#'} target={apps.fileid ? '_blank' : '_self'} rel={apps.fileid ? 'noopener' : ''} aria-label="FileID — open">
+      <a class="floating-app" href="#apps" data-href={apps.fileid || undefined} aria-label="FileID — open" data-umami-event="app: FileID">
         <div class="drift">
           <div class="app-halo" aria-hidden="true"></div>
           <div class="spinner" data-spin data-icon="/assets/fileid.png" role="button" aria-label="FileID app — drag to spin"></div>
@@ -24,7 +23,7 @@ const apps = siteConfig.apps;
         <div class="caption">FileID<span class="status">★ live</span></div>
       </a>
 
-      <a class="floating-app" href={apps.doc_finder || '#'} aria-label="Document Finder — coming soon" data-status="soon">
+      <a class="floating-app" href="#apps" data-href={apps.doc_finder || undefined} aria-label="Document Finder — coming soon" data-status="soon">
         <div class="drift">
           <div class="app-halo" aria-hidden="true"></div>
           <div class="spinner" data-spin data-icon="/assets/doc-finder.png" role="button" aria-label="Document Finder — drag to spin"></div>

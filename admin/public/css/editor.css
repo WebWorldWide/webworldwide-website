@@ -16,12 +16,10 @@
 }
 
 .editor-pane {
-  background: var(--glass-tint);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
-  box-shadow: var(--glass-shadow);
+  background: var(--bg-card);
+  border: var(--border-soft);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -426,12 +424,10 @@
   min-width: 0;
 }
 .ed-panel {
-  background: var(--glass-tint);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
-  box-shadow: var(--glass-shadow);
+  background: var(--bg-card);
+  border: var(--border-soft);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card-sm);
   overflow: hidden;
 }
 .ed-panel summary {
@@ -1552,11 +1548,10 @@
   top: 14px;
   right: 14px;
   z-index: 200;
-  background: var(--glass-tint, #1f1f1f);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  background: var(--bg-card);
+  border: var(--border-soft);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
   padding: 8px;
   display: flex;
   flex-direction: column;

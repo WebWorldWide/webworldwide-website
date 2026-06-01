@@ -14,7 +14,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const PAGES = ['/', '/about/', '/bye-bye-dji/', '/tags/tech/'];
+const PAGES = ['/', '/blog/', '/blog/bye-bye-dji/'];
 
 for (const route of PAGES) {
   test(`a11y: ${route} has no serious/critical violations`, async ({ page }) => {
@@ -44,10 +44,12 @@ for (const route of PAGES) {
 
 // Phase 10: also re-scan with the Cmd+K palette open so an a11y
 // regression in the search dialog doesn't slip past the baseline.
-test('a11y: home with Cmd+K palette open — zero blocking violations', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'networkidle' });
-  await page.keyboard.press('Meta+K');
-  await expect(page.locator('#cmdk')).toBeVisible();
+test('a11y: command palette open — zero blocking violations', async ({ page }) => {
+  await page.goto('/blog/', { waitUntil: 'networkidle' });
+  // The palette is click-driven (no global ⌘K shortcut — a site can't own a
+  // keystroke cross-platform), mounted on /blog/. Open it via the search pill.
+  await page.locator('[data-open-cmdk]').first().click();
+  await expect(page.locator('.cmdk')).toBeVisible();
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();

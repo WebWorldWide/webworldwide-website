@@ -74,6 +74,11 @@ function attachSpinner(spinner: HTMLElement): void {
     drift.style.animationDuration = `${4.8 + Math.random() * 2.4}s`;
   }
 
+  // Spinning is a custom pointer gesture — suppress the browser's native drag
+  // (the "dragging a PNG" ghost + no-drop cursor) on the icon and its layers.
+  spinner.setAttribute('draggable', 'false');
+  spinner.addEventListener('dragstart', (e) => e.preventDefault());
+
   let rotX = -8 + (Math.random() - 0.5) * 6;
   let rotY = Math.random() * 360;
   let velY = reducedMotion() ? 0 : 16 + Math.random() * 10;
@@ -102,6 +107,8 @@ function attachSpinner(spinner: HTMLElement): void {
   apply();
 
   let lastFrame = performance.now();
+  let onScreen = true;
+  let running = false;
   function loop(now: number): void {
     const dt = Math.min(0.06, (now - lastFrame) / 1000);
     lastFrame = now;
@@ -127,9 +134,29 @@ function attachSpinner(spinner: HTMLElement): void {
       }
     }
     apply();
+    if (onScreen && !document.hidden) requestAnimationFrame(loop);
+    else running = false;
+  }
+  function startLoop(): void {
+    if (running || !onScreen || document.hidden) return;
+    running = true;
+    lastFrame = performance.now();
     requestAnimationFrame(loop);
   }
-  requestAnimationFrame(loop);
+  startLoop();
+  // Pause this icon's spin loop while it's scrolled off-screen or the tab is
+  // hidden (the apps section sits mid-page; four 60fps loops over 88 layered
+  // 3D divs are wasteful — and a drain — when unseen).
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries[0]?.isIntersecting ?? true;
+      if (onScreen) startLoop();
+    });
+    io.observe(spinner);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) startLoop();
+  });
 
   // Hover (mouse/pen): perk up — spin faster + pop in scale.
   spinner.addEventListener('pointerenter', (e) => {
@@ -220,15 +247,32 @@ function attachSpinner(spinner: HTMLElement): void {
     }
   });
 
-  // Suppress click on the parent <a> when the user dragged (not clicked).
+  // Click handling on the parent <a>:
+  //  - if the user dragged (moved > 6px), swallow the click (it was a spin);
+  //  - otherwise navigate to data-href. The real destination lives in
+  //    `data-href` (not `href`) so the raw URL never previews in the browser
+  //    status bar while spinning/hovering; `href="#apps"` is a harmless no-JS
+  //    fallback. Tiles with no destination ("coming soon") just no-op.
   const link = spinner.closest('a');
   if (link) {
+    // Stop the anchor itself from starting a native link-drag while spinning.
+    link.setAttribute('draggable', 'false');
+    link.addEventListener('dragstart', (e) => e.preventDefault());
     link.addEventListener(
       'click',
       (e) => {
         if (moveSum > 6) {
           e.preventDefault();
           e.stopPropagation();
+          return;
+        }
+        const dest = link.getAttribute('data-href');
+        if (!dest) return;
+        e.preventDefault();
+        if (/^https?:/i.test(dest)) {
+          window.open(dest, '_blank', 'noopener');
+        } else {
+          window.location.assign(dest);
         }
       },
       true,

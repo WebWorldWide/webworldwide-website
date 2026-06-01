@@ -5,7 +5,7 @@ slug: "escape-the-datacenter-local-ai-is-the-future"
 draft: false
 tags: ["opinion", "tech"]
 ---
-![Construction photo for a datacenter.](/images/2025/12/image-15.png)
+![Construction photo for a datacenter.](/images/2025/12/image-15.webp)
 
 This is not a post telling you AI is the greatest thing in the world. I believe that it is a tool and should be used like one. Like any tool, it should be reliable, fast, and accurate. However, to get all three of these traits, your AI has to be hosted in a datacenter. The datacenter provides enough compute for these huge foundational models—more than your laptop or desktop could ever dream of. However, AI's new obsession should be a race to the bottom. "Bottom" being the least powerful devices.
 

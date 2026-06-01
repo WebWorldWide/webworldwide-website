@@ -8,12 +8,10 @@
   z-index: 10;
   width: 100%;
   max-width: 420px;
-  background: var(--glass-tint);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  box-shadow: var(--glass-shadow);
+  background: var(--bg-card);
+  border: var(--border-soft);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
   padding: 32px 28px 28px;
   overflow: hidden;
 }
@@ -40,15 +38,18 @@
   margin-bottom: 22px;
 }
 .auth-brand .name {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  /* Match the sidebar wordmark: plain Garamond, single color, no accent.
+     16px (vs the old 13px mono) gives the display serif appropriate weight
+     over the 9px "Admin" sublabel; 500 has a real self-hosted face. */
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--fg);
   line-height: 1.2;
 }
 .auth-brand .name b {
-  color: var(--accent);
+  color: inherit;
 }
 .auth-brand .name span {
   display: block;
@@ -87,8 +88,6 @@
   justify-content: center;
 }
 .auth-passkey .ico {
-  font-family: var(--serif);
-  font-size: 18px;
   margin-right: 6px;
 }
 

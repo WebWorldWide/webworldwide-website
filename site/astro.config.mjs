@@ -20,22 +20,40 @@ const siteToml = /** @type {{ site: { url: string } }} */ (
 // The map is generated at build time by scripts/prebuild.mjs and imported here.
 import legacyRedirects from './scripts/legacy-redirects.json' with { type: 'json' };
 
+// Mark every markdown-rendered <img> as lazy-loaded + async-decoded so post
+// images below the fold don't block the initial paint. Tiny hand-rolled
+// rehype plugin (no extra dependency).
+function rehypeLazyImages() {
+  /** @param {any} node */
+  const visit = (node) => {
+    if (node.type === 'element' && node.tagName === 'img') {
+      node.properties ??= {};
+      node.properties.loading ??= 'lazy';
+      node.properties.decoding ??= 'async';
+    }
+    if (Array.isArray(node.children)) node.children.forEach(visit);
+  };
+  /** @param {any} tree */
+  return (tree) => visit(tree);
+}
+
 export default defineConfig({
   site: siteToml.site.url,
   trailingSlash: 'always',
 
+  markdown: {
+    rehypePlugins: [rehypeLazyImages],
+  },
+
   // 301 (meta-refresh) every old `/<slug>/` URL to `/blog/<slug>/`.
   redirects: Object.fromEntries(
-    legacyRedirects.map(({ from, to }) => [from, { status: 301, destination: to }])
+    legacyRedirects.map(({ from, to }) => [from, { status: 301, destination: to }]),
   ),
 
-  integrations: [
-    react(),
-    sitemap({ changefreq: 'weekly', priority: 0.7 })
-  ],
+  integrations: [react(), sitemap({ changefreq: 'weekly', priority: 0.7 })],
 
   image: {
-    service: { entrypoint: 'astro/assets/services/sharp' }
+    service: { entrypoint: 'astro/assets/services/sharp' },
   },
 
   vite: {
@@ -48,10 +66,10 @@ export default defineConfig({
         output: {
           manualChunks(id) {
             if (id.includes('node_modules/three/')) return 'three-vendor';
-          }
-        }
-      }
-    }
+          },
+        },
+      },
+    },
   },
 
   build: {
@@ -59,6 +77,6 @@ export default defineConfig({
     // Inline small (<4KB) stylesheets so the first paint never blocks on a
     // separate CSS request. Larger sheets stay external for caching.
     inlineStylesheets: 'auto',
-    assets: '_assets'
-  }
+    assets: '_assets',
+  },
 });

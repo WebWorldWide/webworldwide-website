@@ -50,10 +50,10 @@
       </section>
       <section class="te-form-group" data-group="analytics">
         <h3>Analytics</h3>
-        ${field('Umami URL', 'params.umamiURL', params.umamiURL || '', 'url')}
-        ${field('Umami site ID', 'params.umamiSiteID', params.umamiSiteID || '')}
-        ${field('Remark42 URL', 'params.remark42URL', params.remark42URL || '', 'url')}
-        ${field('Remark42 site ID', 'params.remark42SiteID', params.remark42SiteID || '')}
+        ${field('Umami URL', 'analytics.url', (hugo.analytics && hugo.analytics.url) || '', 'url')}
+        ${field('Umami site ID', 'analytics.site_id', (hugo.analytics && hugo.analytics.site_id) || '')}
+        ${field('Remark42 URL', 'comments.url', (hugo.comments && hugo.comments.url) || '', 'url')}
+        ${field('Remark42 site ID', 'comments.site_id', (hugo.comments && hugo.comments.site_id) || '')}
       </section>
       <section class="te-form-group" data-group="social">
         <h3>Site social</h3>

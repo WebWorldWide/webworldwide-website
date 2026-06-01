@@ -19,16 +19,16 @@ const ALL_CACHES = [STATIC_CACHE, HTML_CACHE];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(HTML_CACHE).then((c) => c.add('/offline.html').catch(() => {}))
-  );
+  event.waitUntil(caches.open(HTML_CACHE).then((c) => c.add('/offline.html').catch(() => {})));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !ALL_CACHES.includes(k)).map((k) => caches.delete(k)))
-    )
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => !ALL_CACHES.includes(k)).map((k) => caches.delete(k))),
+      ),
   );
   self.clients.claim();
 });
@@ -52,7 +52,7 @@ async function networkFirst(req) {
   try {
     const fresh = await Promise.race([
       fetch(req),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
     ]);
     if (fresh && fresh.ok) cache.put(req, fresh.clone());
     return fresh;

@@ -57,12 +57,12 @@ function collectFatalConsoleErrors(page) {
 }
 
 test.describe('admin shell', () => {
-  test('login.html renders the auth card and theme button', async ({ page }) => {
+  test('login.html renders the auth card and panels', async ({ page }) => {
     const errors = collectFatalConsoleErrors(page);
     await page.goto(loginUrl);
-    // Brand + skip-link target
+    // Brand + skip-link target. (The login screen has no theme toggle — the
+    // theme button lives on the authenticated dashboard/editor chrome.)
     await expect(page.locator('.auth-brand')).toBeVisible();
-    await expect(page.locator('#btn-theme')).toBeVisible();
     // Setup or login panel should be present (the panel toggle is
     // driven by /auth/status which won't resolve over file://, so we
     // just check that both panels exist in the DOM).

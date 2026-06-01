@@ -115,7 +115,7 @@
         </nav>
         <section class="te-cm-panel panel">
           <div class="panel-head">
-            <span class="panel-title"><span class="ind">▾</span><span id="cm-section-title">All comments</span></span>
+            <span class="panel-title"><span class="ind" aria-hidden="true">${window.TE.icon('chevron_down')}</span><span id="cm-section-title">All comments</span></span>
             <div class="panel-head-r">
               <span id="cm-total">—</span>
             </div>
@@ -161,8 +161,8 @@
       <!-- Drawer -->
       <aside class="te-cm-drawer" id="cm-drawer" role="dialog" aria-modal="false" aria-hidden="true" aria-labelledby="cm-drawer-title">
         <header class="te-cm-drawer-head">
-          <span id="cm-drawer-title">[ Comment ]</span>
-          <button type="button" class="btn ghost" id="cm-drawer-close" aria-label="Close">✕</button>
+          <span id="cm-drawer-title">Comment</span>
+          <button type="button" class="btn ghost" id="cm-drawer-close" aria-label="Close">${window.TE.icon('close')}</button>
         </header>
         <div class="te-cm-drawer-body" id="cm-drawer-body"></div>
         <div class="te-cm-actions" id="cm-drawer-actions"></div>
@@ -384,7 +384,7 @@
     const title = $('cm-drawer-title');
     const actions = $('cm-drawer-actions');
     if (!body || !title || !actions) return;
-    title.textContent = c.source === 'webmention' ? '[ Webmention ]' : '[ Comment ]';
+    title.textContent = c.source === 'webmention' ? 'Webmention' : 'Comment';
     const avatar = c.author?.avatar
       ? `<img class="te-cm-avatar" src="${escape(c.author.avatar)}" alt="" />`
       : `<div class="te-cm-avatar"></div>`;
@@ -416,7 +416,7 @@
             <span class="hint">Markdown supported · ⌘↵ to send</span>
           </div>
         </div>`
-          : `<div class="te-cm-reply"><span class="hint">Replies to webmentions go on the source site. Phase 9 will cross-post via Bluesky automatically.</span></div>`
+          : `<div class="te-cm-reply"><span class="hint">Replies to webmentions go on the source site.</span></div>`
       }
     `;
     actions.innerHTML = renderDrawerActions(c);

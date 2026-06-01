@@ -1,0 +1,136 @@
+---
+/**
+ * Blog post detail — serif reading view.
+ *
+ * One static page per published post at /blog/<slug>/ (the legacy Hugo
+ * redirects in astro.config.mjs point here, so the path must stay). Renders
+ * the markdown body inside .post-body, types the title, links to the next
+ * (older, wrapping) post, and mounts real Remark42 comments.
+ */
+import type { GetStaticPaths } from 'astro';
+import { getPosts, getPostContent } from '@/lib/posts';
+import { postSlug, postUrl, fmtDate, coverImage } from '@/lib/post-utils';
+import type { PostEntry } from '@/lib/post-utils';
+import { siteConfig } from '@/lib/site-config';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import TermBar from '@components/TermBar.astro';
+import CommentForm from '@components/islands/CommentForm';
+
+import '@styles/blog.css';
+import '@styles/comments.css';
+
+export const getStaticPaths = (() => {
+  const posts = getPosts();
+  return posts.map((post, i) => ({
+    params: { slug: postSlug(post) },
+    // "Next" = the next-older post, wrapping to the newest after the last one
+    // (matches the design — there's always a next-post card).
+    props: { post, next: posts[(i + 1) % posts.length] }
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  post: PostEntry;
+  next: PostEntry;
+}
+
+const { post, next } = Astro.props;
+// Always defined — the slug came from getPosts(), so the module exists.
+const Content = getPostContent(post.id)!;
+
+const slug = postSlug(post);
+// Hook line only when authored in the admin (frontmatter `excerpt`); otherwise
+// none — and no reading-time.
+const dek = post.data.excerpt ?? '';
+const cover = coverImage(post, post.body ?? '');
+
+// Real comments via Remark42. Use the local container in dev, prod host otherwise.
+const remarkUrl =
+  import.meta.env.DEV && siteConfig.comments.url_dev
+    ? siteConfig.comments.url_dev
+    : siteConfig.comments.url;
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={dek || undefined}
+  ogType="article"
+  ogImage={cover?.src}
+  canonical={post.data.canonical_url ?? Astro.url.toString()}
+>
+  <div class="frame">
+    <article class="card post">
+      <TermBar path={`posts/${slug}.md`} />
+      <div class="body">
+        <a class="back-btn" href="/blog/">← back to posts</a>
+
+        <h1
+          class="post-title t-title"
+          data-typewriter
+          data-tw-delay="250"
+          data-tw-speed="28"
+          data-tw-persist
+          aria-label={post.data.title}
+        >{post.data.title}</h1>
+
+        {dek && <p class="post-dek">{dek}</p>}
+
+        <div class="post-meta">
+          <span>{fmtDate(post.data.date)}</span>
+        </div>
+
+        <div class="post-body">
+          <Content />
+        </div>
+
+        <div class="post-end">
+          <div class="end-actions">
+            <button class="end-action" type="button" data-copy-link data-umami-event="blog: copy link">↗ Copy link</button>
+            <a class="end-action" href="/blog/">← All posts</a>
+            <a class="end-action" href={postUrl(next)} data-umami-event="blog: next post">Next post →</a>
+          </div>
+          <a class="next-post" href={postUrl(next)} data-umami-event="blog: next post card">
+            <div>
+              <div class="next-label">Next post</div>
+              <div class="next-title">{next.data.title}</div>
+            </div>
+            <span class="next-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+
+        <section class="comments">
+          <div class="comments-head">
+            <h2 class="comments-title">
+              <span class="pip" aria-hidden="true"></span>Comments
+            </h2>
+          </div>
+          <CommentForm
+            client:visible
+            threadId={slug}
+            remarkUrl={remarkUrl}
+            remarkSiteId={siteConfig.comments.site_id}
+          />
+        </section>
+      </div>
+    </article>
+  </div>
+</BaseLayout>
+
+<script>
+  import('../../scripts/typewriter.ts');
+
+  // Copy-link button — clipboard with brief confirmation.
+  const copyBtn = document.querySelector<HTMLButtonElement>('[data-copy-link]');
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      const original = copyBtn.textContent;
+      copyBtn.textContent = '✓ Copied';
+      setTimeout(() => {
+        copyBtn.textContent = original;
+      }, 1500);
+    } catch {
+      /* clipboard unavailable — no-op */
+    }
+  });
+</script>

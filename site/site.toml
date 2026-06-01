@@ -16,9 +16,9 @@ locale = "en-US"
 default_language = "en"
 
 [blog]
-posts_per_page = 10
+posts_per_page = 6
 permalink = "/blog/:slug/"
-masthead_name = "The Blog."
+masthead_name = "Web World Wide"
 masthead_kicker = "Blog"
 
 [social]

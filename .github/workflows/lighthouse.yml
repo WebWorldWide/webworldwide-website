@@ -18,7 +18,7 @@ defaults:
     shell: bash
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: '22'
   HUGO_VERSION: 0.161.1
 
 jobs:
@@ -44,15 +44,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Cache Hugo modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/hugo_cache
-          key: hugo-${{ runner.os }}-${{ hashFiles('site/hugo.toml') }}
+      # Both the build below and lhci's preview need site/ deps (Astro, Sharp,
+      # and @iarna/toml in prebuild.mjs).
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --ignore-scripts
+
+      # Build once here so lhci's startServerCommand only has to `preview` the
+      # prebuilt dist/. Building inside startServerCommand raced lhci's
+      # server-ready timeout (Sharp image processing is slow on the runner).
+      - name: Build the Astro site
+        working-directory: site
+        env:
+          NODE_ENV: production
+        run: npm run build
 
       - name: Run Lighthouse CI
         env:
-          HUGO_CACHEDIR: ${{ runner.temp }}/hugo_cache
+          # astro/Vite emit ANSI colour codes between "Local" and the URL, which
+          # broke lhci's startServerReadyPattern; NO_COLOR keeps the ready line
+          # (and the rest of the log) plain.
+          NO_COLOR: '1'
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
         run: npx lhci autorun --config=lighthouserc.json
 

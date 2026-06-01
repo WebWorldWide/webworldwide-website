@@ -124,8 +124,11 @@ service-account*.json
 # Design / scratch / WIP
 # ----------------------------------------------------------------------------
 # /Blog/ held the v7 + Admin v2 mockups during prior phases. This rule
-# prevents accidental re-add when iterating on new designs.
-Blog/
+# prevents accidental re-add when iterating on new designs. MUST be anchored to
+# the repo root (`/Blog/`) — an un-anchored `Blog/` also matched
+# site/src/pages/blog/ (case-insensitively on Windows), so the blog page
+# templates were silently never committed and the deployed/CI build had no blog.
+/Blog/
 *.sketch
 *.fig
 scratch/
@@ -179,7 +182,12 @@ shelf/
 .LSOverride
 .Spotlight-V100
 .Trashes
+# "Icon\r" is the macOS custom-folder-icon resource file; the trailing `?` is
+# meant to match its carriage return. But `?` matches ANY single char, so on
+# case-insensitive filesystems (Windows) `Icon?` also matches real `icons/`
+# directories — which silently dropped our PWA manifest icons. Re-include them.
 Icon?
+!/site/public/icons/
 ._*
 
 # Windows

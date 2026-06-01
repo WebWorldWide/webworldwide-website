@@ -259,9 +259,14 @@ body.te-has-body-dropzone.is-dragover::after {
 }
 
 .te-media-glyph {
-  font-family: var(--mono, monospace);
-  font-size: 36px;
-  color: var(--fg-mute, #aaa);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-mute, #5a72b0);
+}
+.te-media-glyph svg {
+  width: 32px;
+  height: 32px;
 }
 
 .te-media-info {
@@ -427,13 +432,12 @@ body.te-has-body-dropzone.is-dragover::after {
   padding: 10px 16px;
   font-family: var(--mono, monospace);
   font-size: 12px;
-  color: var(--fg, #fff);
-  background: rgb(20 20 24 / 92%);
-  border: 1px solid rgb(255 255 255 / 14%);
+  color: var(--fg, #0e2960);
+  background: var(--bg-elev);
+  border: var(--border-soft);
   border-radius: 999px;
-  box-shadow: 0 16px 32px rgb(0 0 0 / 40%);
+  box-shadow: 0 8px 24px rgb(14 41 96 / 18%);
   transform: translateX(-50%);
-  backdrop-filter: blur(12px);
 }
 
 .te-media-bulk-bar[hidden] {
@@ -449,12 +453,11 @@ body.te-has-body-dropzone.is-dragover::after {
   flex-direction: column;
   width: min(480px, 92vw);
   font-family: var(--mono, monospace);
-  background: rgb(20 20 24 / 96%);
-  border-left: 1px solid var(--glass-border, rgb(255 255 255 / 12%));
-  box-shadow: -20px 0 60px rgb(0 0 0 / 50%);
+  background: var(--bg-elev);
+  border-left: var(--border-soft);
+  box-shadow: -8px 0 24px rgb(14 41 96 / 12%);
   transform: translateX(100%);
   transition: transform 200ms;
-  backdrop-filter: blur(16px);
 }
 
 .te-media-drawer.open {
@@ -468,7 +471,7 @@ body.te-has-body-dropzone.is-dragover::after {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-bottom: 1px solid var(--glass-border, rgb(255 255 255 / 8%));
+  border-bottom: var(--border-soft);
 }
 
 .te-media-drawer-body {
@@ -482,7 +485,7 @@ body.te-has-body-dropzone.is-dragover::after {
   width: 100%;
   max-height: 280px;
   object-fit: contain;
-  background: rgb(0 0 0 / 30%);
+  background: var(--paper-warm);
   border-radius: 8px;
 }
 
@@ -624,6 +627,10 @@ body.te-has-body-dropzone.is-dragover::after {
 .te-upload-x:focus-visible {
   color: var(--fg, #fff);
   outline: none;
+}
+.te-upload-x svg {
+  width: 13px;
+  height: 13px;
 }
 
 /* ── Sidebar dropzone (always visible in admin shell) ──────── */

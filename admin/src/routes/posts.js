@@ -269,8 +269,7 @@ router.post('/:filename/preview', (req, res) => {
     const { data } = parsePost(raw);
     const slug = String(data.slug || src.replace(/\.md$/, ''));
 
-    const secret =
-      process.env.SITE_SECRET || process.env.SESSION_SECRET || 'web-world-wide-secret';
+    const secret = process.env.SITE_SECRET || process.env.SESSION_SECRET || 'web-world-wide-secret';
     const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
     const token = signJwtHS256({ slug, exp }, secret);
 
