@@ -1,14 +1,33 @@
 import matter from 'gray-matter';
-import {
-  validatePost as validatePostSchema,
-  postSchema,
-} from '../../../site/src/content/postSchema.mjs';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /**
- * Re-exports the single source of truth schema + validator from
- * site/src/content/postSchema.mjs. Admin and Astro use the same Zod
- * definition — adding a field means editing postSchema.mjs only.
+ * Single source of truth post schema + validator, defined in
+ * site/src/content/postSchema.mjs and shared by Admin and Astro — adding a
+ * field means editing postSchema.mjs only.
+ *
+ * postSchema.mjs is part of the site SOURCE tree, whose location relative to
+ * this file differs by deployment: in the repo, admin/ and site/ are siblings;
+ * in the Docker image the admin code lives at /app and site is mounted at
+ * /app/site. Probe both source locations rather than hardcoding one (the old
+ * fixed '../../../site' specifier resolved to /site and crash-looped the
+ * container). It is resolved from the source tree, NOT from SITE_DIR, because
+ * SITE_DIR may point at a content-only directory (e.g. a test fixture) that
+ * does not carry the schema source.
  */
+const here = dirname(fileURLToPath(import.meta.url));
+const schemaCandidates = [
+  join(here, '..', '..', '..', 'site', 'src', 'content', 'postSchema.mjs'), // repo: admin/ & site/ siblings
+  join(here, '..', '..', 'site', 'src', 'content', 'postSchema.mjs'), // image: site under /app
+];
+const schemaPath = schemaCandidates.find((p) => existsSync(p)) ?? schemaCandidates[0];
+
+const { validatePost: validatePostSchema, postSchema } = await import(
+  pathToFileURL(schemaPath).href
+);
+
 export { postSchema, validatePostSchema };
 
 /**
