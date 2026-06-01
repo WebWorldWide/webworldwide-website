@@ -925,7 +925,7 @@ const SLASH_ITEMS = [
   {
     id: 'image',
     label: 'Image',
-    hint: 'Insert image (Phase 4)',
+    hint: 'Insert image',
     group: 'Insert',
     keywords: ['image', 'photo', 'picture'],
     placeholder: true,
@@ -2034,7 +2034,7 @@ function buildExtensions(slashExt) {
     // on the rendered `<th>` for a11y; the table itself gets a
     // `role="table"` + aria counts via HTMLAttributes.
     Table.configure({
-      resizable: false,
+      resizable: true,
       allowTableNodeSelection: true,
       HTMLAttributes: { class: 'te-table' },
     }),
@@ -3264,6 +3264,15 @@ export function mount(rootEl, initialMarkdown, options) {
       className: 'te-tb-link',
       active: () => editor.isActive('link'),
       run: () => openLinkDialog(),
+    }),
+  );
+  gMarks.appendChild(
+    tbBtn({
+      label: 'Clear formatting',
+      glyph: '⌧',
+      className: 'te-tb-clear',
+      active: () => false,
+      run: () => editor.chain().focus().unsetAllMarks().run(),
     }),
   );
   richToolbar.appendChild(gMarks);

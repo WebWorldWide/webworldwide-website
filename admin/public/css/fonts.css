@@ -4,32 +4,12 @@
    we ship these alongside the SPA — can't reuse the public site's
    /fonts/ path cross-origin.
 
-   Cormorant Garamond — body + headings
-   Space Mono          — meta / pip labels
-   VT323               — eyebrows / buttons / pixel labels
+   System sans (system-ui) — UI, headings, reading + writing
+   Space Mono              — meta / data labels
+   Cormorant Garamond      — the "Web World Wide" sidebar / login wordmark
+   VT323                   — legacy (retired; left for cache compatibility)
    ============================================================ */
 
-@font-face {
-  font-family: "Cormorant Garamond";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/cormorant-garamond-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Cormorant Garamond";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("/fonts/cormorant-garamond-500.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Cormorant Garamond";
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/cormorant-garamond-400-italic.woff2") format("woff2");
-}
 @font-face {
   font-family: "Space Mono";
   font-style: normal;
@@ -43,6 +23,20 @@
   font-weight: 700;
   font-display: swap;
   src: url("/fonts/space-mono-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/cormorant-garamond-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/cormorant-garamond-500.woff2") format("woff2");
 }
 @font-face {
   font-family: "VT323";

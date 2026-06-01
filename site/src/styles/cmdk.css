@@ -69,7 +69,11 @@
   color: var(--ink-soft);
   text-transform: uppercase;
 }
-.cmdk-list { list-style: none; margin: 0; padding: 0 0 8px; }
+.cmdk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 8px;
+}
 .cmdk-row {
   display: flex;
   justify-content: space-between;
@@ -82,7 +86,7 @@
 }
 .cmdk-row.is-active,
 .cmdk-row:hover {
-  background: rgba(255, 107, 157, 0.1);
+  background: rgba(236, 90, 43, 0.1);
   border-left-color: var(--cherry-strong);
 }
 .cmdk-row-l {
@@ -108,7 +112,7 @@
 }
 .cmdk-row-meta {
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   flex-shrink: 0;
 }

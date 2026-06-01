@@ -23,7 +23,7 @@ env:
   # defer "is ffmpeg / better-sqlite3 available" decisions to `before()`
   # only works under the new semantics. Node 20 evaluates skip at test
   # registration and would run the body of a self-skipping test.
-  NODE_VERSION: "22"
+  NODE_VERSION: '22'
 
 jobs:
   lint:
@@ -61,6 +61,13 @@ jobs:
       - name: Install site dependencies
         if: matrix.task == 'lint:site'
         working-directory: site
+        run: npm ci --ignore-scripts
+
+      # lint:types runs `tsc` over admin/**/*.js (checkJs), so admin's
+      # runtime deps must resolve. Only install them for that task.
+      - name: Install admin dependencies
+        if: matrix.task == 'lint:types'
+        working-directory: admin
         run: npm ci --ignore-scripts
 
       - name: Run ${{ matrix.task }}

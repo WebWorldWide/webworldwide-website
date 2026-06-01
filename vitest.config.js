@@ -15,27 +15,24 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     environmentOptions: {
-      jsdom: { url: 'http://localhost/', pretendToBeVisual: true }
+      jsdom: { url: 'http://localhost/', pretendToBeVisual: true },
     },
     globals: false,
-    include: [
-      'admin/test/**/*.vitest.{test,spec}.js',
-      'scripts/dev/__tests__/**/*.test.js'
-    ],
+    include: ['admin/test/**/*.vitest.{test,spec}.js', 'scripts/dev/__tests__/**/*.test.js'],
     exclude: [
       'node_modules/**',
       '**/node_modules/**',
       'test/playwright/**',
       'admin/test/auth.test.js',
       'site/**',
-      'Blog/**'
+      'Blog/**',
     ],
     reporters: ['default'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['admin/public/js/**/*.js', 'admin/src/**/*.js', 'scripts/**/*.{js,mjs}'],
-      exclude: ['**/*.test.js', '**/*.spec.js']
-    }
-  }
+      exclude: ['**/*.test.js', '**/*.spec.js'],
+    },
+  },
 });

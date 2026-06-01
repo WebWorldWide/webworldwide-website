@@ -8,10 +8,9 @@ const { youtube, youtube_handle } = siteConfig.social;
 <section class="section" id="videos">
   <div class="section-inner">
     <span class="eyebrow reveal">02 — Videos</span>
-    <h2 class="section-title reveal">On <em>YouTube</em>.</h2>
 
     <div class="yt-wrap reveal">
-      <a class="film-frame" href={youtube} target="_blank" rel="noopener" aria-label="Watch on YouTube — Web World Wide channel">
+      <a class="film-frame" href={youtube} target="_blank" rel="noopener" aria-label="Watch on YouTube — Web World Wide channel" data-umami-event="youtube: film">
         <div class="film-bg" aria-hidden="true"></div>
         <div class="film-clouds" id="film-clouds" aria-hidden="true"></div>
 
@@ -27,7 +26,7 @@ const { youtube, youtube_handle } = siteConfig.social;
       </a>
 
       <div class="yt-cta-row">
-        <a class="subscribe-btn" href={youtube} target="_blank" rel="noopener">
+        <a class="subscribe-btn" href={youtube} target="_blank" rel="noopener" data-umami-event="youtube: subscribe">
           <span class="yt-glyph" aria-hidden="true"></span>
           <span>Subscribe</span>
         </a>

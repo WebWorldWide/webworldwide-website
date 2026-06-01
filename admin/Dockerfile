@@ -1,24 +1,20 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
+# Debian (glibc) base — not Alpine/musl. sharp 0.34 ships self-contained
+# glibc prebuilts that install with NO source build (on Alpine it insisted on
+# a source build that needs local node-gyp). Raspberry Pi OS is Debian/glibc
+# too, so this also matches the deploy target.
+#
 # System packages:
 #   git, procps        — runtime for publish + monitoring
-#   python3, make, g++ — better-sqlite3 native build on Alpine ARM64
-#   vips, vips-tools,
-#   vips-dev           — libvips runtime + headers for sharp (Phase 5 image pipeline)
-#   libheif, libheif-tools
-#                      — HEIC/HEIF decode support (Phase 5 image handler)
-#   ffmpeg             — Phase 5b video/audio/animated-GIF transcode.
-#                       Alpine's ffmpeg build includes libx264, libvpx,
-#                       libmp3lame, libopus, and the loudnorm filter.
-#   poppler-utils      — Phase 5c PDF preview generation (pdfinfo /
-#                       pdftoppm). Ships a JPEG renderer + metadata
-#                       extractor; ~20 MB image overhead on Alpine.
-# sharp ships prebuilts for musl-arm64, but bundling vips/libheif keeps
-# the fallback build path working and provides the heif decoder libvips
-# dlopens at runtime.
-RUN apk add --no-cache git procps python3 make g++ \
-    vips vips-tools vips-dev libheif libheif-tools \
-    ffmpeg poppler-utils
+#   ffmpeg             — Phase 5b video/audio/animated-GIF transcode
+#   poppler-utils      — Phase 5c PDF preview (pdfinfo / pdftoppm)
+#   libheif1           — HEIC/HEIF decode (libvips dlopens it at runtime)
+#   python3, make, g++ — fallback compile for any native dep without a
+#                        prebuilt (better-sqlite3 normally ships one)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git procps ffmpeg poppler-utils libheif1 python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

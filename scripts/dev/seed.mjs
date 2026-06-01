@@ -25,7 +25,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadDevEnv, repoPath, makeLogger, c, hasFlag } from './_lib.mjs';
+import { loadDevEnv, repoPath, makeLogger, c, hasFlag, isMainModule } from './_lib.mjs';
 import { runMigrations } from '../../admin/src/db/migrate.js';
 
 // bcrypt and better-sqlite3 live in admin/node_modules (tracked, so the
@@ -98,9 +98,12 @@ export const SAMPLE_MEDIA = Object.freeze([
  */
 function openDevDb() {
   loadDevEnv();
-  const dbPath = process.env.AUTH_DB_PATH
-    ? repoPath(process.env.AUTH_DB_PATH)
-    : repoPath('admin/data/auth-dev.db');
+  // The admin server runs with cwd = admin/ and opens better-sqlite3 with a
+  // path relative to that cwd, so AUTH_DB_PATH is admin-relative. Resolve it
+  // the same way here so `npm run db:seed` and `npm run dev` agree on the file
+  // (otherwise the seed writes admin/data/… while the admin reads admin/admin/data/…).
+  const adminDir = repoPath('admin');
+  const dbPath = resolve(adminDir, process.env.AUTH_DB_PATH || 'data/auth-dev.db');
   mkdirSync(dirname(dbPath), { recursive: true });
 
   runMigrations(dbPath);
@@ -119,9 +122,7 @@ function openDevDb() {
  * @returns {Promise<{ id: string, created: boolean }>}
  */
 export async function seedAdminUser(db) {
-  const existing = db
-    .prepare('SELECT id FROM users WHERE username = ?')
-    .get(DEV_ADMIN.username);
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(DEV_ADMIN.username);
   if (existing) {
     if (!quiet) log.info(`user "${DEV_ADMIN.username}" already exists — skipping`);
     return { id: /** @type {{id: string}} */ (existing).id, created: false };
@@ -202,7 +203,7 @@ export async function runSeed() {
 }
 
 // CLI entrypoint guard. ESM equivalent of `if __name__ == '__main__'`.
-const isMain = import.meta.url === `file://${process.argv[1]}`;
+const isMain = isMainModule(import.meta.url);
 if (isMain) {
   runSeed().catch((err) => {
     log.error(err.stack || err.message);

@@ -26,14 +26,18 @@
   const media = (window.TE.media = window.TE.media || {});
   media.__phase4 = true;
 
+  // Maps a media bucket to an icons.js registry name; rendered to inline
+  // SVG via window.TE.icon() at each call site through the typeIcon() helper.
   const TYPE_ICONS = {
-    image: '▦',
-    video: '▶',
-    audio: '♪',
-    document: '⊟',
-    archive: '◫',
-    other: '◇',
+    image: 'file_image',
+    video: 'file_video',
+    audio: 'file_audio',
+    document: 'file_doc',
+    archive: 'file_archive',
+    other: 'file_other',
   };
+  const typeIcon = (type) =>
+    (window.TE.icon && window.TE.icon(TYPE_ICONS[type] || TYPE_ICONS.other)) || '';
   // TYPE_LABELS intentionally omitted — chip labels live in
   // index.html. Reintroduce here if the filter UI ever needs to
   // render the bucket display name from a JS-only context.
@@ -257,7 +261,7 @@
             <span class="te-upload-status">Uploading…</span>
           </div>
           <div class="te-upload-bar"><i style="width:0%"></i></div>
-          <button type="button" class="te-upload-x" aria-label="Cancel upload">✕</button>
+          <button type="button" class="te-upload-x" aria-label="Cancel upload">${window.TE.icon('close')}</button>
         `;
         row.querySelector('.te-upload-name').textContent = name;
         const bar = /** @type {HTMLElement} */ (row.querySelector('.te-upload-bar i'));
@@ -285,7 +289,7 @@
           markFailed(reason) {
             row.classList.add('failed');
             statusEl.textContent = reason || 'Failed';
-            cancelBtn.textContent = '✕';
+            cancelBtn.innerHTML = window.TE.icon('close');
             cancelBtn.setAttribute('aria-label', 'Dismiss');
             cancelBtn.onclick = () => row.remove();
           },
@@ -409,7 +413,7 @@
         const thumb =
           type === 'image'
             ? `<img loading="lazy" src="${TE.escape(m.url)}" alt="${TE.escape(m.original_name || m.filename)}" />`
-            : `<span class="te-media-glyph" aria-hidden="true">${TYPE_ICONS[type] || TYPE_ICONS.other}</span>`;
+            : `<span class="te-media-glyph" aria-hidden="true">${typeIcon(type)}</span>`;
         const subtitle = `${TE.escape(type.toUpperCase())} · ${TE.escape(TE.fmtBytes(m.size))}`;
         // Phase 5: status overlay. 'processing' shows a shimmering badge,
         // 'failed' surfaces a retry button. 'ready' (the common case)
@@ -589,7 +593,7 @@
           ? `<video class="te-drawer-preview" controls src="${TE.escape(m.url)}"></video>`
           : type === 'audio'
             ? `<audio class="te-drawer-preview" controls src="${TE.escape(m.url)}"></audio>`
-            : `<div class="te-drawer-preview placeholder"><span class="te-media-glyph" aria-hidden="true">${TYPE_ICONS[type] || TYPE_ICONS.other}</span></div>`;
+            : `<div class="te-drawer-preview placeholder"><span class="te-media-glyph" aria-hidden="true">${typeIcon(type)}</span></div>`;
     const usage = Array.isArray(m.usage) ? m.usage : [];
     const usageHtml = usage.length
       ? `<ul class="te-drawer-usage">${usage.map((p) => `<li><a href="/editor.html?file=${encodeURIComponent(p)}">${TE.escape(p)}</a></li>`).join('')}</ul>`

@@ -56,13 +56,19 @@ if (dockerUp) {
   fatal += 1;
   log.error('docker daemon not reachable — required for `npm run dev:full`.');
   console.error('');
-  console.error(`  ${c.bold('Start Docker')} (Docker Desktop on Win/Mac, or ${c.gray('sudo systemctl start docker')} on Linux) and retry,`);
-  console.error(`  or run ${c.bold('npm run dev')} to launch just the site + admin (no comments/analytics).`);
+  console.error(
+    `  ${c.bold('Start Docker')} (Docker Desktop on Win/Mac, or ${c.gray('sudo systemctl start docker')} on Linux) and retry,`,
+  );
+  console.error(
+    `  or run ${c.bold('npm run dev')} to launch just the site + admin (no comments/analytics).`,
+  );
   console.error('');
 } else {
   // Default mode — Docker is optional. Don't block the site + admin.
   log.warn('docker not running — starting site + admin only (no comments/analytics).');
-  console.error(`  ${c.gray('Comments (Remark42) + analytics (Umami) need Docker. Run')} ${c.bold('npm run dev:full')} ${c.gray('once Docker is up.')}`);
+  console.error(
+    `  ${c.gray('Comments (Remark42) + analytics (Umami) need Docker. Run')} ${c.bold('npm run dev:full')} ${c.gray('once Docker is up.')}`,
+  );
 }
 
 // ── Summary ──────────────────────────────────────────────────────────

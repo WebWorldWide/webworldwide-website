@@ -1,0 +1,15 @@
+---
+/**
+ * Terminal status bar — the signature Terminal-Eighty element, re-skinned:
+ * a status box, scanlines, and a monospace `~/filepath`. Decorative.
+ */
+interface Props {
+  path: string;
+}
+const { path } = Astro.props;
+---
+<div class="term-bar">
+  <span class="term-dot" aria-hidden="true"></span>
+  <span class="term-scan" aria-hidden="true"></span>
+  <span class="term-path"><b>~</b>/{path}</span>
+</div>

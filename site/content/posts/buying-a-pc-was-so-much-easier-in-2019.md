@@ -5,7 +5,7 @@ slug: "buying-a-pc-was-so-much-easier-in-2019"
 draft: false
 tags: ["tech", "personal"]
 ---
-![A photo of my gaming PC being built on my kitchen table.](/images/2025/12/image-18-1.png)
+![A photo of my gaming PC being built on my kitchen table.](/images/2025/12/image-18-1.webp)
 
 The first gaming PC I built was in 2019. I worked at a car wash all summer in high school in order to afford it. It wasn't anything crazy even at the time; a mid-spec gaming PC. But it was the nicest computer I had ever owned. I was using a dual-core Lenovo IdeaPad that made this new PC feel as if it was operating at lightspeed. But time is cruel even to the best of machines. In recent years, I have wanted to go and buy a new PC, but it just seems totally out of reach.
 

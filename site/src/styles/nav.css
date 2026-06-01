@@ -35,7 +35,9 @@
   border-radius: 50%;
   background: var(--paper);
   border: 2px solid var(--ink);
-  box-shadow: inset 0 0 0 2px var(--paper), 2px 2px 0 var(--ink);
+  box-shadow:
+    inset 0 0 0 2px var(--paper),
+    2px 2px 0 var(--ink);
   /* Keep the link itself a proper hit target. */
   display: inline-block;
 }
@@ -55,7 +57,9 @@
   text-transform: uppercase;
   padding: 10px 16px;
   border-radius: var(--r-pill);
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
   white-space: nowrap;
   /* WCAG 2.5.5 — min 44x44 hit target */
   min-height: 44px;
@@ -64,10 +68,18 @@
 }
 /* WCAG: paper on bright cherry = 2.34:1 (fails). Use cherry-strong
    (paper on #b04708 = 5.05:1, passes). */
-.topbar-pill a.nav-link:hover { background: var(--cherry-strong); color: var(--paper); }
+.topbar-pill a.nav-link:hover {
+  background: var(--cherry-strong);
+  color: var(--paper);
+}
 /* Ink + sun-deep here: sun (#68dba8) on ink (#0e2960) = 7.4:1, passes. */
-.topbar-pill a.nav-link.is-current { background: var(--ink); color: var(--sun); }
-.topbar-pill a.nav-link:focus-visible { outline-offset: -3px; }
+.topbar-pill a.nav-link.is-current {
+  background: var(--ink);
+  color: var(--sun);
+}
+.topbar-pill a.nav-link:focus-visible {
+  outline-offset: -3px;
+}
 
 .topbar-pill .sep {
   width: 2px;
@@ -82,7 +94,16 @@
     padding: 8px 10px;
     letter-spacing: 0.05em;
   }
-  .topbar-pill .sep { display: none; }
-  .topbar-pill { padding: 4px 8px 4px 4px; gap: 0; }
-  .globe-nav { width: 42px; height: 42px; }
+  .topbar-pill .sep {
+    display: none;
+  }
+  .topbar-pill {
+    padding: 4px 8px 4px 4px;
+    gap: 0;
+  }
+  .globe-nav {
+    /* 44px = WCAG 2.5.5 / Apple HIG minimum tap target (was 42). */
+    width: 44px;
+    height: 44px;
+  }
 }

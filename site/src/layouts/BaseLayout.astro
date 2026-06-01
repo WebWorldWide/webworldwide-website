@@ -14,6 +14,7 @@
  */
 import SkyBackdrop from '@components/SkyBackdrop.astro';
 import Nav from '@components/Nav.astro';
+import Analytics from '@components/Analytics.astro';
 import { siteConfig } from '@/lib/site-config';
 
 import '@styles/fonts.css';
@@ -111,6 +112,7 @@ const dataAttrs = Object.fromEntries(
     <Nav currentPath={currentPath} />
     <main id="main"><slot /></main>
     <slot name="after-main" />
+    <Analytics />
 
     <script is:inline>
       // Register service worker for offline + asset caching. Only in

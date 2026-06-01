@@ -21,60 +21,34 @@
  */
 
 (function () {
-  if (/** @type {any} */ (window).TE) return;
+  /** @type {any} */
+  const w = window;
+  // Guard off an init flag, not mere existence: icons.js seeds window.TE with
+  // its icon helpers before this file loads, so merge into that object rather
+  // than bail. The flag still prevents this IIFE from initialising twice.
+  if (w.TE && w.TE.__commonInit) return;
   /** @type {Record<string, any>} */
-  const TE = {};
-  /** @type {any} */ (window).TE = TE;
+  const TE = w.TE || {};
+  w.TE = TE;
+  TE.__commonInit = true;
 
   // ── Theme ──────────────────────────────────────────────────
-  /**
-   * Apply a theme to <html> and sync all #btn-theme controls.
-   * @param {'light' | 'dark'} theme
-   */
-  function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.querySelectorAll('#btn-theme').forEach((btn) => {
-      btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
-      const glyph = btn.querySelector('#btn-theme-glyph') || btn.querySelector('span');
-      if (glyph) glyph.textContent = theme === 'dark' ? '☾' : '☀';
-    });
-    // Notify Remark42 (comments widget) if loaded.
-    try {
-      const r42 = /** @type {any} */ (window).REMARK42;
-      if (r42 && typeof r42.changeTheme === 'function') r42.changeTheme(theme);
-    } catch (_) {
-      /* noop */
-    }
-  }
-
+  // Dark mode is retired — the admin is light-only. Force data-theme="light"
+  // on boot (clearing any stale "dark" left in localStorage by older builds)
+  // and tell the Remark42 comments embed to match.
   function initTheme() {
-    let saved = null;
+    document.documentElement.setAttribute('data-theme', 'light');
     try {
-      saved = localStorage.getItem('theme');
+      localStorage.removeItem('theme');
     } catch (_) {
       /* sandbox / private mode */
     }
-    const current = /** @type {'light' | 'dark'} */ (
-      saved === 'light' || saved === 'dark'
-        ? saved
-        : document.documentElement.getAttribute('data-theme') === 'light'
-          ? 'light'
-          : 'dark'
-    );
-    applyTheme(current);
-
-    document.querySelectorAll('#btn-theme').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const next =
-          document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        try {
-          localStorage.setItem('theme', next);
-        } catch (_) {
-          /* ignore */
-        }
-        applyTheme(next);
-      });
-    });
+    try {
+      const r42 = /** @type {any} */ (window).REMARK42;
+      if (r42 && typeof r42.changeTheme === 'function') r42.changeTheme('light');
+    } catch (_) {
+      /* noop */
+    }
   }
 
   // ── Toasts ─────────────────────────────────────────────────
@@ -508,5 +482,5 @@
 
   // Expose internals for tests (only when running under jsdom — there's
   // no harm leaving these in prod, but keeping under __test prefix.)
-  TE.__test = { applyTheme, openPalette, closePalette, renderPalette };
+  TE.__test = { initTheme, openPalette, closePalette, renderPalette };
 })();
