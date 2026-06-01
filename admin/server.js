@@ -238,7 +238,17 @@ app.use('/api', (req, res, next) => {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   try {
-    const sessionData = JSON.parse(Buffer.from(session, 'base64').toString());
+    const sessionData = JSON.parse(Buffer.from(session, 'base64').toString('utf-8'));
+    // Reject malformed-but-parseable payloads (e.g. `null`, a string, or a
+    // missing/!numeric expiry) so we never attach junk to req.user.
+    if (
+      !sessionData ||
+      typeof sessionData !== 'object' ||
+      typeof sessionData.expires !== 'number'
+    ) {
+      res.clearCookie('session');
+      return res.status(401).json({ error: 'Invalid session' });
+    }
     if (sessionData.expires < Date.now()) {
       res.clearCookie('session');
       return res.status(401).json({ error: 'Session expired' });
