@@ -1,38 +1,23 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 import { postSchema } from './content/postSchema.mjs';
 
 // Astro 5 canonical content-config location is `src/content.config.ts`. The
-// legacy `src/content/config.ts` location was not being picked up on the Linux
-// CI runner, so the collections were never defined and every /blog/* route
-// 404'd (tinyglobby found all 23 posts there, but Astro never invoked the
-// loader). See git history for the long debugging trail.
+// posts live OUTSIDE src/ (at site/content/posts/, managed by the admin CMS),
+// so the glob loader needs an explicit base. We pass an absolute file:// href
+// computed from THIS file: the loader resolves `base` via
+// `new URL(base, config.root)`, and an absolute href ignores config.root, so
+// it's root-independent and parses safely on Windows (a bare `C:\…` path would
+// be mis-read as a URL scheme).
 //
-// Absolute file:// hrefs to the content dirs (the posts live OUTSIDE src/, at
-// site/content/posts/). The glob loader resolves `base` via
-// `new URL(base, config.root)`; an absolute href ignores config.root entirely,
-// so it's root-independent and parses safely on Windows (a bare `C:\…` path is
-// mis-read as a URL scheme).
+// NOTE: there is intentionally only ONE collection. A second `pages` collection
+// previously globbed the PARENT dir (site/content/), whose base contains this
+// collection's base (site/content/posts/) — nested collection bases broke
+// content loading on the Linux CI/Pages build (the loader filled the data-store
+// but `getCollection` returned nothing during page generation, so every
+// /blog/* route 404'd). It was unused, so it's gone.
 const postsBase = new URL('../content/posts/', import.meta.url).href;
-const contentBase = new URL('../content/', import.meta.url).href;
-
-// TEMP DEBUG — remove once CI content loading is fixed.
-{
-  const { existsSync, readdirSync } = await import('node:fs');
-  const { fileURLToPath } = await import('node:url');
-  let info = '';
-  try {
-    const p = fileURLToPath(postsBase);
-    info = `exists=${existsSync(p)} md=${existsSync(p) ? readdirSync(p).filter((f) => f.endsWith('.md')).length : 'NA'}`;
-  } catch (e) {
-    info = `err=${e instanceof Error ? e.message : String(e)}`;
-  }
-  // eslint-disable-next-line no-console
-  console.error(
-    `[cfg-debug] import.meta.url=${import.meta.url} cwd=${process.cwd()} postsBase=${postsBase} ${info}`,
-  );
-}
 
 /**
  * Posts collection — Markdown files at site/content/posts/*.md
@@ -48,17 +33,4 @@ const posts = defineCollection({
   schema: postSchema,
 });
 
-const pages = defineCollection({
-  loader: glob({ pattern: '*.md', base: contentBase }),
-  schema: z
-    .object({
-      title: z.string(),
-      date: z.coerce.date().optional(),
-      slug: z.string().optional(),
-      draft: z.boolean().default(false),
-      type: z.string().optional(),
-    })
-    .passthrough(),
-});
-
-export const collections = { posts, pages };
+export const collections = { posts };
