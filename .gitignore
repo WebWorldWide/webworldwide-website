@@ -241,3 +241,7 @@ docker-compose.local.yml
 NOTES.md
 TODO.md
 SCRATCH.md
+
+# Runtime system-health marker (written by scripts/system-health.sh)
+docker/health/*
+!docker/health/.gitkeep

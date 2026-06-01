@@ -2,6 +2,8 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import http from 'http';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 const execAsync = promisify(exec);
 
@@ -182,5 +184,31 @@ export async function getBackupStatus() {
     return { log: stdout.trim(), status: 'unknown' };
   } catch (_err) {
     return { status: 'unknown', message: 'Could not read backup logs' };
+  }
+}
+
+// SD-card + system health. The cms container can't run vcgencmd or read
+// /sys/block or the kernel journal, so scripts/system-health.sh collects all
+// of that on the HOST every 5 min and writes a JSON marker that we bind-mount
+// read-only at /app/health. Here we just read + lightly validate it (mirrors
+// the marker-file pattern getBackupStatus uses).
+export function getSystemHealth() {
+  const dir = process.env.TE_HEALTH_DIR || '/app/health';
+  const marker = join(dir, 'system-health.json');
+  try {
+    if (!existsSync(marker)) {
+      return { status: 'unknown', message: 'collector has not run yet' };
+    }
+    const data = JSON.parse(readFileSync(marker, 'utf-8'));
+    // Collector runs every 5 min; if the marker is old the collector is dead,
+    // so don't keep showing stale "ok" data.
+    const collectedMs = Date.parse(data.collected_iso);
+    if (Number.isFinite(collectedMs) && Date.now() - collectedMs > 20 * 60 * 1000) {
+      data.stale = true;
+      if (data.status === 'ok') data.status = 'unknown';
+    }
+    return data;
+  } catch (err) {
+    return { status: 'unknown', message: err.message };
   }
 }
