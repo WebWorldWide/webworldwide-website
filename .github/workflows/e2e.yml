@@ -53,6 +53,26 @@ jobs:
         working-directory: site
         run: npm ci --ignore-scripts
 
+      - name: DEBUG content loading (temporary)
+        working-directory: site
+        run: |
+          echo "node=$(node -v) cwd=$(pwd)"
+          echo "ls content/posts (first 3):"; ls -la content/posts 2>/dev/null | head -4
+          echo "md via ls: $(ls content/posts/*.md 2>/dev/null | wc -l)"
+          node --input-type=module -e "
+            import { glob } from 'tinyglobby';
+            import { readdirSync } from 'node:fs';
+            const abs = process.cwd() + '/content/posts';
+            console.log('readdir md:', readdirSync('content/posts').filter((f) => f.endsWith('.md')).length);
+            console.log('tg rel *.md:', (await glob('*.md', { cwd: 'content/posts' })).length);
+            console.log('tg abs *.md:', (await glob('*.md', { cwd: abs })).length);
+            console.log('tg abs+slash:', (await glob('*.md', { cwd: abs + '/' })).length);
+            console.log('tg expandFalse:', (await glob('*.md', { cwd: abs, expandDirectories: false })).length);
+            console.log('tg starstar:', (await glob('**/*.md', { cwd: abs })).length);
+          "
+          echo "== build =="; npm run build 2>&1 | grep -iE "page\(s\) built|No files found|does not exist" | head
+          echo "dist/blog entries: $(ls dist/blog 2>/dev/null | wc -l)"
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
