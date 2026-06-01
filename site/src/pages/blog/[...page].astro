@@ -101,7 +101,7 @@ const pageTitle = page.currentPage === 1 ? 'Blog' : `Blog · Page ${page.current
             <TermBar path={`posts/${c.slug}.md`} />
             <div class="body">
               <div class="pc-head">
-                <h3 class="pc-title t-title">{c.title}</h3>
+                <h2 class="pc-title t-title">{c.title}</h2>
               </div>
               {c.excerpt && <p class="pc-excerpt">{c.excerpt}</p>}
               <div class="pc-foot">
