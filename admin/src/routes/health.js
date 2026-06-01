@@ -5,6 +5,7 @@ import {
   getDiskUsage,
   getDockerStats,
   getBackupStatus,
+  getSystemHealth,
 } from '../utils/system.js';
 import { readdirSync } from 'fs';
 import { join } from 'path';
@@ -90,6 +91,7 @@ router.get('/', async (req, res) => {
     ]);
 
     const system = getSystemStats();
+    const health = getSystemHealth();
 
     // Basic blog stats
     const blogStats = { posts: 0, drafts: 0 };
@@ -109,6 +111,11 @@ router.get('/', async (req, res) => {
       docker,
       backup,
       blog: blogStats,
+      storage: health.storage || { status: health.status || 'unknown' },
+      power: health.power || { status: health.status || 'unknown' },
+      swap: health.swap || null,
+      health_status: health.status || 'unknown',
+      health_collected: health.collected_iso || null,
     });
   } catch (err) {
     console.error('Health API error:', err);

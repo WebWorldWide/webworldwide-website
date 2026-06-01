@@ -9,7 +9,7 @@
     "dev": "node --watch server.js",
     "build:editor": "NODE_ENV=production node scripts/build-editor.mjs",
     "dev:editor": "node scripts/build-editor.mjs --watch",
-    "test": "node --test --test-reporter spec test/auth.test.js test/media.test.js test/conversion.test.js test/conversion-av.test.js test/conversion-pdc.test.js test/posts-bulk.test.js test/settings.test.js test/taxonomies.test.js test/redirects.test.js test/activity.test.js test/scheduler.test.js test/toml-roundtrip.test.js test/publish-media-data.test.js test/embed.test.js test/webmentions.test.js test/comments.test.js test/bluesky.test.js",
+    "test": "node --test --test-reporter spec test/auth.test.js test/media.test.js test/conversion.test.js test/conversion-av.test.js test/conversion-pdc.test.js test/posts-bulk.test.js test/settings.test.js test/taxonomies.test.js test/redirects.test.js test/activity.test.js test/scheduler.test.js test/toml-roundtrip.test.js test/publish-media-data.test.js test/embed.test.js test/webmentions.test.js test/comments.test.js test/bluesky.test.js test/health.test.js",
     "lint": "cd .. && npm run lint:js -- admin/"
   },
   "dependencies": {
