@@ -697,7 +697,17 @@
     const useShortcode = !forceImage && item.id;
     const tt = bodyEl && bodyEl._tiptap;
     if (tt && tt.chain) {
-      if (useShortcode) {
+      if (useShortcode && isImage) {
+        // Image from the library → a real inline node so the picture renders
+        // in the editor and can be selected/deleted; it serializes back to the
+        // {{< attachment id >}} shortcode on save (rich render on the site).
+        tt.chain()
+          .focus()
+          .insertContent({ type: 'attachment', attrs: { id: String(item.id) } })
+          .run();
+      } else if (useShortcode) {
+        // Non-image attachment (pdf/zip/audio/…): keep the text shortcode — the
+        // editor can't usefully preview it as an image.
         const shortcode = `{{< attachment id="${item.id}" >}}`;
         tt.chain().focus().insertContent(`\n\n${shortcode}\n\n`).run();
       } else if (isImage) {

@@ -255,6 +255,7 @@ const tokenSpec = {
       alt: (tok.children && tok.children[0] && tok.children[0].content) || null,
     }),
   },
+  attachment: { node: 'attachment', getAttrs: (tok) => ({ id: tok.content || '' }) },
   hardbreak: { node: 'hardBreak' },
   em: { mark: 'italic' },
   strong: { mark: 'bold' },
@@ -427,6 +428,43 @@ function buildParser(schema) {
     }
     return out;
   }
+  // Hugo `{{< attachment id="..." >}}` shortcodes arrive as plain text (md is
+  // html:true). Split them out of inline text into `attachment` tokens so they
+  // load as real image nodes and survive the round-trip — mirrors splitMath.
+  const ATTACHMENT_RE = /\{\{<\s*attachment\s+id="([^"]+)"\s*>\}\}/;
+  function splitAttachment(children, TokCtor) {
+    const out = [];
+    for (let i = 0; i < children.length; i++) {
+      const t = children[i];
+      if (t.type !== 'text' || !t.content || t.content.indexOf('{{<') < 0) {
+        out.push(t);
+        continue;
+      }
+      let rest = t.content;
+      while (rest.length) {
+        const m = ATTACHMENT_RE.exec(rest);
+        if (!m) {
+          const textTok = new TokCtor('text', '', 0);
+          textTok.content = rest;
+          textTok.level = t.level;
+          out.push(textTok);
+          break;
+        }
+        if (m.index > 0) {
+          const textTok = new TokCtor('text', '', 0);
+          textTok.content = rest.slice(0, m.index);
+          textTok.level = t.level;
+          out.push(textTok);
+        }
+        const atTok = new TokCtor('attachment', '', 0);
+        atTok.content = m[1];
+        atTok.level = t.level;
+        out.push(atTok);
+        rest = rest.slice(m.index + m[0].length);
+      }
+    }
+    return out;
+  }
   const tokenize = (text, env) => {
     let tokens = tokenizer.parse(text || '', env || {});
     let TokCtor = null;
@@ -460,6 +498,9 @@ function buildParser(schema) {
       if (tk.children) tk.children = remap(tk.children);
       if (hasMath && tk.children && tk.type === 'inline') {
         tk.children = splitMath(tk.children, tk.constructor);
+      }
+      if (tk.children && tk.type === 'inline') {
+        tk.children = splitAttachment(tk.children, tk.constructor);
       }
     }
     if (hasMath && TokCtor) {
@@ -611,6 +652,10 @@ const nodeSerializers = {
   },
   tableHeader(state, node) {
     state.renderContent(node);
+  },
+  // Attachment node → the exact Hugo shortcode it came from.
+  attachment(state, node) {
+    state.write(`{{< attachment id="${node.attrs.id || ''}" >}}`);
   },
   // ── Phase 3c: math ───────────────────────────────────────
   mathInline(state, node) {
@@ -1666,6 +1711,86 @@ const MathBlock = Node.create({
   },
 });
 
+// Resolved media URLs are cached per id so re-renders / multiple instances
+// don't re-hit /api/media for the same attachment.
+const attachmentUrlCache = new Map();
+
+/**
+ * NodeView for the `attachment` node: renders the real image inline (resolved
+ * from the media library by id) so the writer sees + can select/delete it,
+ * while the node still serializes back to the `{{< attachment id >}}` shortcode.
+ */
+function attachmentNodeView(node) {
+  const dom = document.createElement('img');
+  dom.className = 'te-attachment';
+  dom.setAttribute('contenteditable', 'false');
+  const id = node.attrs.id || '';
+  dom.dataset.attachmentId = id;
+  dom.alt = '';
+  const fail = () => {
+    dom.alt = id ? `[attachment ${id}]` : '[attachment]';
+  };
+  if (id) {
+    if (attachmentUrlCache.has(id)) {
+      dom.src = attachmentUrlCache.get(id);
+    } else {
+      fetch(`/api/media/${encodeURIComponent(id)}`, { credentials: 'same-origin' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((item) => {
+          if (item && item.url) {
+            attachmentUrlCache.set(id, item.url);
+            dom.src = item.url;
+          } else {
+            fail();
+          }
+          return null;
+        })
+        .catch(fail);
+    }
+  } else {
+    fail();
+  }
+  return { dom };
+}
+
+/**
+ * Hugo `{{< attachment id="..." >}}` shortcode as a first-class inline node.
+ * Renders as the real image in the editor (see attachmentNodeView) and
+ * round-trips to the exact shortcode via the parser split + serializer below,
+ * so the published site keeps its rich responsive rendering.
+ */
+const Attachment = Node.create({
+  name: 'attachment',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes() {
+    return { id: { default: '' } };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'img[data-attachment-id]',
+        getAttrs: (el) => ({ id: el.getAttribute('data-attachment-id') || '' }),
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes, node }) {
+    return [
+      'img',
+      mergeAttributes(HTMLAttributes, {
+        'data-attachment-id': node.attrs.id || '',
+        class: 'te-attachment',
+        alt: '',
+      }),
+    ];
+  },
+  addNodeView() {
+    return ({ node }) => attachmentNodeView(node);
+  },
+});
+
 /** Callout (admonition) — block container with a `type` attribute. */
 const Callout = Node.create({
   name: 'callout',
@@ -2028,6 +2153,7 @@ function buildExtensions(slashExt) {
       HTMLAttributes: { rel: 'noopener noreferrer' },
     }),
     Image.configure({ inline: true, allowBase64: false }),
+    Attachment,
     TaskList,
     TaskItem.configure({ nested: true }),
     // Phase 3c: tables. The TableHeader extension applies `scope="col"`
