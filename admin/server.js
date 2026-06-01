@@ -11,6 +11,9 @@ import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
+import { versionizeHtml } from './src/utils/assets.js';
 
 // Route modules
 import authRoutes from './src/routes/auth.js';
@@ -55,6 +58,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', 'site');
+
+// Per-deploy cache-busting token for admin assets. Prefer the deployed git
+// commit (the repo is mounted at /app/.git); fall back to start time, which
+// still changes on every deploy since the container is recreated.
+const ASSET_VERSION =
+  (() => {
+    try {
+      return execSync('git rev-parse --short HEAD', {
+        cwd: __dirname,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+        .toString()
+        .trim();
+    } catch {
+      return '';
+    }
+  })() || `t${Date.now()}`;
+const PUBLIC_DIR = join(__dirname, 'public');
 
 // Run migrations before opening the listener so a fresh install never
 // races a request against partial DDL.
@@ -144,6 +165,26 @@ const webmentionLimiter = rateLimit({
 //
 // The static() max-age option only sets the default; setHeaders runs
 // after and can override per-path. We use it for the HTML + font split.
+// Serve admin HTML pages ourselves (before express.static) so we can rewrite
+// local /js + /css references to carry a per-deploy ?v=<ASSET_VERSION> query.
+// Combined with the no-cache header on HTML, this makes deploys land instantly
+// even behind an aggressive CDN cache. Non-HTML and missing files fall through.
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const rel = req.path === '/' ? 'index.html' : req.path.replace(/^\/+/, '');
+  if (!rel.endsWith('.html')) return next();
+  const file = join(PUBLIC_DIR, rel);
+  if (file !== PUBLIC_DIR && !file.startsWith(PUBLIC_DIR + '/')) return next(); // traversal guard
+  let html;
+  try {
+    html = readFileSync(file, 'utf-8');
+  } catch {
+    return next(); // not an admin HTML page — let static/routers handle it
+  }
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.type('html').send(versionizeHtml(html, ASSET_VERSION));
+});
+
 app.use(
   express.static(join(__dirname, 'public'), {
     maxAge: '1h',
