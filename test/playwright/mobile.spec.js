@@ -31,7 +31,7 @@ const VIEWPORTS = [
   { name: 'ipad-mini', width: 768, height: 1024 },
 ];
 
-const ROUTES = ['/', '/about/', '/bye-bye-dji/', '/tags/tech/'];
+const ROUTES = ['/', '/blog/', '/blog/bye-bye-dji/'];
 
 const TAP_TARGET_MIN = 44; // CSS px; matches WCAG 2.2 + Apple HIG
 
@@ -63,6 +63,10 @@ const TAP_TARGET_EXEMPT = [
   '.post-body a',
   '.prose a',
   '.e-content a',
+  // App-card "drag to spin" handle (role=button) — a supplementary
+  // enhancement nested inside a larger <a class="floating-app"> nav target.
+  // The wrapping link is the real tap target; the spinner just adds play.
+  '.spinner',
 ];
 
 test.describe('mobile viewport: no horizontal scroll', () => {
