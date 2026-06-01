@@ -6,7 +6,7 @@
         "http://127.0.0.1:4322/blog/",
         "http://127.0.0.1:4322/blog/bye-bye-dji/"
       ],
-      "startServerCommand": "npm --prefix site run build && npm --prefix site run preview",
+      "startServerCommand": "npm --prefix site run preview",
       "startServerReadyPattern": "Local\\s+http://",
       "numberOfRuns": 3,
       "settings": {
