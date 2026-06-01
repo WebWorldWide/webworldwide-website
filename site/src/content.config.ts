@@ -17,6 +17,23 @@ import { postSchema } from './content/postSchema.mjs';
 const postsBase = new URL('../content/posts/', import.meta.url).href;
 const contentBase = new URL('../content/', import.meta.url).href;
 
+// TEMP DEBUG — remove once CI content loading is fixed.
+{
+  const { existsSync, readdirSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  let info = '';
+  try {
+    const p = fileURLToPath(postsBase);
+    info = `exists=${existsSync(p)} md=${existsSync(p) ? readdirSync(p).filter((f) => f.endsWith('.md')).length : 'NA'}`;
+  } catch (e) {
+    info = `err=${e instanceof Error ? e.message : String(e)}`;
+  }
+  // eslint-disable-next-line no-console
+  console.error(
+    `[cfg-debug] import.meta.url=${import.meta.url} cwd=${process.cwd()} postsBase=${postsBase} ${info}`,
+  );
+}
+
 /**
  * Posts collection — Markdown files at site/content/posts/*.md
  *
