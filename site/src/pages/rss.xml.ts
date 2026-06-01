@@ -1,13 +1,13 @@
 import rss from '@astrojs/rss';
-import { getCollection } from 'astro:content';
 import type { APIContext } from 'astro';
 import { siteConfig } from '@/lib/site-config';
-import { isPublished, postSlug, sortByDateDesc } from '@/lib/post-utils';
+import { getPosts } from '@/lib/posts';
+import { postSlug } from '@/lib/post-utils';
 
 const siteToml = siteConfig;
 
 export async function GET(context: APIContext) {
-  const posts = (await getCollection('posts', isPublished)).sort(sortByDateDesc);
+  const posts = getPosts();
 
   return rss({
     title: siteToml.site.title,
