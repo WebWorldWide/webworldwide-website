@@ -25,6 +25,7 @@
     "@fontsource/vt323": "^5.2.7",
     "@iarna/toml": "^2.2.5",
     "astro": "^6.4.2",
+    "gray-matter": "^4.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sharp": "^0.34.0",
