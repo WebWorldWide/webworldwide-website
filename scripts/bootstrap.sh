@@ -5,7 +5,7 @@
 # Usage (fresh Pi):
 #   ssh adam@pi
 #   sudo apt-get update -y && sudo apt-get install -y git
-#   sudo git clone https://github.com/AdamNolle/web-world-wide-online.git /opt/web-world-wide
+#   sudo git clone https://github.com/WebWorldWide/webworldwide-website.git /opt/web-world-wide
 #   sudo /opt/web-world-wide/scripts/bootstrap.sh
 #
 # Re-running on a healthy system: prints "all phases already complete, system
@@ -30,7 +30,7 @@
 set -euo pipefail
 
 # ── Constants ────────────────────────────────────────────────────────────────
-readonly REPO_URL_DEFAULT="https://github.com/AdamNolle/web-world-wide-online.git"
+readonly REPO_URL_DEFAULT="https://github.com/WebWorldWide/webworldwide-website.git"
 readonly APP_DIR="/opt/web-world-wide"
 readonly BACKUP_DIR="/opt/www-blog-backups"
 readonly DOCKER_DIR="$APP_DIR/docker"
@@ -44,7 +44,7 @@ readonly NODE_MAJOR=22
 # ── Args (defaults; overridden by flags or existing .env) ───────────────────
 CF_TOKEN=""
 GH_PAT=""
-GH_USER="AdamNolle"
+GH_USER="WebWorldWide"
 DOMAIN_BASE="webworldwide.online"
 NON_INTERACTIVE=0
 SKIP_BACKUPS_REPO=0
@@ -316,7 +316,7 @@ setup_backups() {
         log "repo not found — creating https://github.com/${GH_USER}/www-blog-backups (private)"
         curl -fsS -H "Authorization: token $GH_PAT" \
              -H "Content-Type: application/json" \
-             -d '{"name":"www-blog-backups","private":true,"description":"Encrypted backups for web-world-wide-online (Pi)"}' \
+             -d '{"name":"www-blog-backups","private":true,"description":"Encrypted backups for webworldwide-website (Pi)"}' \
              https://api.github.com/user/repos >/dev/null \
           || die "failed to create www-blog-backups repo via GitHub API" 1
         sleep 2

@@ -1,9 +1,9 @@
 # Web World Wide Blog Architecture
 
-[![Quality](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/quality.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/quality.yml)
-[![E2E + a11y](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/e2e.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/e2e.yml)
-[![Lighthouse](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/lighthouse.yml)
-[![Deploy](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/deploy.yml/badge.svg)](https://github.com/AdamNolle/web-world-wide-online/actions/workflows/deploy.yml)
+[![Quality](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/quality.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/quality.yml)
+[![E2E + a11y](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/e2e.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/e2e.yml)
+[![Lighthouse](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/lighthouse.yml)
+[![Deploy](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/deploy.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/deploy.yml)
 
 Welcome to **Web World Wide**, a high-performance, $0/month, self-hosted blog stack designed for Raspberry Pi. It replaces bloated, database-heavy platforms (like Ghost or WordPress) with a hyper-fast static site generator and a lightweight Node.js admin panel.
 
@@ -24,8 +24,8 @@ command.
 | Linux    | Docker Engine (`apt install docker.io` or distro equivalent) — start with `sudo systemctl start docker` |
 
 ```bash
-git clone https://github.com/AdamNolle/web-world-wide-online
-cd web-world-wide-online
+git clone https://github.com/WebWorldWide/webworldwide-website
+cd webworldwide-website
 npm install        # cascades into site/ and admin/ on first run
 npm run dev        # preflight → docker + astro + admin in parallel
 ```
@@ -146,7 +146,7 @@ SSH into your fresh Raspberry Pi OS Lite (64-bit) and run:
 
 ```bash
 sudo apt-get update -y && sudo apt-get install -y git
-sudo git clone https://github.com/AdamNolle/web-world-wide-online.git /opt/web-world-wide
+sudo git clone https://github.com/WebWorldWide/webworldwide-website.git /opt/web-world-wide
 sudo /opt/web-world-wide/scripts/bootstrap.sh
 ```
 
