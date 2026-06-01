@@ -7,7 +7,7 @@
         "http://127.0.0.1:4322/blog/bye-bye-dji/"
       ],
       "startServerCommand": "npm --prefix site run preview",
-      "startServerReadyPattern": "Local\\s+http://",
+      "startServerReadyPattern": "http://127.0.0.1:4322",
       "numberOfRuns": 3,
       "settings": {
         "formFactor": "mobile",
