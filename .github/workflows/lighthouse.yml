@@ -61,6 +61,10 @@ jobs:
 
       - name: Run Lighthouse CI
         env:
+          # astro/Vite emit ANSI colour codes between "Local" and the URL, which
+          # broke lhci's startServerReadyPattern; NO_COLOR keeps the ready line
+          # (and the rest of the log) plain.
+          NO_COLOR: '1'
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
         run: npx lhci autorun --config=lighthouserc.json
 
