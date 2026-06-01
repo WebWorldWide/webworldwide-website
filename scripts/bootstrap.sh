@@ -435,6 +435,8 @@ $CRON_MARKER promote-scheduled (every 5 min)
 */5 * * * * $APP_DIR/scripts/promote-scheduled.sh >> /var/log/wwwide-promote.log 2>&1
 $CRON_MARKER dump-webmentions (every 15 min)
 */15 * * * * $APP_DIR/scripts/dump-webmentions.sh >> /var/log/wwwide-webmentions.log 2>&1
+$CRON_MARKER system-health (every 5 min)
+*/5 * * * * $APP_DIR/scripts/system-health.sh >> /var/log/wwwide-syshealth.log 2>&1
 EOF
 )
   printf '%s\n\n%s\n' "$stripped" "$new_block" | crontab -
@@ -561,6 +563,56 @@ self_test() {
   exit 1
 }
 
+# ── harden ─────────────────────────────────────────────────────────────────
+# Security + SD-longevity hardening. Idempotent; safe to re-run. LAN-friendly:
+# allows SSH BEFORE enabling ufw so a re-run never locks the operator out.
+harden() {
+  log "applying security + reliability hardening…"
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    unattended-upgrades fail2ban ufw smartmontools lm-sensors vnstat >/dev/null 2>&1 ||
+    warn "some hardening packages failed to install"
+
+  # Automatic security updates.
+  cat >/etc/apt/apt.conf.d/20auto-upgrades <<'CONF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+CONF
+  systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
+
+  # SSH brute-force protection.
+  cat >/etc/fail2ban/jail.d/sshd-wwwide.local <<'CONF'
+[sshd]
+enabled = true
+maxretry = 5
+bantime = 1h
+findtime = 10m
+CONF
+  systemctl enable --now fail2ban >/dev/null 2>&1 || true
+
+  # Firewall: allow SSH FIRST, then enable (lockout-safe).
+  ufw allow OpenSSH >/dev/null 2>&1 || true
+  ufw default deny incoming >/dev/null 2>&1 || true
+  ufw default allow outgoing >/dev/null 2>&1 || true
+  ufw --force enable >/dev/null 2>&1 || true
+
+  # Bound journald growth on the SD card.
+  mkdir -p /etc/systemd/journald.conf.d
+  cat >/etc/systemd/journald.conf.d/00-wwwide-size.conf <<'CONF'
+[Journal]
+SystemMaxUse=200M
+SystemMaxFileSize=50M
+CONF
+  systemctl restart systemd-journald >/dev/null 2>&1 || true
+
+  # Prefer RAM/zram over the SD swapfile.
+  echo 'vm.swappiness=10' >/etc/sysctl.d/99-wwwide-swappiness.conf
+  sysctl -p /etc/sysctl.d/99-wwwide-swappiness.conf >/dev/null 2>&1 || true
+
+  systemctl enable --now vnstat >/dev/null 2>&1 || true
+  ok "hardening applied"
+}
+
 # ── main ─────────────────────────────────────────────────────────────────────
 main() {
   parse_args "$@"
@@ -575,6 +627,7 @@ main() {
   install_node
   setup_swap
   install_docker
+  harden
   clone_or_pull_repo
   load_existing_env
   prompt_secrets
@@ -582,6 +635,7 @@ main() {
   validate_gh_pat
   setup_backups
   write_env
+  mkdir -p "$DOCKER_DIR/health"
   compose_up
   install_crons
   install_systemd_unit

@@ -268,9 +268,11 @@
       const tempStatus = data?.temperature?.status; // 'ok' | 'warning' | 'critical'
       const tempSev = tempStatus === 'critical' ? 'bad' : tempStatus === 'warning' ? 'warn' : 'ok';
 
+      const swap = Number(data?.swap?.usagePercent || 0);
       setMetric('metric-cpu', `${cpu.toFixed(0)}%`, cpu, severityForPct(cpu, [70, 90]));
       setMetric('metric-ram', `${ram.toFixed(0)}%`, ram, severityForPct(ram, [75, 90]));
       setMetric('metric-disk', `${disk.toFixed(0)}%`, disk, severityForPct(disk, [80, 95]));
+      setMetric('metric-swap', `${swap.toFixed(0)}%`, swap, severityForPct(swap, [50, 85]));
       const tempPct = Math.min(100, Math.max(0, (temp / 85) * 100)); // 85°C as visual max
       setMetric(
         'metric-temp',
@@ -307,9 +309,46 @@
         }
       }
 
+      // SD card + power (collected on the host by scripts/system-health.sh)
+      const storage = data?.storage || {};
+      const power = data?.power || {};
+      const sdSev =
+        storage.status === 'critical' || power.status === 'critical'
+          ? 'bad'
+          : storage.status === 'warn' || power.status === 'warn'
+            ? 'warn'
+            : 'ok';
+      const sdpEl = $('sdpower-status');
+      if (sdpEl) {
+        let color = 'var(--fg-dim)';
+        if (sdSev === 'bad') color = 'var(--danger)';
+        else if (sdSev === 'warn') color = 'var(--warn)';
+        sdpEl.style.color = color;
+        if (!storage.status && !power.status) {
+          sdpEl.textContent = 'collecting…';
+        } else {
+          const ro = storage.mount_ro ? 'READ-ONLY' : 'rw';
+          const wr =
+            typeof storage.write_gb_per_day !== 'number'
+              ? ''
+              : ` · ~${storage.write_gb_per_day.toFixed(2)} GB/day`;
+          const pwr = power.undervoltage_now
+            ? 'UNDERVOLTAGE NOW'
+            : power.undervoltage_ever
+              ? 'undervolt since boot'
+              : 'power ok';
+          sdpEl.innerHTML =
+            `SD (${TE.escape(storage.device || '?')}): ${ro} · ${storage.fs_errors || 0} err · ` +
+            `${storage.disk_used_pct ?? '?'}% disk · ${storage.inode_used_pct ?? '?'}% inodes${TE.escape(wr)}<br>` +
+            `Power: ${TE.escape(pwr)}`;
+        }
+      }
+
       // Sidebar overall status
-      const anyBad = tempSev === 'bad' || containers.some((c) => c.healthy === false);
-      const anyWarn = tempSev === 'warn' || cpu >= 70 || ram >= 75 || disk >= 80;
+      const anyBad =
+        tempSev === 'bad' || sdSev === 'bad' || containers.some((c) => c.healthy === false);
+      const anyWarn =
+        tempSev === 'warn' || sdSev === 'warn' || cpu >= 70 || ram >= 75 || disk >= 80;
       const pip = $('side-pip');
       const sys = $('side-system');
       if (pip) {
