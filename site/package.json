@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Web World Wide — Astro site (public-facing). Built from Markdown content collections and React islands; deploys to GitHub Pages.",
   "scripts": {
-    "dev": "node scripts/prebuild.mjs && astro dev --port 4321 --host 127.0.0.1",
+    "dev": "node scripts/prebuild.mjs && astro sync && astro dev --port 4321 --host 127.0.0.1",
     "prebuild": "node scripts/prebuild.mjs",
-    "build": "npm run prebuild && astro check && astro build",
+    "build": "npm run prebuild && astro sync && astro check && astro build",
     "preview": "astro preview --port 4322 --host 127.0.0.1",
     "astro": "astro",
     "check": "astro check",
