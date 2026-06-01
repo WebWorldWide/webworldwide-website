@@ -74,6 +74,10 @@ jobs:
           echo "dist/blog entries: $(ls dist/blog 2>/dev/null | wc -l)"
           echo "== data-store =="
           node --input-type=module -e "import {readFileSync,existsSync,readdirSync} from 'node:fs'; for (const f of ['.astro/data-store.json','node_modules/.astro/data-store.json']) { if(existsSync(f)){const r=readFileSync(f,'utf8'); console.log(f,'size',r.length,'bye-bye-dji?',r.includes('bye-bye-dji'),'posts-key?',r.includes('\"posts\"')); } else console.log(f,'MISSING'); } console.log('.astro:', existsSync('.astro')?readdirSync('.astro').join(','):'none')"
+          echo "== build2: astro build ALONE (no check), fresh caches =="
+          rm -rf dist .astro node_modules/.astro
+          npx astro build 2>&1 | grep -iE "page\(s\) built|error|cfg-debug" | head
+          echo "dist/blog (alone): $(ls dist/blog 2>/dev/null | wc -l)"
 
       - name: Cache Playwright browsers
         id: playwright-cache
