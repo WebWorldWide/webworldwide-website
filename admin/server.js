@@ -283,12 +283,18 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
-// Export SITE_DIR for use in routes
-export { SITE_DIR };
+// Export SITE_DIR (+ the app, for the boot smoke test) for use elsewhere.
+export { SITE_DIR, app };
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  ■ Web World Wide CMS`);
-  console.log(`  ├─ Admin: http://localhost:${PORT}`);
-  console.log(`  ├─ Site:  ${SITE_DIR}`);
-  console.log(`  └─ Ready.\n`);
-});
+// Don't bind a port under test. Importing this module still builds the whole
+// app — every route registers — which is exactly what the boot smoke test
+// relies on to catch registration-time crashes (e.g. an Express-incompatible
+// route) that per-router unit tests never exercise.
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n  ■ Web World Wide CMS`);
+    console.log(`  ├─ Admin: http://localhost:${PORT}`);
+    console.log(`  ├─ Site:  ${SITE_DIR}`);
+    console.log(`  └─ Ready.\n`);
+  });
+}
