@@ -1,0 +1,142 @@
+---
+/**
+ * Blog listing — paginated post index.
+ *
+ * Page 1 = /blog/, then /blog/2/, … via Astro's paginate() so every page is a
+ * real static file (SEO + no-JS). All published posts paginate evenly (no
+ * special "featured" card). ⌘K search (CommandPalette island) covers all
+ * posts. Only the masthead title types out (see the data-typewriter script);
+ * card titles render statically.
+ */
+import type { GetStaticPaths, Page } from 'astro';
+import { getPosts } from '@/lib/posts';
+import { toSummary, postSlug, postUrl, fmtDate, pad2 } from '@/lib/post-utils';
+import type { PostEntry, PostSummary } from '@/lib/post-utils';
+import { siteConfig } from '@/lib/site-config';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import TermBar from '@components/TermBar.astro';
+import CommandPalette from '@components/islands/CommandPalette';
+
+import '@styles/blog.css';
+import '@styles/cmdk.css';
+
+export const getStaticPaths = (({ paginate }) => {
+  const posts = getPosts();
+  // Summaries (built from raw markdown bodies) drive the ⌘K palette — all posts.
+  const summaries = posts.map((p) => toSummary(p, p.body));
+  const updated = posts.length ? fmtDate(posts[0].data.date) : '';
+  return paginate(posts, {
+    pageSize: siteConfig.blog.posts_per_page,
+    props: { summaries, total: posts.length, updated }
+  });
+}) satisfies GetStaticPaths;
+
+interface Props {
+  page: Page<PostEntry>;
+  summaries: PostSummary[];
+  total: number;
+  updated: string;
+}
+
+const { page, summaries, total, updated } = Astro.props;
+
+const masthead = siteConfig.blog.masthead_name;
+// Meta-only description (no visible deck on the masthead).
+const metaDescription =
+  'Web World Wide — writing on technology, the companies behind it, and the open web.';
+
+const cards = page.data.map((p) => ({
+  url: postUrl(p),
+  slug: postSlug(p),
+  title: p.data.title,
+  date: fmtDate(p.data.date),
+  // Hook line only when an excerpt was authored in the admin — no auto-derived
+  // fragment, and no reading-time.
+  excerpt: p.data.excerpt ?? ''
+}));
+
+const pageTitle = page.currentPage === 1 ? 'Blog' : `Blog · Page ${page.currentPage}`;
+---
+
+<BaseLayout title={pageTitle} description={metaDescription}>
+  <div class="frame">
+    <!-- MASTHEAD -->
+    <header class="card masthead">
+      <TermBar path="blog" />
+      <div class="body">
+        <h1
+          class="mast-title t-title"
+          data-typewriter
+          data-tw-delay="200"
+          data-tw-speed="60"
+          data-tw-persist
+          aria-label={masthead}
+        >{masthead}</h1>
+        <div class="mast-meta">
+          <span><b>{total}</b> posts</span>
+          {updated && <span>Updated {updated}</span>}
+        </div>
+        <div class="mast-foot">
+          <button class="search-pill" type="button" data-open-cmdk aria-label="Search posts">
+            <span class="prompt" aria-hidden="true">›</span>
+            <span>search posts…</span>
+          </button>
+          <a class="rss-btn" href={siteConfig.rss.url} aria-label="RSS feed">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+              <circle cx="6.18" cy="17.82" r="2.18"></circle>
+              <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83C19.56 11.4 12.6 4.44 4 4.44z"></path>
+              <path d="M4 10.1v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83C13.9 14.93 9.47 10.1 4 10.1z"></path>
+            </svg>
+            <span>RSS</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- POST CARDS -->
+    <div class="post-grid">
+      {
+        cards.map((c) => (
+          <a class="card post-card" href={c.url}>
+            <TermBar path={`posts/${c.slug}.md`} />
+            <div class="body">
+              <div class="pc-head">
+                <h3 class="pc-title t-title">{c.title}</h3>
+              </div>
+              {c.excerpt && <p class="pc-excerpt">{c.excerpt}</p>}
+              <div class="pc-foot">
+                <span>{c.date}</span>
+                <span class="go">OPEN →</span>
+              </div>
+            </div>
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- PAGER -->
+    {
+      page.lastPage > 1 && (
+        <nav class="pager" aria-label="Pagination">
+          {page.url.prev ? (
+            <a class="pager-btn" href={page.url.prev} rel="prev">← Newer</a>
+          ) : (
+            <span class="pager-btn is-disabled" aria-disabled="true">← Newer</span>
+          )}
+          <span class="count">PAGE {pad2(page.currentPage)} / {pad2(page.lastPage)}</span>
+          {page.url.next ? (
+            <a class="pager-btn" href={page.url.next} rel="next">Older →</a>
+          ) : (
+            <span class="pager-btn is-disabled" aria-disabled="true">Older →</span>
+          )}
+        </nav>
+      )
+    }
+  </div>
+
+  <CommandPalette posts={summaries} client:idle />
+</BaseLayout>
+
+<script>
+  import('../../scripts/typewriter.ts');
+</script>
