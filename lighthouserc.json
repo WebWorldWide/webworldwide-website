@@ -1,4 +1,5 @@
 {
+  "//": "LHCI config. IMPORTANT: every key inside `ci.assert.assertions` is treated by LHCI as a Lighthouse audit ID — a comment key there makes LHCI assert that a non-existent audit ran and fails the whole run (the `auditRan` failure). Keep notes at the root, like this one. Rationale for the gates: performance is advisory (warn) because the home is a WebGL/Three.js showpiece (globe + wordmark warp) that can't clear 0.9+ under throttled-mobile simulation; accessibility, best-practices and SEO are hard-gated. Accessibility is additionally covered by the axe-core e2e suite (test/playwright/a11y.spec.js).",
   "ci": {
     "collect": {
       "staticDistDir": "./site/dist",
@@ -26,9 +27,7 @@
     },
     "assert": {
       "assertions": {
-        "_comment_perf": "Advisory (warn, not error): the home is a WebGL/Three.js showpiece — globe + wordmark warp + app spinners — so throttled-mobile performance can't clear 0.95. Surface it as a warning instead of blocking the merge. Accessibility stays hard-gated below AND by the axe-core e2e suite (test/playwright/a11y.spec.js).",
         "categories:performance": ["warn", { "minScore": 0.9 }],
-        "_comment_a11y_b_p": "0.95 — Lighthouse penalises Chrome-only-warning audits like 'csp-xss' and 'image-aspect-ratio' that are hard to hit 100% on a static site.",
         "categories:accessibility": ["error", { "minScore": 0.95 }],
         "categories:best-practices": ["error", { "minScore": 0.95 }],
         "categories:seo": ["error", { "minScore": 1.0 }]
