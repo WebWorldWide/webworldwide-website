@@ -6,7 +6,7 @@
 # ==============================================================================
 
 # Variables
-REPO_DIR="/home/adam/web-world-wide-online"
+REPO_DIR="/opt/web-world-wide"
 DOCKER_DIR="$REPO_DIR/docker"
 
 # Navigate to repo

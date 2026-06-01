@@ -1,5 +1,5 @@
 {
-  "name": "web-world-wide-online",
+  "name": "webworldwide-website",
   "version": "1.0.0",
   "private": true,
   "description": "Web World Wide — Astro static site + Node admin CMS. This root package orchestrates lint, test, and CI across the monorepo (site/, admin/, migrate/).",
