@@ -17,22 +17,22 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@astrojs/react": "^4.4.0",
-    "@astrojs/rss": "^4.0.13",
-    "@astrojs/sitemap": "^3.5.0",
+    "@astrojs/react": "^5.0.6",
+    "@astrojs/rss": "^4.0.18",
+    "@astrojs/sitemap": "^3.7.3",
     "@fontsource/cormorant-garamond": "^5.2.11",
     "@fontsource/space-mono": "^5.2.9",
     "@fontsource/vt323": "^5.2.7",
     "@iarna/toml": "^2.2.5",
-    "astro": "^5.16.0",
+    "astro": "^6.4.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sharp": "^0.34.0",
     "three": "^0.184.0",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
+    "@astrojs/check": "^0.9.9",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
