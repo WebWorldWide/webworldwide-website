@@ -1,23 +1,57 @@
+import { readFile, readdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
 import { defineCollection } from 'astro:content';
-import { glob } from 'astro/loaders';
+import type { Loader } from 'astro/loaders';
+import matter from 'gray-matter';
 
 import { postSchema } from './content/postSchema.mjs';
 
-// Astro 5 canonical content-config location is `src/content.config.ts`. The
-// posts live OUTSIDE src/ (at site/content/posts/, managed by the admin CMS),
-// so the glob loader needs an explicit base. We pass an absolute file:// href
-// computed from THIS file: the loader resolves `base` via
-// `new URL(base, config.root)`, and an absolute href ignores config.root, so
-// it's root-independent and parses safely on Windows (a bare `C:\…` path would
-// be mis-read as a URL scheme).
+// Posts live at site/content/posts/*.md — outside src/, managed by the admin
+// CMS. We deliberately do NOT use Astro's built-in glob() loader here:
 //
-// NOTE: there is intentionally only ONE collection. A second `pages` collection
-// previously globbed the PARENT dir (site/content/), whose base contains this
-// collection's base (site/content/posts/) — nested collection bases broke
-// content loading on the Linux CI/Pages build (the loader filled the data-store
-// but `getCollection` returned nothing during page generation, so every
-// /blog/* route 404'd). It was unused, so it's gone.
-const postsBase = new URL('../content/posts/', import.meta.url).href;
+// glob() stores markdown entries with DEFERRED rendering (it writes a module map
+// to .astro/content-modules.mjs and renders lazily). On the Linux CI / GitHub
+// Pages build that deferred path produced an empty collection — the loader
+// filled node_modules/.astro/data-store.json with all 23 posts, but
+// getCollection('posts') returned 0 during page generation, so only the home
+// page built and every /blog/* route 404'd. It worked on Windows, which hid it.
+//
+// This hand-rolled loader instead reads the files with fs.readdir (identical on
+// every platform — prebuild.mjs relies on the same) and renders each post INLINE
+// via the loader context's renderMarkdown(), storing the HTML on the entry. That
+// sidesteps the deferred module entirely. The schema stays single-sourced in
+// postSchema.mjs (imported by the admin too).
+const postsURL = new URL('../content/posts/', import.meta.url);
+
+const postsLoader: Loader = {
+  name: 'posts-fs',
+  load: async ({ store, parseData, renderMarkdown, generateDigest, logger }) => {
+    store.clear();
+    const dir = fileURLToPath(postsURL);
+    const files = (await readdir(dir)).filter((file) => file.endsWith('.md'));
+    for (const file of files) {
+      const fileURL = new URL(file, postsURL);
+      const filePath = fileURLToPath(fileURL);
+      // Normalise CRLF so frontmatter + body parse identically on every OS.
+      const raw = (await readFile(filePath, 'utf-8')).replace(/\r\n/g, '\n');
+      const { data: frontmatter, content: body } = matter(raw);
+      const id = file.replace(/\.md$/, '');
+      const data = await parseData({ id, data: frontmatter, filePath });
+      const rendered = await renderMarkdown(body, { fileURL });
+      store.set({
+        id,
+        data,
+        body,
+        filePath,
+        digest: generateDigest(raw),
+        rendered,
+        assetImports: rendered.metadata?.imagePaths,
+      });
+    }
+    logger.info(`posts-fs: loaded ${files.length} post(s)`);
+  },
+};
 
 /**
  * Posts collection — Markdown files at site/content/posts/*.md
@@ -28,9 +62,6 @@ const postsBase = new URL('../content/posts/', import.meta.url).href;
  */
 export { postSchema };
 
-const posts = defineCollection({
-  loader: glob({ pattern: '*.md', base: postsBase }),
-  schema: postSchema,
-});
+const posts = defineCollection({ loader: postsLoader, schema: postSchema });
 
 export const collections = { posts };
