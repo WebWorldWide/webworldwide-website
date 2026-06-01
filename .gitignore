@@ -182,7 +182,12 @@ shelf/
 .LSOverride
 .Spotlight-V100
 .Trashes
+# "Icon\r" is the macOS custom-folder-icon resource file; the trailing `?` is
+# meant to match its carriage return. But `?` matches ANY single char, so on
+# case-insensitive filesystems (Windows) `Icon?` also matches real `icons/`
+# directories — which silently dropped our PWA manifest icons. Re-include them.
 Icon?
+!/site/public/icons/
 ._*
 
 # Windows
