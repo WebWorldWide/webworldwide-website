@@ -70,8 +70,10 @@ jobs:
             console.log('tg expandFalse:', (await glob('*.md', { cwd: abs, expandDirectories: false })).length);
             console.log('tg starstar:', (await glob('**/*.md', { cwd: abs })).length);
           "
-          echo "== build =="; npm run build 2>&1 | grep -iE "page\(s\) built|No files found|does not exist" | head
+          echo "== build =="; npm run build 2>&1 | grep -iE "page\(s\) built|No files found|does not exist|generateData|\[glob\]" | head
           echo "dist/blog entries: $(ls dist/blog 2>/dev/null | wc -l)"
+          echo "== data-store =="
+          node --input-type=module -e "import {readFileSync,existsSync,readdirSync} from 'node:fs'; for (const f of ['.astro/data-store.json','node_modules/.astro/data-store.json']) { if(existsSync(f)){const r=readFileSync(f,'utf8'); console.log(f,'size',r.length,'bye-bye-dji?',r.includes('bye-bye-dji'),'posts-key?',r.includes('\"posts\"')); } else console.log(f,'MISSING'); } console.log('.astro:', existsSync('.astro')?readdirSync('.astro').join(','):'none')"
 
       - name: Cache Playwright browsers
         id: playwright-cache
