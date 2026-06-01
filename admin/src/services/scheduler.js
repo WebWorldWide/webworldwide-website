@@ -64,8 +64,14 @@ export async function promoteScheduledPosts(opts = {}) {
       data.draft = false;
       // Keep publish_at as a historical record — Hugo ignores it; the
       // admin UI uses it to render "published on X" badges.
+      const serialized = serializePost(data, content || '');
       if (!opts.dryRun) {
-        writeFileSync(filePath, serializePost(data, content || ''));
+        // No-op guard: only write when the serialized output actually
+        // differs, so we never churn the file (or leave a spurious diff in
+        // the deploy's git tree) when nothing logically changed.
+        if (serialized !== raw) {
+          writeFileSync(filePath, serialized);
+        }
       }
       promoted.push(file);
     } catch (err) {
@@ -110,11 +116,14 @@ export async function defaultCommit(filenames) {
   await git.commit(
     `Auto-publish ${filenames.length} scheduled post${filenames.length === 1 ? '' : 's'}`,
   );
-  // Push is optional — failures shouldn't block local-only flows.
+  // Push failures don't throw (the local commit stands), but they DO leave
+  // the deploy ahead of origin until the next successful push, so surface
+  // them loudly (stderr) rather than as a quiet warning — a silent push
+  // failure is how the deploy's git tree drifts out of sync.
   try {
     await git.push('origin', 'main');
   } catch (err) {
-    console.warn('[scheduler] git push failed (continuing):', err.message);
+    console.error('[scheduler] ERROR: git push failed — deploy is ahead of origin:', err.message);
   }
 }
 
