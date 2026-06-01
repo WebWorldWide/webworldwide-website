@@ -13,9 +13,13 @@
  *   - drag-over highlights via the `is-dragover` CSS class
  *   - drop hands the FileList to `onUpload`
  *   - click or Enter/Space opens a hidden `<input type=file multiple>`
- *   - if `target === document.body`, capture-phase `paste` events with
- *     `clipboardData.files.length > 0` are also routed through onUpload
- *   - keyboard reachable: `role="button"`, `tabindex=0`, `aria-label`
+ *     (INLINE targets only — never when the target is document.body, or
+ *     every click on the page would pop the OS file chooser)
+ *   - if `target === document.body`, the zone is drag + paste ONLY:
+ *     capture-phase `paste` events with `clipboardData.files.length > 0`
+ *     are routed through onUpload, but clicks are left alone
+ *   - keyboard reachable (inline targets): `role="button"`, `tabindex=0`,
+ *     `aria-label`
  *   - returns `{ destroy() }` so callers can tear listeners down when
  *     unmounting (used by the library page when switching views)
  *
@@ -63,17 +67,25 @@
     const label = options.label || 'Drop files here';
     const ariaLabel = options.ariaLabel || label;
 
-    // Make non-button targets keyboard-actionable. We don't override
+    // A whole-page (body) dropzone exists only for "drop/paste anywhere".
+    // It must NOT become click-to-pick or keyboard-actionable, otherwise
+    // every click (or Space/Enter) on the page opens the OS file chooser.
+    // Inline dropzones keep the full click/keyboard affordance.
+    const isBody = target === document.body;
+
+    // Make non-button inline targets keyboard-actionable. We don't override
     // <button>/<a> etc. — they're already focusable and self-describing.
     const isNative =
       target instanceof HTMLButtonElement ||
       target instanceof HTMLAnchorElement ||
       target instanceof HTMLInputElement;
-    if (!isNative) {
-      if (!target.hasAttribute('role')) target.setAttribute('role', 'button');
-      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '0');
+    if (!isBody) {
+      if (!isNative) {
+        if (!target.hasAttribute('role')) target.setAttribute('role', 'button');
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '0');
+      }
+      if (!target.hasAttribute('aria-label')) target.setAttribute('aria-label', ariaLabel);
     }
-    if (!target.hasAttribute('aria-label')) target.setAttribute('aria-label', ariaLabel);
 
     // Body drop zones don't render a label (they're invisible until
     // drag-over). Inline dropzones get a default label if empty.
@@ -169,8 +181,12 @@
     target.addEventListener('dragover', onDragOver);
     target.addEventListener('dragleave', onDragLeave);
     target.addEventListener('drop', onDrop);
-    target.addEventListener('click', onClick);
-    if (!isNative) target.addEventListener('keydown', onKey);
+    // Click/keyboard-to-pick is for inline dropzones only — NEVER body
+    // (would hijack every click on the page into a file dialog).
+    if (!isBody) {
+      target.addEventListener('click', onClick);
+      if (!isNative) target.addEventListener('keydown', onKey);
+    }
     fileInput.addEventListener('change', onInputChange);
 
     const wantsPaste = options.pasteOnBody !== false && target === document.body;
@@ -183,8 +199,10 @@
       target.removeEventListener('dragover', onDragOver);
       target.removeEventListener('dragleave', onDragLeave);
       target.removeEventListener('drop', onDrop);
-      target.removeEventListener('click', onClick);
-      if (!isNative) target.removeEventListener('keydown', onKey);
+      if (!isBody) {
+        target.removeEventListener('click', onClick);
+        if (!isNative) target.removeEventListener('keydown', onKey);
+      }
       fileInput.removeEventListener('change', onInputChange);
       if (wantsPaste) document.removeEventListener('paste', onPaste);
       if (fileInput.parentNode) fileInput.parentNode.removeChild(fileInput);
