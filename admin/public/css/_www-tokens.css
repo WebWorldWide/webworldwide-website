@@ -77,7 +77,9 @@
   --line-strong: var(--line-strong-www);
   --fg: var(--ink);
   --fg-dim: var(--ink-soft);
-  --fg-mute: var(--ink-mute);
+  /* --fg-mute was --ink-mute (#5a72b0) — too light for the small labels it's
+     used on. Bump to the --ink-soft tier so faint UI text stays legible. */
+  --fg-mute: var(--ink-soft);
 
   /* --accent points to the AA-compliant strong cherry so every
      `color: var(--accent)` rule in the admin (80+ across all CSS
