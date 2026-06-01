@@ -148,7 +148,7 @@ export default [
 
   // Migrate CLI.
   {
-    files: ['migrate/**/*.js'],
+    files: ['migrate/**/*.{js,mjs}'],
     plugins: { security, n },
     languageOptions: {
       ecmaVersion: 2024,
