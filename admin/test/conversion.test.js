@@ -58,11 +58,11 @@ before(async () => {
   process.env.NODE_ENV = 'test';
   process.env.MEDIA_MAX_UPLOAD_SIZE = String(20 * 1024 * 1024); // 20 MB
   siteDir = join(tempDir, 'site');
-  imagesDir = join(siteDir, 'static', 'images', '2026', '05');
+  imagesDir = join(siteDir, 'public', 'images', '2026', '05');
   mkdirSync(siteDir, { recursive: true });
   mkdirSync(join(siteDir, 'content', 'posts'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'images'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'files'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'images'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'files'), { recursive: true });
   mkdirSync(imagesDir, { recursive: true });
   process.env.SITE_DIR = siteDir;
   // Stop server.js from auto-starting a competing worker if a test
@@ -197,14 +197,14 @@ test('image: PNG generates webp + avif at 4 widths + thumbnail', skipOpts(), asy
   for (const w of [320, 640, 1024, 1920]) {
     assert.ok(conversions[`webp-${w}`], `conversion entry webp-${w}`);
     assert.ok(conversions[`avif-${w}`], `conversion entry avif-${w}`);
-    const webpFile = join(siteDir, 'static', conversions[`webp-${w}`].replace(/^\//, ''));
-    const avifFile = join(siteDir, 'static', conversions[`avif-${w}`].replace(/^\//, ''));
+    const webpFile = join(siteDir, 'public', conversions[`webp-${w}`].replace(/^\//, ''));
+    const avifFile = join(siteDir, 'public', conversions[`avif-${w}`].replace(/^\//, ''));
     assert.ok(existsSync(webpFile), `${webpFile} written`);
     assert.ok(existsSync(avifFile), `${avifFile} written`);
   }
   // Thumbnail.
   assert.ok(conversions.thumb, 'thumb conversion entry');
-  const thumbFile = join(siteDir, 'static', conversions.thumb.replace(/^\//, ''));
+  const thumbFile = join(siteDir, 'public', conversions.thumb.replace(/^\//, ''));
   assert.ok(existsSync(thumbFile), 'thumb file on disk');
   const thumbMeta = await sharp(thumbFile).metadata();
   assert.equal(thumbMeta.width, 240, 'thumb is 240px wide');
@@ -245,7 +245,7 @@ test('image: EXIF stripped from web variants', skipOpts(), async () => {
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
   const conversions = JSON.parse(row.conversions_json || '{}');
   // The 640w WebP should have NO EXIF metadata at all.
-  const webpPath = join(siteDir, 'static', conversions['webp-640'].replace(/^\//, ''));
+  const webpPath = join(siteDir, 'public', conversions['webp-640'].replace(/^\//, ''));
   const webpBuf = readFileSync(webpPath);
   assert.ok(
     !webpBuf.includes(Buffer.from('T80-FIXTURE-EXIF-MARKER')),
@@ -311,7 +311,7 @@ test('image: HEIC/HEIF → JPEG fallback (libheif available)', skipOpts(), async
   assert.equal(row.status, 'ready');
   const conversions = JSON.parse(row.conversions_json || '{}');
   assert.ok(conversions['heic-converted-jpg'], 'JPEG fallback recorded');
-  const jpgPath = join(siteDir, 'static', conversions['heic-converted-jpg'].replace(/^\//, ''));
+  const jpgPath = join(siteDir, 'public', conversions['heic-converted-jpg'].replace(/^\//, ''));
   assert.ok(existsSync(jpgPath), 'JPEG fallback written to disk');
   const jpgMeta = await sharp(jpgPath).metadata();
   assert.equal(jpgMeta.format, 'jpeg');

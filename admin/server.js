@@ -58,6 +58,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', 'site');
+// Astro serves everything under `site/public` at the web root, so uploaded
+// media (images/files) lives there — NOT in Hugo's old `site/static`.
+// Keep this in lockstep with the media route + conversion worker; a host
+// can override it via SITE_PUBLIC_DIR.
+const SITE_PUBLIC_DIR = process.env.SITE_PUBLIC_DIR || join(SITE_DIR, 'public');
 
 // Per-deploy cache-busting token for admin assets. Prefer the deployed git
 // commit (the repo is mounted at /app/.git); fall back to start time, which
@@ -200,22 +205,21 @@ app.use(
   }),
 );
 
-// Phase 4: serve uploaded originals straight off the site's static
-// tree. In production these are also baked into Hugo's output by the
-// publish step; the admin process serves them directly so the library
-// UI works the moment a file is uploaded — no `hugo build` round-trip.
-// Mounting `images` and `files` as separate roots so we never expose
-// the rest of `site/static/`.
+// Serve uploaded media straight off Astro's public tree — the very files
+// the published site serves at the web root (`/images/...`, `/files/...`),
+// so the library UI and the live site agree the moment a file is uploaded.
+// Mounting `images` and `files` as separate roots so we never expose the
+// rest of `site/public/`.
 app.use(
   '/images',
-  express.static(join(SITE_DIR, 'static', 'images'), {
+  express.static(join(SITE_PUBLIC_DIR, 'images'), {
     fallthrough: false,
     maxAge: '7d',
   }),
 );
 app.use(
   '/files',
-  express.static(join(SITE_DIR, 'static', 'files'), {
+  express.static(join(SITE_PUBLIC_DIR, 'files'), {
     fallthrough: false,
     maxAge: '7d',
   }),

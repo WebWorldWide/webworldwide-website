@@ -37,3 +37,14 @@ Dockerfile     text eol=lf
 *.zip          binary
 *.tar          binary
 *.gz           binary
+# Audio/video — self-hosted media uploaded via the CMS (originals +
+# ffmpeg-compressed renditions). Plain `binary` (NOT Git LFS): GitHub Pages
+# serves LFS-tracked files as their pointer text, not the media itself.
+*.mp4          binary
+*.webm         binary
+*.mov          binary
+*.m4v          binary
+*.mp3          binary
+*.wav          binary
+*.m4a          binary
+*.ogg          binary

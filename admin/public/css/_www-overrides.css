@@ -320,9 +320,11 @@ body {
    focus. WCAG 2.4.7 + 2.4.13 — focus must be visible regardless of
    widget-specific styling. */
 :focus-visible {
-  outline: 3px solid var(--sky-deep) !important;
-  outline-offset: 3px !important;
-  box-shadow: 0 0 0 6px rgba(30, 104, 240, 0.28) !important;
+  /* Visible, WCAG-2.4.7 focus ring — but calmer than the old 3px outline +
+     6px box-shadow halo, which read as "broken" and bloomed over adjacent
+     controls. The editor pane draws its own ring via :focus-within. */
+  outline: 2px solid var(--sky-deep) !important;
+  outline-offset: 2px !important;
 }
 
 /* SKIP LINK */

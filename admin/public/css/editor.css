@@ -12,7 +12,7 @@
   grid-template-columns: minmax(0, 1fr) 260px 340px;
   gap: 16px;
   align-items: stretch;
-  min-height: calc(100vh - 130px);
+  min-height: calc(100dvh - 130px);
 }
 
 .editor-pane {
@@ -40,6 +40,24 @@
     transparent 95%
   );
   pointer-events: none;
+}
+/* Focused-editor ring. `:focus-within` matches whether focus arrived by
+   click OR keyboard (unlike `:focus-visible`, which ignores mouse), so
+   clicking into either the WYSIWYG (ProseMirror) or source (CodeMirror)
+   surface now shows a clear blue outline on the pane — the "blue outline"
+   the editor is supposed to have. */
+.editor-pane:focus-within {
+  border-color: var(--sky-deep);
+  box-shadow:
+    0 0 0 3px rgba(30, 104, 240, 0.28),
+    var(--shadow-card);
+}
+/* The pane ring is the editor's focus indicator, so suppress the inner
+   surfaces' own focus outline to avoid a doubled ring on keyboard focus
+   (the global :focus-visible rule would otherwise add one inside). */
+.editor-pane .ProseMirror:focus-visible,
+.editor-pane .cm-content:focus-visible {
+  outline: none !important;
 }
 
 .editor-head {
@@ -368,6 +386,33 @@
   border-radius: 4px;
   display: block;
   margin: 8px 0;
+}
+/* Inline media nodes — library attachments (img.te-attachment) and the
+   self-hosted video node (video.te-video). Keep them bounded to the writing
+   column so backfilled media / inserted video never blow out the layout. */
+.ProseMirror img.te-attachment,
+.ProseMirror video.te-video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 14px auto;
+}
+.ProseMirror video.te-video {
+  background: #000;
+}
+.ProseMirror video,
+.ProseMirror iframe {
+  max-width: 100%;
+}
+/* Selected media node (ProseMirror adds .ProseMirror-selectednode) + hover. */
+.ProseMirror .te-attachment.ProseMirror-selectednode,
+.ProseMirror .te-video.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ProseMirror video.te-video:hover {
+  box-shadow: 0 0 0 2px var(--glass-border);
 }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -1198,6 +1243,18 @@
 .editor-layout[data-toc-open="false"][data-seo-open="false"] .ed-aux {
   display: none;
 }
+/* Mid-band: below 1280px the 260px aux + 340px sidebar crowd the writing
+   column, so drop the aux track first (TOC/SEO stay reachable via their
+   toggles). The full single-column collapse still kicks in at 1180px. */
+@media (max-width: 1280px) {
+  .editor-layout,
+  .editor-layout[data-toc-open="false"][data-seo-open="false"] {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .ed-aux {
+    display: none;
+  }
+}
 @media (max-width: 1180px) {
   .editor-layout,
   .editor-layout[data-toc-open="false"][data-seo-open="false"] {
@@ -1557,11 +1614,22 @@
   flex-direction: column;
   gap: 6px;
   min-width: 320px;
+  max-width: calc(100% - 28px);
+  box-sizing: border-box;
   font-family: var(--mono);
   font-size: 12px;
 }
 .te-find-modal[hidden] {
   display: none;
+}
+/* On a narrow editor pane the 320px min-width would push the modal past the
+   right edge — pin it to both sides and let it shrink instead. */
+@media (max-width: 560px) {
+  .te-find-modal {
+    left: 14px;
+    right: 14px;
+    min-width: 0;
+  }
 }
 .te-find-row {
   display: flex;

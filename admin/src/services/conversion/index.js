@@ -117,13 +117,18 @@ export function resolveDiskContext(job, db) {
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(job.media_id);
   if (!row) return null;
   const siteDir = process.env.SITE_DIR || join(__dirname, '..', '..', '..', '..', 'site');
-  const staticDir = join(siteDir, 'static');
+  // Media lives under Astro's public dir (was Hugo's `static/` pre-migration).
+  const mediaRoot = process.env.SITE_PUBLIC_DIR || join(siteDir, 'public');
   const type = classifyMime(row.mime_type);
   const category = type === 'image' ? 'images' : 'files';
-  const yyyymm = derivePathFromUploadedAt(row.uploaded_at);
-  const diskDir = join(staticDir, category, yyyymm);
-  const diskPath = join(diskDir, row.filename);
-  const urlBase = `/${category}/${yyyymm}`;
+  // Backfilled rows carry an explicit storage_path; new uploads derive it from
+  // the upload month + filename (unchanged behavior).
+  const rel =
+    row.storage_path || `${category}/${derivePathFromUploadedAt(row.uploaded_at)}/${row.filename}`;
+  const lastSlash = rel.lastIndexOf('/');
+  const diskPath = join(mediaRoot, rel);
+  const diskDir = join(mediaRoot, rel.slice(0, lastSlash));
+  const urlBase = `/${rel.slice(0, lastSlash)}`;
   if (!existsSync(diskPath)) return null;
   return { row, diskPath, diskDir, urlBase };
 }

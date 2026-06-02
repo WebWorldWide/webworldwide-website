@@ -724,44 +724,37 @@ convention is:
 Keep these comments at the top of new shortcode templates so they show
 up in the admin reference automatically.
 
-### Attachments (Phase 6)
+### Media (images, GIFs, video, embeds)
 
-Embed any uploaded file with a rich preview using the `attachment`
-shortcode:
+The site is Astro: everything under `site/public/` is served at the web
+root, so media is referenced with **plain, Astro-native markup** — no Hugo
+shortcodes, no build-time data file.
 
-```markdown
-{{< attachment id="abc123" >}}
-{{< attachment id="abc123" caption="My caption" >}}
-```
+- **Images & GIFs** → standard Markdown: `![alt](/images/yyyy/mm/file.webp)`.
+  GIFs animate as `<img>`; the WYSIWYG editor renders them inline.
+- **Video** → uploaded files are transcoded by the ffmpeg conversion worker
+  (H.264 MP4 + VP9 WebM + poster); the editor inserts a plain
+  `<video controls><source …></video>` referencing the compressed
+  renditions. It serializes multi-line so CommonMark treats it as a single
+  HTML block on re-parse (a one-line `<video>` would parse as inline HTML).
+- **External embeds** (YouTube/Vimeo/…) → the provider's raw `<iframe>` HTML
+  (resolved via `/api/embed`), which Astro renders as-is.
+- **Other files** (pdf/zip/audio) → a plain Markdown link.
 
-The `id` is the media-library id (visible in `admin/#/media`).
-At publish time, `admin/src/services/publish-media-data.js` writes
-`site/data/media.json` with every media record's metadata + conversion
-URLs. The shortcode looks the id up there and dispatches to a per-type
-partial in `site/layouts/partials/attachment-*.html`:
+Uploads land in `site/public/{images,files}/yyyy/mm/` and are tracked in the
+`media` table (`admin/data/auth.db`). To index files that already exist on
+disk (e.g. the Ghost-migrated images) into the library, run
+`npm run backfill:media` from `admin/` (idempotent).
 
-- `image/*` → responsive `<picture>` (AVIF + WebP + fallback) with
-  click-to-lightbox
-- `video/*` → `<video controls>` with H.264 MP4 + VP9 WebM sources
-- `audio/*` → waveform image + `<audio controls>` with MP3 + Opus
-- `application/pdf` → cover thumb + page count + Open + Download
-- code files → pre-rendered Shiki HTML + language badge
-- archives → collapsible `<details>` file tree
-- anything else → generic file card with byte size + Download
+Legacy `{{< attachment id="…" >}}` shortcodes from the Hugo era still _parse_
+in the editor (so old drafts load), but the editor no longer _inserts_ them
+and the Astro site does not render them — convert any that remain to the
+markup above.
 
-Every preview offers a **Download original** link with the
-`download="<original-filename>"` attribute — GitHub Pages does not
-support `Content-Disposition` headers, so the attribute is how we hint
-the browser to use the original filename when saving.
-
-The editor's slash menu's **File attachment** entry opens the media
-library, lets you pick or upload a file, and inserts the shortcode at
-the cursor. Drag-drop of non-image files into the editor body does the
-same (image drops still use TipTap's native image node).
-
-Image clicks (and gallery items from the `gallery` shortcode) open
-`site/static/js/lightbox.js`, a tiny vanilla overlay with focus trap,
-arrow-key navigation, and ESC/backdrop close.
+**Size note:** self-hosted video (originals + renditions) is committed to the
+repo and served by GitHub Pages (~1 GB site / 100 MB per-file limits; Git LFS
+is NOT usable — Pages serves the pointer, not the file). Keep clips short and
+prefer external embeds for long-form video.
 
 ### Activity log
 

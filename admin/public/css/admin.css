@@ -1246,7 +1246,11 @@ body[data-page="login"] {
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.5),
     0 1px 0 var(--glass-highlight) inset;
-  overflow: hidden;
+  /* Cap to the viewport (minus the .modal's 24px padding) and scroll inside
+     so a tall modal never clips off-screen. `dvh` accounts for mobile chrome.
+     A non-visible overflow value still clips to the rounded corners. */
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
 }
 .modal-head {
   padding: 14px 18px;
@@ -1289,7 +1293,7 @@ body[data-page="login"] {
   flex-direction: column;
   gap: 8px;
   z-index: 600;
-  max-width: 360px;
+  max-width: min(360px, calc(100vw - 36px));
   pointer-events: none;
 }
 .toast {
