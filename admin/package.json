@@ -27,7 +27,7 @@
     "@tiptap/extension-image": "^3.23.4",
     "@tiptap/extension-link": "^3.23.4",
     "@tiptap/extension-list": "^3.23.4",
-    "@tiptap/extension-table": "^3.23.4",
+    "@tiptap/extension-table": "^3.24.0",
     "@tiptap/extension-table-cell": "^3.23.4",
     "@tiptap/extension-table-header": "^3.23.4",
     "@tiptap/extension-table-row": "^3.23.4",
