@@ -62,11 +62,11 @@ before(async () => {
   process.env.NODE_ENV = 'test';
   process.env.MEDIA_MAX_UPLOAD_SIZE = String(20 * 1024 * 1024);
   siteDir = join(tempDir, 'site');
-  filesDir = join(siteDir, 'static', 'files', '2026', '05');
+  filesDir = join(siteDir, 'public', 'files', '2026', '05');
   mkdirSync(siteDir, { recursive: true });
   mkdirSync(join(siteDir, 'content', 'posts'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'images'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'files'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'images'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'files'), { recursive: true });
   mkdirSync(filesDir, { recursive: true });
   process.env.SITE_DIR = siteDir;
   process.env.CONVERSION_WORKER = 'off';
@@ -149,7 +149,7 @@ test('pdf: tiny.pdf → cover JPG + thumb JPG + page_count', skipPdfOpts(), asyn
   assert.equal(conversions.page_count, 1, 'page_count probed');
   for (const key of ['cover', 'thumb']) {
     assert.ok(conversions[key], `conversion key ${key} present`);
-    const filePath = join(siteDir, 'static', conversions[key].replace(/^\//, ''));
+    const filePath = join(siteDir, 'public', conversions[key].replace(/^\//, ''));
     assert.ok(existsSync(filePath), `${key} file exists on disk`);
     // image-size decodes the JPEG header — proves the file is a real
     // image, not an empty/corrupt write.
@@ -178,14 +178,14 @@ test('code: sample.js → preview-html + preview-txt with shiki render', skipOpt
   assert.ok(conversions.char_count > 0, 'char_count populated');
 
   // preview-txt should round-trip the source bytes verbatim.
-  const txtPath = join(siteDir, 'static', conversions['preview-txt'].replace(/^\//, ''));
+  const txtPath = join(siteDir, 'public', conversions['preview-txt'].replace(/^\//, ''));
   assert.ok(existsSync(txtPath));
   const txt = readFileSync(txtPath, 'utf8');
   assert.equal(txt, readFileSync(diskPath, 'utf8'), 'preview-txt matches source');
 
   // preview-html should contain a <pre class="shiki"...> wrapper and
   // the source identifier "function add".
-  const htmlPath = join(siteDir, 'static', conversions['preview-html'].replace(/^\//, ''));
+  const htmlPath = join(siteDir, 'public', conversions['preview-html'].replace(/^\//, ''));
   assert.ok(existsSync(htmlPath));
   const html = readFileSync(htmlPath, 'utf8');
   assert.ok(html.includes('<pre class="shiki'), 'shiki <pre> wrapper present');
@@ -237,7 +237,7 @@ test('archive: sample.zip → tree.json with correct entries', skipOpts(), async
   assert.equal(conversions.truncated, false);
   assert.ok(conversions.total_size > 0);
 
-  const treePath = join(siteDir, 'static', conversions.tree.replace(/^\//, ''));
+  const treePath = join(siteDir, 'public', conversions.tree.replace(/^\//, ''));
   assert.ok(existsSync(treePath));
   const tree = JSON.parse(readFileSync(treePath, 'utf8'));
   assert.equal(tree.format, 'zip');

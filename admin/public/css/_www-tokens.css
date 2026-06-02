@@ -91,6 +91,8 @@
   --accent-soft: rgba(236, 90, 43, 0.12);
   --accent-glow: rgba(236, 90, 43, 0.34);
   --accent-on: #ffffff;
+  /* Alias used by a few editor surfaces (e.g. .serp-card's white card). */
+  --fg-on-accent: var(--accent-on);
   --selection: var(--cherry);
 
   --warn: #d68f1e;

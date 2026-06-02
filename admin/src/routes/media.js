@@ -66,14 +66,17 @@ const router = Router();
 
 // ── Config ────────────────────────────────────────────────────────
 const SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', '..', '..', 'site');
-const STATIC_DIR = join(SITE_DIR, 'static');
+// Media is stored under Astro's public dir (served at the web root). This was
+// Hugo's `static/` before the Astro migration; `SITE_PUBLIC_DIR` lets tests
+// and alternate hosts override the location.
+const MEDIA_ROOT = process.env.SITE_PUBLIC_DIR || join(SITE_DIR, 'public');
 const MAX_UPLOAD_SIZE = Number(process.env.MEDIA_MAX_UPLOAD_SIZE || 100 * 1024 * 1024);
 
 // Ensure the year/month sub-directories exist on demand (Multer's tmp
 // staging area lives in the OS tmpdir, not the site root, so we never
 // half-write into static/ unless dedup+move succeeds).
-mkdirSync(join(STATIC_DIR, 'images'), { recursive: true });
-mkdirSync(join(STATIC_DIR, 'files'), { recursive: true });
+mkdirSync(join(MEDIA_ROOT, 'images'), { recursive: true });
+mkdirSync(join(MEDIA_ROOT, 'files'), { recursive: true });
 
 // ── DB ────────────────────────────────────────────────────────────
 const dbPath = process.env.AUTH_DB_PATH || join(__dirname, '..', '..', 'data', 'auth.db');
@@ -86,7 +89,7 @@ db.pragma('journal_mode = WAL');
 db.exec(`
   CREATE TABLE IF NOT EXISTS media (
     id TEXT PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
+    filename TEXT NOT NULL,
     original_name TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size INTEGER NOT NULL,
@@ -97,11 +100,16 @@ db.exec(`
     conversions_json TEXT DEFAULT '{}',
     status TEXT NOT NULL DEFAULT 'ready',
     uploaded_at INTEGER NOT NULL,
-    post_refs_json TEXT DEFAULT '[]'
+    post_refs_json TEXT DEFAULT '[]',
+    storage_path TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_media_uploaded_at ON media(uploaded_at);
   CREATE INDEX IF NOT EXISTS idx_media_hash ON media(hash);
   CREATE INDEX IF NOT EXISTS idx_media_mime ON media(mime_type);
+  -- NOTE: the partial UNIQUE index on storage_path is created by migration
+  -- 009, NOT here. This inline baseline can run at import against an
+  -- already-existing (pre-009) media table that lacks the column, so
+  -- creating the index here would throw "no such column: storage_path".
 
   -- Phase 5: idempotent mirror of migration 003 so tests that import
   -- this router without invoking the migration runner still find the
@@ -204,7 +212,12 @@ function shapeMedia(row) {
   if (!row) return null;
   const type = classifyMime(row.mime_type);
   const category = type === 'image' ? 'images' : 'files';
-  const url = `/${category}/${derivePathFromUploadedAt(row.uploaded_at)}/${row.filename}`;
+  // Backfilled rows store the file's real path relative to the media root
+  // (e.g. images/2025/12/image.webp); that wins over the uploaded_at +
+  // filename derivation used for ordinary CMS uploads.
+  const url = row.storage_path
+    ? `/${row.storage_path}`
+    : `/${category}/${derivePathFromUploadedAt(row.uploaded_at)}/${row.filename}`;
   let conversions;
   try {
     conversions = JSON.parse(row.conversions_json || '{}');
@@ -224,6 +237,7 @@ function shapeMedia(row) {
     hash_prefix: String(row.hash || '').slice(0, 8),
     type,
     url,
+    storage_path: row.storage_path || null,
     status: row.status,
     uploaded_at: row.uploaded_at,
     conversions,
@@ -250,9 +264,10 @@ function derivePathFromUploadedAt(uploadedAt) {
  * @returns {string}
  */
 function diskPathFor(row) {
+  if (row.storage_path) return join(MEDIA_ROOT, row.storage_path);
   const type = classifyMime(row.mime_type);
   const category = type === 'image' ? 'images' : 'files';
-  return join(STATIC_DIR, category, derivePathFromUploadedAt(row.uploaded_at), row.filename);
+  return join(MEDIA_ROOT, category, derivePathFromUploadedAt(row.uploaded_at), row.filename);
 }
 
 // Phase 5: pick a job type for the asset and enqueue it. SVGs flow
@@ -373,9 +388,9 @@ async function finalizeUploads(files, res) {
         originalName: file.originalname,
         now,
       });
-      const targetDir = join(STATIC_DIR, relativeDir);
+      const targetDir = join(MEDIA_ROOT, relativeDir);
       mkdirSync(targetDir, { recursive: true });
-      const targetPath = join(STATIC_DIR, relativePath);
+      const targetPath = join(MEDIA_ROOT, relativePath);
 
       // Atomic-ish move. `rename` works across same fs; if tmp and site
       // happen to live on different filesystems, fall back to a copy.
@@ -402,8 +417,8 @@ async function finalizeUploads(files, res) {
         `INSERT INTO media (
             id, filename, original_name, mime_type, size,
             width, height, duration, hash,
-            conversions_json, status, uploaded_at, post_refs_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, '[]')`,
+            conversions_json, status, uploaded_at, post_refs_json, storage_path
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, '[]', NULL)`,
       ).run(
         id,
         filename,

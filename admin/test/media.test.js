@@ -66,8 +66,8 @@ before(async () => {
   const siteDir = join(tempDir, 'site');
   postsDir = join(siteDir, 'content', 'posts');
   mkdirSync(postsDir, { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'images'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'files'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'images'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'files'), { recursive: true });
   process.env.SITE_DIR = siteDir;
 
   // Verify better-sqlite3 loads (CI Linux always works; macOS dev hosts
@@ -152,7 +152,7 @@ test('upload an image: 200 with id, url, dims', skipOpts(), async () => {
   assert.equal(file.height, 1, 'image-size parsed height=1');
 
   // The file should exist on disk under the site static tree.
-  const onDisk = join(process.env.SITE_DIR, 'static', file.url.replace(/^\//, ''));
+  const onDisk = join(process.env.SITE_DIR, 'public', file.url.replace(/^\//, ''));
   assert.ok(existsSync(onDisk), 'file written to static dir');
 });
 
@@ -265,7 +265,7 @@ test('GET /api/media/:id includes usage list', skipOpts(), async () => {
 
   // Read the file off disk to verify content-addressing — the prefix
   // should equal the first 8 hex chars of sha256(text).
-  const onDisk = join(process.env.SITE_DIR, 'static', file.url.replace(/^\//, ''));
+  const onDisk = join(process.env.SITE_DIR, 'public', file.url.replace(/^\//, ''));
   assert.ok(existsSync(onDisk));
   assert.deepEqual(readFileSync(onDisk), txt);
 });
