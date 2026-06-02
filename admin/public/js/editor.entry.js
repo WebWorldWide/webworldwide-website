@@ -256,6 +256,23 @@ const tokenSpec = {
     }),
   },
   attachment: { node: 'attachment', getAttrs: (tok) => ({ id: tok.content || '' }) },
+  // Block-level raw HTML for self-hosted video / external embeds. The
+  // `tokenize` wrapper (splitBlockHtml) rewrites `<video>` / `<iframe>`
+  // html_block tokens into these so prosemirror-markdown maps them to real
+  // nodes — an unmapped html_block would throw and blank the doc.
+  video: {
+    node: 'video',
+    getAttrs: (tok) => ({
+      mp4: (tok.meta && tok.meta.mp4) || '',
+      webm: (tok.meta && tok.meta.webm) || '',
+      poster: (tok.meta && tok.meta.poster) || '',
+      src: (tok.meta && tok.meta.src) || '',
+    }),
+  },
+  embed: {
+    node: 'embed',
+    getAttrs: (tok) => ({ html: (tok.meta && tok.meta.html) || '' }),
+  },
   hardbreak: { node: 'hardBreak' },
   em: { mark: 'italic' },
   strong: { mark: 'bold' },
@@ -465,6 +482,52 @@ function buildParser(schema) {
     }
     return out;
   }
+  // Block-level raw HTML → first-class nodes. markdown-it (html:true) emits a
+  // single `html_block` token for a `<video>…</video>` or `<iframe>…</iframe>`
+  // block; prosemirror-markdown has no mapping for html_block and would throw
+  // (→ applyMarkdownToEditor's catch blanks the doc). We convert the recognised
+  // media blocks into `video` / `embed` node tokens so they render as real,
+  // selectable nodes and round-trip to the same HTML the published Astro site
+  // renders. Anything else is left untouched. Mirrors splitAttachment.
+  function splitBlockHtml(toks, TokCtor) {
+    const srcOf = (tag) => {
+      const m = tag && /\bsrc\s*=\s*"([^"]*)"/i.exec(tag);
+      return m ? m[1] : '';
+    };
+    const out = [];
+    for (const tk of toks) {
+      if (tk.type !== 'html_block' || !tk.content) {
+        out.push(tk);
+        continue;
+      }
+      const videoM = /<video\b[\s\S]*?<\/video>/i.exec(tk.content);
+      if (videoM) {
+        const seg = videoM[0];
+        const mp4Tag = (/<source\b[^>]*type\s*=\s*"video\/mp4"[^>]*>/i.exec(seg) || [])[0];
+        const webmTag = (/<source\b[^>]*type\s*=\s*"video\/webm"[^>]*>/i.exec(seg) || [])[0];
+        const posterM = /\bposter\s*=\s*"([^"]*)"/i.exec(seg);
+        const bareSrc = /<video\b[^>]*\bsrc\s*=\s*"([^"]*)"/i.exec(seg);
+        const t = new TokCtor('video', '', 0);
+        t.block = true;
+        t.meta = {
+          mp4: srcOf(mp4Tag),
+          webm: srcOf(webmTag),
+          poster: posterM ? posterM[1] : '',
+          src: mp4Tag || webmTag ? '' : bareSrc ? bareSrc[1] : '',
+        };
+        out.push(t);
+        continue;
+      }
+      // Any other block HTML (iframe embeds + any raw HTML) → an `embed`
+      // passthrough node, so prosemirror-markdown never sees an unmapped
+      // html_block (which would throw → blank doc) and the content round-trips.
+      const e = new TokCtor('embed', '', 0);
+      e.block = true;
+      e.meta = { html: tk.content.trim() };
+      out.push(e);
+    }
+    return out;
+  }
   const tokenize = (text, env) => {
     let tokens = tokenizer.parse(text || '', env || {});
     let TokCtor = null;
@@ -509,6 +572,8 @@ function buildParser(schema) {
     if (hasTable) {
       tokens = preprocessTokens(tokens);
     }
+    const TC = TokCtor || (tokens[0] && tokens[0].constructor);
+    if (TC) tokens = splitBlockHtml(tokens, TC);
     return tokens;
   };
   // MarkdownParser's `parse()` calls `tokenizer.parse(...)`. We pass a
@@ -653,9 +718,42 @@ const nodeSerializers = {
   tableHeader(state, node) {
     state.renderContent(node);
   },
-  // Attachment node → the exact Hugo shortcode it came from.
+  // Attachment node → the exact Hugo shortcode it came from. (Kept for
+  // backward-compat with drafts saved before the Astro migration; the editor
+  // no longer *inserts* these — see editor.js insertMediaIntoEditor.)
   attachment(state, node) {
     state.write(`{{< attachment id="${node.attrs.id || ''}" >}}`);
+  },
+  // Self-hosted video → a plain, single-line <video> the Astro site renders
+  // natively (no shortcode/plugin). Single line so it round-trips as one
+  // html_block token. References the compressed renditions, not the original.
+  video(state, node) {
+    const { mp4, webm, poster, src } = node.attrs;
+    const posterAttr = poster ? ` poster="${poster}"` : '';
+    // Multi-line so the FIRST line is a bare `<video …>` tag — CommonMark then
+    // treats the whole thing as one html_block (condition 7), which
+    // splitBlockHtml turns back into this node. `<video>` isn't a condition-6
+    // block tag, so a single-line `<video>…</video>` would parse as *inline*
+    // HTML and never round-trip.
+    const lines = [];
+    if (mp4 || webm) {
+      lines.push(`<video controls${posterAttr}>`);
+      if (mp4) lines.push(`<source src="${mp4}" type="video/mp4">`);
+      if (webm) lines.push(`<source src="${webm}" type="video/webm">`);
+    } else {
+      lines.push(`<video controls${posterAttr} src="${src || ''}">`);
+    }
+    lines.push('</video>');
+    state.write(lines.join('\n'));
+    state.closeBlock(node);
+  },
+  // External embed (YouTube/Vimeo/…) → the provider's raw iframe HTML, which
+  // Astro renders as-is. Collapsed to one line so it stays a single html_block.
+  embed(state, node) {
+    // Collapse blank lines only (a blank line would split the html_block on
+    // re-parse); keep single newlines so multi-line embeds stay intact.
+    state.write((node.attrs.html || '').replace(/\n{2,}/g, '\n').trim());
+    state.closeBlock(node);
   },
   // ── Phase 3c: math ───────────────────────────────────────
   mathInline(state, node) {
@@ -833,6 +931,27 @@ export function looksLikeSingleUrlPaste(text) {
  * Fallback when the host page didn't wire `te-slash-embed`. Prompts for
  * a URL inline, calls /api/embed, and inserts the returned shortcode.
  */
+/**
+ * Insert a resolved embed value: an `embed` node when it's raw iframe HTML
+ * (Astro-native), or plain text for the legacy shortcode fallback.
+ */
+function insertEmbedValue(editor, value) {
+  if (!value) return;
+  if (/^\s*</.test(value)) {
+    editor
+      .chain()
+      .focus()
+      .insertContent({ type: 'embed', attrs: { html: value.trim() } })
+      .run();
+  } else {
+    editor
+      .chain()
+      .focus()
+      .insertContent(value + '\n')
+      .run();
+  }
+}
+
 function triggerEmbedPrompt(editor) {
   const url = window.prompt('Embed URL (YouTube, Bluesky, Spotify, …)');
   if (!url) return;
@@ -841,14 +960,8 @@ function triggerEmbedPrompt(editor) {
     return;
   }
   resolveEmbed(url)
-    .then((shortcode) => {
-      if (shortcode) {
-        editor
-          .chain()
-          .focus()
-          .insertContent(shortcode + '\n')
-          .run();
-      }
+    .then((value) => {
+      insertEmbedValue(editor, value);
       return null;
     })
     .catch((err) => {
@@ -874,8 +987,13 @@ export async function resolveEmbed(url) {
     });
     if (!res.ok) return null;
     const body = await res.json();
-    if (!body || typeof body.shortcode !== 'string') return null;
-    return body.shortcode;
+    if (!body) return null;
+    // Prefer the provider's raw iframe HTML — the Astro site renders it
+    // natively. Fall back to the legacy shortcode only when no html is offered
+    // (it inserts as plain text rather than breaking the editor).
+    if (typeof body.html === 'string' && body.html.trim()) return body.html;
+    if (typeof body.shortcode === 'string') return body.shortcode;
+    return null;
   } catch (err) {
     console.warn('[embed] /api/embed failed', err);
     return null;
@@ -1250,9 +1368,9 @@ function createEmbedPasteUI() {
  *
  * @param {import('@tiptap/core').Editor} editor
  * @param {string} url
- * @param {string} shortcode
+ * @param {string} value resolved embed — iframe HTML (→ embed node) or a shortcode string
  */
-function replacePastedUrlWith(editor, url, shortcode) {
+function replacePastedUrlWith(editor, url, value) {
   const { state } = editor;
   const { doc, selection } = state;
   let from = -1;
@@ -1276,23 +1394,23 @@ function replacePastedUrlWith(editor, url, shortcode) {
     }
     return true;
   });
+  // Astro-native embed: an `embed` node for iframe HTML, else the literal
+  // shortcode text as a fallback.
+  const isHtml = /^\s*</.test(value);
+  const content = isHtml ? { type: 'embed', attrs: { html: value.trim() } } : value + '\n';
   if (from < 0) {
     // Fallback: just insert at cursor — better than losing the embed.
-    editor
-      .chain()
-      .focus()
-      .insertContent('\n' + shortcode + '\n')
-      .run();
+    editor.chain().focus().insertContent(content).run();
     return;
   }
-  // Delete the URL text (and any link mark that covers it) and insert
-  // the shortcode literal as a fresh paragraph.
+  // Delete the URL text (and any link mark that covers it) and insert the
+  // embed node (or shortcode literal) in its place.
   editor
     .chain()
     .focus()
     .setTextSelection({ from, to })
     .deleteSelection()
-    .insertContent(shortcode + '\n')
+    .insertContent(content)
     .run();
 }
 
@@ -1791,6 +1909,126 @@ const Attachment = Node.create({
   },
 });
 
+/**
+ * NodeView for the `video` node: a real, inline <video> the writer can play,
+ *  select, and delete. Sources come straight from the node attrs (resolved at
+ *  insert time), so no /api/media round-trip is needed.
+ */
+function videoNodeView(node) {
+  const dom = document.createElement('video');
+  dom.className = 'te-video';
+  dom.setAttribute('controls', '');
+  dom.setAttribute('preload', 'metadata');
+  dom.setAttribute('contenteditable', 'false');
+  if (node.attrs.poster) dom.setAttribute('poster', node.attrs.poster);
+  const addSource = (src, type) => {
+    if (!src) return;
+    const s = document.createElement('source');
+    s.setAttribute('src', src);
+    s.setAttribute('type', type);
+    dom.appendChild(s);
+  };
+  if (node.attrs.mp4 || node.attrs.webm) {
+    addSource(node.attrs.mp4, 'video/mp4');
+    addSource(node.attrs.webm, 'video/webm');
+  } else if (node.attrs.src) {
+    dom.setAttribute('src', node.attrs.src);
+  }
+  return { dom };
+}
+
+/**
+ * NodeView for the `embed` node: renders the provider's iframe HTML inline.
+ *  The HTML comes from our own /api/embed (trusted oEmbed providers); this is
+ *  the author-only editor preview. iframe embeds (YouTube/Vimeo) render here;
+ *  script-based embeds won't execute via innerHTML but still serialize fine.
+ */
+function embedNodeView(node) {
+  const dom = document.createElement('div');
+  dom.className = 'te-embed';
+  dom.setAttribute('contenteditable', 'false');
+  dom.innerHTML = node.attrs.html || '';
+  return { dom };
+}
+
+/**
+ * Self-hosted video as a first-class block node. Stores the resolved source
+ * URLs (compressed mp4/webm + poster) directly — NOT a media id — so it
+ * serializes to a plain <video> tag the published Astro site renders with no
+ * shortcode or build plugin. Round-trips via the parser's splitBlockHtml.
+ */
+const Video = Node.create({
+  name: 'video',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return {
+      mp4: { default: '' },
+      webm: { default: '' },
+      poster: { default: '' },
+      src: { default: '' },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'video',
+        getAttrs: (el) => {
+          const sources = Array.from(el.querySelectorAll('source'));
+          const pick = (type) => {
+            const s = sources.find((x) => (x.getAttribute('type') || '').includes(type));
+            return s ? s.getAttribute('src') || '' : '';
+          };
+          return {
+            mp4: pick('mp4'),
+            webm: pick('webm'),
+            poster: el.getAttribute('poster') || '',
+            src: el.getAttribute('src') || '',
+          };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes, node }) {
+    const attrs = { class: 'te-video', controls: 'controls' };
+    if (node.attrs.poster) attrs.poster = node.attrs.poster;
+    const src = node.attrs.mp4 || node.attrs.src;
+    if (src) attrs.src = src;
+    return ['video', mergeAttributes(HTMLAttributes, attrs)];
+  },
+  addNodeView() {
+    return ({ node }) => videoNodeView(node);
+  },
+});
+
+/**
+ * External embed (YouTube/Vimeo/Bluesky/…). Holds the provider's raw iframe
+ * HTML and renders it inline; serializes back to that HTML (Astro-native).
+ */
+const Embed = Node.create({
+  name: 'embed',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { html: { default: '' } };
+  },
+  parseHTML() {
+    return [{ tag: 'iframe', getAttrs: (el) => ({ html: el.outerHTML }) }];
+  },
+  renderHTML() {
+    // Real markup is injected by the NodeView; this placeholder keeps
+    // ProseMirror's own DOM serialization (copy/paste) sane.
+    return ['div', { class: 'te-embed', 'data-embed': '' }];
+  },
+  addNodeView() {
+    return ({ node }) => embedNodeView(node);
+  },
+});
+
 /** Callout (admonition) — block container with a `type` attribute. */
 const Callout = Node.create({
   name: 'callout',
@@ -2154,6 +2392,8 @@ function buildExtensions(slashExt) {
     }),
     Image.configure({ inline: true, allowBase64: false }),
     Attachment,
+    Video,
+    Embed,
     TaskList,
     TaskItem.configure({ nested: true }),
     // Phase 3c: tables. The TableHeader extension applies `scope="col"`

@@ -129,7 +129,7 @@ describe('markdown serializer/parser', () => {
     // And the first pass must preserve the meaningful content:
     // image, link URLs, prose. We're flexible on exact mark layout
     // because CommonMark normalises overlapping marks.
-    expect(once).toContain('![DJI Phantom 3](/images/2025/12/image-17.png)');
+    expect(once).toContain('![DJI Phantom 3](/images/2025/12/image-17.webp)');
     expect(once).toContain('theverge.com/news/849460/fcc-foreign-drone-ban-dji');
     expect(once).toContain('YouTube videos');
     // No trailing whitespace junk:
@@ -243,6 +243,29 @@ describe('TEEditor.mount() façade', () => {
     expect(instance.value).toContain('# Programmatic');
     expect(instance.value).toContain('body');
     expect(inputCount).toBeGreaterThan(0);
+  });
+
+  it('round-trips a self-hosted <video> as a video node', () => {
+    const md =
+      '<video controls poster="/files/2026/01/x-poster.jpg">\n' +
+      '<source src="/files/2026/01/x-h264.mp4" type="video/mp4">\n' +
+      '<source src="/files/2026/01/x-vp9.webm" type="video/webm">\n' +
+      '</video>';
+    instance = mount(rootEl, md);
+    let vid = null;
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.type.name === 'video') vid = n;
+    });
+    expect(vid).not.toBeNull();
+    expect(vid.attrs.mp4).toBe('/files/2026/01/x-h264.mp4');
+    expect(vid.attrs.webm).toBe('/files/2026/01/x-vp9.webm');
+    expect(vid.attrs.poster).toBe('/files/2026/01/x-poster.jpg');
+    const once = instance.value;
+    expect(once).toContain('<source src="/files/2026/01/x-h264.mp4" type="video/mp4">');
+    expect(once).toContain('<source src="/files/2026/01/x-vp9.webm" type="video/webm">');
+    // Fixed point: re-feeding the serialized Markdown yields the same output.
+    instance.value = once;
+    expect(instance.value).toBe(once);
   });
 });
 

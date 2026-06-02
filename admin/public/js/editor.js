@@ -684,59 +684,95 @@
     });
   }
 
-  function insertMediaIntoEditor(item, opts) {
+  function insertMediaIntoEditor(item) {
     if (!item || !item.url) return;
-    opts = opts || {};
-    const isImage = (item.type || (item.mime_type || '').split('/')[0]) === 'image';
-    // Phase 6: prefer the `attachment` shortcode for any file with an
-    // id. The shortcode hits site.Data.media at build time and renders
-    // a rich per-type preview. We still fall back to a plain markdown
-    // image for the `forceImage` path so the editor keeps working if a
-    // legacy caller skips the media library.
-    const forceImage = opts.forceImage === true;
-    const useShortcode = !forceImage && item.id;
+    // Determine the media kind. Library/upload items carry `type`/`mime_type`;
+    // the "recent media" thumbnails pass only { url, filename }, so fall back
+    // to the URL extension.
+    let kind = item.type || (item.mime_type || '').split('/')[0];
+    if (!kind || kind === 'application') {
+      const u = (item.url || '').toLowerCase();
+      if (/\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)(\?|$)/.test(u)) kind = 'image';
+      else if (/\.(mp4|webm|mov|m4v|ogv)(\?|$)/.test(u)) kind = 'video';
+    }
     const tt = bodyEl && bodyEl._tiptap;
-    if (tt && tt.chain) {
-      if (useShortcode && isImage) {
-        // Image from the library → a real inline node so the picture renders
-        // in the editor and can be selected/deleted; it serializes back to the
-        // {{< attachment id >}} shortcode on save (rich render on the site).
+    const splice = (md) => {
+      const start = bodyEl.selectionStart || 0;
+      const end = bodyEl.selectionEnd || 0;
+      bodyEl.value = bodyEl.value.slice(0, start) + md + bodyEl.value.slice(end);
+      bodyEl.selectionStart = bodyEl.selectionEnd = start + md.length;
+      bodyEl.focus && bodyEl.focus();
+    };
+
+    if (kind === 'video') {
+      // Reference the compressed renditions the conversion worker produced —
+      // NOT the heavy original — so what ships to GitHub Pages stays small.
+      const conv = item.conversions || {};
+      const mp4 = conv['h264-mp4'] || '';
+      const webm = conv['vp9-webm'] || '';
+      const poster = conv['poster'] || '';
+      if (!mp4 && !webm && item.status && item.status !== 'ready') {
+        // Still being optimized (or ffmpeg unavailable). Don't bake in the raw
+        // original; tell the user to insert from the library once it's ready.
+        if (window.TE && TE.toast) {
+          TE.toast(
+            'Video is still being optimized — insert it from the media library once ready.',
+            'info',
+          );
+        }
+        return;
+      }
+      if (tt && tt.chain) {
         tt.chain()
           .focus()
-          .insertContent({ type: 'attachment', attrs: { id: String(item.id) } })
-          .run();
-      } else if (useShortcode) {
-        // Non-image attachment (pdf/zip/audio/…): keep the text shortcode — the
-        // editor can't usefully preview it as an image.
-        const shortcode = `{{< attachment id="${item.id}" >}}`;
-        tt.chain().focus().insertContent(`\n\n${shortcode}\n\n`).run();
-      } else if (isImage) {
-        tt.chain()
-          .focus()
-          .setImage({ src: item.url, alt: item.original_name || '' })
+          .insertContent({
+            type: 'video',
+            attrs: { mp4, webm, poster, src: mp4 || webm ? '' : item.url },
+          })
           .run();
       } else {
-        const label = `[File: ${item.original_name || item.filename}](${item.url})`;
-        tt.chain().focus().insertContent(`\n\n${label}\n\n`).run();
+        const posterAttr = poster ? ` poster="${poster}"` : '';
+        // Multi-line so CommonMark treats it as one html_block (see the video
+        // serializer in editor.entry.js for why single-line fails to parse).
+        const lines = [];
+        if (mp4 || webm) {
+          lines.push(`<video controls${posterAttr}>`);
+          if (mp4) lines.push(`<source src="${mp4}" type="video/mp4">`);
+          if (webm) lines.push(`<source src="${webm}" type="video/webm">`);
+        } else {
+          lines.push(`<video controls${posterAttr} src="${item.url}">`);
+        }
+        lines.push('</video>');
+        splice(`\n\n${lines.join('\n')}\n\n`);
       }
       markDirty();
       updateMetrics();
       return;
     }
-    // Fallback textarea — splice markdown / shortcode at the cursor.
-    let md;
-    if (useShortcode) {
-      md = `\n\n{{< attachment id="${item.id}" >}}\n\n`;
-    } else if (isImage) {
-      md = `\n![${item.original_name || ''}](${item.url})\n`;
-    } else {
-      md = `\n[File: ${item.original_name || item.filename}](${item.url})\n`;
+
+    if (kind === 'image') {
+      // Images + GIFs → standard Markdown image (Astro-native; GIFs animate as
+      // <img>). Renders inline in the WYSIWYG editor and round-trips cleanly.
+      if (tt && tt.chain) {
+        tt.chain()
+          .focus()
+          .setImage({ src: item.url, alt: item.original_name || '' })
+          .run();
+      } else {
+        splice(`\n![${item.original_name || ''}](${item.url})\n`);
+      }
+      markDirty();
+      updateMetrics();
+      return;
     }
-    const start = bodyEl.selectionStart || 0;
-    const end = bodyEl.selectionEnd || 0;
-    bodyEl.value = bodyEl.value.slice(0, start) + md + bodyEl.value.slice(end);
-    bodyEl.selectionStart = bodyEl.selectionEnd = start + md.length;
-    bodyEl.focus && bodyEl.focus();
+
+    // audio / pdf / archive / other → a plain Markdown link.
+    const label = `[${item.original_name || item.filename || 'file'}](${item.url})`;
+    if (tt && tt.chain) {
+      tt.chain().focus().insertContent(`\n\n${label}\n\n`).run();
+    } else {
+      splice(`\n${label}\n`);
+    }
     markDirty();
     updateMetrics();
   }
@@ -894,18 +930,10 @@
         dropzone: 'ed-dropzone',
         input: 'ed-file-input',
         recent: 'ed-recent-media',
-        onInsert: ({ url }) => {
-          if (!url) return;
-          // Insert markdown image at cursor — fallback editor only.
-          const md = `\n![](${url})\n`;
-          const start = bodyEl.selectionStart || 0;
-          const end = bodyEl.selectionEnd || 0;
-          bodyEl.value = bodyEl.value.slice(0, start) + md + bodyEl.value.slice(end);
-          bodyEl.selectionStart = bodyEl.selectionEnd = start + md.length;
-          bodyEl.focus();
-          updateMetrics();
-          markDirty();
-        },
+        // Route both the recent-media thumbnails and sidebar uploads through
+        // the same inserter so images/GIFs/videos get the right markup +
+        // inline preview in WYSIWYG and the textarea fallback alike.
+        onInsert: (item) => insertMediaIntoEditor(item),
       });
     }
 

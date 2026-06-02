@@ -46,7 +46,7 @@ before(async () => {
   const siteDir = join(tempDir, 'site');
   postsDir = join(siteDir, 'content', 'posts');
   mkdirSync(postsDir, { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'images'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'images'), { recursive: true });
   process.env.SITE_DIR = siteDir;
 
   try {

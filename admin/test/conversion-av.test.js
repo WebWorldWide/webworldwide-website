@@ -52,11 +52,11 @@ before(async () => {
   process.env.NODE_ENV = 'test';
   process.env.MEDIA_MAX_UPLOAD_SIZE = String(20 * 1024 * 1024);
   siteDir = join(tempDir, 'site');
-  filesDir = join(siteDir, 'static', 'files', '2026', '05');
+  filesDir = join(siteDir, 'public', 'files', '2026', '05');
   mkdirSync(siteDir, { recursive: true });
   mkdirSync(join(siteDir, 'content', 'posts'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'images'), { recursive: true });
-  mkdirSync(join(siteDir, 'static', 'files'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'images'), { recursive: true });
+  mkdirSync(join(siteDir, 'public', 'files'), { recursive: true });
   mkdirSync(filesDir, { recursive: true });
   process.env.SITE_DIR = siteDir;
   process.env.CONVERSION_WORKER = 'off';
@@ -143,13 +143,13 @@ test('video: tiny.mp4 → H.264 MP4 + VP9 WebM + poster + thumb', skipOpts(), as
   const conversions = JSON.parse(row.conversions_json || '{}');
   for (const key of ['h264-mp4', 'vp9-webm', 'poster', 'thumb']) {
     assert.ok(conversions[key], `conversion key ${key} present`);
-    const filePath = join(siteDir, 'static', conversions[key].replace(/^\//, ''));
+    const filePath = join(siteDir, 'public', conversions[key].replace(/^\//, ''));
     assert.ok(existsSync(filePath), `${key} file exists on disk`);
   }
 
   // Verify codecs via ffprobe.
-  const mp4Path = join(siteDir, 'static', conversions['h264-mp4'].replace(/^\//, ''));
-  const webmPath = join(siteDir, 'static', conversions['vp9-webm'].replace(/^\//, ''));
+  const mp4Path = join(siteDir, 'public', conversions['h264-mp4'].replace(/^\//, ''));
+  const webmPath = join(siteDir, 'public', conversions['vp9-webm'].replace(/^\//, ''));
   const mp4Meta = await ffmpegHelpers.ffprobe(mp4Path);
   assert.equal(mp4Meta.videoCodec, 'h264', 'MP4 uses H.264');
   const webmMeta = await ffmpegHelpers.ffprobe(webmPath);
@@ -205,7 +205,7 @@ test('video: 1080p cap downscales 4K source', skipOpts(), async () => {
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
   assert.equal(row.status, 'ready');
   const conversions = JSON.parse(row.conversions_json || '{}');
-  const mp4Path = join(siteDir, 'static', conversions['h264-mp4'].replace(/^\//, ''));
+  const mp4Path = join(siteDir, 'public', conversions['h264-mp4'].replace(/^\//, ''));
   const mp4Meta = await ffmpegHelpers.ffprobe(mp4Path);
   assert.equal(mp4Meta.width, 1920, 'capped at 1920 wide');
   assert.equal(mp4Meta.height, 1080, '16:9 preserved → 1080 tall');
@@ -228,13 +228,13 @@ test('audio: tiny.wav → MP3 + Opus + waveform.png', skipOpts(), async () => {
   const conversions = JSON.parse(row.conversions_json || '{}');
   for (const key of ['mp3-128', 'opus-96', 'waveform']) {
     assert.ok(conversions[key], `conversion key ${key} present`);
-    const filePath = join(siteDir, 'static', conversions[key].replace(/^\//, ''));
+    const filePath = join(siteDir, 'public', conversions[key].replace(/^\//, ''));
     assert.ok(existsSync(filePath), `${key} file exists on disk`);
   }
 
   // Verify codecs via ffprobe.
-  const mp3Path = join(siteDir, 'static', conversions['mp3-128'].replace(/^\//, ''));
-  const opusPath = join(siteDir, 'static', conversions['opus-96'].replace(/^\//, ''));
+  const mp3Path = join(siteDir, 'public', conversions['mp3-128'].replace(/^\//, ''));
+  const opusPath = join(siteDir, 'public', conversions['opus-96'].replace(/^\//, ''));
   const mp3Meta = await ffmpegHelpers.ffprobe(mp3Path);
   assert.equal(mp3Meta.audioCodec, 'mp3', 'MP3 codec match');
   const opusMeta = await ffmpegHelpers.ffprobe(opusPath);
@@ -286,7 +286,7 @@ test('audio: LUFS-normalized MP3 measures within 1 dB of -16 LUFS', skipOpts(), 
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
   assert.equal(row.status, 'ready');
   const conversions = JSON.parse(row.conversions_json || '{}');
-  const mp3Path = join(siteDir, 'static', conversions['mp3-128'].replace(/^\//, ''));
+  const mp3Path = join(siteDir, 'public', conversions['mp3-128'].replace(/^\//, ''));
   assert.ok(existsSync(mp3Path));
 
   // Re-measure the MP3's integrated loudness. We expect it within
@@ -312,7 +312,7 @@ test('gif: tiny.gif → H.264 MP4 + VP9 WebM + poster JPEG', skipOpts(), async (
     filename: 'sample.gif',
     mime: 'image/gif',
   });
-  const imagesGifDir = join(siteDir, 'static', 'images', '2026', '05');
+  const imagesGifDir = join(siteDir, 'public', 'images', '2026', '05');
   mkdirSync(imagesGifDir, { recursive: true });
   copyFileSync(join(__dirname, 'fixtures', 'tiny.gif'), join(imagesGifDir, 'sample.gif'));
   const db = queue.__internal.getDb();
@@ -330,7 +330,7 @@ test('gif: tiny.gif → H.264 MP4 + VP9 WebM + poster JPEG', skipOpts(), async (
   const conversions = JSON.parse(row.conversions_json || '{}');
   for (const key of ['h264-mp4', 'vp9-webm', 'poster']) {
     assert.ok(conversions[key], `conversion key ${key} present`);
-    const filePath = join(siteDir, 'static', conversions[key].replace(/^\//, ''));
+    const filePath = join(siteDir, 'public', conversions[key].replace(/^\//, ''));
     assert.ok(existsSync(filePath), `${key} file exists on disk`);
   }
 
@@ -339,7 +339,7 @@ test('gif: tiny.gif → H.264 MP4 + VP9 WebM + poster JPEG', skipOpts(), async (
 
   // Verify the MP4 is actually H.264 with a video stream (i.e. animated
   // transcode, not a stilled frame).
-  const mp4Path = join(siteDir, 'static', conversions['h264-mp4'].replace(/^\//, ''));
+  const mp4Path = join(siteDir, 'public', conversions['h264-mp4'].replace(/^\//, ''));
   const mp4Meta = await ffmpegHelpers.ffprobe(mp4Path);
   assert.equal(mp4Meta.videoCodec, 'h264');
   assert.ok(mp4Meta.duration > 0, 'transcoded MP4 has nonzero duration');
