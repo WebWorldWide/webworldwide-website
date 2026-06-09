@@ -41,6 +41,7 @@
     "selector-pseudo-element-no-unknown": null
   },
   "ignoreFiles": [
+    "admin/public/vendor/**",
     "site/public/**",
     "site/resources/**",
     "admin/node_modules/**",

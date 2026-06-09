@@ -16,16 +16,11 @@
     <link rel="stylesheet" href="/css/redirects.css" />
     <link rel="stylesheet" href="/css/activity.css" />
     <link rel="stylesheet" href="/css/comments.css" />
-    <!-- WebAuthn browser library (CDN — passkey registration). Wrapped
-       in try/catch in auth.js so an ad-blocker doesn't crash the page.
-       `defer` so it parses in parallel with HTML and never blocks the
-       first paint; the global preconnect above warms the TLS handshake. -->
-    <link rel="preconnect" href="https://unpkg.com" crossorigin />
-    <link rel="dns-prefetch" href="https://unpkg.com" />
-    <script
-      defer
-      src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"
-    ></script>
+    <!-- WebAuthn browser library (self-hosted vendor copy — passkey
+       registration). Wrapped in try/catch in auth.js so a load failure
+       doesn't crash the page. `defer` so it parses in parallel with
+       HTML and never blocks the first paint. -->
+    <script defer src="/vendor/simplewebauthn-browser.umd.min.js"></script>
   </head>
   <body data-page="dashboard">
     <a class="skip-link" href="#main">Skip to content</a>

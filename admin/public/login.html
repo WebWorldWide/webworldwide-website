@@ -13,11 +13,7 @@
     <!-- WebAuthn library — defer so it doesn't block the login form's
          first paint. The passkey CTA is interactive within ~50ms of
          first render either way; defer is purely a latency win. -->
-    <link rel="preconnect" href="https://unpkg.com" crossorigin />
-    <script
-      defer
-      src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"
-    ></script>
+    <script defer src="/vendor/simplewebauthn-browser.umd.min.js"></script>
   </head>
   <body data-page="login">
     <a class="skip-link" href="#main">Skip to content</a>

@@ -42,6 +42,8 @@ export default [
       'admin/uploads/**',
       'admin/public/js/editor.bundle.js',
       'admin/public/js/editor.bundle.js.map',
+      // Vendored third-party assets (self-hosted CDN replacements).
+      'admin/public/vendor/**',
       'Blog/**',
       '.planning/**',
       'coverage/**',
