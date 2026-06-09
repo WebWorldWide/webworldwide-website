@@ -28,15 +28,24 @@ REMOTE=$(git rev-parse '@{u}')
 
 if [ "$LOCAL" != "$REMOTE" ]; then
     echo "$(date): Updates found. Pulling latest code..."
-    
+
     # Pull changes
     git pull origin main
-    
+
+    # Keep the HOST admin deps in sync — promote-scheduled.sh and
+    # dump-webmentions.sh run admin code with the host's node, outside
+    # the container. Only reinstall when the lockfile actually changed.
+    if ! git diff --quiet "$LOCAL" HEAD -- admin/package-lock.json; then
+        echo "$(date): admin lockfile changed — refreshing host node_modules..."
+        npm ci --omit=dev --prefix "$REPO_DIR/admin" || \
+            echo "$(date): WARNING: host npm ci failed — scheduler/webmention crons may break."
+    fi
+
     # Rebuild containers gracefully (no "down" — only recreates changed containers)
     # This keeps cloudflared and other unchanged services running during rebuild
     echo "$(date): Rebuilding changed containers..."
     docker compose --project-directory "$DOCKER_DIR" up -d --build --remove-orphans
-    
+
     echo "$(date): Update and deployment complete."
 else
     echo "$(date): System is up to date."

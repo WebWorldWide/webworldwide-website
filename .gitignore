@@ -26,14 +26,17 @@ site/public/.well-known/webfinger
 # ----------------------------------------------------------------------------
 # Node / npm / package managers
 #
-# Root, site/, and migrate/ node_modules are dev-only and never deployed.
-# admin/node_modules/ IS intentionally tracked so the Pi can deploy via
-# `git pull` without running `npm install`. Do NOT add a /node_modules/
-# rule that would hide it.
+# No node_modules is tracked. (An old comment here claimed
+# admin/node_modules was committed for git-pull deploys — it never was,
+# which is why the host cron scripts crashed with ERR_MODULE_NOT_FOUND.)
+# The Pi keeps admin's host deps in sync via auto-update.sh, which runs
+# `npm ci --omit=dev` in admin/ whenever the pulled lockfile changes;
+# the cms container installs its own tree at image build.
 # ----------------------------------------------------------------------------
 /node_modules/
 /site/node_modules/
 /migrate/node_modules/
+/admin/node_modules/
 .npm/
 .yarn/
 .pnpm-store/
