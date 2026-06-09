@@ -1,9 +1,13 @@
 ---
-title: "It Comes Back to the iPhone"
-date: 2025-12-17T14:07:42.000Z
-slug: "it-comes-back-to-the-iphone"
+title: It Comes Back to the iPhone
+slug: it-comes-back-to-the-iphone
 draft: false
-tags: ["culture", "tech", "opinion"]
+date: '2025-12-17T14:07:00.000Z'
+excerpt: ''
+tags:
+  - culture
+  - tech
+  - opinion
 ---
 ![Someone celebrating after buying an iPhone outside an Apple Store](/images/2025/12/image-12.webp)
 
