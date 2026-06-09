@@ -2174,17 +2174,15 @@ const FootnoteBlock = Node.create({
 // Math node view + lazy KaTeX loader
 // ─────────────────────────────────────────────────────────────────
 //
-// We load KaTeX (JS + CSS) from a CDN with subresource integrity the
-// first time a math node is mounted. This keeps the bundle ~250 KB
-// smaller; the trade-off is one network request on the first math node
-// ever rendered in a session. Subsequent renders re-use the cached
-// module + CSS.
+// We lazy-load KaTeX (JS + CSS) the first time a math node is mounted.
+// This keeps the bundle ~250 KB smaller; the trade-off is one request
+// on the first math node ever rendered in a session. Subsequent
+// renders re-use the cached module + CSS.
 //
-// SRI hashes are pinned to KaTeX 0.16.11 (matches the dependency we
-// installed; if you bump the version, regenerate these hashes).
-const KATEX_CDN_BASE = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist';
-const KATEX_JS_SRI = 'sha256-rzgIjudPpzaP4WT9HrkmaDxDsBpYHC2VqGuOJTb6BiM=';
-const KATEX_CSS_SRI = 'sha256-bgC0/wn7sV6sdK0NB4tCYibTu0YqEcZL9Vi8YGmFkRk=';
+// KaTeX is self-hosted under /vendor/katex (copied from the pinned
+// `katex` devDependency — see admin/package.json). Same-origin assets
+// need no SRI/crossorigin, and the admin CSP stays CDN-free.
+const KATEX_BASE = '/vendor/katex';
 let katexPromise = null;
 function loadKatex() {
   if (typeof window === 'undefined') return Promise.resolve(null);
@@ -2195,16 +2193,12 @@ function loadKatex() {
     if (!document.querySelector('link[data-te-katex]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = `${KATEX_CDN_BASE}/katex.min.css`;
-      link.crossOrigin = 'anonymous';
-      link.integrity = KATEX_CSS_SRI;
+      link.href = `${KATEX_BASE}/katex.min.css`;
       link.dataset.teKatex = 'css';
       document.head.appendChild(link);
     }
     const script = document.createElement('script');
-    script.src = `${KATEX_CDN_BASE}/katex.min.js`;
-    script.crossOrigin = 'anonymous';
-    script.integrity = KATEX_JS_SRI;
+    script.src = `${KATEX_BASE}/katex.min.js`;
     script.async = true;
     script.dataset.teKatex = 'js';
     script.onload = () => resolve(window.katex || null);

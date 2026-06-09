@@ -12,6 +12,7 @@ import helmet from 'helmet';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { randomBytes } from 'crypto';
 import { readFileSync } from 'fs';
 import { versionizeHtml } from './src/utils/assets.js';
 
@@ -125,17 +126,80 @@ if (process.env.REMARK42_POLLER !== 'off') {
 // Trust proxy (behind Caddy/Cloudflare)
 app.set('trust proxy', 1);
 
-// Security headers
+// Security headers.
+//
+// CSP notes:
+//   - All first-party scripts/styles/fonts are self-hosted (the
+//     simplewebauthn UMD and KaTeX live under /vendor — no CDNs).
+//   - `style-src-attr 'unsafe-inline'` is required: several UI modules
+//     (media, comments, dashboard) set style="" attributes from JS
+//     template strings. Inline <style>/<script> BLOCKS stay forbidden.
+//   - `img-src https:` is required for federated avatars — webmention
+//     author photos and Remark42 avatars come from arbitrary origins.
+//   - `frame-src` mirrors the embed providers the editor can render
+//     (src/services/embed/providers.js).
+//   - CSP_REPORT_ONLY=1 flips to report-only for staged rollouts.
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Disabled to allow external images/scripts for now
+    contentSecurityPolicy: {
+      useDefaults: false,
+      reportOnly: process.env.CSP_REPORT_ONLY === '1',
+      directives: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'"],
+        'script-src-attr': ["'none'"],
+        'style-src': ["'self'"],
+        'style-src-attr': ["'unsafe-inline'"],
+        'font-src': ["'self'"],
+        'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+        'media-src': ["'self'", 'blob:'],
+        'connect-src': ["'self'"],
+        'frame-src': [
+          'https://www.youtube.com',
+          'https://www.youtube-nocookie.com',
+          'https://player.vimeo.com',
+          'https://embed.bsky.app',
+          'https://open.spotify.com',
+          'https://w.soundcloud.com',
+          'https://codepen.io',
+          'https://www.tiktok.com',
+        ],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+        'frame-ancestors': ["'self'"],
+        'worker-src': ["'self'"],
+      },
+    },
   }),
 );
 
-// Middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(cookieParser(process.env.SESSION_SECRET || 'web-world-wide-secret'));
+// Session-cookie signing secret. A predictable secret means forgeable
+// sessions, so production refuses to boot without one; dev/test get a
+// random per-process secret (fine — sessions just don't survive a
+// restart there).
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('Fatal: SESSION_SECRET must be set in production (see docker/.env).');
+  process.exit(1);
+}
+if (!SESSION_SECRET) {
+  console.warn(
+    '[server] SESSION_SECRET unset — using a random per-process secret (dev/test only).',
+  );
+}
+
+// Middleware. Body caps are deliberately small: file uploads go through
+// Multer (multipart) on /api/media, not these parsers; everything else
+// is JSON/form data measured in kilobytes. The webmention endpoint
+// mounts its own 8kb parser below, so skip it here.
+const urlencodedParser = express.urlencoded({ extended: true, limit: '2mb' });
+app.use(express.json({ limit: '2mb' }));
+app.use((req, res, next) => {
+  if (req.path.startsWith('/webmention')) return next();
+  return urlencodedParser(req, res, next);
+});
+app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 
 // Rate limiting
 const authLimiter = rateLimit({
@@ -148,10 +212,11 @@ const authLimiter = rateLimit({
 
 // Phase 8: Webmention receiver is public-facing; cap inbound POSTs
 // per-IP to absorb spam without dropping Bridgy Fed's legitimate
-// bursts (Mastodon fans-out one ping per follower-mentioning-us).
+// bursts (Mastodon fans-out one ping per follower-mentioning-us —
+// but each fan-out arrives from Bridgy's IPs at a modest rate).
 const webmentionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30,
+  max: 10,
   message: { error: 'Too many webmentions. Slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -233,7 +298,13 @@ app.use('/auth', authLimiter, authRoutes);
 // auth-cookie check below doesn't bounce Bridgy Fed's POSTs.
 // The admin moderation surface mounts under /api/webmentions further
 // down (behind the session cookie).
-app.use('/webmention', webmentionLimiter, webmentionPublicRoutes);
+// A webmention is two URLs in a form body — 8kb is generous.
+app.use(
+  '/webmention',
+  webmentionLimiter,
+  express.urlencoded({ extended: false, limit: '8kb' }),
+  webmentionPublicRoutes,
+);
 
 // Auth middleware for API routes
 app.use('/api', (req, res, next) => {
