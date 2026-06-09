@@ -18,20 +18,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
-RUN npm install --omit=dev
+# Copy package files (lockfile included) and install the EXACT pinned
+# tree — `npm ci` honors package-lock.json; `npm install` would silently
+# drift from what CI tested.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 # Copy app code
 COPY server.js ./
 COPY src/ ./src/
 COPY public/ ./public/
+# Operational scripts (media/alt-text backfills) so they can run against
+# the production DB volume: docker compose exec cms node scripts/<name>.js
+COPY scripts/ ./scripts/
 
-# Git config for the CMS user
-RUN git config --global user.name "Web World Wide CMS" && \
-    git config --global user.email "cms@webworldwide.online" && \
-    git config --global init.defaultBranch main && \
-    git config --global --add safe.directory /app
+# The container runs as uid 1000 (compose `user:`), matching the host
+# owner of the mounted site/ and .git. Git author identity comes from
+# GIT_AUTHOR_* / GIT_COMMITTER_* env vars in docker-compose.yml — no
+# root-only `git config --global` here.
 
 ENV PORT=3000
 ENV NODE_ENV=production

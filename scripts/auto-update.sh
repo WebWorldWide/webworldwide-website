@@ -9,6 +9,12 @@
 REPO_DIR="/opt/web-world-wide"
 DOCKER_DIR="$REPO_DIR/docker"
 
+# Git auth: token lives in docker/.env (0600). The repo's credential
+# helper reads $GH_TOKEN. The repo is public today, so fetch/pull work
+# without it — exported anyway so this keeps working if it goes private.
+GH_TOKEN="$(grep -m1 '^GH_TOKEN=' "$DOCKER_DIR/.env" 2>/dev/null | cut -d= -f2- || true)"
+export GH_TOKEN
+
 # Navigate to repo
 cd "$REPO_DIR" || { echo "$(date): Failed to find repo at $REPO_DIR"; exit 1; }
 

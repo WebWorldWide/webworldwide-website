@@ -25,6 +25,11 @@ SITE_DIR="${SITE_DIR:-$REPO_DIR/site}"
 
 export SITE_DIR
 
+# Git auth for the scheduler's commit+push: token lives in docker/.env
+# (0600); the repo's credential helper reads $GH_TOKEN.
+GH_TOKEN="$(grep -m1 '^GH_TOKEN=' "$REPO_DIR/docker/.env" 2>/dev/null | cut -d= -f2- || true)"
+export GH_TOKEN
+
 cd "$REPO_DIR"
 
 echo "[$(date -Is)] scheduler: starting"
