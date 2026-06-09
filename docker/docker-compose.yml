@@ -33,6 +33,13 @@ services:
       context: ../admin
     container_name: cms
     restart: unless-stopped
+    # Run as the host owner of the mounted site/ + .git (adam, uid 1000)
+    # so container writes don't litter the repo with root-owned files and
+    # git needs no safe.directory escape hatch. group_add grants read on
+    # the docker socket for the health dashboard (host docker gid).
+    user: "1000:1000"
+    group_add:
+      - "${DOCKER_GID:-985}"
     environment:
       - PORT=3000
       - NODE_ENV=production
@@ -41,8 +48,23 @@ services:
       - ORIGIN=https://${DOMAIN_ADMIN}
       - SITE_DIR=/app/site
       - TE_HEALTH_DIR=/app/health
+      # Git push auth — the repo's credential helper (.git/config, which
+      # is bind-mounted below) reads this. The token never appears in a
+      # remote URL.
+      - GH_TOKEN=${GH_TOKEN}
+      # Commit identity (replaces the root-only `git config --global`
+      # that used to live in the Dockerfile).
+      - GIT_AUTHOR_NAME=Web World Wide CMS
+      - GIT_AUTHOR_EMAIL=cms@webworldwide.online
+      - GIT_COMMITTER_NAME=Web World Wide CMS
+      - GIT_COMMITTER_EMAIL=cms@webworldwide.online
+      # Umami proxy for the admin Analytics view (server-side only).
+      - UMAMI_API_URL=${UMAMI_INTERNAL_URL:-http://umami:3000}
+      - UMAMI_ADMIN_USER=${UMAMI_ADMIN_USER:-}
+      - UMAMI_ADMIN_PASSWORD=${UMAMI_ADMIN_PASSWORD:-}
+      - UMAMI_SITE_ID=${UMAMI_SITE_ID:-}
     volumes:
-      - ../site:/app/site          # So it can read/write Hugo files
+      - ../site:/app/site          # So it can read/write site files
       - ../.git:/app/.git          # So it can commit/push
       - cms_data:/app/data         # SQLite DB for auth
       - /var/run/docker.sock:/var/run/docker.sock:ro # For health dashboard
@@ -60,6 +82,14 @@ services:
       - SITE=webworldwide
       - AUTH_ANON=true             # No login required for users
       - ADMIN_SHARED_ID=${REMARK42_ADMIN_ID}
+      # Spam posture for an anonymous-friendly board: cap comment size,
+      # allow short self-edits, auto-close threads on old posts, and let
+      # community votes bury/hide obvious junk.
+      - MAX_COMMENT_SIZE=4096
+      - EDIT_TIME=5m
+      - READONLY_AGE=90
+      - LOW_SCORE=-3
+      - CRITICAL_SCORE=-7
     volumes:
       - remark_data:/srv/var
 

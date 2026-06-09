@@ -38,12 +38,16 @@ readonly ENV_FILE="$DOCKER_DIR/.env"
 readonly AGE_KEY_FILE="/etc/age/key.txt"
 readonly SYSTEMD_UNIT="/etc/systemd/system/wwwide-boot-check.service"
 readonly CRON_MARKER="# WWW-PI:"
+# Inline git credential helper: resolves pushes/fetches with the token in
+# $GH_TOKEN without ever writing the secret into a remote URL.
+# shellcheck disable=SC2016 # single-quoted on purpose; git expands at use time
+readonly GIT_CRED_HELPER='!f() { test "$1" = get && echo "username=x-access-token" && echo "password=${GH_TOKEN}"; }; f' 
 readonly REQUIRED_APT_PKGS="git curl jq age openssl ufw cron ca-certificates"
 readonly NODE_MAJOR=22
 
 # ── Args (defaults; overridden by flags or existing .env) ───────────────────
 CF_TOKEN=""
-GH_PAT=""
+GH_TOKEN=""
 GH_USER="WebWorldWide"
 DOMAIN_BASE="webworldwide.online"
 NON_INTERACTIVE=0
@@ -74,7 +78,8 @@ parse_args() {
   for arg in "$@"; do
     case "$arg" in
       --cf-token=*)        CF_TOKEN="${arg#*=}" ;;
-      --gh-pat=*)          GH_PAT="${arg#*=}" ;;
+      --gh-token=*)        GH_TOKEN="${arg#*=}" ;;
+      --gh-pat=*)          GH_TOKEN="${arg#*=}" ;; # deprecated alias
       --gh-user=*)         GH_USER="${arg#*=}" ;;
       --domain-base=*)     DOMAIN_BASE="${arg#*=}" ;;
       --non-interactive)   NON_INTERACTIVE=1 ;;
@@ -188,12 +193,14 @@ clone_or_pull_repo() {
   if [ -d "$APP_DIR/.git" ]; then
     log "repo present, pulling latest…"
     git -C "$APP_DIR" config --global --add safe.directory "$APP_DIR" || true
+    git -C "$APP_DIR" config credential.helper "$GIT_CRED_HELPER" || true
     git -C "$APP_DIR" pull --ff-only >/dev/null 2>&1 || \
       warn "git pull failed (offline? local changes?) — continuing with current checkout"
     ok "repo at $(git -C "$APP_DIR" rev-parse --short HEAD)"
   else
     log "cloning $REPO_URL_DEFAULT → $APP_DIR…"
     git clone "$REPO_URL_DEFAULT" "$APP_DIR" >/dev/null
+    git -C "$APP_DIR" config credential.helper "$GIT_CRED_HELPER" || true
     chown -R "${SUDO_USER:-root}":"${SUDO_USER:-root}" "$APP_DIR"
     ok "repo cloned"
   fi
@@ -207,12 +214,12 @@ load_existing_env() {
   log "found existing $ENV_FILE — preserving values"
   # Only adopt values that are set AND non-empty.
   local val
-  for key in CLOUDFLARE_TUNNEL_TOKEN GH_PAT GH_USER DOMAIN_ADMIN; do
+  for key in CLOUDFLARE_TUNNEL_TOKEN GH_TOKEN GH_PAT GH_USER DOMAIN_ADMIN; do
     val=$(grep -E "^${key}=" "$ENV_FILE" | head -n1 | cut -d= -f2- || true)
     [ -n "$val" ] || continue
     case "$key" in
       CLOUDFLARE_TUNNEL_TOKEN) [ -z "$CF_TOKEN" ] && CF_TOKEN="$val" ;;
-      GH_PAT)                  [ -z "$GH_PAT" ]   && GH_PAT="$val" ;;
+      GH_TOKEN|GH_PAT)         [ -z "$GH_TOKEN" ] && GH_TOKEN="$val" ;;
       GH_USER)                 GH_USER="$val" ;;
     esac
   done
@@ -229,16 +236,17 @@ prompt_secrets() {
     read -rp "  Token: " CF_TOKEN
     [ -n "$CF_TOKEN" ] || die "no Cloudflare token provided" 2
   fi
-  if [ -z "$GH_PAT" ] && [ "$SKIP_BACKUPS_REPO" -eq 0 ]; then
+  if [ -z "$GH_TOKEN" ] && [ "$SKIP_BACKUPS_REPO" -eq 0 ]; then
     if [ "$NON_INTERACTIVE" -eq 1 ]; then
-      warn "no --gh-pat; falling back to local-only backups"
+      warn "no --gh-token; falling back to local-only backups"
       SKIP_BACKUPS_REPO=1
     else
-      printf '\n%sGitHub Personal Access Token%s (for the encrypted-backups repo)\n' "$C_BOLD" "$C_RESET"
-      printf '  Needs %srepo%s scope. Create at: %shttps://github.com/settings/tokens%s\n' "$C_BOLD" "$C_RESET" "$C_BLUE" "$C_RESET"
+      printf '\n%sGitHub fine-grained access token%s (for git pushes + the encrypted-backups repo)\n' "$C_BOLD" "$C_RESET"
+      printf '  Create at: %shttps://github.com/settings/personal-access-tokens%s\n' "$C_BLUE" "$C_RESET"
+      printf '  Scope it to the website + backups repos with %sContents: Read and write%s.\n' "$C_BOLD" "$C_RESET"
       printf '  Leave blank to use local-only backups.\n'
-      read -rp "  PAT: " GH_PAT
-      [ -n "$GH_PAT" ] || SKIP_BACKUPS_REPO=1
+      read -rp "  Token: " GH_TOKEN
+      [ -n "$GH_TOKEN" ] || SKIP_BACKUPS_REPO=1
     fi
   fi
 }
@@ -268,25 +276,23 @@ validate_cf_token() {
   ok "Cloudflare token valid (tunnel=${tunnel_id:0:8}…, account=${account_tag:0:8}…)"
 }
 
-# ── validate_gh_pat ──────────────────────────────────────────────────────────
-validate_gh_pat() {
+# ── validate_gh_token ────────────────────────────────────────────────────────
+# Fine-grained tokens send no x-oauth-scopes header, so a 200 on /user is
+# the strongest generic check available; repo-level access is exercised
+# for real by the clone/push in setup_backups.
+validate_gh_token() {
   [ "$SKIP_BACKUPS_REPO" -eq 1 ] && return 0
-  [ -n "$GH_PAT" ] || return 0
-  log "validating GitHub PAT…"
+  [ -n "$GH_TOKEN" ] || return 0
+  log "validating GitHub token…"
   local headers
-  headers=$(curl -sI -H "Authorization: token $GH_PAT" \
+  headers=$(curl -sI -H "Authorization: token $GH_TOKEN" \
     https://api.github.com/user 2>/dev/null || true)
   if ! echo "$headers" | head -n1 | grep -q "200"; then
-    warn "GitHub PAT rejected by api.github.com — falling back to local-only backups"
+    warn "GitHub token rejected by api.github.com — falling back to local-only backups"
     SKIP_BACKUPS_REPO=1
     return 0
   fi
-  if ! echo "$headers" | grep -i '^x-oauth-scopes:' | grep -q 'repo'; then
-    warn "GitHub PAT lacks 'repo' scope — falling back to local-only backups"
-    SKIP_BACKUPS_REPO=1
-    return 0
-  fi
-  ok "GitHub PAT valid (repo scope present)"
+  ok "GitHub token valid"
 }
 
 # ── setup_backups ────────────────────────────────────────────────────────────
@@ -311,20 +317,26 @@ setup_backups() {
   else
     if [ ! -d "$BACKUP_DIR/.git" ]; then
       log "cloning/creating www-blog-backups repo…"
+      # Plain URL + one-shot credential helper: the token must never be
+      # embedded in the remote URL (it would persist in .git/config).
+      local backup_url="https://github.com/${GH_USER}/www-blog-backups.git"
       # Try clone first; if 404, create via GitHub API.
-      if ! git clone "https://${GH_PAT}@github.com/${GH_USER}/www-blog-backups.git" "$BACKUP_DIR" 2>/dev/null; then
+      if ! GH_TOKEN="$GH_TOKEN" git -c credential.helper="$GIT_CRED_HELPER" clone "$backup_url" "$BACKUP_DIR" 2>/dev/null; then
         log "repo not found — creating https://github.com/${GH_USER}/www-blog-backups (private)"
-        curl -fsS -H "Authorization: token $GH_PAT" \
+        curl -fsS -H "Authorization: token $GH_TOKEN" \
              -H "Content-Type: application/json" \
              -d '{"name":"www-blog-backups","private":true,"description":"Encrypted backups for webworldwide-website (Pi)"}' \
              https://api.github.com/user/repos >/dev/null \
           || die "failed to create www-blog-backups repo via GitHub API" 1
         sleep 2
-        git clone "https://${GH_PAT}@github.com/${GH_USER}/www-blog-backups.git" "$BACKUP_DIR" \
+        GH_TOKEN="$GH_TOKEN" git -c credential.helper="$GIT_CRED_HELPER" clone "$backup_url" "$BACKUP_DIR" \
           || die "failed to clone newly-created backup repo" 1
       fi
       chown -R "${SUDO_USER:-root}":"${SUDO_USER:-root}" "$BACKUP_DIR"
     fi
+    # Persistent helper so every later push (backup.sh under cron) just
+    # needs GH_TOKEN in the environment.
+    git -C "$BACKUP_DIR" config credential.helper "$GIT_CRED_HELPER"
     # Always overwrite public.key (it's idempotent — same content if same key).
     echo "$pub_key" > "$BACKUP_DIR/public.key"
     if ! git -C "$BACKUP_DIR" diff --quiet -- public.key 2>/dev/null; then
@@ -394,6 +406,7 @@ SITE_BASE_URL=https://${DOMAIN_BASE}
 
 # ── Bootstrap-managed (used by --self-test) ──
 GH_USER=$GH_USER
+GH_TOKEN=$GH_TOKEN
 HEALTHCHECK_WEBHOOK_URL=
 EOF
   chmod 600 "$tmp"
@@ -632,7 +645,7 @@ main() {
   load_existing_env
   prompt_secrets
   validate_cf_token
-  validate_gh_pat
+  validate_gh_token
   setup_backups
   write_env
   mkdir -p "$DOCKER_DIR/health"

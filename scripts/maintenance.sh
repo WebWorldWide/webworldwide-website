@@ -7,11 +7,13 @@
 
 echo "Starting system maintenance at $(date)"
 
-# 1. Prune unused Docker images, containers, and networks
-# -a removes all unused images (not just dangling)
-# -f forces without confirmation
+# 1. Prune dangling Docker images and build cache.
+# Deliberately NOT `-a` (would delete the images a stopped service needs
+# to come back) and NOT `--volumes` (would delete data volumes of any
+# container that happens to be stopped — this combination deleted the
+# remark42 container + nearly its data in June 2026).
 echo "[1/3] Pruning Docker..."
-docker system prune -af --volumes
+docker system prune -f
 
 # 2. Clean apt package manager cache
 echo "[2/3] Cleaning apt cache..."
