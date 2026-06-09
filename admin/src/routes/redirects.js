@@ -138,7 +138,7 @@ router.get('/_shortcodes', (_req, res) => {
   for (const file of readdirSync(SHORTCODES_DIR)) {
     if (!file.endsWith('.html')) continue;
     const full = join(SHORTCODES_DIR, file);
-    let raw = '';
+    let raw;
     try {
       raw = readFileSync(full, 'utf-8');
     } catch {

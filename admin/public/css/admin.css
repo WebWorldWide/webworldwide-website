@@ -49,23 +49,23 @@
   /* WCAG AA: 6.39:1 on --bg (#07090A) */
   --fg-mute: #8a9491;
   --accent: #3dff7f;
-  --accent-soft: rgba(61, 255, 127, 0.1);
-  --accent-glow: rgba(61, 255, 127, 0.28);
+  --accent-soft: rgb(61, 255, 127, 0.1);
+  --accent-glow: rgb(61, 255, 127, 0.28);
   --accent-on: #001a0a;
-  --selection: rgba(61, 255, 127, 0.28);
+  --selection: rgb(61, 255, 127, 0.28);
 
   /* Admin-only status tokens */
   --warn: #ffd166;
-  --warn-soft: rgba(255, 209, 102, 0.1);
-  --warn-glow: rgba(255, 209, 102, 0.28);
+  --warn-soft: rgb(255, 209, 102, 0.1);
+  --warn-glow: rgb(255, 209, 102, 0.28);
   --danger: #ff6b6b;
-  --danger-soft: rgba(255, 107, 107, 0.1);
-  --danger-glow: rgba(255, 107, 107, 0.28);
+  --danger-soft: rgb(255, 107, 107, 0.1);
+  --danger-glow: rgb(255, 107, 107, 0.28);
 
-  --glass-tint: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.07);
-  --glass-highlight: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 24px 60px -16px rgba(0, 0, 0, 0.6);
+  --glass-tint: rgb(255, 255, 255, 0.03);
+  --glass-border: rgb(255, 255, 255, 0.07);
+  --glass-highlight: rgb(255, 255, 255, 0.1);
+  --glass-shadow: 0 1px 0 0 rgb(255, 255, 255, 0.04) inset, 0 24px 60px -16px rgb(0, 0, 0, 0.6);
 }
 
 /* LIGHT — mirrors public site palette */
@@ -81,23 +81,22 @@
   /* WCAG AA: 5.57:1 on --bg (#F3F4F1) */
   --fg-mute: #5f6359;
   --accent: #048037;
-  --accent-soft: rgba(4, 128, 55, 0.1);
-  --accent-glow: rgba(4, 128, 55, 0.28);
+  --accent-soft: rgb(4, 128, 55, 0.1);
+  --accent-glow: rgb(4, 128, 55, 0.28);
   --accent-on: #ffffff;
-  --selection: rgba(4, 128, 55, 0.2);
+  --selection: rgb(4, 128, 55, 0.2);
 
   --warn: #8c5a0a; /* darker amber, ~5:1 on light bg */
-  --warn-soft: rgba(140, 90, 10, 0.1);
-  --warn-glow: rgba(140, 90, 10, 0.22);
+  --warn-soft: rgb(140, 90, 10, 0.1);
+  --warn-glow: rgb(140, 90, 10, 0.22);
   --danger: #b83434; /* ~5.6:1 on light bg */
-  --danger-soft: rgba(184, 52, 52, 0.1);
-  --danger-glow: rgba(184, 52, 52, 0.24);
+  --danger-soft: rgb(184, 52, 52, 0.1);
+  --danger-glow: rgb(184, 52, 52, 0.24);
 
-  --glass-tint: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(15, 18, 12, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.85);
-  --glass-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.7) inset, 0 24px 60px -16px rgba(15, 30, 15, 0.12);
+  --glass-tint: rgb(255, 255, 255, 0.55);
+  --glass-border: rgb(15, 18, 12, 0.08);
+  --glass-highlight: rgb(255, 255, 255, 0.85);
+  --glass-shadow: 0 1px 0 0 rgb(255, 255, 255, 0.7) inset, 0 24px 60px -16px rgb(15, 30, 15, 0.12);
 }
 
 /* ============================================================
@@ -165,7 +164,7 @@ img {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
@@ -273,8 +272,8 @@ body[data-page="login"] {
     to bottom,
     transparent 0,
     transparent 3px,
-    rgba(0, 0, 0, 0.04) 3px,
-    rgba(0, 0, 0, 0.04) 4px
+    rgb(0, 0, 0, 0.04) 3px,
+    rgb(0, 0, 0, 0.04) 4px
   );
   mix-blend-mode: multiply;
   opacity: 0.1;
@@ -1225,7 +1224,7 @@ body[data-page="login"] {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(0, 0, 0, 0.6);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   z-index: 500;
@@ -1244,7 +1243,7 @@ body[data-page="login"] {
   border: 1px solid var(--glass-border);
   border-radius: 8px;
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.5),
+    0 30px 80px rgb(0, 0, 0, 0.5),
     0 1px 0 var(--glass-highlight) inset;
   /* Cap to the viewport (minus the .modal's 24px padding) and scroll inside
      so a tall modal never clips off-screen. `dvh` accounts for mobile chrome.
@@ -1305,7 +1304,7 @@ body[data-page="login"] {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--fg);
-  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 28px -8px rgb(0, 0, 0, 0.5);
   pointer-events: auto;
   animation: toast-in 180ms ease-out;
 }
@@ -1406,7 +1405,7 @@ body[data-page="login"] {
   position: fixed;
   inset: 0;
   z-index: 700;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgb(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
@@ -1424,7 +1423,7 @@ body[data-page="login"] {
   border: 1px solid var(--glass-border);
   border-radius: 8px;
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.5),
+    0 30px 80px rgb(0, 0, 0, 0.5),
     0 1px 0 var(--glass-highlight) inset;
   overflow: hidden;
   font-family: var(--mono);

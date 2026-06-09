@@ -101,7 +101,8 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'ready',
     uploaded_at INTEGER NOT NULL,
     post_refs_json TEXT DEFAULT '[]',
-    storage_path TEXT
+    storage_path TEXT,
+    alt_text TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_media_uploaded_at ON media(uploaded_at);
   CREATE INDEX IF NOT EXISTS idx_media_hash ON media(hash);

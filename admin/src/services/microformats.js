@@ -110,7 +110,7 @@ export function parseSource(html, sourceUrl, targetUrl) {
   // actually links to the target. Microformats provide a structured
   // path (u-in-reply-to etc.); we also accept a plain `<a href>` in
   // the body as a fallback (per W3C — the link discovery rule).
-  let linksToTarget = false;
+  let linksToTarget;
   if (type !== 'mention') {
     // We already proved it via the structured property match.
     linksToTarget = true;

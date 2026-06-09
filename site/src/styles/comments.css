@@ -2,7 +2,7 @@
    Comments form + preview rows
    ============================================================ */
 .comment-form {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(255, 255, 255, 0.7);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   border: 2px solid var(--ink);

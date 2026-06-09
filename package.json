@@ -28,7 +28,7 @@
     "test:e2e": "playwright test --config=playwright.config.js",
     "test:e2e:install": "playwright install --with-deps",
     "test:lighthouse": "lhci autorun --config=lighthouserc.json",
-    "test:a11y": "pa11y-ci --config .pa11yci.json",
+    "test:a11y": "playwright test test/playwright/a11y.spec.js test/playwright/admin-a11y.spec.js --project=chromium",
     "build": "npm --prefix site run build",
     "build:check": "npm run build && npm run lint:html-site",
     "dev": "node scripts/dev/preflight.mjs && run-p -l dev:site dev:admin",
@@ -49,30 +49,29 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
-    "@eslint/js": "^9.15.0",
+    "@eslint/js": "^10.0.1",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.49.0",
     "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.8",
-    "eslint": "^9.15.0",
-    "eslint-plugin-jsdoc": "^50.5.0",
-    "eslint-plugin-n": "^17.13.2",
+    "eslint": "^10.4.1",
+    "eslint-plugin-jsdoc": "^63.0.1",
+    "eslint-plugin-n": "^18.0.1",
     "eslint-plugin-promise": "^7.1.0",
-    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-security": "^4.0.0",
     "globals": "^15.12.0",
     "htmlhint": "^1.1.4",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^15.2.10",
-    "markdownlint-cli2": "^0.15.0",
+    "lint-staged": "^17.0.7",
+    "markdownlint-cli2": "^0.22.1",
     "npm-run-all2": "^7.0.1",
-    "pa11y-ci": "^3.1.0",
     "prettier": "^3.3.3",
-    "shellcheck": "^3.1.0",
-    "stylelint": "^16.10.0",
-    "stylelint-config-standard": "^36.0.1",
+    "shellcheck": "^4.1.0",
+    "stylelint": "^17.12.0",
+    "stylelint-config-standard": "^40.0.0",
     "stylelint-no-unsupported-browser-features": "^8.0.4",
-    "stylelint-order": "^6.0.4",
+    "stylelint-order": "^8.1.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
@@ -94,5 +93,10 @@
     "*.{json,html,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "overrides": {
+    "file-type": "^21.3.4",
+    "tmp": "^0.2.6",
+    "uuid": "^11.1.1"
   }
 }

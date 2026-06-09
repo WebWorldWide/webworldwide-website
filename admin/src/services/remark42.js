@@ -226,7 +226,7 @@ async function call(path, opts) {
 
   const ct = res.headers.get('content-type') || '';
   /** @type {any} */
-  let payload = null;
+  let payload;
   if (ct.includes('application/json')) {
     payload = await res.json().catch(() => null);
   } else {

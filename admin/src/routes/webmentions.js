@@ -222,7 +222,7 @@ export async function validateMention(id) {
   const row = db().prepare('SELECT * FROM webmentions WHERE id = ?').get(id);
   if (!row) return;
 
-  let body = '';
+  let body;
   try {
     body = await fetchSource(row.source);
   } catch (err) {
