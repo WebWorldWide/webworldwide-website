@@ -90,7 +90,7 @@ export async function publishChanges() {
     };
   } catch (err) {
     console.error('Git publish error:', err);
-    throw new Error(`Failed to publish: ${err.message}`);
+    throw new Error(`Failed to publish: ${err.message}`, { cause: err });
   }
 }
 

@@ -165,7 +165,7 @@ export function markDone(jobId, conversions, opts) {
     if (conversions && typeof conversions === 'object') {
       const media = db.prepare('SELECT conversions_json FROM media WHERE id = ?').get(job.media_id);
       if (media) {
-        let existing = {};
+        let existing;
         try {
           existing = JSON.parse(media.conversions_json || '{}');
         } catch {

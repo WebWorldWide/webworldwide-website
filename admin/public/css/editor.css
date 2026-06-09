@@ -49,7 +49,7 @@
 .editor-pane:focus-within {
   border-color: var(--sky-deep);
   box-shadow:
-    0 0 0 3px rgba(30, 104, 240, 0.28),
+    0 0 0 3px rgb(30, 104, 240, 0.28),
     var(--shadow-card);
 }
 /* The pane ring is the editor's focus indicator, so suppress the inner
@@ -593,7 +593,7 @@
   right: 2px;
   font-family: var(--mono);
   font-size: 8px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0, 0, 0, 0.5);
   color: var(--accent);
   padding: 1px 4px;
   border-radius: 2px;
@@ -755,7 +755,7 @@
   background: var(--bg, var(--glass-tint));
   border: 1px solid var(--glass-border);
   border-radius: 6px;
-  box-shadow: var(--glass-shadow, 0 4px 20px rgba(0, 0, 0, 0.18));
+  box-shadow: var(--glass-shadow, 0 4px 20px rgb(0, 0, 0, 0.18));
   padding: 4px;
   font-family: var(--sans);
   max-height: 320px;
@@ -831,7 +831,7 @@
 .te-link-dialog {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgb(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -846,7 +846,7 @@
   background-color: var(--bg-deep, var(--bg, #fff));
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  box-shadow: var(--glass-shadow, 0 12px 40px rgba(0, 0, 0, 0.32));
+  box-shadow: var(--glass-shadow, 0 12px 40px rgb(0, 0, 0, 0.32));
   padding: 18px 18px 14px;
   width: min(420px, 100%);
   display: flex;
@@ -1349,7 +1349,7 @@
   text-decoration: none;
   font-size: 13px;
   line-height: 1.35;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   border-left: 2px solid transparent;
 }
 .ed-toc-link:hover,
@@ -1401,13 +1401,13 @@
   padding: 12px 14px;
   border-radius: 8px;
   font-family: arial, sans-serif;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 6px rgb(0, 0, 0, 0.12);
+  border: 1px solid rgb(0, 0, 0, 0.08);
 }
 :root[data-theme="dark"] .serp-card {
   background: #2c2c2c;
   color: #dadce0;
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgb(255, 255, 255, 0.08);
   box-shadow: none;
 }
 .serp-url {
@@ -1432,7 +1432,7 @@
   margin-bottom: 3px;
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 :root[data-theme="dark"] .serp-title {
   color: #8ab4f8;
@@ -1441,7 +1441,7 @@
   font-size: 13px;
   line-height: 1.45;
   color: #4d5156;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 :root[data-theme="dark"] .serp-desc {
   color: #bdc1c6;
@@ -1789,7 +1789,7 @@
     padding: 6px 10px;
     overflow-x: auto;
     flex-wrap: nowrap;
-    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 -12px 32px rgb(0, 0, 0, 0.35);
   }
   .te-editor-toolbar-rich .te-tb-divider {
     margin: 0 4px;
@@ -1840,7 +1840,7 @@
   border: 1px solid var(--line, currentColor);
   border-radius: 6px;
   padding: 6px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 20px rgb(0, 0, 0, 0.45);
   font-family: var(--mono, monospace);
   font-size: 12px;
   max-width: 520px;

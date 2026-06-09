@@ -329,7 +329,7 @@
   width: min(620px, 100vw);
   background: var(--bg-elev);
   border-left: 1px solid var(--glass-border);
-  box-shadow: -20px 0 60px -20px rgba(0, 0, 0, 0.6);
+  box-shadow: -20px 0 60px -20px rgb(0, 0, 0, 0.6);
   z-index: 60;
   transform: translateX(100%);
   transition: transform 180ms ease;
@@ -403,7 +403,7 @@
   font-size: 13px;
   line-height: 1.55;
   white-space: pre-wrap;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .te-cm-detail-content code {
@@ -494,7 +494,7 @@
   border-radius: 8px;
   font-family: var(--mono);
   font-size: 12px;
-  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 30px -10px rgb(0, 0, 0, 0.45);
   z-index: 70;
 }
 

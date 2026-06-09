@@ -360,8 +360,11 @@ app.use('/api/comments', commentsRoutes);
 // the "New Post" picker can fetch each scaffold.
 app.use('/api/templates', express.static(join(__dirname, 'templates'), { fallthrough: false }));
 
-// SPA fallback — serve index.html for client-side routing
-app.get('*', (req, res) => {
+// SPA fallback — serve index.html for client-side routing.
+// (Plain middleware, not app.get('*'): express 5 / path-to-regexp 8
+// rejects the bare-'*' route pattern.)
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
     return res.status(404).json({ error: 'Not found' });
   }

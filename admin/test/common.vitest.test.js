@@ -104,29 +104,20 @@ describe('TE.fmtUptime', () => {
   });
 });
 
-describe('theme toggle', () => {
-  it('flips data-theme, localStorage, aria-pressed, and glyph on click', () => {
+describe('theme (light-only)', () => {
+  // Dark mode is retired — common.js forces data-theme="light" on boot
+  // and clears any legacy saved preference so old localStorage values
+  // can't resurrect the dark palette.
+  it('forces light on boot and clears a legacy saved theme', () => {
+    window.localStorage.setItem('theme', 'dark');
     bootCommon();
-    const btn = /** @type {HTMLButtonElement} */ (document.getElementById('btn-theme'));
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(btn.getAttribute('aria-pressed')).toBe('false');
-
-    btn.click();
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(btn.getAttribute('aria-pressed')).toBe('true');
-    expect(window.localStorage.getItem('theme')).toBe('light');
-    const glyph = document.getElementById('btn-theme-glyph');
-    expect(glyph?.textContent).toBe('☀');
-
-    btn.click();
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(window.localStorage.getItem('theme')).toBe('dark');
-    expect(glyph?.textContent).toBe('☾');
+    expect(window.localStorage.getItem('theme')).toBe(null);
   });
 
-  it('respects a pre-saved theme on boot', () => {
-    window.localStorage.setItem('theme', 'light');
+  it('stays light even after a stray toggle click', () => {
     bootCommon();
+    /** @type {HTMLButtonElement | null} */ (document.getElementById('btn-theme'))?.click();
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 });

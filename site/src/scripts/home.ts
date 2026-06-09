@@ -15,14 +15,17 @@ const reducedMotion = (): boolean =>
 export function mouseParallax(stageId = 'wordmarkStage'): void {
   const stage = document.getElementById(stageId);
   if (!stage || reducedMotion()) return;
-  let mx = 0, my = 0, tx = 0, ty = 0;
+  let mx = 0,
+    my = 0,
+    tx = 0,
+    ty = 0;
   window.addEventListener(
     'mousemove',
     (e) => {
       mx = (e.clientX / window.innerWidth - 0.5) * 2;
       my = (e.clientY / window.innerHeight - 0.5) * 2;
     },
-    { passive: true }
+    { passive: true },
   );
   (function tick() {
     tx += (mx - tx) * 0.06;
@@ -76,7 +79,7 @@ export function scrollReveal(): void {
         }
       });
     },
-    { threshold: 0.15, rootMargin: '0px 0px -10% 0px' }
+    { threshold: 0.15, rootMargin: '0px 0px -10% 0px' },
   );
   els.forEach((el) => io.observe(el));
 }
@@ -105,7 +108,7 @@ export function filmClouds(): void {
     '00211122022112',
     '02111111111112',
     '02111111111112',
-    '02222222222220'
+    '02222222222220',
   ];
   const svg = (scale: number): string => {
     const h = shape.length;

@@ -288,7 +288,6 @@ router.get('/', async (req, res) => {
 
   /** @type {any[]} */
   let items = [];
-  let total = 0;
   /** @type {string|null} */
   let upstreamError = null;
 
@@ -342,7 +341,7 @@ router.get('/', async (req, res) => {
 
   // Sort newest first, slice for page.
   items.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  total = items.length;
+  const total = items.length;
   const start = (page - 1) * limit;
   const end = start + limit;
   const paged = items.slice(start, end);

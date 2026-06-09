@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const ICONS_JS = readFileSync(join(__dirname, '..', 'public', 'js', 'icons.js'), 'utf-8');
 const COMMON_JS = readFileSync(join(__dirname, '..', 'public', 'js', 'common.js'), 'utf-8');
 const DASHBOARD_JS = readFileSync(join(__dirname, '..', 'public', 'js', 'dashboard.js'), 'utf-8');
 
@@ -129,6 +130,9 @@ beforeEach(() => {
     });
   });
 
+  // Mirror index.html's load order: icons.js registers TE.icon, which
+  // dashboard.js row templates call.
+  new Function(ICONS_JS)();
   new Function(COMMON_JS)();
   new Function(DASHBOARD_JS)();
 });

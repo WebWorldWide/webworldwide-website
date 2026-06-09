@@ -146,7 +146,7 @@
       }
     }
     /** @type {any} */
-    let data = null;
+    let data;
     const ct = res.headers.get('content-type') || '';
     if (ct.includes('application/json')) {
       data = await res.json().catch(() => null);

@@ -42,7 +42,7 @@ if (!existsSync(envDevPath)) {
 }
 
 // ── 2. Docker daemon ─────────────────────────────────────────────────
-let dockerUp = false;
+let dockerUp;
 try {
   execSync('docker info', { stdio: 'ignore', timeout: 5000 });
   dockerUp = true;

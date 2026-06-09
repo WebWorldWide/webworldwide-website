@@ -25,20 +25,14 @@ const SHAPES: string[][] = [
     '0211111211111111111112',
     '2111111111111111111112',
     '2111111111111111111112',
-    '0222222222222222222220'
+    '0222222222222222222220',
   ],
-  [
-    '00022200002200',
-    '00211122022112',
-    '02111111111112',
-    '02111111111112',
-    '02222222222220'
-  ],
+  ['00022200002200', '00211122022112', '02111111111112', '02111111111112', '02222222222220'],
   [
     '00022000022000022000022000',
     '02211220221122022112202112',
     '21111111111111111111111111',
-    '02222222222222222222222220'
+    '02222222222222222222222220',
   ],
   [
     '0002220000',
@@ -47,8 +41,8 @@ const SHAPES: string[][] = [
     '2111111112',
     '2111111112',
     '0211111120',
-    '0022222200'
-  ]
+    '0022222200',
+  ],
 ];
 
 function shapeToSVG(shape: string[], scale: number, outlineHex: string): string {
@@ -72,10 +66,54 @@ function shapeToSVG(shape: string[], scale: number, outlineHex: string): string 
 }
 
 const DEFAULT_LAYERS: CloudLayer[] = [
-  { count: 4, scaleMin: 3, scaleMax: 5, durMin: 280, durMax: 360, opMin: 0.3, opMax: 0.5, outline: '%23d4dff0', topMin: 0, topMax: 30 },
-  { count: 6, scaleMin: 5, scaleMax: 9, durMin: 220, durMax: 300, opMin: 0.5, opMax: 0.7, outline: '%23c0d0ec', topMin: 2, topMax: 65 },
-  { count: 6, scaleMin: 9, scaleMax: 13, durMin: 150, durMax: 220, opMin: 0.7, opMax: 0.85, outline: '%23a8c8f0', topMin: 6, topMax: 88 },
-  { count: 3, scaleMin: 14, scaleMax: 20, durMin: 100, durMax: 160, opMin: 0.85, opMax: 0.95, outline: '%2388b4e8', topMin: 14, topMax: 96 }
+  {
+    count: 4,
+    scaleMin: 3,
+    scaleMax: 5,
+    durMin: 280,
+    durMax: 360,
+    opMin: 0.3,
+    opMax: 0.5,
+    outline: '%23d4dff0',
+    topMin: 0,
+    topMax: 30,
+  },
+  {
+    count: 6,
+    scaleMin: 5,
+    scaleMax: 9,
+    durMin: 220,
+    durMax: 300,
+    opMin: 0.5,
+    opMax: 0.7,
+    outline: '%23c0d0ec',
+    topMin: 2,
+    topMax: 65,
+  },
+  {
+    count: 6,
+    scaleMin: 9,
+    scaleMax: 13,
+    durMin: 150,
+    durMax: 220,
+    opMin: 0.7,
+    opMax: 0.85,
+    outline: '%23a8c8f0',
+    topMin: 6,
+    topMax: 88,
+  },
+  {
+    count: 3,
+    scaleMin: 14,
+    scaleMax: 20,
+    durMin: 100,
+    durMax: 160,
+    opMin: 0.85,
+    opMax: 0.95,
+    outline: '%2388b4e8',
+    topMin: 14,
+    topMax: 96,
+  },
 ];
 
 function rand(min: number, max: number): number {

@@ -130,7 +130,7 @@ router.get('/', async (req, res) => {
     console.warn('[embed] cache read failed:', err.message);
   }
   if (cached && cached.expires_at > now) {
-    let payload = null;
+    let payload;
     try {
       payload = JSON.parse(cached.payload_json);
     } catch {

@@ -22,10 +22,10 @@
   /* Sky blue (the public home-page background color) is the admin accent. */
   --accent: var(--sky-deep); /* #1450c8 — AA on white for text/links/active */
   --accent-bg: var(--sky); /* #1e68f0 — bright fill for CTAs (white text) */
-  --accent-soft: rgba(30, 104, 240, 0.12);
-  --accent-glow: rgba(30, 104, 240, 0.26);
+  --accent-soft: rgb(30, 104, 240, 0.12);
+  --accent-glow: rgb(30, 104, 240, 0.26);
   --accent-on: #ffffff;
-  --selection: rgba(30, 104, 240, 0.22);
+  --selection: rgb(30, 104, 240, 0.22);
 }
 
 /* TYPOGRAPHY — one clean, legible family for reading + writing. Cormorant

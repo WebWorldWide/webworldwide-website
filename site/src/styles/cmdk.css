@@ -4,7 +4,7 @@
 .cmdk-back {
   position: fixed;
   inset: 0;
-  background: rgba(14, 41, 96, 0.55);
+  background: rgb(14, 41, 96, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: var(--z-modal);
@@ -16,7 +16,7 @@
 .cmdk {
   width: 640px;
   max-width: 92%;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgb(255, 255, 255, 0.92);
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
   border: var(--border-strong);
@@ -86,7 +86,7 @@
 }
 .cmdk-row.is-active,
 .cmdk-row:hover {
-  background: rgba(236, 90, 43, 0.1);
+  background: rgb(236, 90, 43, 0.1);
   border-left-color: var(--cherry-strong);
 }
 .cmdk-row-l {

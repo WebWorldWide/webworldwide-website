@@ -40,22 +40,22 @@
   --paper-warm: #eef3fb;
 
   /* Glass */
-  --glass: rgba(255, 255, 255, 0.74);
-  --glass-strong: rgba(255, 255, 255, 0.85);
-  --glass-soft: rgba(255, 255, 255, 0.45);
-  --glass-warm: rgba(238, 243, 251, 0.88);
+  --glass: rgb(255, 255, 255, 0.74);
+  --glass-strong: rgb(255, 255, 255, 0.85);
+  --glass-soft: rgb(255, 255, 255, 0.45);
+  --glass-warm: rgb(238, 243, 251, 0.88);
 
   /* WCAG-friendly hairlines */
-  --line-www: rgba(14, 41, 96, 0.18);
-  --line-strong-www: rgba(14, 41, 96, 0.42);
+  --line-www: rgb(14, 41, 96, 0.18);
+  --line-strong-www: rgb(14, 41, 96, 0.42);
 
   /* Shadows / borders — calmed for a legible daily-driver tool.
      Was chunky hard-offset ink (8px 8px 0); now subtle elevation +
      hairline borders so panels read as clean cards, not stickers. */
-  --shadow-card: 0 1px 3px rgba(14, 41, 96, 0.1), 0 1px 2px rgba(14, 41, 96, 0.06);
-  --shadow-card-sm: 0 1px 2px rgba(14, 41, 96, 0.08);
-  --shadow-card-xs: 0 1px 1px rgba(14, 41, 96, 0.06);
-  --shadow-button: 0 1px 2px rgba(14, 41, 96, 0.08);
+  --shadow-card: 0 1px 3px rgb(14, 41, 96, 0.1), 0 1px 2px rgb(14, 41, 96, 0.06);
+  --shadow-card-sm: 0 1px 2px rgb(14, 41, 96, 0.08);
+  --shadow-card-xs: 0 1px 1px rgb(14, 41, 96, 0.06);
+  --shadow-button: 0 1px 2px rgb(14, 41, 96, 0.08);
   --border-strong: 1px solid var(--line-strong-www);
   --border-soft: 1px solid var(--line-www);
 
@@ -88,26 +88,26 @@
      display text, and decorative icons. */
   --accent: var(--cherry-strong);
   --accent-bg: var(--cherry);
-  --accent-soft: rgba(236, 90, 43, 0.12);
-  --accent-glow: rgba(236, 90, 43, 0.34);
+  --accent-soft: rgb(236, 90, 43, 0.12);
+  --accent-glow: rgb(236, 90, 43, 0.34);
   --accent-on: #ffffff;
   /* Alias used by a few editor surfaces (e.g. .serp-card's white card). */
   --fg-on-accent: var(--accent-on);
   --selection: var(--cherry);
 
   --warn: #d68f1e;
-  --warn-soft: rgba(214, 143, 30, 0.16);
-  --warn-glow: rgba(214, 143, 30, 0.32);
+  --warn-soft: rgb(214, 143, 30, 0.16);
+  --warn-glow: rgb(214, 143, 30, 0.32);
   --danger: #d94a3a;
-  --danger-soft: rgba(217, 74, 58, 0.14);
-  --danger-glow: rgba(217, 74, 58, 0.3);
+  --danger-soft: rgb(217, 74, 58, 0.14);
+  --danger-glow: rgb(217, 74, 58, 0.3);
   --ok: var(--sun-deep);
-  --ok-soft: rgba(58, 169, 130, 0.14);
+  --ok-soft: rgb(58, 169, 130, 0.14);
 
   --glass-tint: var(--glass);
   --glass-border: var(--ink);
-  --glass-highlight: rgba(255, 255, 255, 0.6);
-  --glass-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.7) inset, var(--shadow-card);
+  --glass-highlight: rgb(255, 255, 255, 0.6);
+  --glass-shadow: 0 1px 0 0 rgb(255, 255, 255, 0.7) inset, var(--shadow-card);
 
   /* Override the admin's legacy font stacks so every var(--mono),
      var(--sans), var(--serif) downstream uses the WWW palette. */
