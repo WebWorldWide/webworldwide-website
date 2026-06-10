@@ -154,6 +154,15 @@
     }
     const close = () => setOpen(false);
 
+    // Growing past the breakpoint (rotate, window resize) turns the
+    // drawer back into the static rail — the focus trap and nav-open
+    // state must release with it or Tab stays caged in the sidebar.
+    const mq = window.matchMedia('(max-width: 800px)');
+    const onBreakpoint = () => {
+      if (!mq.matches && document.body.classList.contains('nav-open')) close();
+    };
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onBreakpoint);
+
     toggle.addEventListener('click', () => setOpen(!document.body.classList.contains('nav-open')));
     backdrop.addEventListener('click', close);
     // Following a nav link should dismiss the drawer.
@@ -192,21 +201,25 @@
     // this hook or edits silently vanish on a sidebar click.
     window.TE.viewGuards = window.TE.viewGuards || {};
 
+    // Guards are registered under canonical route names — normalize
+    // aliases (#dashboard→posts, #terminal→system) before lookup, the
+    // same mapping show() uses for module init.
+    const canonical = (r) => (r === 'terminal' ? 'system' : r === 'dashboard' ? 'posts' : r);
+
     let activeRoute = currentRoute();
-    let restoringHash = false;
     show(activeRoute);
     window.addEventListener('hashchange', () => {
-      if (restoringHash) {
-        restoringHash = false;
-        return;
-      }
       const next = currentRoute();
-      if (next !== activeRoute) {
-        const guard = window.TE.viewGuards[activeRoute];
+      if (canonical(next) !== canonical(activeRoute)) {
+        const guard = window.TE.viewGuards[canonical(activeRoute)];
         const warning = typeof guard === 'function' ? guard() : null;
         if (warning && !window.confirm(`${warning} Leave this view anyway?`)) {
-          restoringHash = true;
-          window.location.hash = activeRoute === 'overview' ? '#overview' : `#${activeRoute}`;
+          // replaceState: assigning location.hash would PUSH a new
+          // history entry (desyncing the back button — each cancel
+          // would add a step), and replaceState fires no hashchange,
+          // so no restore-flag dance is needed. The view never
+          // changed; only the URL is put back.
+          window.history.replaceState(null, '', `#${activeRoute}`);
           return;
         }
       }
