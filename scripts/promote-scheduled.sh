@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# Repo hygiene: cron installs this as root, but everything below only
+# needs adam (repo owner; in the docker group). Re-exec so pulled/
+# committed files never end up root-owned again.
+if [ "$(id -u)" = 0 ] && command -v runuser >/dev/null 2>&1; then
+  exec runuser -u adam -- "$0" "$@"
+fi
+
 # ==============================================================================
 # Web World Wide — Scheduled Publish Promoter
 #
