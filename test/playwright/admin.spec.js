@@ -17,6 +17,7 @@
 import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { loginDevAdmin } from './helpers/login.js';
 import { startStaticAdmin } from './helpers/static-admin.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +42,9 @@ test.afterAll(async () => {
 });
 
 const stackUp = process.env.DEV_STACK_RUNNING === 'true' || process.env.DEV_STACK_RUNNING === '1';
-const liveAdminUrl = process.env.ADMIN_ORIGIN || 'http://127.0.0.1:8787';
+// `npm run dev:all` serves the admin natively on :3000 (see
+// scripts/dev/preflight.mjs) — ADMIN_ORIGIN overrides for other setups.
+const liveAdminUrl = process.env.ADMIN_ORIGIN || 'http://127.0.0.1:3000';
 
 /**
  * Set up a console listener that fails the test on any unexpected
@@ -135,6 +138,7 @@ test.describe('admin shell', () => {
       !stackUp,
       'Cmd+K palette is wired in common.js which only loads from http(s); set DEV_STACK_RUNNING=1.',
     );
+    await loginDevAdmin(page, liveAdminUrl);
     await page.goto(`${liveAdminUrl}/index.html`);
     await page.waitForFunction(() => Boolean(/** @type {any} */ (window).TE));
     await page.keyboard.press('Meta+K');

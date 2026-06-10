@@ -42,3 +42,38 @@ test('server.js builds the full Express app without throwing', async () => {
   assert.equal(typeof mod.app, 'function', 'app is an Express handler');
   assert.equal(typeof mod.app.use, 'function', 'app has Express methods');
 });
+
+test('GET /auth/status is NOT metered by the brute-force limiter', async () => {
+  // The SPA pings /auth/status on every page load. If the auth limiter
+  // (20 req / 15 min) counts those GETs, a normal user locks themself
+  // out of the admin within minutes of ordinary clicking around —
+  // it must meter credential attempts (POSTs) only.
+  const { app } = await import('../server.js');
+  const srv = app.listen(0);
+  try {
+    const port = srv.address().port;
+    let last;
+    for (let i = 0; i < 30; i++) {
+      last = await fetch(`http://127.0.0.1:${port}/auth/status`);
+    }
+    assert.equal(last.status, 200, '30th status ping still answers 200');
+
+    // POST credential attempts ARE metered: hammering login eventually
+    // draws a 429 instead of an auth error.
+    let sawLimit = false;
+    for (let i = 0; i < 25; i++) {
+      const res = await fetch(`http://127.0.0.1:${port}/auth/login/password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'nope', password: 'wrong-password' }),
+      });
+      if (res.status === 429) {
+        sawLimit = true;
+        break;
+      }
+    }
+    assert.ok(sawLimit, 'repeated login POSTs hit the rate limiter');
+  } finally {
+    await new Promise((resolve) => srv.close(resolve));
+  }
+});

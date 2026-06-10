@@ -183,6 +183,10 @@ describe('live preview', () => {
 
     const input = type('hero.words.0', 'Wob');
 
+    // The preview rebuild trails typing by ~180ms (debounced — a full
+    // innerHTML rebuild per keystroke is too heavy on a Pi).
+    expect(document.querySelector('#hp-canvas .pv-word').textContent).toBe('Web');
+    await new Promise((r) => setTimeout(r, 250));
     expect(document.querySelector('#hp-canvas .pv-word').textContent).toBe('Wob');
     // The input was not re-rendered out from under the typist.
     expect(document.querySelector('[data-path="hero.words.0"]')).toBe(input);

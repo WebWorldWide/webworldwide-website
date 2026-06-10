@@ -11,17 +11,18 @@
  *   - the desktop side rail collapses (off-canvas drawer OR bottom nav)
  *   - the editor's slash-menu / toolbar collapse to a bottom action bar
  *
- * We don't authenticate (no test user in dev DB) — we exercise login.html
- * directly, and for the gated pages the spec assumes the dev stack
- * already has an authenticated session cookie. Phase 5e's
- * NODE_ENV=development branch bypasses the auth wall for the editor
- * routes, which is what lets the spec hit /index.html and /editor.html
- * without a session.
+ * Authentication: helpers/login.js signs in as the seeded dev user
+ * (admin/password — `npm run db:seed`) before hitting the gated pages;
+ * auth.js would otherwise bounce them to /login.html.
  */
 
 import { test, expect } from '@playwright/test';
+import { loginDevAdmin } from './helpers/login.js';
 
-const ADMIN = process.env.ADMIN_URL || 'http://127.0.0.1:8080';
+// `npm run dev:all` serves the admin natively on :3000 (see
+// scripts/dev/preflight.mjs). ADMIN_ORIGIN matches the other gated
+// specs; ADMIN_URL kept as a legacy alias.
+const ADMIN = process.env.ADMIN_ORIGIN || process.env.ADMIN_URL || 'http://127.0.0.1:3000';
 const DEV_STACK = process.env.DEV_STACK_RUNNING === '1';
 
 test.describe.configure({ mode: 'serial' });
@@ -33,6 +34,7 @@ test.describe('admin mobile sweep (gated)', () => {
 
   for (const path of ['/login.html', '/index.html', '/editor.html']) {
     test(`${path} fits viewport horizontally`, async ({ page }) => {
+      if (path !== '/login.html') await loginDevAdmin(page, ADMIN);
       await page.goto(`${ADMIN}${path}`, { waitUntil: 'domcontentloaded' });
       await page.evaluate(() => document.fonts?.ready);
       const overflow = await page.evaluate(() => ({
@@ -47,13 +49,14 @@ test.describe('admin mobile sweep (gated)', () => {
   }
 
   test('dashboard sidebar collapses off-canvas under 768 px', async ({ page }) => {
+    await loginDevAdmin(page, ADMIN);
     await page.goto(`${ADMIN}/index.html`, { waitUntil: 'domcontentloaded' });
-    // The Phase 5e dashboard markup is `.shell > .side + .main`. We test
+    // The v2 shell markup is `.shell > .sidebar + .main`. We test
     // that the side rail is either fully hidden (display:none) OR
     // translated off-canvas (negative transform) OR explicitly stacked
     // above the main column — any of those count as "responsive".
     const sideState = await page.evaluate(() => {
-      const side = document.querySelector('.side');
+      const side = document.querySelector('.sidebar');
       if (!side) return { exists: false };
       const cs = getComputedStyle(side);
       const rect = side.getBoundingClientRect();
@@ -63,27 +66,37 @@ test.describe('admin mobile sweep (gated)', () => {
         position: cs.position,
         transform: cs.transform,
         widthPx: rect.width,
+        rightEdge: rect.right,
         viewportWidth: window.innerWidth,
       };
     });
     expect(sideState.exists, 'side rail exists in dashboard markup').toBe(true);
     // Either hidden, or its width is ≤ 50 % of viewport (i.e. it
     // collapsed to a slim icon bar) — both satisfy mobile-friendliness.
+    // Hidden, shrunk to a slim bar, or translated fully off-canvas
+    // (v2's drawer: full width but right edge ≤ 0 until toggled) all
+    // count as responsive.
     const offCanvas =
-      sideState.display === 'none' || (sideState.widthPx ?? 0) <= sideState.viewportWidth * 0.5;
+      sideState.display === 'none' ||
+      (sideState.widthPx ?? 0) <= sideState.viewportWidth * 0.5 ||
+      (sideState.rightEdge ?? 1) <= 0;
     expect(
       offCanvas,
-      `side rail must hide or shrink on mobile (got width=${sideState.widthPx})`,
+      `side rail must hide, shrink, or slide off-canvas on mobile ` +
+        `(got width=${sideState.widthPx}, right=${sideState.rightEdge})`,
     ).toBe(true);
   });
 
   test('editor toolbar reflows to a single horizontally-scrollable strip', async ({ page }) => {
+    await loginDevAdmin(page, ADMIN);
     await page.goto(`${ADMIN}/editor.html`, { waitUntil: 'domcontentloaded' });
-    // The toolbar lives in `.editor-toolbar`. On phones it shouldn't
-    // line-wrap (the buttons would interleave with content); it should
-    // scroll horizontally inside its own container instead.
+    // The rich-text toolbar lives in `.te-editor-toolbar-rich` (built
+    // by the TipTap bundle). On phones it shouldn't line-wrap (the
+    // buttons would interleave with content); it becomes a sticky
+    // bottom bar that scrolls horizontally inside its own container.
+    await page.waitForSelector('.te-editor-toolbar-rich', { timeout: 10_000 });
     const toolbar = await page.evaluate(() => {
-      const t = document.querySelector('.editor-toolbar');
+      const t = document.querySelector('.te-editor-toolbar-rich');
       if (!t) return null;
       const cs = getComputedStyle(t);
       return {

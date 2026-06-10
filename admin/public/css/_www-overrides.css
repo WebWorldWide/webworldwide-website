@@ -64,7 +64,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 ::selection {
-  background: var(--accent-bg);
+  /* AA: white text needs the dark accent tier, even in selections. */
+  background: var(--accent);
   color: #fff;
 }
 

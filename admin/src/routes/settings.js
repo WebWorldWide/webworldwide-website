@@ -157,6 +157,9 @@ export function normalizeHomepage(parsed) {
   let items = Array.isArray(hp.apps?.items) ? hp.apps.items : null;
   if (!items) {
     // Old toml: derive tiles from the legacy [apps] fileid/doc_finder keys.
+    // MUST mirror normalizeHomepage in site/src/lib/site-config.ts — a
+    // mismatch means loading + saving a legacy toml here silently changes
+    // what the site renders (it persists this default as the new truth).
     items = [
       {
         name: 'FileID',
@@ -170,7 +173,8 @@ export function normalizeHomepage(parsed) {
         link: asString(p.apps?.doc_finder),
         icon: '/assets/doc-finder.png',
       },
-      { name: 'Untitled', status: 'soon', link: '', icon: '' },
+      { name: 'Untitled', status: 'lab', link: '', icon: '' },
+      { name: 'Untitled', status: 'lab', link: '', icon: '' },
     ];
   }
   const apps = {

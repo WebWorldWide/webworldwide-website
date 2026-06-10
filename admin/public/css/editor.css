@@ -953,12 +953,13 @@ body[data-page="editor"] {
   outline-offset: 1px;
 }
 .te-link-foot .te-link-ok {
-  background: var(--accent-bg);
+  /* AA: white text needs the dark accent tier. */
+  background: var(--accent);
   color: var(--accent-on);
-  border-color: var(--accent-deep);
+  border-color: var(--accent-fill-hover);
 }
 .te-link-foot .te-link-ok:hover {
-  background: var(--accent-deep);
+  background: var(--accent-fill-hover);
   color: var(--accent-on);
 }
 .te-link-foot .te-link-remove[hidden] {
@@ -1904,13 +1905,14 @@ body[data-page="editor"] {
   outline: none;
 }
 .te-embed-paste-btn.primary {
-  background: var(--accent-bg);
+  /* AA: white text needs the dark accent tier. */
+  background: var(--accent);
   color: var(--accent-on);
-  border-color: var(--accent-deep);
+  border-color: var(--accent-fill-hover);
 }
 .te-embed-paste-btn.primary:hover,
 .te-embed-paste-btn.primary:focus-visible {
-  background: var(--accent-deep);
+  background: var(--accent-fill-hover);
   color: var(--accent-on);
 }
 .te-embed-paste-btn.ghost {

@@ -139,10 +139,18 @@
     (document.querySelector('.shell') || document.body).appendChild(backdrop);
 
     function setOpen(open) {
+      const wasOpen = document.body.classList.contains('nav-open');
       document.body.classList.toggle('nav-open', open);
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-      if (open) sidebar.querySelector('a, button')?.focus();
+      // The drawer follows the modal keyboard pattern: Tab cycles
+      // inside it while open (trapFocus also restores focus on release).
+      if (open && !wasOpen) {
+        if (window.TE && TE.trapFocus) TE.trapFocus(sidebar);
+        sidebar.querySelector('a, button')?.focus();
+      } else if (!open && wasOpen) {
+        if (window.TE && TE.releaseFocus) TE.releaseFocus(sidebar);
+      }
     }
     const close = () => setOpen(false);
 
@@ -178,8 +186,33 @@
   function boot() {
     window.TE = window.TE || {};
     window.TE.routes = window.TE.routes || {};
-    show(currentRoute());
-    window.addEventListener('hashchange', () => show(currentRoute()));
+    // Views with unsaved state register a guard: TE.viewGuards.<route>
+    // returns a warning string while dirty (or null when clean).
+    // beforeunload only covers full page loads — hash navigation needs
+    // this hook or edits silently vanish on a sidebar click.
+    window.TE.viewGuards = window.TE.viewGuards || {};
+
+    let activeRoute = currentRoute();
+    let restoringHash = false;
+    show(activeRoute);
+    window.addEventListener('hashchange', () => {
+      if (restoringHash) {
+        restoringHash = false;
+        return;
+      }
+      const next = currentRoute();
+      if (next !== activeRoute) {
+        const guard = window.TE.viewGuards[activeRoute];
+        const warning = typeof guard === 'function' ? guard() : null;
+        if (warning && !window.confirm(`${warning} Leave this view anyway?`)) {
+          restoringHash = true;
+          window.location.hash = activeRoute === 'overview' ? '#overview' : `#${activeRoute}`;
+          return;
+        }
+      }
+      activeRoute = next;
+      show(next);
+    });
     wireMobileNav();
     wireNewPost();
   }
