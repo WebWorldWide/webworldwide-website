@@ -1,21 +1,39 @@
 ---
 /**
- * Hero — wordmark + tagline.
+ * Hero — wordmark + tagline, driven by site.toml ([homepage.hero]).
  * Wordmark warp + central globe driven by /src/scripts/wordmark-warp.ts.
  * The <h1> stays as a real heading so SR users get the page identity;
  * the visual letters are absolutely positioned by the script.
+ *
+ * Rendering contract for the warp script: the h1's textContent is the words
+ * joined by " • " (the script splits it into chars and warps the non-space
+ * glyphs onto a ring, appending one seam bullet — any 2–5 words work).
+ * The tagline string uses "·"/"•" as separators, each rendered as the pixel
+ * <span class="sep"> square the CSS pulse animation expects.
  */
+import { homepage } from '@/lib/site-config';
+
+const { words, tagline } = homepage.hero;
+const wordmark = words.join(' • ');
+
+const escapeHtml = (s: string): string =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const taglineHtml = tagline
+  .split(/\s*[·•]\s*/)
+  .filter(Boolean)
+  .map(escapeHtml)
+  .join('<span class="sep"></span>');
 ---
 <header class="hero" id="home">
   <div class="wordmark-stage" id="wordmarkStage">
     <div class="wordmark-area" id="wordmarkArea">
-      <h1 class="wordmark" data-text="Web • World • Wide">Web • World • Wide</h1>
+      <h1 class="wordmark" data-text={wordmark}>{wordmark}</h1>
       <div class="wordmark-globe" id="wordmarkGlobe" aria-hidden="true">
         <canvas id="wordmark-globe-canvas"></canvas>
       </div>
     </div>
   </div>
-  <p class="tagline" aria-hidden="true">W<span class="sep"></span>W<span class="sep"></span>W</p>
+  <p class="tagline" aria-hidden="true" set:html={taglineHtml} />
 </header>
 
 <script>

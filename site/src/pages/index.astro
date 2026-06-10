@@ -2,11 +2,12 @@
 /**
  * Home page — Web World Wide brand site.
  *
- * Sections:
+ * Sections (order + visibility driven by site.toml [homepage]):
  *   - Hero (wordmark warp → ring + central globe)
  *   - Apps (drag-to-spin extruded 3D icons)
  *   - Videos (YouTube cinematic film frame)
- *   - Socials (9 brand tiles)
+ *   - Socials (brand tiles)
+ *   - BlogCta (end-of-page card linking to the blog)
  *
  * All animations honor prefers-reduced-motion via their initializers.
  */
@@ -15,84 +16,32 @@ import Hero from '@components/sections/Hero.astro';
 import Apps from '@components/sections/Apps.astro';
 import Videos from '@components/sections/Videos.astro';
 import Socials from '@components/sections/Socials.astro';
+import BlogCta from '@components/sections/BlogCta.astro';
+import { homepage } from '@/lib/site-config';
 
 import '@styles/home.css';
+
+const sectionComponents = {
+  hero: Hero,
+  apps: Apps,
+  videos: Videos,
+  socials: Socials,
+  blog_cta: BlogCta,
+} as const;
+type SectionKey = keyof typeof sectionComponents;
+
+// [homepage] section_order picks the order; [homepage.sections] toggles
+// visibility. Unknown keys are ignored so a stale order can't break the build.
+const sections = homepage.section_order.filter(
+  (key): key is SectionKey => key in sectionComponents && homepage.sections[key as SectionKey],
+);
 ---
 <BaseLayout title="Home" description="Web World Wide — My World on the Web. Apps, blog, YouTube, and elsewhere.">
-  <Hero />
-  <Apps />
-  <Videos />
-  <Socials />
-
-  <!-- End-of-page CTA so the blog is reachable from the home scroll. -->
-  <a class="blog-cta" href="/blog/">
-    <div>
-      <div class="blog-cta-label">Latest</div>
-      <div class="blog-cta-title">The Web World Wide <em>Blog</em></div>
-    </div>
-    <span class="blog-cta-arrow" aria-hidden="true">→</span>
-  </a>
+  {sections.map((key) => {
+    const Section = sectionComponents[key];
+    return <Section />;
+  })}
 </BaseLayout>
-
-<style>
-  .blog-cta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    flex-wrap: wrap;
-    max-width: 1080px;
-    margin: 8px auto 72px;
-    padding: 28px 34px;
-    background: rgba(255, 255, 255, 0.93);
-    backdrop-filter: blur(10px) saturate(150%);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
-    border: var(--border-strong);
-    box-shadow: var(--shadow-card);
-    border-radius: var(--r-card);
-    color: var(--ink);
-    transition: transform 0.14s ease, box-shadow 0.14s ease;
-  }
-  .blog-cta:hover,
-  .blog-cta:focus-visible {
-    transform: translate(-2px, -2px);
-    box-shadow: 10px 10px 0 var(--ink);
-  }
-  .blog-cta-label {
-    font-family: var(--font-pixel);
-    font-size: 16px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-    margin-bottom: 6px;
-  }
-  .blog-cta-title {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: clamp(26px, 4vw, 40px);
-    line-height: 1.05;
-  }
-  .blog-cta-title em {
-    font-style: italic;
-    color: var(--cherry-strong);
-  }
-  .blog-cta-arrow {
-    font-family: var(--font-mono);
-    font-size: 34px;
-    color: var(--cherry-strong);
-    transition: transform 0.16s ease;
-  }
-  .blog-cta:hover .blog-cta-arrow,
-  .blog-cta:focus-visible .blog-cta-arrow {
-    transform: translateX(8px);
-  }
-  @media (max-width: 760px) {
-    .blog-cta {
-      margin: 8px 16px 56px;
-      padding: 22px 22px;
-    }
-  }
-</style>
 
 <script>
   // Boot home-page client behaviors: reveals, parallax, anchor scroll,

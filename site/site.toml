@@ -58,5 +58,47 @@ handle_user = "blog"
 
 [apps]
 # Linked products on the home page Apps section.
+# Kept for backward compat while the Astro components migrate to
+# [homepage.apps] below — do not remove until that migration lands.
 fileid = "https://claude.ai/design/p/51500a82-3faf-4144-9a89-94e738dbb888?file=index.html"
 doc_finder = ""  # Empty = renders as "SOON" tile
+
+[homepage]
+# Home-page editor (admin CMS). Section visibility + ordering for the
+# landing page. Edited via PATCH /api/settings/homepage.
+section_order = ["hero", "apps", "videos", "socials", "blog_cta"]
+
+[homepage.sections]
+hero = true
+apps = true
+videos = true
+socials = true
+blog_cta = true
+
+[homepage.hero]
+# `tagline` renders under the wordmark; "·"/"•" separators become the pixel
+# squares ("W · W · W" → W ▪ W ▪ W).
+words = ["Web", "World", "Wide"]
+tagline = "W · W · W"
+
+[homepage.apps]
+# `items` is an inline-table array on ONE line on purpose: the admin's
+# toml-roundtrip writer rewrites whole `key = value` lines, so keeping
+# the array single-line lets edits round-trip without losing comments.
+# status: "live" (★ live), "soon" (coming soon), "lab" (in the lab).
+# Empty icon = placeholder card; empty link = tile is a no-op.
+items = [ { name = "FileID", status = "live", link = "https://claude.ai/design/p/51500a82-3faf-4144-9a89-94e738dbb888?file=index.html", icon = "/assets/fileid.png" }, { name = "Document Finder", status = "soon", link = "", icon = "/assets/doc-finder.png" }, { name = "Untitled", status = "lab", link = "", icon = "" }, { name = "Untitled", status = "lab", link = "", icon = "" } ]
+
+[homepage.videos]
+episode = "EP. 001"
+film_title = "First video — coming soon"
+
+[homepage.socials]
+order = ["youtube", "github", "twitter", "bluesky", "mastodon", "reddit", "instagram", "threads"]
+hidden = []
+
+[homepage.blog_cta]
+kicker = "Latest"
+title = "The Web World Wide"
+title_accent = "Blog"
+url = "/blog/"
