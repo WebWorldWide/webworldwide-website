@@ -1,24 +1,26 @@
 // @ts-check
 /**
- * terminal.js — web terminal modal on the dashboard.
+ * terminal.js — web terminal pane (System view).
  *
  * Backend: POST /api/health/terminal — allowlisted shell commands only
  * (uptime, df, free, ps, docker, etc.). Wraps execAsync server-side
- * w/ 15s timeout. Untouched in Phase 2.
+ * w/ 15s timeout. Lives inside #view-system's Terminal tab; the old
+ * modal wiring is kept optional for backward compatibility.
  */
 (function () {
   function boot() {
     const openBtn = document.getElementById('btn-open-terminal');
     const closeBtn = document.getElementById('btn-close-terminal');
-    const modal = document.getElementById('terminal-modal');
     const form = document.getElementById('terminal-form');
     const input = document.getElementById('terminal-input');
     const output = document.getElementById('terminal-output');
-    if (!modal || !form || !input || !output) return;
+    if (!form || !input || !output) return;
 
+    // Legacy modal affordances — the terminal now lives in the System
+    // view, but a cached page may still render the old modal shell.
     if (openBtn) {
       openBtn.addEventListener('click', () => {
-        TE.openModal('terminal-modal');
+        if (document.getElementById('terminal-modal')) TE.openModal('terminal-modal');
         try {
           input.focus();
         } catch (_) {

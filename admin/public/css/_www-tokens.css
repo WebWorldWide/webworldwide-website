@@ -1,117 +1,128 @@
 /* ============================================================
-   Web World Wide — admin token overrides
+   Web World Wide — admin v2 design tokens
    ------------------------------------------------------------
    Loads FIRST in the admin <link rel="stylesheet"> order, so
-   every var() reference downstream resolves to the WWW palette.
-   Matches site/src/styles/tokens.css — single source of truth.
+   every var() reference downstream resolves to the v2 palette.
+   Canonical source: the Admin.html design handoff (calm
+   workhorse — WWW identity at the edges, clean working surface).
+
+   Two-tier accent (a11y): the design's orange #ec5a2b is ~3:1 on
+   white — fine for fills, large display text and decoration, but
+   it FAILS AA for body text. So:
+     --accent      → #b04708 (AA ≥4.5:1) — text, links, active states
+     --accent-bg   → #ec5a2b — button fills, badges (white text on top)
+     --accent-deep → #c8430f — hover tier for fills
    ============================================================ */
 
 :root,
 [data-theme="dark"],
 [data-theme="light"] {
-  /* Sky palette */
+  /* Brand */
   --sky: #1e68f0;
   --sky-deep: #1450c8;
   --sky-far: #a8c8f0;
   --cloud: #ffffff;
 
-  /* Status / accents.
-     `*-strong` variants are WCAG AA-compliant for body text on white
-     (≥ 4.5:1). Used by `--accent` below so every admin rule that does
-     `color: var(--accent)` inherits a passing contrast automatically.
-     Use the brighter `--cherry` / `--sun` only for backgrounds (with
-     ink-on-color text), large display text, or non-text decoration. */
-  --sun: #28b083;
-  --sun-deep: #3aa982;
-  --sun-strong: #1e6d50;
-  --cherry: #ec5a2b;
-  --cherry-deep: #d96815;
-  --cherry-strong: #b04708;
-  --grass: #3ec25d;
-
-  /* Ink */
+  /* Ink scale (text) */
   --ink: #0e2960;
   --ink-soft: #2a4a90;
   --ink-mute: #5a72b0;
   --ink-faint: #92a3c8;
 
-  /* Paper */
-  --paper: #ffffff;
-  --paper-warm: #eef3fb;
+  /* Surfaces */
+  --bg-page: #e9eef9;
+  --surface: #ffffff;
+  --surface-2: #f4f7fd;
+  --surface-3: #eef3fb;
 
-  /* Glass */
-  --glass: rgb(255, 255, 255, 0.74);
-  --glass-strong: rgb(255, 255, 255, 0.85);
-  --glass-soft: rgb(255, 255, 255, 0.45);
-  --glass-warm: rgb(238, 243, 251, 0.88);
-
-  /* WCAG-friendly hairlines */
+  /* Hairlines */
   --line-www: rgb(14, 41, 96, 0.18);
   --line-strong-www: rgb(14, 41, 96, 0.42);
 
-  /* Shadows / borders — calmed for a legible daily-driver tool.
-     Was chunky hard-offset ink (8px 8px 0); now subtle elevation +
-     hairline borders so panels read as clean cards, not stickers. */
-  --shadow-card: 0 1px 3px rgb(14, 41, 96, 0.1), 0 1px 2px rgb(14, 41, 96, 0.06);
+  /* Accent family (see header note) */
+  --cherry: #ec5a2b;
+  --cherry-deep: #c8430f;
+  --cherry-strong: #b04708;
+  --accent: var(--cherry-strong);
+  --accent-bg: var(--cherry);
+  --accent-deep: var(--cherry-deep);
+  --accent-soft: rgb(236, 90, 43, 0.12);
+  --accent-line: rgb(236, 90, 43, 0.32);
+  --accent-glow: rgb(236, 90, 43, 0.34);
+  --accent-on: #ffffff;
+  --fg-on-accent: var(--accent-on);
+  --selection: rgb(236, 90, 43, 0.25);
+
+  /* Status */
+  --ok: #1f9d6b;
+  --ok-soft: rgb(31, 157, 107, 0.14);
+  --warn: #b87a16; /* AA-darkened tier of the design's #d68f1e */
+  --warn-bright: #d68f1e;
+  --warn-soft: rgb(214, 143, 30, 0.16);
+  --warn-glow: rgb(214, 143, 30, 0.32);
+  --danger: #c93a2a; /* AA tier of the design's #d94a3a */
+  --danger-bright: #d94a3a;
+  --danger-soft: rgb(217, 74, 58, 0.14);
+  --danger-glow: rgb(217, 74, 58, 0.3);
+
+  /* Geometry */
+  --radius: 11px;
+  --radius-sm: 7px;
+  --radius-xs: 5px;
+
+  /* Elevation (clean tier of the design system) */
+  --shadow-card: 0 1px 2px rgb(14, 41, 96, 0.05), 0 4px 14px rgb(14, 41, 96, 0.05);
+  --shadow-pop: 0 12px 40px rgb(14, 41, 96, 0.16), 0 2px 6px rgb(14, 41, 96, 0.1);
   --shadow-card-sm: 0 1px 2px rgb(14, 41, 96, 0.08);
   --shadow-card-xs: 0 1px 1px rgb(14, 41, 96, 0.06);
-  --shadow-button: 0 1px 2px rgb(14, 41, 96, 0.08);
+  --shadow-button: 0 1px 2px rgb(14, 41, 96, 0.1);
+  --shadow-button-hover: 0 3px 8px rgb(14, 41, 96, 0.16);
   --border-strong: 1px solid var(--line-strong-www);
   --border-soft: 1px solid var(--line-www);
 
   /* Type stacks */
-  --font-serif: "Cormorant Garamond", "Apple Garamond", "ITC Garamond", Garamond, Georgia, serif;
+  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-read: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-site: "Cormorant Garamond", "Apple Garamond", Garamond, Georgia, serif;
   --font-mono-www: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  /* VT323 pixel face retired for legibility — alias the pixel token to the
-     clean sans so every legacy var(--font-pixel) rule de-pixelates at once. */
-  --font-pixel: var(--font-sans);
+  --font-pixel: "VT323", "Space Mono", monospace;
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-read);
 
-  /* Map legacy admin tokens to WWW equivalents so existing rules
-     (var(--bg), var(--fg), var(--accent)…) "just work". */
-  --bg: var(--sky);
-  --bg-elev: var(--paper);
-  --bg-card: var(--paper);
-  --bg-deep: var(--sky-deep);
+  /* Legacy admin aliases — keep every var() in admin.css / editor.css /
+     per-view css resolving. */
+  --bg: var(--bg-page);
+  --bg-elev: var(--surface);
+  --bg-card: var(--surface);
+  --bg-deep: var(--surface-3);
+  --paper: var(--surface);
+  --paper-warm: var(--surface-3);
   --line: var(--line-www);
   --line-strong: var(--line-strong-www);
   --fg: var(--ink);
   --fg-dim: var(--ink-soft);
-  /* --fg-mute was --ink-mute (#5a72b0) — too light for the small labels it's
-     used on. Bump to the --ink-soft tier so faint UI text stays legible. */
+  /* --fg-mute stays a step darker than --ink-mute: small labels must hold AA. */
   --fg-mute: var(--ink-soft);
 
-  /* --accent points to the AA-compliant strong cherry so every
-     `color: var(--accent)` rule in the admin (80+ across all CSS
-     files) automatically meets contrast on white surfaces. The
-     bright `--cherry` is still available for backgrounds, large
-     display text, and decorative icons. */
-  --accent: var(--cherry-strong);
-  --accent-bg: var(--cherry);
-  --accent-soft: rgb(236, 90, 43, 0.12);
-  --accent-glow: rgb(236, 90, 43, 0.34);
-  --accent-on: #ffffff;
-  /* Alias used by a few editor surfaces (e.g. .serp-card's white card). */
-  --fg-on-accent: var(--accent-on);
-  --selection: var(--cherry);
+  /* Status aliases kept from the previous theme */
+  --sun: #28b083;
+  --sun-deep: #3aa982;
+  --sun-strong: #1e6d50;
+  --grass: #3ec25d;
 
-  --warn: #d68f1e;
-  --warn-soft: rgb(214, 143, 30, 0.16);
-  --warn-glow: rgb(214, 143, 30, 0.32);
-  --danger: #d94a3a;
-  --danger-soft: rgb(217, 74, 58, 0.14);
-  --danger-glow: rgb(217, 74, 58, 0.3);
-  --ok: var(--sun-deep);
-  --ok-soft: rgb(58, 169, 130, 0.14);
-
-  --glass-tint: var(--glass);
-  --glass-border: var(--ink);
+  /* Glass aliases — surfaces are opaque in v2; map to solids so any
+     legacy glass rule renders as a clean card. */
+  --glass: var(--surface);
+  --glass-strong: var(--surface);
+  --glass-soft: var(--surface-2);
+  --glass-warm: var(--surface-3);
+  --glass-tint: var(--surface);
+  --glass-border: var(--line-www);
   --glass-highlight: rgb(255, 255, 255, 0.6);
-  --glass-shadow: 0 1px 0 0 rgb(255, 255, 255, 0.7) inset, var(--shadow-card);
+  --glass-shadow: var(--shadow-card);
 
-  /* Override the admin's legacy font stacks so every var(--mono),
-     var(--sans), var(--serif) downstream uses the WWW palette. */
+  /* Legacy font aliases */
   --mono: var(--font-mono-www);
-  --sans: var(--font-sans);
-  --serif: var(--font-serif);
+  --sans: var(--font-ui);
+  --serif: var(--font-read);
 }
