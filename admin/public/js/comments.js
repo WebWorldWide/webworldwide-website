@@ -32,7 +32,7 @@
 
   const STATUS_TABS = [
     { id: 'all', label: 'All' },
-    { id: 'visible', label: 'Visible' },
+    { id: 'visible', label: 'Live' },
     { id: 'pinned', label: 'Pinned' },
     { id: 'pending', label: 'Pending mentions' },
     { id: 'spam', label: 'Spam' },
@@ -445,7 +445,7 @@
           ? `<button type="button" class="btn" data-act="unpin">Unpin</button>`
           : `<button type="button" class="btn" data-act="pin">Pin</button>`,
       );
-      buttons.push(`<button type="button" class="btn" data-act="spam">Mark spam</button>`);
+      buttons.push(`<button type="button" class="btn" data-act="spam">Hide as spam</button>`);
       buttons.push(`<button type="button" class="btn danger" data-act="delete">Delete</button>`);
     } else if (c.source === 'webmention') {
       if (c.status === 'pending') {
@@ -505,7 +505,7 @@
       });
       TE.toast(act === 'pin' ? 'Pinned.' : 'Unpinned.');
     } else if (act === 'spam') {
-      if (!confirm('Mark as spam and block the author?')) return;
+      if (!confirm('Hide as spam and block the author?')) return;
       await TE.fetchJSON(`/api/comments/${id}/spam`, {
         method: 'POST',
         body: JSON.stringify({
@@ -514,7 +514,7 @@
           userName: c.author?.name,
         }),
       });
-      TE.toast('Marked spam.');
+      TE.toast('Hidden as spam.');
     } else if (act === 'delete') {
       if (!confirm('Delete this comment?')) return;
       await TE.fetchJSON(`/api/comments/${id}?url=${encodeURIComponent(c.postUrl)}`, {

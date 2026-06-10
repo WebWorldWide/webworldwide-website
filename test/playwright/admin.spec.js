@@ -85,14 +85,27 @@ test.describe('admin shell', () => {
 
   test('index.html renders the sidebar, topbar, and posts panel', async ({ page }) => {
     const errors = collectFatalConsoleErrors(page);
-    await page.goto(indexUrl);
+    // v2: the default route is Overview; the posts panel lives at #posts.
+    await page.goto(`${indexUrl}#posts`);
     await expect(page.locator('aside.sidebar')).toBeVisible();
     await expect(page.locator('header.topbar')).toBeVisible();
     await expect(page.locator('#posts-panel')).toBeVisible();
-    // Tabs are present and have role="tab"
-    await expect(page.locator('[role="tab"]')).toHaveCount(4);
-    // Pi Health metric panel exists
-    await expect(page.locator('#health-panel')).toBeVisible();
+    // Posts filter tabs are present and have role="tab" (the hidden
+    // System view contributes its own tablist, so scope to the panel).
+    await expect(page.locator('#posts-panel [role="tab"]')).toHaveCount(4);
+    expect(errors).toEqual([]);
+  });
+
+  test('index.html#system shows the health metrics + terminal tabs', async ({ page }) => {
+    const errors = collectFatalConsoleErrors(page);
+    await page.goto(`${indexUrl}#system`);
+    await expect(page.locator('#view-system')).toBeVisible();
+    await expect(page.locator('#systab-health')).toBeVisible();
+    await expect(page.locator('#metric-cpu')).toBeVisible();
+    // Terminal tab swaps panes without leaving the view.
+    await page.locator('[data-systab="terminal"]').click();
+    await expect(page.locator('#terminal-form')).toBeVisible();
+    await expect(page.locator('#systab-health')).toBeHidden();
     expect(errors).toEqual([]);
   });
 

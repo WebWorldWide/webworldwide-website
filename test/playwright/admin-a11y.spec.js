@@ -122,6 +122,11 @@ test.describe('admin a11y', () => {
   // render a "Loading…" placeholder under file:// (no /api/*), which
   // is still fully audit-able by axe.
   const HASH_ROUTES = [
+    { hash: '#overview', label: 'overview' },
+    { hash: '#posts', label: 'posts' },
+    { hash: '#homepage', label: 'homepage editor' },
+    { hash: '#analytics', label: 'analytics' },
+    { hash: '#system', label: 'system' },
     { hash: '#media', label: 'media library' },
     { hash: '#comments', label: 'comments moderation' },
     { hash: '#settings', label: 'settings' },

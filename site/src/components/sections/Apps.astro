@@ -1,54 +1,69 @@
 ---
 /**
- * Apps section — 4 extruded 3D app icons with drag-to-spin.
- * Hydrated by src/scripts/app-spinners.ts.
+ * Apps section — extruded 3D app icons with drag-to-spin, one tile per
+ * [homepage.apps] items entry in site.toml. Hydrated by src/scripts/app-spinners.ts.
  *
- * `data-icon` points at the image; `data-fallback` JSON has label/bg/ink
- * for placeholder cards. `data-status="soon"` softens the status pip color.
+ * Per-tile contract (kept stable for app-spinners.ts + home.css):
+ *   - `data-href` carries the real destination (empty link = no attribute,
+ *     tile is a no-op); `href="#apps"` stays as the no-JS fallback.
+ *   - `data-icon` points at the image; tiles without an icon get a
+ *     `data-fallback` JSON placeholder (label/bg/ink cycled from FALLBACKS).
+ *   - `data-status="soon"` softens the status pip color for non-live tiles.
  */
-import { siteConfig } from '@/lib/site-config';
-const apps = siteConfig.apps;
+import { homepage } from '@/lib/site-config';
+
+/** status key → pip label, aria-label suffix, and whether the pip is soft. */
+const STATUS: Record<string, { label: string; aria: string; soon: boolean }> = {
+  live: { label: '★ live', aria: 'open', soon: false },
+  soon: { label: 'coming soon', aria: 'coming soon', soon: true },
+  lab: { label: 'in the lab', aria: 'in the lab', soon: true },
+};
+
+/** Placeholder card configs for icon-less tiles, assigned in order. */
+const FALLBACKS = [
+  '{"label":"?","bg":"linear-gradient(135deg,#ffd58b,#ff8a3d)","ink":"#0e2960"}',
+  '{"label":"!","bg":"linear-gradient(135deg,#a0e8c8,#3ec25d)","ink":"#0e2960"}',
+];
+
+let fallbackIdx = 0;
+const tiles = homepage.apps.items.map((item) => {
+  const meta = STATUS[item.status] ?? STATUS.soon;
+  return {
+    ...item,
+    meta,
+    fallback: item.icon ? undefined : FALLBACKS[fallbackIdx++ % FALLBACKS.length],
+  };
+});
 ---
 <section class="section" id="apps">
   <div class="section-inner">
     <span class="eyebrow reveal">01 — Apps</span>
 
     <div class="apps-float reveal">
-      <a class="floating-app" href="#apps" data-href={apps.fileid || undefined} aria-label="FileID — open" data-umami-event="app: FileID">
-        <div class="drift">
-          <div class="app-halo" aria-hidden="true"></div>
-          <div class="spinner" data-spin data-icon="/assets/fileid.png" role="button" aria-label="FileID app — drag to spin"></div>
-          <div class="app-shadow" aria-hidden="true"></div>
-        </div>
-        <div class="caption">FileID<span class="status">★ live</span></div>
-      </a>
-
-      <a class="floating-app" href="#apps" data-href={apps.doc_finder || undefined} aria-label="Document Finder — coming soon" data-status="soon">
-        <div class="drift">
-          <div class="app-halo" aria-hidden="true"></div>
-          <div class="spinner" data-spin data-icon="/assets/doc-finder.png" role="button" aria-label="Document Finder — drag to spin"></div>
-          <div class="app-shadow" aria-hidden="true"></div>
-        </div>
-        <div class="caption">Document Finder<span class="status">coming soon</span></div>
-      </a>
-
-      <a class="floating-app" href="#apps" aria-label="Untitled app — in the lab" data-status="soon">
-        <div class="drift">
-          <div class="app-halo" aria-hidden="true"></div>
-          <div class="spinner" data-spin data-fallback='{"label":"?","bg":"linear-gradient(135deg,#ffd58b,#ff8a3d)","ink":"#0e2960"}' role="button" aria-label="Untitled — drag to spin"></div>
-          <div class="app-shadow" aria-hidden="true"></div>
-        </div>
-        <div class="caption">Untitled<span class="status">in the lab</span></div>
-      </a>
-
-      <a class="floating-app" href="#apps" aria-label="Untitled app — in the lab" data-status="soon">
-        <div class="drift">
-          <div class="app-halo" aria-hidden="true"></div>
-          <div class="spinner" data-spin data-fallback='{"label":"!","bg":"linear-gradient(135deg,#a0e8c8,#3ec25d)","ink":"#0e2960"}' role="button" aria-label="Untitled — drag to spin"></div>
-          <div class="app-shadow" aria-hidden="true"></div>
-        </div>
-        <div class="caption">Untitled<span class="status">in the lab</span></div>
-      </a>
+      {tiles.map((t) => (
+        <a
+          class="floating-app"
+          href="#apps"
+          data-href={t.link || undefined}
+          aria-label={`${t.name} — ${t.meta.aria}`}
+          data-status={t.meta.soon ? 'soon' : undefined}
+          data-umami-event={t.meta.soon ? undefined : `app: ${t.name}`}
+        >
+          <div class="drift">
+            <div class="app-halo" aria-hidden="true"></div>
+            <div
+              class="spinner"
+              data-spin
+              data-icon={t.icon || undefined}
+              data-fallback={t.fallback}
+              role="button"
+              aria-label={`${t.name} — drag to spin`}
+            ></div>
+            <div class="app-shadow" aria-hidden="true"></div>
+          </div>
+          <div class="caption">{t.name}<span class="status">{t.meta.label}</span></div>
+        </a>
+      ))}
     </div>
   </div>
 </section>

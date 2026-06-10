@@ -1,9 +1,12 @@
 ---
 /**
  * Videos / YouTube section — cinematic film frame + subscribe CTA.
+ * Episode tag + film title come from site.toml ([homepage.videos]);
+ * channel URL/handle from [social].
  */
-import { siteConfig } from '@/lib/site-config';
+import { siteConfig, homepage } from '@/lib/site-config';
 const { youtube, youtube_handle } = siteConfig.social;
+const { episode, film_title } = homepage.videos;
 ---
 <section class="section" id="videos">
   <div class="section-inner">
@@ -15,14 +18,14 @@ const { youtube, youtube_handle } = siteConfig.social;
         <div class="film-clouds" id="film-clouds" aria-hidden="true"></div>
 
         <div class="film-handle"><span class="rec-dot" aria-hidden="true"></span> {youtube_handle}</div>
-        <div class="film-meta"><span>EP. 001</span><span class="tc">00:00 / —:——</span></div>
+        <div class="film-meta"><span>{episode}</span><span class="tc">00:00 / —:——</span></div>
 
         <div class="film-content">
           <span class="film-play" aria-hidden="true">
             <span class="play-tri"></span>
           </span>
         </div>
-        <div class="film-title">First video — coming soon</div>
+        <div class="film-title">{film_title}</div>
       </a>
 
       <div class="yt-cta-row">

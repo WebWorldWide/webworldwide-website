@@ -1,0 +1,77 @@
+---
+/**
+ * Blog CTA — end-of-page card so the blog is reachable from the home scroll.
+ * Copy + destination come from site.toml ([homepage.blog_cta]): `kicker` is
+ * the pixel label, `title` + italic `title_accent` form the headline.
+ */
+import { homepage } from '@/lib/site-config';
+
+const { kicker, title, title_accent, url } = homepage.blog_cta;
+---
+<a class="blog-cta" href={url}>
+  <div>
+    <div class="blog-cta-label">{kicker}</div>
+    <div class="blog-cta-title">{title_accent ? <>{`${title} `}<em>{title_accent}</em></> : title}</div>
+  </div>
+  <span class="blog-cta-arrow" aria-hidden="true">→</span>
+</a>
+
+<style>
+  .blog-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    max-width: 1080px;
+    margin: 8px auto 72px;
+    padding: 28px 34px;
+    background: rgba(255, 255, 255, 0.93);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    border: var(--border-strong);
+    box-shadow: var(--shadow-card);
+    border-radius: var(--r-card);
+    color: var(--ink);
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+  }
+  .blog-cta:hover,
+  .blog-cta:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 var(--ink);
+  }
+  .blog-cta-label {
+    font-family: var(--font-pixel);
+    font-size: 16px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .blog-cta-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: clamp(26px, 4vw, 40px);
+    line-height: 1.05;
+  }
+  .blog-cta-title em {
+    font-style: italic;
+    color: var(--cherry-strong);
+  }
+  .blog-cta-arrow {
+    font-family: var(--font-mono);
+    font-size: 34px;
+    color: var(--cherry-strong);
+    transition: transform 0.16s ease;
+  }
+  .blog-cta:hover .blog-cta-arrow,
+  .blog-cta:focus-visible .blog-cta-arrow {
+    transform: translateX(8px);
+  }
+  @media (max-width: 760px) {
+    .blog-cta {
+      margin: 8px 16px 56px;
+      padding: 22px 22px;
+    }
+  }
+</style>
