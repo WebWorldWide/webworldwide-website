@@ -2,17 +2,189 @@
 /**
  * Sky backdrop — fixed sky gradient + pixel cloud puffs.
  *
- * The puffs container is hydrated by site/src/scripts/clouds.ts which
- * generates inline SVG <div>s. The script auto-runs on DOMContentLoaded.
+ * The puffs are rendered at BUILD TIME (seeded PRNG, so every build is
+ * the same sky) instead of being injected by a client script: the old
+ * clouds.ts ran after hydration, which made a late-painting cloud the
+ * page's Largest Contentful Paint and dragged the homepage perf score.
+ * Server-rendered divs paint with the first stylesheet — zero JS.
  *
  * Renders behind everything via z-index: -5 / -3 in sky.css. Decorative,
  * fully aria-hidden.
  */
----
-<div class="sky" aria-hidden="true"></div>
-<div class="sky-puffs" id="skyPuffs" aria-hidden="true"></div>
 
-<script>
-  // Eager-import so clouds appear on first paint.
-  import('../scripts/clouds.ts');
-</script>
+type CloudLayer = {
+  count: number;
+  scaleMin: number;
+  scaleMax: number;
+  durMin: number;
+  durMax: number;
+  opMin: number;
+  opMax: number;
+  outline: string; // url-encoded hex (e.g., '%23a8c8f0')
+  topMin: number;
+  topMax: number;
+};
+
+const SHAPES: string[][] = [
+  [
+    '0002220002220000022000',
+    '0022112202211220222110',
+    '0211111211111111111112',
+    '2111111111111111111112',
+    '2111111111111111111112',
+    '0222222222222222222220',
+  ],
+  ['00022200002200', '00211122022112', '02111111111112', '02111111111112', '02222222222220'],
+  [
+    '00022000022000022000022000',
+    '02211220221122022112202112',
+    '21111111111111111111111111',
+    '02222222222222222222222220',
+  ],
+  [
+    '0002220000',
+    '0022112200',
+    '0211111120',
+    '2111111112',
+    '2111111112',
+    '0211111120',
+    '0022222200',
+  ],
+];
+
+const LAYERS: CloudLayer[] = [
+  {
+    count: 4,
+    scaleMin: 3,
+    scaleMax: 5,
+    durMin: 280,
+    durMax: 360,
+    opMin: 0.3,
+    opMax: 0.5,
+    outline: '%23d4dff0',
+    topMin: 0,
+    topMax: 30,
+  },
+  {
+    count: 6,
+    scaleMin: 5,
+    scaleMax: 9,
+    durMin: 220,
+    durMax: 300,
+    opMin: 0.5,
+    opMax: 0.7,
+    outline: '%23c0d0ec',
+    topMin: 2,
+    topMax: 65,
+  },
+  {
+    count: 6,
+    scaleMin: 9,
+    scaleMax: 13,
+    durMin: 150,
+    durMax: 220,
+    opMin: 0.7,
+    opMax: 0.85,
+    outline: '%23a8c8f0',
+    topMin: 6,
+    topMax: 88,
+  },
+  {
+    count: 3,
+    scaleMin: 14,
+    scaleMax: 20,
+    durMin: 100,
+    durMax: 160,
+    opMin: 0.85,
+    opMax: 0.95,
+    outline: '%2388b4e8',
+    topMin: 14,
+    topMax: 96,
+  },
+];
+
+function shapeToSVG(shape: string[], scale: number, outlineHex: string): string {
+  const h = shape.length;
+  const w = shape[0].length;
+  let body = '';
+  let outline = '';
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const ch = shape[y][x];
+      if (ch === '1') body += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
+      else if (ch === '2') outline += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
+    }
+  }
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='${w * scale}' height='${h * scale}' ` +
+    `viewBox='0 0 ${w} ${h}' shape-rendering='crispEdges'>` +
+    `<g fill='%23ffffff'>${body}</g>` +
+    `<g fill='${outlineHex}'>${outline}</g></svg>`;
+  return `url("data:image/svg+xml;utf8,${svg}")`;
+}
+
+// Deterministic PRNG (mulberry32) — the sky layout is decided at build
+// time, identical for every visitor, friendly to visual-regression
+// testing.
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(0x80808080);
+const rand = (min: number, max: number): number => min + rng() * (max - min);
+
+type Puff = {
+  width: number;
+  height: number;
+  top: string;
+  opacity: string;
+  driftDur: string;
+  driftDelay: string;
+  bg: string;
+  bobDur: string;
+  bobDelay: string;
+};
+
+const puffs: Puff[] = [];
+for (const L of LAYERS) {
+  for (let i = 0; i < L.count; i++) {
+    const shape = SHAPES[Math.floor(rng() * SHAPES.length)];
+    const scale = L.scaleMin + Math.floor(rng() * (L.scaleMax - L.scaleMin + 1));
+    const dur = rand(L.durMin, L.durMax);
+    puffs.push({
+      width: shape[0].length * scale,
+      height: shape.length * scale,
+      top: `${rand(L.topMin, L.topMax).toFixed(2)}vh`,
+      opacity: rand(L.opMin, L.opMax).toFixed(2),
+      driftDur: `${dur.toFixed(1)}s`,
+      driftDelay: `${(-rng() * dur).toFixed(1)}s`,
+      bg: shapeToSVG(shape, scale, L.outline),
+      bobDur: `${(4 + rng() * 4).toFixed(2)}s`,
+      bobDelay: `${(-rng() * 4).toFixed(2)}s`,
+    });
+  }
+}
+---
+
+<div class="sky" aria-hidden="true"></div>
+<div class="sky-puffs" id="skyPuffs" aria-hidden="true">
+  {
+    puffs.map((p) => (
+      <div
+        class="puff"
+        style={`--w:${p.width}px;width:${p.width}px;height:${p.height}px;top:${p.top};left:0;opacity:${p.opacity};animation-duration:${p.driftDur};animation-delay:${p.driftDelay}`}
+      >
+        <div
+          class="puff-bob"
+          style={`background-image:${p.bg};animation-duration:${p.bobDur};animation-delay:${p.bobDelay}`}
+        />
+      </div>
+    ))
+  }
+</div>

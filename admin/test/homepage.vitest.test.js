@@ -176,7 +176,70 @@ describe('save / discard', () => {
   });
 });
 
+describe('structural edits', () => {
+  // Open a section card so its field editor (and its add/toggle buttons) render.
+  function openSection(id) {
+    document.querySelector(`.hp-sec[data-id="${id}"] .hp-sec-head`).click();
+  }
+
+  it('adds an app item to the rail and the preview', async () => {
+    await boot();
+    openSection('apps');
+    expect(document.querySelectorAll('#hp-canvas [data-pv="apps"] .pv-app').length).toBe(2);
+
+    document.querySelector('[data-act="app-add"]').click();
+
+    expect(document.querySelectorAll('#hp-canvas [data-pv="apps"] .pv-app').length).toBe(3);
+    expect(document.querySelectorAll('.hp-sec[data-id="apps"] .hp-item').length).toBe(3);
+    expect(document.getElementById('hp-dirty').classList.contains('unsaved')).toBe(true);
+  });
+
+  it('toggles a social network off (hides its preview tile)', async () => {
+    await boot();
+    openSection('socials');
+    // MODEL hides only `threads`, so 7 of the 8 ordered tiles show.
+    expect(document.querySelectorAll('#hp-canvas [data-pv="socials"] .pv-social').length).toBe(7);
+
+    document.querySelector('[data-act="soc-toggle"][data-key="youtube"]').click();
+
+    expect(document.querySelectorAll('#hp-canvas [data-pv="socials"] .pv-social').length).toBe(6);
+    // Saving now sends youtube in socials.hidden.
+    document.getElementById('hp-save').click();
+    await flush();
+    const patchCall = globalThis.fetch.mock.calls.find(([, o]) => o && o.method === 'PATCH');
+    expect(JSON.parse(patchCall[1].body).socials.hidden).toContain('youtube');
+  });
+
+  it('reorders sections with the move-down button', async () => {
+    await boot();
+    // hero is first; move it down one slot.
+    document.querySelector('.hp-sec[data-id="hero"] [data-act="sec-down"]').click();
+
+    const railIds = Array.from(document.querySelectorAll('#hp-rail-scroll .hp-sec')).map((c) =>
+      c.getAttribute('data-id'),
+    );
+    expect(railIds).toEqual(['apps', 'hero', 'videos', 'socials', 'blog_cta']);
+  });
+});
+
 describe('live preview', () => {
+  it('honors section_order after a reorder', async () => {
+    await boot();
+    expect(
+      Array.from(document.querySelectorAll('#hp-canvas .pv-block')).map((b) =>
+        b.getAttribute('data-pv'),
+      ),
+    ).toEqual(MODEL.section_order);
+
+    document.querySelector('.hp-sec[data-id="hero"] [data-act="sec-down"]').click();
+
+    expect(
+      Array.from(document.querySelectorAll('#hp-canvas .pv-block')).map((b) =>
+        b.getAttribute('data-pv'),
+      ),
+    ).toEqual(['apps', 'hero', 'videos', 'socials', 'blog_cta']);
+  });
+
   it('re-renders the edited hero word without rebuilding the rail', async () => {
     await boot();
     expect(document.querySelector('#hp-canvas .pv-word').textContent).toBe('Web');
