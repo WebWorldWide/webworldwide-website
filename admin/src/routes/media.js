@@ -242,6 +242,7 @@ function shapeMedia(row) {
     status: row.status,
     uploaded_at: row.uploaded_at,
     conversions,
+    alt_text: row.alt_text || null,
   };
 }
 
@@ -587,6 +588,41 @@ router.get('/:id/usage', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Not found' });
   const shaped = shapeMedia(row);
   res.json({ posts: postsReferencing(shaped.url) });
+});
+
+const MAX_ALT_TEXT_LENGTH = 1000;
+
+/**
+ * PATCH /api/media/:id — edit asset metadata. Currently the only
+ * editable field is `alt_text` (string to set, null/'' to clear).
+ * The stored value is the library default the editor inserts with;
+ * markdown stays authoritative inside already-published post bodies.
+ */
+router.patch('/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+
+  const body = req.body || {};
+  if (!('alt_text' in body)) {
+    return res.status(400).json({ error: 'no_editable_fields', message: 'Provide alt_text.' });
+  }
+  const raw = body.alt_text;
+  if (raw !== null && typeof raw !== 'string') {
+    return res
+      .status(400)
+      .json({ error: 'invalid_alt_text', message: 'alt_text must be a string or null.' });
+  }
+  const altText = raw === null ? null : raw.trim() || null;
+  if (altText && altText.length > MAX_ALT_TEXT_LENGTH) {
+    return res.status(400).json({
+      error: 'alt_text_too_long',
+      message: `Alt text must be ${MAX_ALT_TEXT_LENGTH} characters or fewer.`,
+    });
+  }
+
+  db.prepare('UPDATE media SET alt_text = ? WHERE id = ?').run(altText, req.params.id);
+  const updated = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
+  res.json(shapeMedia(updated));
 });
 
 /**

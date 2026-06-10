@@ -173,6 +173,37 @@
   };
 
   /**
+   * Edit asset metadata. Currently only `alt_text` is editable (string
+   * to set; null/'' clears). Returns the updated, API-shaped record.
+   *
+   * @param {string} id
+   * @param {{ alt_text?: string | null }} fields
+   * @returns {Promise<any>}
+   */
+  media.patch = function patchMedia(id, fields) {
+    return TE.fetchJSON(`/api/media/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(fields),
+    });
+  };
+
+  /**
+   * True when an image's alt text is missing or is really a filename
+   * (`image-19.webp`) — the states the library badges as needing alt.
+   *
+   * @param {{ alt_text?: string | null, filename?: string, original_name?: string }} m
+   * @returns {boolean}
+   */
+  media.needsAlt = function needsAlt(m) {
+    const a = String(m.alt_text || '').trim();
+    if (!a) return true;
+    if (/^[\w. ()-]+\.(webp|png|jpe?g|gif|svg|avif|bmp|ico)$/i.test(a)) return true;
+    if (m.filename && a === m.filename) return true;
+    if (m.original_name && a === m.original_name) return true;
+    return false;
+  };
+
+  /**
    * Trigger a re-run of the most recent conversion job for an asset.
    * Used by the failed-state retry button in the library grid.
    *
@@ -426,6 +457,11 @@
           statusBadge = `<span class="te-media-status failed" title="Conversion failed" aria-label="Conversion failed">● Failed</span>
             <button type="button" class="te-media-retry" data-retry-id="${TE.escape(m.id)}" aria-label="Retry conversion">Retry</button>`;
         }
+        // Accessibility nudge: images with no usable alt text wear a
+        // warning chip; the drawer is where alt gets written.
+        if (type === 'image' && media.needsAlt(m)) {
+          statusBadge += `<span class="te-media-status no-alt" title="No alt text — open details to add one" aria-label="No alt text">⚠ No alt</span>`;
+        }
         return `
         <div class="te-media-card ${sel ? 'is-selected' : ''} status-${TE.escape(status)}" data-id="${TE.escape(m.id)}" role="listitem">
           <label class="te-media-check">
@@ -588,7 +624,7 @@
     const type = m.type || classifyOnClient(m.mime_type);
     const preview =
       type === 'image'
-        ? `<img class="te-drawer-preview" src="${TE.escape(m.url)}" alt="${TE.escape(m.original_name)}" />`
+        ? `<img class="te-drawer-preview" src="${TE.escape(m.url)}" alt="${TE.escape(m.alt_text || m.original_name)}" />`
         : type === 'video'
           ? `<video class="te-drawer-preview" controls src="${TE.escape(m.url)}"></video>`
           : type === 'audio'
@@ -599,9 +635,23 @@
       ? `<ul class="te-drawer-usage">${usage.map((p) => `<li><a href="/editor.html?file=${encodeURIComponent(p)}">${TE.escape(p)}</a></li>`).join('')}</ul>`
       : '<p class="te-drawer-usage empty">Not referenced by any post.</p>';
     const dims = m.width && m.height ? `${m.width} × ${m.height} px` : '—';
+    const isImage = type === 'image';
+    const altSection = isImage
+      ? `
+      <div class="te-drawer-alt">
+        <label class="te-drawer-alt-label" for="drawer-alt-input">Alt text</label>
+        <textarea id="drawer-alt-input" class="te-drawer-alt-input" rows="3" maxlength="1000"
+          placeholder="Describe this image for screen readers…">${TE.escape(m.alt_text || '')}</textarea>
+        <div class="te-drawer-alt-row">
+          <span class="te-drawer-alt-hint">${media.needsAlt(m) ? '⚠ Images without alt text are invisible to screen readers.' : ''}</span>
+          <button type="button" class="btn" data-drawer-save-alt="${TE.escape(m.id)}">Save alt text</button>
+        </div>
+      </div>`
+      : '';
     body.innerHTML = `
       ${preview}
       <h3 class="te-drawer-title">${TE.escape(m.original_name || m.filename)}</h3>
+      ${altSection}
       <dl class="te-drawer-meta">
         <dt>Type</dt><dd>${TE.escape(type)} (${TE.escape(m.mime_type)})</dd>
         <dt>Size</dt><dd>${TE.escape(TE.fmtBytes(m.size))}</dd>
@@ -615,6 +665,25 @@
         <button type="button" class="btn danger" data-drawer-delete="${TE.escape(m.id)}">Delete</button>
       </div>
     `;
+    const saveAltBtn = body.querySelector('[data-drawer-save-alt]');
+    if (saveAltBtn) {
+      saveAltBtn.addEventListener('click', async () => {
+        const input = /** @type {HTMLTextAreaElement} */ (body.querySelector('#drawer-alt-input'));
+        saveAltBtn.setAttribute('disabled', 'true');
+        try {
+          const updated = await media.patch(m.id, { alt_text: input.value });
+          TE.toast(updated.alt_text ? 'Alt text saved.' : 'Alt text cleared.');
+          // Update the local list copy so the grid badge refreshes.
+          const item = lib.items.find((i) => i.id === m.id);
+          if (item) item.alt_text = updated.alt_text;
+          renderItems();
+        } catch (err) {
+          TE.toast(err.message || 'Could not save alt text.', 'error');
+        } finally {
+          saveAltBtn.removeAttribute('disabled');
+        }
+      });
+    }
     const delBtn = body.querySelector('[data-drawer-delete]');
     if (delBtn) {
       delBtn.addEventListener('click', async () => {
@@ -853,20 +922,25 @@
         }
         recentEl.innerHTML = items
           .map(
-            (m) => `
-            <button type="button" class="thumb" data-url="${TE.escape(m.url)}" data-filename="${TE.escape(m.filename)}"
+            (m, i) => `
+            <button type="button" class="thumb" data-idx="${i}" data-url="${TE.escape(m.url)}" data-filename="${TE.escape(m.filename)}"
                     style="background-image:url('${TE.escape(m.url)}'); border:1px solid var(--glass-border); padding:0;">
               <span class="badge" aria-hidden="true">${TE.escape((m.filename || '').split('.').pop().toUpperCase())}</span>
-              <span class="sr-only">${TE.escape(m.original_name || m.filename)}</span>
+              <span class="sr-only">${TE.escape(m.alt_text || m.original_name || m.filename)}</span>
             </button>`,
           )
           .join('');
         recentEl.querySelectorAll('.thumb').forEach((el) => {
           el.addEventListener('click', () => {
-            onInsert({
-              url: el.getAttribute('data-url'),
-              filename: el.getAttribute('data-filename'),
-            });
+            // Hand the FULL library record to the insert callback —
+            // editor.js needs id/alt_text/type, not just the URL.
+            const m = items[Number(el.getAttribute('data-idx'))];
+            onInsert(
+              m || {
+                url: el.getAttribute('data-url'),
+                filename: el.getAttribute('data-filename'),
+              },
+            );
           });
         });
       } catch (err) {
