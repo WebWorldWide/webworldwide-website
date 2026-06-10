@@ -629,9 +629,16 @@
         // hydrated later by loadPost) so the WYSIWYG renders from the
         // same source the textarea would have shown.
         const initial = (bodyEl && bodyEl.value) || '';
+        const labelEditorSurface = () => {
+          const surface = editorRoot.querySelector('.ProseMirror');
+          if (surface && !surface.getAttribute('aria-label')) {
+            surface.setAttribute('aria-label', 'Post body');
+          }
+        };
         const instance = TEEditor.mount(editorRoot, initial, {
           placeholder: 'Write your post in Markdown…',
         });
+        labelEditorSurface();
         // The façade is the new bodyEl. It exposes .value, .selectionStart,
         // .selectionEnd, addEventListener('input'), .focus(), .setMode().
         bodyEl = instance;

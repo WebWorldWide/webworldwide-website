@@ -24,13 +24,26 @@
  */
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { startStaticAdmin } from './helpers/static-admin.js';
+import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, '..', '..', 'admin', 'public');
 
-const fileUrl = (name) => pathToFileURL(join(PUBLIC_DIR, name)).href;
+// Serve over a real http origin so the SPA's absolute asset paths
+// resolve and the hash router truly swaps views before axe runs.
+// /api|/auth answer 503 (plus a fake authed /auth/status) — every view
+// renders its degraded state, which is exactly what we audit.
+/** @type {{ url: string, close: () => Promise<void> }} */
+let staticAdmin;
+test.beforeAll(async () => {
+  staticAdmin = await startStaticAdmin(PUBLIC_DIR);
+});
+test.afterAll(async () => {
+  if (staticAdmin) await staticAdmin.close();
+});
+const fileUrl = (name) => `${staticAdmin.url}/${name}`;
 
 /**
  * Configure an AxeBuilder with the WCAG 2.0/2.1 AA tag set and the
@@ -44,12 +57,10 @@ const fileUrl = (name) => pathToFileURL(join(PUBLIC_DIR, name)).href;
  *    admin is a single-purpose admin shell (not a public document)
  *    we accept this rather than wrap every panel in another landmark.
  *
- *  - `page-has-heading-one`: file:// loading prevents the dashboard
- *    from initialising its hash router, so axe may run while the H1
- *    view is hidden. The H1 is present in the static HTML (see
- *    /index.html `.sec-title`) — this is a false negative under
- *    file://, not a real defect. Covered separately by admin.spec.js
- *    DOM assertions.
+ *  - `page-has-heading-one`: some routed views (homepage editor,
+ *    analytics) render their H1 from JS after a fetch settles; axe can
+ *    run against the pre-paint empty-state. The H1s exist (covered by
+ *    admin.spec.js DOM assertions) — not a real defect.
  * @param page
  */
 function buildAxe(page) {

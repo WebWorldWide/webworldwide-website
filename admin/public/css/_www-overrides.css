@@ -12,6 +12,44 @@
    v2 views (Overview / Analytics / System / Homepage).
    ============================================================ */
 
+/* TOKEN RE-POINT — admin.css loads after _www-tokens.css and shadows
+   the legacy token names (--accent, --warn, --mono, --glass-*…) with
+   its old green theme. This block loads after admin.css, so it wins:
+   every legacy name resolves to the v2 family again. Names admin.css
+   does NOT shadow (--ink*, --surface*, --accent-bg, --font-*) come
+   straight from _www-tokens.css. */
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  --accent: var(--cherry-strong);
+  --accent-soft: rgb(236 90 43 / 12%);
+  --accent-glow: rgb(236 90 43 / 34%);
+  --accent-on: #ffffff;
+  --selection: rgb(236 90 43 / 25%);
+  --warn: #b87a16;
+  --warn-soft: rgb(214 143 30 / 16%);
+  --warn-glow: rgb(214 143 30 / 32%);
+  --danger: #c93a2a;
+  --danger-soft: rgb(217 74 58 / 14%);
+  --danger-glow: rgb(217 74 58 / 30%);
+  --bg: var(--bg-page);
+  --bg-elev: var(--surface);
+  --bg-card: var(--surface);
+  --bg-deep: var(--surface-3);
+  --line: var(--line-www);
+  --line-strong: var(--line-strong-www);
+  --fg: var(--ink);
+  --fg-dim: var(--ink-soft);
+  --fg-mute: var(--ink-soft);
+  --mono: var(--font-mono-www);
+  --sans: var(--font-ui);
+  --serif: var(--font-read);
+  --glass-tint: var(--surface);
+  --glass-border: var(--line-www);
+  --glass-highlight: rgb(255 255 255 / 60%);
+  --glass-shadow: var(--shadow-card);
+}
+
 /* CANVAS */
 html {
   background: var(--bg-page);
@@ -123,7 +161,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   cursor: pointer;
-  background: var(--accent-bg);
+  background: var(--accent);
   border: 1px solid var(--accent-deep);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-button);
@@ -134,7 +172,7 @@ body {
 }
 .btn-new:hover,
 .btn-new:focus-visible {
-  background: var(--accent-deep);
+  background: var(--accent-fill-hover);
   box-shadow: var(--shadow-button-hover);
   transform: translateY(-1px);
 }
@@ -157,7 +195,7 @@ body {
   font-family: var(--font-pixel);
   font-size: 12.5px;
   font-weight: 400;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   text-transform: uppercase;
   letter-spacing: 0.2em;
 }
@@ -226,11 +264,11 @@ body {
 }
 .side-item .badge.ok {
   color: #fff;
-  background: var(--ok);
+  background: var(--sun-strong);
 }
 .side-item .badge.cm:not(.zero) {
   color: #fff;
-  background: var(--accent-bg);
+  background: var(--accent);
 }
 .side-item[aria-current="page"] .badge {
   color: #fff;
@@ -326,7 +364,7 @@ body {
 .crumb .c-eyebrow {
   font-family: var(--font-pixel);
   font-size: 13px;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   text-transform: uppercase;
   letter-spacing: 0.18em;
 }
@@ -415,7 +453,7 @@ body {
 .btn-primary,
 .btn.solid {
   color: #fff;
-  background: var(--accent-bg);
+  background: var(--accent);
   border-color: var(--accent-deep);
 }
 .btn.primary:hover,
@@ -424,8 +462,8 @@ body {
 .btn-primary:focus-visible,
 .btn.solid:hover,
 .btn.solid:focus-visible {
-  background: var(--accent-deep);
-  border-color: var(--accent-deep);
+  background: var(--accent-fill-hover);
+  border-color: var(--accent-fill-hover);
 }
 .btn.ghost {
   color: var(--ink-soft);
@@ -652,14 +690,14 @@ body {
 .row-grid.head {
   font-family: var(--font-pixel);
   font-size: 12.5px;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   text-transform: uppercase;
   letter-spacing: 0.16em;
 }
 .r-num {
   font-family: var(--font-mono-www);
   font-size: 12px;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   font-variant-numeric: tabular-nums;
 }
 .r-title-wrap,
@@ -1030,7 +1068,7 @@ body {
 .empty .e-mark {
   font-family: var(--font-pixel);
   font-size: 30px;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
 }
 .empty .e-text {
   margin-top: 6px;
@@ -1164,14 +1202,67 @@ body {
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 780px) {
+/* Mobile nav: the hamburger lives in the topbar and is hidden on
+   desktop; below 800px the sidebar becomes an off-canvas drawer it
+   toggles (legacy admin.css used display:none with NO way to navigate
+   on a phone — this block must use the same 800px breakpoint so it
+   shadows that rule). */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  margin-right: 4px;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--r-sm);
+}
+.nav-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+.nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 89;
+  display: none;
+  background: rgb(14 41 96 / 0.42);
+}
+
+@media (max-width: 800px) {
   .shell {
     grid-template-columns: 1fr;
   }
   .sidebar {
-    display: none;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 90;
+    display: flex;
+    width: min(290px, 84vw);
+    overflow-y: auto;
+    box-shadow: 6px 0 24px rgb(14 41 96 / 0.18);
+    transition: transform 0.18s ease;
+    transform: translateX(-102%);
+  }
+  body.nav-open .sidebar {
+    transform: none;
+  }
+  body.nav-open .nav-backdrop {
+    display: block;
+  }
+  .nav-toggle {
+    display: inline-flex;
   }
   .topbar-search {
     display: none;
+  }
+}
+@media (max-width: 800px) and (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
   }
 }

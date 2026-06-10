@@ -1,34 +1,26 @@
 /* ============================================================
-   Login / setup page styles (login.html)
-   Centered card on the standard admin backdrop.
+   Login / setup page styles (login.html) — v2 design language.
+   Centered white auth card on the calm --bg-page canvas;
+   Cormorant wordmark, VT323 micro-labels, Hanken inputs with
+   an accent focus ring, cherry primary CTA (mirrors .btn-new
+   in the design handoff).
    ============================================================ */
+
+body[data-page="login"] {
+  background: var(--bg-page);
+}
 
 .auth-card {
   position: relative;
   z-index: 10;
   width: 100%;
   max-width: 420px;
-  background: var(--bg-card);
-  border: var(--border-soft);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   padding: 32px 28px 28px;
   overflow: hidden;
-}
-.auth-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent 5%,
-    var(--glass-highlight) 50%,
-    transparent 95%
-  );
-  pointer-events: none;
 }
 
 .auth-brand {
@@ -38,54 +30,126 @@
   margin-bottom: 22px;
 }
 .auth-brand .name {
-  /* Match the sidebar wordmark: plain Garamond, single color, no accent.
-     16px (vs the old 13px mono) gives the display serif appropriate weight
-     over the 9px "Admin" sublabel; 500 has a real self-hosted face. */
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 16px;
-  font-weight: 500;
+  /* "Web World Wide" wordmark — the public site's Cormorant, 600. */
+  font-family: var(--font-site);
+  font-size: 21px;
+  font-weight: 600;
   letter-spacing: 0;
-  color: var(--fg);
-  line-height: 1.2;
+  color: var(--ink);
+  line-height: 1.1;
 }
 .auth-brand .name b {
   color: inherit;
+  font-weight: inherit;
 }
 .auth-brand .name span {
+  /* "Admin" sublabel — pixel accent tier. */
   display: block;
-  font-size: 9px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  font-weight: 400;
   letter-spacing: 0.22em;
-  color: var(--fg-mute);
-  font-weight: 500;
-  margin-top: 2px;
+  color: var(--ink-mute);
+  margin-top: 3px;
   text-transform: uppercase;
 }
 
 .auth-title {
-  font-family: var(--serif);
+  font-family: var(--font-read);
   font-size: 26px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.022em;
   margin: 0 0 4px;
-  color: var(--fg);
+  color: var(--ink);
 }
 .auth-sub {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--fg-mute);
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  color: var(--ink-mute);
   margin: 0 0 24px;
   text-transform: uppercase;
 }
 
-.auth-passkey {
-  width: 100%;
-  padding: 14px 16px;
+/* Fields — VT323 micro-labels over 16px Hanken inputs. Scoped to the
+   card so the base .field rules in admin.css keep covering the rest
+   of the admin. */
+.auth-card .field label {
+  font-family: var(--font-pixel);
   font-size: 13px;
-  letter-spacing: 0.06em;
+  font-weight: 400;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-weight: 700;
+  color: var(--ink-mute);
+}
+.auth-card .field input {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+}
+.auth-card .field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Primary CTA — mirrors the design's .btn-new: cherry fill, white
+   text, deep-cherry border, pixel type. */
+.auth-card .btn-primary {
+  display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
+  background: var(--accent-bg);
+  color: var(--accent-on);
+  border: 1px solid var(--accent-deep);
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-button);
+  transition:
+    background 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+.auth-card .btn-primary:hover,
+.auth-card .btn-primary:focus-visible {
+  background: var(--accent-deep);
+  color: var(--accent-on);
+  border-color: var(--accent-deep);
+  box-shadow: var(--shadow-button-hover);
+  transform: translateY(-1px);
+}
+
+.auth-card .submit {
+  width: 100%;
+}
+
+/* Passkey CTA — quiet secondary: surface + strong hairline, same
+   pixel type tier. Declared after the primary rules so it wins the
+   cascade over `.auth-card .btn-primary` on the same element. */
+.auth-card .auth-passkey {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong-www);
+  padding: 12px 16px;
+}
+.auth-card .auth-passkey:hover,
+.auth-card .auth-passkey:focus-visible {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--ink-mute);
+  box-shadow: var(--shadow-button);
+  transform: none;
 }
 .auth-passkey .ico {
   margin-right: 6px;
@@ -96,10 +160,10 @@
   align-items: center;
   gap: 10px;
   margin: 20px 0;
-  font-family: var(--mono);
-  font-size: 9.5px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
   letter-spacing: 0.22em;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   text-transform: uppercase;
 }
 .auth-divider::before,
@@ -107,16 +171,16 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--glass-border);
+  background: var(--line-www);
 }
 
 .auth-toggle {
   background: transparent;
   border: 0;
-  color: var(--fg-dim);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
   padding: 8px 0;
@@ -134,21 +198,15 @@
 .auth-form.open {
   display: block;
 }
-.auth-form .submit {
-  width: 100%;
-  justify-content: center;
-  padding: 11px 14px;
-  font-size: 12px;
-}
 
 .auth-error {
   margin-top: 14px;
   padding: 10px 12px;
   background: var(--danger-soft);
   border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   color: var(--danger);
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11.5px;
   display: none;
 }
@@ -168,7 +226,9 @@
 .pw-wrap {
   position: relative;
 }
-.pw-wrap input {
+/* Scoped past `.auth-card .field input` so the Show-toggle clearance
+   keeps winning the cascade. */
+.auth-card .pw-wrap input {
   padding-right: 56px;
 }
 .pw-toggle {
@@ -178,8 +238,8 @@
   transform: translateY(-50%);
   background: transparent;
   border: 0;
-  color: var(--fg-mute);
-  font-family: var(--mono);
+  color: var(--ink-mute);
+  font-family: var(--font-mono-www);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -193,16 +253,9 @@
 .auth-foot {
   margin-top: 28px;
   text-align: center;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 10px;
   letter-spacing: 0.18em;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   text-transform: uppercase;
-}
-
-.theme-mini {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 20;
 }

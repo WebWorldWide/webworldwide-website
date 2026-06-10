@@ -21,7 +21,11 @@
  *   #tags #redirects #activity #shortcodes → utility views ("More")
  */
 (function () {
-  if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') return;
+  // Boot on the shell page only — '/', '/index.html', or any path that
+  // ENDS in /index.html (file:// in tests serves the absolute fs path).
+  // editor.html / login.html have their own page modules.
+  const path = window.location.pathname;
+  if (path !== '/' && !path.endsWith('/index.html')) return;
 
   /** @type {Record<string, () => void>} */
   const initialized = {};
@@ -121,6 +125,42 @@
     }
   }
 
+  // ── Mobile nav drawer (hamburger < 800px) ─────────────────────
+  function wireMobileNav() {
+    const toggle = document.getElementById('nav-toggle');
+    const sidebar = document.getElementById('sidebar');
+    if (!toggle || !sidebar) return;
+
+    // The backdrop must live INSIDE .shell: the shell is a stacking
+    // context (position:relative + z-index), so a body-level backdrop
+    // would always paint above the sidebar regardless of z-index.
+    const backdrop = document.createElement('div');
+    backdrop.className = 'nav-backdrop';
+    (document.querySelector('.shell') || document.body).appendChild(backdrop);
+
+    function setOpen(open) {
+      document.body.classList.toggle('nav-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      if (open) sidebar.querySelector('a, button')?.focus();
+    }
+    const close = () => setOpen(false);
+
+    toggle.addEventListener('click', () => setOpen(!document.body.classList.contains('nav-open')));
+    backdrop.addEventListener('click', close);
+    // Following a nav link should dismiss the drawer.
+    sidebar.addEventListener('click', (e) => {
+      const t = /** @type {HTMLElement} */ (e.target);
+      if (t.closest('a')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('nav-open')) {
+        close();
+        toggle.focus();
+      }
+    });
+  }
+
   // ── Template picker for + New Post ────────────────────────────
   function wireNewPost() {
     const btn = document.getElementById('btn-new-post');
@@ -140,6 +180,7 @@
     window.TE.routes = window.TE.routes || {};
     show(currentRoute());
     window.addEventListener('hashchange', () => show(currentRoute()));
+    wireMobileNav();
     wireNewPost();
   }
 

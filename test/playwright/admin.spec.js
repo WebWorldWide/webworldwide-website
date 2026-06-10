@@ -4,31 +4,41 @@
  *
  * The admin SPA depends on the Node/Express backend for /api/* and
  * /auth/*. We don't boot Express in this Playwright suite (CI doesn't
- * have a Pi-shaped sqlite binding for every Node release). Instead we
- * load the static HTML files via file:// URLs and assert the shells
- * render the expected DOM landmarks without throwing.
+ * have a Pi-shaped sqlite binding for every Node release). Instead a
+ * tiny in-suite static server (helpers/static-admin.js) serves
+ * admin/public over http so the SPA's absolute asset paths resolve and
+ * its JavaScript genuinely runs; /api|/auth return 503, which every
+ * view degrades from gracefully. We only fail on uncaught exceptions
+ * or unexpected console.error.
  *
- * The page-level fetches that the JS issues (e.g. /auth/status) will
- * fail with net::ERR_FAILED — that's fine. The frontend wraps those
- * in try/catch and falls through gracefully; we only fail the test on
- * uncaught exceptions or hard JS errors.
- *
- * Two scenarios require a real http(s) origin (live admin server) and
- * are gated on DEV_STACK_RUNNING=1 — the same pattern admin-a11y.spec.js
- * uses. Under file:// the scripts referenced via absolute paths
- * (`/js/common.js`) can't load, so `window.TE` is never populated and
- * the localStorage write path used by the theme toggle can fire before
- * the listener wires up. See CONTRIBUTING.md for how to enable them.
+ * Scenarios that need the REAL backend (auth round-trips) stay gated
+ * on DEV_STACK_RUNNING=1 — the same pattern admin-a11y.spec.js uses.
  */
 import { test, expect } from '@playwright/test';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { startStaticAdmin } from './helpers/static-admin.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, '..', '..', 'admin', 'public');
-const loginUrl = pathToFileURL(join(PUBLIC_DIR, 'login.html')).href;
-const indexUrl = pathToFileURL(join(PUBLIC_DIR, 'index.html')).href;
-const editorUrl = pathToFileURL(join(PUBLIC_DIR, 'editor.html')).href;
+
+// A real http origin (static files only, /api|/auth → 503) so the SPA's
+// absolute asset paths resolve and its JS actually runs in CI. See
+// helpers/static-admin.js.
+/** @type {{ url: string, close: () => Promise<void> }} */
+let staticAdmin;
+let loginUrl = '';
+let indexUrl = '';
+let editorUrl = '';
+test.beforeAll(async () => {
+  staticAdmin = await startStaticAdmin(PUBLIC_DIR);
+  loginUrl = `${staticAdmin.url}/login.html`;
+  indexUrl = `${staticAdmin.url}/index.html`;
+  editorUrl = `${staticAdmin.url}/editor.html`;
+});
+test.afterAll(async () => {
+  if (staticAdmin) await staticAdmin.close();
+});
 
 const stackUp = process.env.DEV_STACK_RUNNING === 'true' || process.env.DEV_STACK_RUNNING === '1';
 const liveAdminUrl = process.env.ADMIN_ORIGIN || 'http://127.0.0.1:8787';
@@ -47,8 +57,11 @@ function collectFatalConsoleErrors(page) {
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;
     const text = msg.text();
-    // Skip predictable file:// network failures.
+    // Skip predictable backend-offline noise: the static test server
+    // answers /api|/auth with 503 (see helpers/static-admin.js).
     if (/fetch|XMLHttpRequest|net::ERR/i.test(text)) return;
+    if (/503|Service Unavailable|backend offline/i.test(text)) return;
+    if (/Failed to load (posts|resource)/i.test(text)) return;
     if (/Not authenticated/.test(text)) return;
     errors.push(text);
   });
@@ -71,23 +84,31 @@ test.describe('admin shell', () => {
     expect(errors).toEqual([]);
   });
 
-  test('login.html theme toggle flips data-theme', async ({ page }) => {
-    test.skip(
-      !stackUp,
-      'Theme toggle wires up in common.js which only loads from http(s); set DEV_STACK_RUNNING=1.',
-    );
-    await page.goto(`${liveAdminUrl}/login.html`);
+  test('login.html forces the light theme (dark mode is retired)', async ({ page }) => {
+    await page.goto(loginUrl);
     const html = page.locator('html');
-    await expect(html).toHaveAttribute('data-theme', 'dark');
-    await page.locator('#btn-theme').click();
     await expect(html).toHaveAttribute('data-theme', 'light');
   });
 
-  test('index.html renders the sidebar, topbar, and posts panel', async ({ page }) => {
+  test('index.html renders the sidebar, topbar, and posts panel', async ({ page, isMobile }) => {
     const errors = collectFatalConsoleErrors(page);
     // v2: the default route is Overview; the posts panel lives at #posts.
     await page.goto(`${indexUrl}#posts`);
-    await expect(page.locator('aside.sidebar')).toBeVisible();
+    if (isMobile) {
+      // < 800px the sidebar is an off-canvas drawer behind the hamburger.
+      await expect(page.locator('aside.sidebar')).not.toBeInViewport();
+      const toggle = page.locator('#nav-toggle');
+      await expect(toggle).toBeVisible();
+      await toggle.click();
+      await expect(page.locator('aside.sidebar')).toBeInViewport();
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      // Choosing a destination dismisses the drawer.
+      await page.locator('.side-item[data-route="posts"]').click();
+      await expect(page.locator('aside.sidebar')).not.toBeInViewport();
+    } else {
+      await expect(page.locator('aside.sidebar')).toBeVisible();
+      await expect(page.locator('#nav-toggle')).toBeHidden();
+    }
     await expect(page.locator('header.topbar')).toBeVisible();
     await expect(page.locator('#posts-panel')).toBeVisible();
     // Posts filter tabs are present and have role="tab" (the hidden
@@ -128,9 +149,10 @@ test.describe('admin shell', () => {
     await expect(page.locator('#post-title')).toBeVisible();
     await expect(page.locator('#post-slug')).toBeVisible();
     await expect(page.locator('#editor-root')).toBeVisible();
-    // Phase 3 will replace #editor-fallback with TipTap. For now it's
-    // a real <textarea> the editor.js code drives.
-    await expect(page.locator('#editor-fallback')).toBeVisible();
+    // The TipTap bundle mounts a real WYSIWYG surface and hides the
+    // #editor-fallback textarea (which only shows if the bundle fails).
+    await expect(page.locator('#editor-root .ProseMirror')).toBeVisible();
+    await expect(page.locator('#editor-fallback')).toBeHidden();
     // Right rail frontmatter panels — Phase 5e expanded the rail to:
     // Frontmatter, Schedule, Cover image, Custom CSS/JS, Draft preview,
     // SEO, Media, Publish (8 collapsible <details> panels).
