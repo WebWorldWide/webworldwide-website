@@ -180,6 +180,48 @@ body.te-has-body-dropzone.is-dragover::after {
   background: rgb(255 255 255 / 6%);
 }
 
+/* Usage filter pills (All / In posts / Unused) — segmented control that
+   matches the v2 chip vocabulary. The pressed pill uses accent-soft fill
+   with AA --accent text (decoration-only --accent-bg is never paired with
+   white text here). */
+.te-media-used-filter {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line-www, var(--glass-border, rgb(255 255 255 / 10%)));
+  border-radius: 999px;
+}
+
+.te-media-used-filter button {
+  padding: 6px 12px;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--ink-mute, var(--fg-mute, #888));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition:
+    background 120ms,
+    color 120ms;
+}
+
+.te-media-used-filter button + button {
+  border-left: 1px solid var(--line-www, var(--glass-border, rgb(255 255 255 / 10%)));
+}
+
+.te-media-used-filter button:hover,
+.te-media-used-filter button:focus-visible {
+  color: var(--ink, var(--fg, #fff));
+  background: var(--surface-2, rgb(255 255 255 / 5%));
+  outline: none;
+}
+
+.te-media-used-filter button[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 #media-library-dropzone {
   margin-bottom: 16px;
 }
@@ -291,6 +333,27 @@ body.te-has-body-dropzone.is-dragover::after {
   color: var(--fg-mute, #888);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* "Used in" chip on a card — accent-soft fill with AA --accent text
+   (never white-on-accent). Truncates to a single line. */
+.te-media-post {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 4px;
+  overflow: hidden;
+  font-family: var(--mono, monospace);
+  font-size: 10px;
+  color: var(--accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+#media-grid.view-list .te-media-post {
+  margin-top: 0;
 }
 
 /* ── Phase 5: per-card conversion status ──────────────────── */
@@ -550,8 +613,18 @@ body.te-has-body-dropzone.is-dragover::after {
 
 .te-drawer-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
   margin-top: 16px;
+}
+
+/* Quiet "not used" note sitting next to the Delete button. */
+.te-drawer-unused {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-mute, var(--fg-mute, #888));
 }
 
 /* ── Alt text editor (images only) ─────────────────────────── */

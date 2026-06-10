@@ -43,6 +43,7 @@ import {
   unlinkSync,
   statSync,
   readFileSync,
+  readdirSync,
 } from 'fs';
 import { createHash } from 'crypto';
 import { dirname, join } from 'path';
@@ -70,6 +71,7 @@ const SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', '..', '..', 'site
 // Hugo's `static/` before the Astro migration; `SITE_PUBLIC_DIR` lets tests
 // and alternate hosts override the location.
 const MEDIA_ROOT = process.env.SITE_PUBLIC_DIR || join(SITE_DIR, 'public');
+const POSTS_DIR = join(SITE_DIR, 'content', 'posts');
 const MAX_UPLOAD_SIZE = Number(process.env.MEDIA_MAX_UPLOAD_SIZE || 100 * 1024 * 1024);
 
 // Ensure the year/month sub-directories exist on demand (Multer's tmp
@@ -270,6 +272,89 @@ function diskPathFor(row) {
   const type = classifyMime(row.mime_type);
   const category = type === 'image' ? 'images' : 'files';
   return join(MEDIA_ROOT, category, derivePathFromUploadedAt(row.uploaded_at), row.filename);
+}
+
+// ── "Used in" post scan ───────────────────────────────────────────
+// Responsive variants share a base-name prefix (e.g. name.webp +
+// name-320w.webp + name-640w.avif + name-thumb.webp). To decide which
+// post a media row belongs to we match the row's URL *or any of its
+// variant URLs* against the URLs referenced in post bodies + cover
+// frontmatter. Both sides are reduced to a "variant base key"
+// (directory + base name, minus the variant suffix + extension) so a
+// post that references only a `-320w` variant still credits the base
+// asset (and vice-versa).
+//
+// NOTE: the suffix list is deliberately narrow (`\d+w`, `thumb`,
+// `\d+x\d+`) so legitimate name parts like `image-19` or `image-18-1`
+// are NOT mistaken for variants. dedupe-media.js mirrors this helper.
+/**
+ * @param {string} url public path, e.g. `/images/2025/12/name-320w.webp`
+ * @returns {string}
+ */
+function variantBaseKey(url) {
+  const slash = url.lastIndexOf('/');
+  const dir = url.slice(0, slash + 1);
+  let name = url.slice(slash + 1).replace(/\.[a-z0-9]+$/i, '');
+  name = name.replace(/-(?:\d+w|thumb|\d+x\d+)$/i, '');
+  return dir + name;
+}
+
+/**
+ * One pass over the posts directory → map(variantBaseKey → [{ filename,
+ * title }]). Built once per request by the list/detail handlers and
+ * reused for every item (never re-scanned per row). Title comes from
+ * frontmatter `title:`; falls back to the filename sans `.md`.
+ *
+ * @param {string} postsDir
+ * @returns {Map<string, { filename: string, title: string }[]>}
+ */
+function buildUsageMap(postsDir) {
+  /** @type {Map<string, { filename: string, title: string }[]>} */
+  const map = new Map();
+  let files;
+  try {
+    files = readdirSync(postsDir).filter((f) => f.endsWith('.md'));
+  } catch {
+    return map;
+  }
+  // Matches both body image URLs and `cover: /images/…` frontmatter.
+  const urlRe = /\/(?:images|files)\/[A-Za-z0-9_./-]+/g;
+  for (const file of files) {
+    let text;
+    try {
+      text = readFileSync(join(postsDir, file), 'utf8');
+    } catch {
+      continue;
+    }
+    let title = file.replace(/\.md$/, '');
+    const fm = text.match(/^---\n([\s\S]*?)\n---/);
+    if (fm) {
+      const t = fm[1].match(/^title:\s*['"]?(.*?)['"]?\s*$/m);
+      if (t && t[1].trim()) title = t[1].trim();
+    }
+    /** @type {Set<string>} */
+    const keys = new Set();
+    let m;
+    while ((m = urlRe.exec(text)) !== null) keys.add(variantBaseKey(m[0]));
+    for (const key of keys) {
+      const arr = map.get(key) || [];
+      if (!arr.some((e) => e.filename === file)) arr.push({ filename: file, title });
+      map.set(key, arr);
+    }
+  }
+  return map;
+}
+
+/**
+ * Look up the posts that reference a media URL (or any of its variants).
+ *
+ * @param {string} url
+ * @param {Map<string, { filename: string, title: string }[]>} usageMap
+ * @returns {{ filename: string, title: string }[]}
+ */
+function usedInFor(url, usageMap) {
+  const arr = usageMap.get(variantBaseKey(url));
+  return arr ? arr.slice() : [];
 }
 
 // Phase 5: pick a job type for the asset and enqueue it. SVGs flow
@@ -561,8 +646,16 @@ router.get('/', (req, res) => {
   const start = (page - 1) * limit;
   const slice = filtered.slice(start, start + limit);
 
+  // Single post-scan for the whole page (cached per request, never
+  // re-scanned per item) → each row gets `used_in: [{ filename, title }]`.
+  const usageMap = buildUsageMap(POSTS_DIR);
+
   res.json({
-    items: slice.map(shapeMedia),
+    items: slice.map((r) => {
+      const s = shapeMedia(r);
+      s.used_in = usedInFor(s.url, usageMap);
+      return s;
+    }),
     total,
     page,
     limit,
@@ -577,7 +670,8 @@ router.get('/:id', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Not found' });
   const shaped = shapeMedia(row);
   const usage = postsReferencing(shaped.url);
-  res.json({ ...shaped, usage });
+  const used_in = usedInFor(shaped.url, buildUsageMap(POSTS_DIR));
+  res.json({ ...shaped, usage, used_in });
 });
 
 /**

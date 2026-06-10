@@ -272,6 +272,38 @@ test('GET /api/media/:id includes usage list', skipOpts(), async () => {
   assert.deepEqual(readFileSync(onDisk), txt);
 });
 
+test('GET /api/media list includes used_in [{ filename, title }]', skipOpts(), async () => {
+  // Unique bytes so we get a fresh row with a predictable URL.
+  const txt = Buffer.from(`usedin-${Date.now()}`);
+  const r = await upload('used-in.txt', txt, 'text/plain');
+  const file = (await r.json()).file;
+
+  // A post with a real title that references the asset's URL.
+  writeFileSync(
+    join(postsDir, 'used-in-ref.md'),
+    `---\ntitle: A Descriptive Title\n---\nSee [here](${file.url}).\n`,
+  );
+
+  const list = await fetch(`${baseUrl}/api/media?q=used-in`).then((x) => x.json());
+  const listed = list.items.find((i) => i.id === file.id);
+  assert.ok(listed, 'asset is in the listing');
+  assert.ok(Array.isArray(listed.used_in), 'used_in is an array');
+  assert.equal(listed.used_in.length, 1);
+  assert.equal(listed.used_in[0].filename, 'used-in-ref.md');
+  assert.equal(listed.used_in[0].title, 'A Descriptive Title');
+
+  // Detail endpoint carries it too.
+  const detail = await fetch(`${baseUrl}/api/media/${file.id}`).then((x) => x.json());
+  assert.equal(detail.used_in[0].title, 'A Descriptive Title');
+
+  // An asset referenced by no post reports used_in: [].
+  const r2 = await upload('unused-asset.txt', Buffer.from(`unused-${Date.now()}`), 'text/plain');
+  const file2 = (await r2.json()).file;
+  const list2 = await fetch(`${baseUrl}/api/media?q=unused-asset`).then((x) => x.json());
+  const listed2 = list2.items.find((i) => i.id === file2.id);
+  assert.deepEqual(listed2.used_in, []);
+});
+
 // ── Phase: alt text ────────────────────────────────────────────────
 
 test('PATCH /api/media/:id sets, echoes, and clears alt_text', skipOpts(), async () => {

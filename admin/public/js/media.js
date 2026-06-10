@@ -336,9 +336,19 @@
     type: 'all',
     q: '',
     sort: 'date',
+    used: 'all', // 'all' | 'in' | 'unused' — client-side usage filter
     selected: new Set(),
     view: 'grid',
   };
+
+  /**
+   * True when a media record is referenced by at least one post.
+   * @param {{ used_in?: any[] }} m
+   * @returns {boolean}
+   */
+  function isUsed(m) {
+    return Array.isArray(m.used_in) && m.used_in.length > 0;
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -422,13 +432,21 @@
     const grid = $('media-grid');
     const empty = $('media-empty');
     if (!grid) return;
-    if (!lib.items.length) {
+    // Usage filter is applied client-side over the loaded page so the
+    // type-chip counts (which read lib.items) stay accurate.
+    const visible = lib.items.filter((m) => {
+      if (lib.used === 'in') return isUsed(m);
+      if (lib.used === 'unused') return !isUsed(m);
+      return true;
+    });
+    if (!visible.length) {
       grid.innerHTML = '';
       if (empty) {
         empty.hidden = false;
-        empty.textContent = lib.q
-          ? 'No files match that filter.'
-          : 'No uploads yet. Drop files anywhere to add them.';
+        empty.textContent =
+          lib.q || lib.used !== 'all'
+            ? 'No files match that filter.'
+            : 'No uploads yet. Drop files anywhere to add them.';
       }
       return;
     }
@@ -437,7 +455,7 @@
     grid.classList.toggle('view-list', lib.view === 'list');
     grid.classList.toggle('view-grid', lib.view === 'grid');
 
-    grid.innerHTML = lib.items
+    grid.innerHTML = visible
       .map((m) => {
         const type = m.type || classifyOnClient(m.mime_type);
         const sel = lib.selected.has(m.id);
@@ -446,6 +464,15 @@
             ? `<img loading="lazy" src="${TE.escape(m.url)}" alt="${TE.escape(m.original_name || m.filename)}" />`
             : `<span class="te-media-glyph" aria-hidden="true">${typeIcon(type)}</span>`;
         const subtitle = `${TE.escape(type.toUpperCase())} · ${TE.escape(TE.fmtBytes(m.size))}`;
+        // "Used in" chip: one post → its (truncated) title; many → "N posts".
+        const usedIn = Array.isArray(m.used_in) ? m.used_in : [];
+        let postChip = '';
+        if (usedIn.length === 1) {
+          postChip = `<span class="te-media-post" title="${TE.escape(usedIn[0].title)}">${TE.escape(usedIn[0].title)}</span>`;
+        } else if (usedIn.length > 1) {
+          const titles = usedIn.map((p) => p.title).join('\n');
+          postChip = `<span class="te-media-post" title="${TE.escape(titles)}">${usedIn.length} posts</span>`;
+        }
         // Phase 5: status overlay. 'processing' shows a shimmering badge,
         // 'failed' surfaces a retry button. 'ready' (the common case)
         // emits nothing so the card layout is unchanged.
@@ -476,6 +503,7 @@
           <div class="te-media-info">
             <span class="te-media-name" title="${TE.escape(m.original_name || m.filename)}">${TE.escape(m.original_name || m.filename)}</span>
             <span class="te-media-sub">${subtitle}</span>
+            ${postChip}
           </div>
         </div>`;
       })
@@ -595,6 +623,48 @@
     if (count) count.textContent = String(n);
   }
 
+  // ── Usage filter (All / In posts / Unused) ─────────────────
+  // Builds a small segmented control and drops it next to the search
+  // input. Idempotent — won't double-mount if bootLibrary runs twice.
+  function mountUsedFilter() {
+    const toolbar = document.querySelector('.te-media-toolbar');
+    if (!toolbar || document.getElementById('media-used-filter')) return;
+    const opts = [
+      { key: 'all', label: 'All' },
+      { key: 'in', label: 'In posts' },
+      { key: 'unused', label: 'Unused' },
+    ];
+    const group = document.createElement('div');
+    group.id = 'media-used-filter';
+    group.className = 'te-media-used-filter';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Filter by post usage');
+    group.innerHTML = opts
+      .map(
+        (o) =>
+          `<button type="button" data-used-filter="${o.key}" aria-pressed="${
+            lib.used === o.key ? 'true' : 'false'
+          }">${TE.escape(o.label)}</button>`,
+      )
+      .join('');
+    group.querySelectorAll('[data-used-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        lib.used = btn.getAttribute('data-used-filter') || 'all';
+        group.querySelectorAll('[data-used-filter]').forEach((b) => {
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+        renderItems();
+      });
+    });
+    // Sit right after the search input when present, else append.
+    const search = document.getElementById('media-search');
+    if (search && search.parentNode === toolbar && search.nextSibling) {
+      toolbar.insertBefore(group, search.nextSibling);
+    } else {
+      toolbar.appendChild(group);
+    }
+  }
+
   // ── Detail drawer ──────────────────────────────────────────
   async function openDrawer(id) {
     const drawer = $('media-drawer');
@@ -632,9 +702,20 @@
           : type === 'audio'
             ? `<audio class="te-drawer-preview" controls src="${TE.escape(m.url)}"></audio>`
             : `<div class="te-drawer-preview placeholder"><span class="te-media-glyph" aria-hidden="true">${typeIcon(type)}</span></div>`;
-    const usage = Array.isArray(m.usage) ? m.usage : [];
-    const usageHtml = usage.length
-      ? `<ul class="te-drawer-usage">${usage.map((p) => `<li><a href="/editor.html?file=${encodeURIComponent(p)}">${TE.escape(p)}</a></li>`).join('')}</ul>`
+    // Prefer the richer `used_in` (filename + post title); fall back to the
+    // legacy `usage` (filenames only) for older API responses.
+    const usedIn = Array.isArray(m.used_in)
+      ? m.used_in
+      : Array.isArray(m.usage)
+        ? m.usage.map((f) => ({ filename: f, title: f }))
+        : [];
+    const usageHtml = usedIn.length
+      ? `<ul class="te-drawer-usage">${usedIn
+          .map(
+            (p) =>
+              `<li><a href="/editor.html?file=${encodeURIComponent(p.filename)}">${TE.escape(p.title || p.filename)}</a></li>`,
+          )
+          .join('')}</ul>`
       : '<p class="te-drawer-usage empty">Not referenced by any post.</p>';
     const dims = m.width && m.height ? `${m.width} × ${m.height} px` : '—';
     const isImage = type === 'image';
@@ -665,6 +746,7 @@
       <div class="te-drawer-actions">
         <a class="btn" href="${TE.escape(m.url)}" download="${TE.escape(m.original_name || m.filename)}">Download original</a>
         <button type="button" class="btn danger" data-drawer-delete="${TE.escape(m.id)}">Delete</button>
+        ${usedIn.length ? '' : '<span class="te-drawer-unused" role="note">Not used in any post</span>'}
       </div>
     `;
     const saveAltBtn = body.querySelector('[data-drawer-save-alt]');
@@ -810,6 +892,12 @@
         reload();
       });
     }
+
+    // Usage filter pills (All / In posts / Unused). Injected here rather
+    // than in the static markup so the whole feature lives in this file.
+    // Filtering is client-side (over the loaded page) so it re-renders
+    // without a round-trip.
+    mountUsedFilter();
 
     // View toggle
     document.querySelectorAll('[data-media-view]').forEach((btn) => {
