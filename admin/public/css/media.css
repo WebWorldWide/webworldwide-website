@@ -324,6 +324,18 @@ body.te-has-body-dropzone.is-dragover::after {
   background: rgb(160 30 30 / 85%);
 }
 
+/* Accessibility chip: image has no usable alt text yet. Sits bottom-left
+   so it can coexist with a processing/failed chip in the top corner. */
+.te-media-status.no-alt {
+  top: auto;
+  right: auto;
+  bottom: 6px;
+  left: 6px;
+  color: var(--warn, #8c5a0a);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--warn, #8c5a0a);
+}
+
 .te-media-retry {
   position: absolute;
   right: 6px;
@@ -540,6 +552,53 @@ body.te-has-body-dropzone.is-dragover::after {
   display: flex;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* ── Alt text editor (images only) ─────────────────────────── */
+.te-drawer-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.te-drawer-alt-label {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--fg-mute, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.te-drawer-alt-input {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--fg);
+  resize: vertical;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--line-strong, #b5bab1);
+  border-radius: 6px;
+}
+
+.te-drawer-alt-input:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-soft, rgb(4 128 55 / 10%));
+}
+
+.te-drawer-alt-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.te-drawer-alt-hint {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--warn, #8c5a0a);
 }
 
 /* ── Upload progress tray ──────────────────────────────────── */

@@ -91,7 +91,9 @@ before(async () => {
   const app = express();
   // No auth middleware in the test app: we exercise the router directly
   // and the production server.js applies its own session check before
-  // this router runs.
+  // this router runs. JSON body parsing mirrors server.js (PATCH
+  // metadata edits arrive as JSON; uploads are multipart via Multer).
+  app.use(express.json());
   app.use('/api/media', mediaRouter);
 
   await new Promise((resolve) => {
@@ -269,3 +271,76 @@ test('GET /api/media/:id includes usage list', skipOpts(), async () => {
   assert.ok(existsSync(onDisk));
   assert.deepEqual(readFileSync(onDisk), txt);
 });
+
+// ── Phase: alt text ────────────────────────────────────────────────
+
+test('PATCH /api/media/:id sets, echoes, and clears alt_text', skipOpts(), async () => {
+  const r = await upload('alt-test.png', PNG_1x1, 'image/png');
+  const file = (await r.json()).file;
+  assert.equal(file.alt_text, null);
+
+  // Set.
+  const set = await fetch(`${baseUrl}/api/media/${file.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alt_text: '  A single transparent pixel  ' }),
+  });
+  assert.equal(set.status, 200);
+  const setBody = await set.json();
+  assert.equal(setBody.alt_text, 'A single transparent pixel'); // trimmed
+
+  // List + detail both echo it.
+  const detail = await fetch(`${baseUrl}/api/media/${file.id}`).then((x) => x.json());
+  assert.equal(detail.alt_text, 'A single transparent pixel');
+  const list = await fetch(`${baseUrl}/api/media?q=alt-test`).then((x) => x.json());
+  const listed = list.items.find((i) => i.id === file.id);
+  assert.equal(listed.alt_text, 'A single transparent pixel');
+
+  // Clear with null; empty string clears too.
+  const clear = await fetch(`${baseUrl}/api/media/${file.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alt_text: null }),
+  });
+  assert.equal((await clear.json()).alt_text, null);
+});
+
+test(
+  'PATCH /api/media/:id validation: 404, no fields, wrong type, too long',
+  skipOpts(),
+  async () => {
+    const missing = await fetch(`${baseUrl}/api/media/definitely-not-an-id`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alt_text: 'x' }),
+    });
+    assert.equal(missing.status, 404);
+
+    const r = await upload('alt-valid.txt', Buffer.from('alt validation target'), 'text/plain');
+    const file = (await r.json()).file;
+
+    const noFields = await fetch(`${baseUrl}/api/media/${file.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(noFields.status, 400);
+    assert.equal((await noFields.json()).error, 'no_editable_fields');
+
+    const wrongType = await fetch(`${baseUrl}/api/media/${file.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alt_text: 42 }),
+    });
+    assert.equal(wrongType.status, 400);
+    assert.equal((await wrongType.json()).error, 'invalid_alt_text');
+
+    const tooLong = await fetch(`${baseUrl}/api/media/${file.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alt_text: 'a'.repeat(1001) }),
+    });
+    assert.equal(tooLong.status, 400);
+    assert.equal((await tooLong.json()).error, 'alt_text_too_long');
+  },
+);

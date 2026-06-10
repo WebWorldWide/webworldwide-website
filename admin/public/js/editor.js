@@ -360,7 +360,9 @@
       const coverEl = $('post-cover');
       const altEl = $('post-cover-alt');
       if (coverEl) coverEl.value = m.url || '';
-      if (altEl && !altEl.value) altEl.value = m.original_name || '';
+      // Prefill only from real library alt text — never the filename
+      // (an empty field + placeholder beats a filename-alt shipping).
+      if (altEl && !altEl.value) altEl.value = m.alt_text || '';
       updateCoverPreview();
       markDirty();
     } catch (err) {
@@ -753,13 +755,31 @@
     if (kind === 'image') {
       // Images + GIFs → standard Markdown image (Astro-native; GIFs animate as
       // <img>). Renders inline in the WYSIWYG editor and round-trips cleanly.
+      //
+      // Alt text comes from the media library (`alt_text`), NEVER the
+      // filename — a filename-alt is what screen readers end up reading
+      // aloud. When the library has none, ask; the answer is saved back
+      // so the next insertion of the same image starts with it.
+      let alt = String(item.alt_text || '').trim();
+      const altIsUsable = alt && !(TE.media && TE.media.needsAlt && TE.media.needsAlt(item));
+      if (!altIsUsable) {
+        const answer = window.prompt(
+          'Describe this image for screen readers (alt text):',
+          alt || '',
+        );
+        alt = (answer || '').trim();
+        if (alt && item.id && TE.media && TE.media.patch) {
+          // Fire-and-forget: teach the library this alt for next time.
+          TE.media.patch(item.id, { alt_text: alt }).catch(() => {});
+        }
+        if (!alt && window.TE && TE.toast) {
+          TE.toast('Inserted without alt text — add one in the media library.', 'warn');
+        }
+      }
       if (tt && tt.chain) {
-        tt.chain()
-          .focus()
-          .setImage({ src: item.url, alt: item.original_name || '' })
-          .run();
+        tt.chain().focus().setImage({ src: item.url, alt }).run();
       } else {
-        splice(`\n![${item.original_name || ''}](${item.url})\n`);
+        splice(`\n![${alt}](${item.url})\n`);
       }
       markDirty();
       updateMetrics();
