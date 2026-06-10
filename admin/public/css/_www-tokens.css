@@ -26,7 +26,10 @@
   /* Ink scale (text) */
   --ink: #0e2960;
   --ink-soft: #2a4a90;
-  --ink-mute: #5a72b0;
+  /* Mute tier darkened from the design's #5a72b0: that value is 4.04:1
+     on the #e9eef9 page canvas (fails AA). #4d64a0 is 4.95:1 there and
+     5.8:1 on white. */
+  --ink-mute: #4d64a0;
   --ink-faint: #92a3c8;
 
   /* Surfaces */
@@ -46,6 +49,9 @@
   --accent: var(--cherry-strong);
   --accent-bg: var(--cherry);
   --accent-deep: var(--cherry-deep);
+  /* Hover tier for AA accent FILLS (white text): darker than
+     --accent so the hover keeps ≥4.5:1. */
+  --accent-fill-hover: #8f3a06;
   --accent-soft: rgb(236, 90, 43, 0.12);
   --accent-line: rgb(236, 90, 43, 0.32);
   --accent-glow: rgb(236, 90, 43, 0.34);
@@ -57,10 +63,12 @@
   --ok: #1f9d6b;
   --ok-soft: rgb(31, 157, 107, 0.14);
   --warn: #b87a16; /* AA-darkened tier of the design's #d68f1e */
+  --warn-strong: #8c5a0a; /* AA on --warn-soft tinted backgrounds */
   --warn-bright: #d68f1e;
   --warn-soft: rgb(214, 143, 30, 0.16);
   --warn-glow: rgb(214, 143, 30, 0.32);
   --danger: #c93a2a; /* AA tier of the design's #d94a3a */
+  --danger-strong: #b02f20; /* AA on --danger-soft tinted backgrounds */
   --danger-bright: #d94a3a;
   --danger-soft: rgb(217, 74, 58, 0.14);
   --danger-glow: rgb(217, 74, 58, 0.3);

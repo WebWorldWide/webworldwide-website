@@ -314,7 +314,7 @@
   padding: 16px;
   border-left: 2px solid var(--danger);
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-strong, var(--danger));
   font-family: var(--mono);
   font-size: 12px;
   margin: 12px 16px 0;

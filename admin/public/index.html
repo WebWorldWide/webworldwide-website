@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/css/_www-overrides.css" />
     <link rel="stylesheet" href="/css/dashboard.css" />
     <link rel="stylesheet" href="/css/media.css" />
+    <link rel="stylesheet" href="/css/homepage.css" />
     <link rel="stylesheet" href="/css/settings.css" />
     <link rel="stylesheet" href="/css/taxonomies.css" />
     <link rel="stylesheet" href="/css/redirects.css" />
@@ -27,7 +28,7 @@
 
     <div class="shell">
       <!-- ============ SIDEBAR ============ -->
-      <aside class="sidebar" aria-label="Main navigation">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation">
         <a class="side-brand" href="/index.html">
           <span class="gmark" aria-hidden="true"
             ><canvas id="brand-globe" width="68" height="68"></canvas
@@ -130,6 +131,24 @@
       <!-- ============ MAIN ============ -->
       <main id="main" class="main" tabindex="-1">
         <header class="topbar">
+          <button
+            type="button"
+            class="nav-toggle"
+            id="nav-toggle"
+            aria-label="Open navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </button>
           <div class="crumb">
             <span class="c-eyebrow" aria-hidden="true">Admin /</span>
             <b class="c-title" id="crumb-section">Overview</b>
@@ -887,6 +906,7 @@ Allowed commands run with timeout=15s. Type a command and press Enter.
       role="dialog"
       aria-modal="false"
       aria-hidden="true"
+      inert
       aria-labelledby="media-drawer-title"
     >
       <header class="te-media-drawer-head">

@@ -107,7 +107,7 @@
         <nav class="te-cm-nav" aria-label="Filter comments by status">
           ${STATUS_TABS.map(
             (t) =>
-              `<button type="button" class="te-cm-nav-item" data-tab="${t.id}" aria-selected="${t.id === 'all'}">
+              `<button type="button" class="te-cm-nav-item" data-tab="${t.id}" aria-pressed="${t.id === 'all'}">
                 <span>${escape(t.label)}</span>
                 <span class="count" id="cm-tab-count-${t.id}">—</span>
               </button>`,
@@ -131,7 +131,14 @@
             </label>
           </div>
           <div id="cm-error-host"></div>
-          <div class="te-cm-list" id="cm-list" role="list" aria-live="polite">
+          <!--
+            role="list" is applied dynamically by renderList(): axe's
+            aria-required-children rule fails a role="list" with zero
+            role="listitem" children, and during loading / empty /
+            offline states the container holds only presentational
+            chrome (header legend + empty-state note).
+          -->
+          <div class="te-cm-list" id="cm-list" aria-live="polite">
             <!--
               Header is purely visual labels for the data rows. We mark
               it aria-hidden so axe doesn't expect role="row" semantics
@@ -139,14 +146,14 @@
               screen reader doesn't announce the column legend before
               every row.
             -->
-            <div class="te-cm-row te-cm-row-head" aria-hidden="true">
+            <div class="te-cm-row te-cm-row-head" aria-hidden="true" role="presentation">
               <span></span>
               <span>Author</span>
               <span>Post / excerpt</span>
               <span>Status</span>
               <span>When</span>
             </div>
-            <div class="te-cm-empty" id="cm-loading">Loading comments…</div>
+            <div class="te-cm-empty" id="cm-loading" role="presentation">Loading comments…</div>
           </div>
           <div class="te-cm-foot">
             <span id="cm-foot-text">—</span>
@@ -159,7 +166,7 @@
       </div>
 
       <!-- Drawer -->
-      <aside class="te-cm-drawer" id="cm-drawer" role="dialog" aria-modal="false" aria-hidden="true" aria-labelledby="cm-drawer-title">
+      <aside class="te-cm-drawer" id="cm-drawer" role="dialog" aria-modal="false" aria-hidden="true" inert aria-labelledby="cm-drawer-title">
         <header class="te-cm-drawer-head">
           <span id="cm-drawer-title">Comment</span>
           <button type="button" class="btn ghost" id="cm-drawer-close" aria-label="Close">${window.TE.icon('close')}</button>
@@ -218,7 +225,7 @@
       const id = btn.getAttribute('data-tab');
       const on = id === state.activeTab;
       btn.classList.toggle('active', on);
-      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     for (const tab of STATUS_TABS) {
       const el = $(`cm-tab-count-${tab.id}`);
@@ -232,7 +239,7 @@
     if (!list) return;
     // Preserve the header row.
     list.innerHTML = `
-      <div class="te-cm-row te-cm-row-head" aria-hidden="true">
+      <div class="te-cm-row te-cm-row-head" aria-hidden="true" role="presentation">
         <span></span>
         <span>Author</span>
         <span>Post / excerpt</span>
@@ -245,12 +252,14 @@
       return;
     }
     if (!state.items.length) {
+      list.removeAttribute('role');
       list.insertAdjacentHTML(
         'beforeend',
-        `<div class="te-cm-empty">No comments match this filter.</div>`,
+        `<div class="te-cm-empty" role="presentation">No comments match this filter.</div>`,
       );
       return;
     }
+    list.setAttribute('role', 'list');
     const lastVisit = readLastVisit();
     for (const c of state.items) {
       const unread = c.ts > lastVisit && (c.status === 'visible' || c.status === 'pending');
@@ -305,12 +314,18 @@
 
   function renderBlocked(list) {
     if (!state.blocked.length) {
-      list.insertAdjacentHTML('beforeend', `<div class="te-cm-empty">No blocked users.</div>`);
+      list.removeAttribute('role');
+      list.insertAdjacentHTML(
+        'beforeend',
+        `<div class="te-cm-empty" role="presentation">No blocked users.</div>`,
+      );
       return;
     }
+    list.setAttribute('role', 'list');
     for (const b of state.blocked) {
       const row = document.createElement('div');
       row.className = 'te-cm-row';
+      row.setAttribute('role', 'listitem');
       row.dataset.id = b.id;
       row.innerHTML = `
         <span class="te-cm-check"></span>
@@ -425,6 +440,7 @@
     if (drawer) {
       drawer.classList.add('open');
       drawer.removeAttribute('aria-hidden');
+      drawer.inert = false;
     }
     const replyTextarea = /** @type {HTMLTextAreaElement | null} */ ($('cm-reply-text'));
     if (replyTextarea) {
@@ -545,6 +561,7 @@
     if (!drawer) return;
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
+    drawer.inert = true;
   }
 
   // ── Bulk actions ─────────────────────────────────────────────

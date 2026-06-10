@@ -4,6 +4,13 @@
    #editor-root and adds rich-text styles here.
    ============================================================ */
 
+/* v2 — calm writing room. Page canvas + opaque panes; Newsreader for
+   the writing surface, Space Mono for status chrome, VT323 for panel
+   labels. Tokens live in _www-tokens.css. */
+body[data-page="editor"] {
+  background: var(--bg-page);
+}
+
 .editor-layout {
   display: grid;
   /* Phase 3d: 3-column track (main · aux for TOC/SEO · frontmatter).
@@ -16,9 +23,9 @@
 }
 
 .editor-pane {
-  background: var(--bg-card);
-  border: var(--border-soft);
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -26,30 +33,14 @@
   position: relative;
   min-width: 0;
 }
-.editor-pane::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent 5%,
-    var(--glass-highlight) 50%,
-    transparent 95%
-  );
-  pointer-events: none;
-}
 /* Focused-editor ring. `:focus-within` matches whether focus arrived by
    click OR keyboard (unlike `:focus-visible`, which ignores mouse), so
    clicking into either the WYSIWYG (ProseMirror) or source (CodeMirror)
-   surface now shows a clear blue outline on the pane — the "blue outline"
-   the editor is supposed to have. */
+   surface shows a clear accent ring on the pane. */
 .editor-pane:focus-within {
-  border-color: var(--sky-deep);
+  border-color: var(--accent);
   box-shadow:
-    0 0 0 3px rgb(30, 104, 240, 0.28),
+    0 0 0 3px var(--accent-soft),
     var(--shadow-card);
 }
 /* The pane ring is the editor's focus indicator, so suppress the inner
@@ -65,20 +56,20 @@
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--line-www);
   flex-wrap: wrap;
 }
 .ed-pill {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font-pixel);
+  font-size: 13px;
   letter-spacing: 0.18em;
-  padding: 3px 10px;
-  border-radius: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
   text-transform: uppercase;
-  color: var(--warn);
+  color: var(--warn-strong, var(--warn));
   border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
   background: var(--warn-soft);
-  font-weight: 600;
+  font-weight: 400;
 }
 .ed-pill.pub {
   color: var(--accent);
@@ -86,9 +77,9 @@
   background: var(--accent-soft);
 }
 .ed-saved {
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -97,8 +88,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent-glow);
+  background: var(--accent-bg);
   display: inline-block;
 }
 .editor-head-r {
@@ -111,43 +101,43 @@
 
 .ed-title-wrap {
   padding: 30px 40px 14px;
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--line-www);
 }
 .ed-title {
   width: 100%;
   background: transparent;
   border: 0;
   outline: 0;
-  font-family: var(--serif);
+  font-family: var(--font-read);
   font-size: 42px;
   font-weight: 600;
-  letter-spacing: -0.024em;
-  color: var(--fg);
+  letter-spacing: -0.022em;
+  color: var(--ink);
   line-height: 1.06;
   margin: 0 0 10px;
   padding: 0;
 }
 .ed-title::placeholder {
-  color: var(--fg-mute);
+  color: var(--ink-faint);
 }
 .ed-slug {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--fg-mute);
+  font-family: var(--font-mono-www);
+  font-size: 12px;
+  color: var(--ink-mute);
 }
 .ed-slug .root {
-  color: var(--fg-mute);
+  color: var(--ink-mute);
 }
 .ed-slug input {
   background: transparent;
   border: 0;
   outline: 0;
   color: var(--accent);
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font-mono-www);
+  font-size: 12px;
   flex: 1;
   min-width: 0;
   padding: 0;
@@ -178,15 +168,15 @@
   border: 0;
   outline: 0;
   resize: vertical;
-  font-family: var(--serif);
-  font-size: 16px;
-  line-height: 1.65;
-  color: var(--fg);
+  font-family: var(--font-read);
+  font-size: 20px;
+  line-height: 1.7;
+  color: var(--ink);
   padding: 0;
   min-height: 320px;
 }
 #editor-fallback::placeholder {
-  color: var(--fg-mute);
+  color: var(--ink-faint);
 }
 /* The bundle keeps a hidden textarea inside #editor-root as the
    Markdown source-of-truth. Force it out of the flow so it never
@@ -212,8 +202,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--glass-border);
+  padding: 0 0 4px;
   flex-wrap: wrap;
 }
 .te-editor-toolbar-spacer {
@@ -223,27 +212,27 @@
 .te-editor-mode-toggle {
   display: inline-flex;
   gap: 0;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--line-www);
   border-radius: 999px;
-  padding: 2px;
-  background: var(--glass-tint);
+  padding: 3px;
+  background: var(--surface-2);
 }
 .te-editor-mode-btn {
   appearance: none;
   background: transparent;
   border: 0;
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font-pixel);
+  font-size: 13px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-mute);
-  padding: 5px 12px;
+  color: var(--ink-mute);
+  padding: 4px 12px;
   border-radius: 999px;
   cursor: pointer;
   transition: 120ms;
 }
 .te-editor-mode-btn:hover {
-  color: var(--fg);
+  color: var(--ink);
 }
 .te-editor-mode-btn.active {
   background: var(--accent-soft);
@@ -274,10 +263,10 @@
 .ProseMirror {
   flex: 1;
   outline: none;
-  font-family: var(--serif);
-  font-size: 16px;
-  line-height: 1.65;
-  color: var(--fg);
+  font-family: var(--font-read);
+  font-size: 20px;
+  line-height: 1.7;
+  color: var(--ink);
   padding: 0;
   min-height: 280px;
 }
@@ -293,60 +282,60 @@
 .ProseMirror h4,
 .ProseMirror h5,
 .ProseMirror h6 {
-  font-family: var(--serif);
+  font-family: var(--font-read);
   font-weight: 600;
   letter-spacing: -0.012em;
   line-height: 1.18;
-  color: var(--fg);
+  color: var(--ink);
   margin: 28px 0 10px;
 }
 .ProseMirror h1 {
-  font-size: 32px;
+  font-size: 34px;
 }
 .ProseMirror h2 {
-  font-size: 26px;
+  font-size: 28px;
 }
 .ProseMirror h3 {
-  font-size: 21px;
+  font-size: 23px;
 }
 .ProseMirror h4 {
-  font-size: 18px;
+  font-size: 20px;
 }
 .ProseMirror h5,
 .ProseMirror h6 {
   font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--fg-dim);
+  color: var(--ink-soft);
 }
 .ProseMirror blockquote {
   margin: 0 0 14px;
   padding: 4px 0 4px 16px;
-  border-left: 3px solid var(--accent);
-  color: var(--fg-dim);
+  border-left: 3px solid var(--accent-bg);
+  color: var(--ink-soft);
   font-style: italic;
 }
 .ProseMirror hr {
   border: 0;
-  border-top: 1px dashed var(--glass-border);
+  border-top: 1px dashed var(--line-www);
   margin: 22px 0;
 }
 .ProseMirror code {
-  font-family: var(--mono);
-  font-size: 0.9em;
+  font-family: var(--font-mono-www);
+  font-size: 0.75em;
   padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--glass-tint);
-  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  border: 1px solid var(--line-www);
 }
 .ProseMirror pre {
-  font-family: var(--mono);
-  font-size: 13px;
+  font-family: var(--font-mono-www);
+  font-size: 14px;
   line-height: 1.55;
   padding: 12px 14px;
-  border-radius: 5px;
-  background: var(--bg-deep, var(--glass-tint));
-  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line-www);
   overflow-x: auto;
   margin: 0 0 14px;
 }
@@ -383,7 +372,7 @@
 .ProseMirror img {
   max-width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   display: block;
   margin: 8px 0;
 }
@@ -395,7 +384,7 @@
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   margin: 14px auto;
 }
 .ProseMirror video.te-video {
@@ -412,11 +401,11 @@
   outline-offset: 2px;
 }
 .ProseMirror video.te-video:hover {
-  box-shadow: 0 0 0 2px var(--glass-border);
+  box-shadow: 0 0 0 2px var(--line-www);
 }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: var(--fg-mute);
+  color: var(--ink-faint);
   pointer-events: none;
   height: 0;
   float: left;
@@ -426,23 +415,26 @@
 .cm-editor {
   flex: 1;
   height: 100%;
-  border-radius: 4px;
-  background: var(--glass-tint);
-  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line-www);
 }
 .cm-editor.cm-focused {
   outline: none;
   border-color: var(--accent);
 }
+/* Source mode is part of the writing surface — same long-form serif
+   as the WYSIWYG view (Markdown syntax stays legible; code spans in
+   the document render via their own marks). */
 .cm-editor .cm-scroller {
-  font-family: var(--mono);
-  font-size: 13.5px;
-  line-height: 1.6;
-  padding: 10px 12px;
+  font-family: var(--font-read);
+  font-size: 20px;
+  line-height: 1.7;
+  padding: 12px 14px;
 }
 .cm-editor .cm-content {
   caret-color: var(--accent);
-  color: var(--fg);
+  color: var(--ink);
 }
 .cm-editor .cm-cursor {
   border-left-color: var(--accent);
@@ -469,10 +461,10 @@
   min-width: 0;
 }
 .ed-panel {
-  background: var(--bg-card);
-  border: var(--border-soft);
-  border-radius: 8px;
-  box-shadow: var(--shadow-card-sm);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 .ed-panel summary {
@@ -483,23 +475,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font-pixel);
+  font-size: 13px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-weight: 700;
-  color: var(--fg);
+  font-weight: 400;
+  color: var(--ink-mute);
   user-select: none;
 }
 .ed-panel summary::-webkit-details-marker {
   display: none;
 }
 .ed-panel summary .chev {
-  color: var(--fg-mute);
+  color: var(--ink-faint);
   transition: transform 120ms;
 }
 .ed-panel[open] summary {
-  border-bottom-color: var(--glass-border);
+  border-bottom-color: var(--line-www);
 }
 .ed-panel[open] summary .chev {
   transform: rotate(90deg);
@@ -508,19 +500,54 @@
   padding: 14px 16px;
 }
 
+/* v2 field treatment inside the side panels — VT323 micro-labels,
+   16px Hanken inputs, accent focus ring. Scoped so the base .field
+   rules in admin.css keep covering the rest of the admin. */
+.ed-side .field label {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.ed-side .field input,
+.ed-side .field textarea,
+.ed-side .field select {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
+}
+.ed-side .field input:focus,
+.ed-side .field textarea:focus,
+.ed-side .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+/* The custom CSS / JS panels hold code, not prose — keep them mono. */
+#post-custom-css,
+#post-custom-js {
+  font-family: var(--font-mono-www);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 /* Social preview card inside SEO panel */
 .social-preview {
-  border: 1px solid var(--glass-border);
-  border-radius: 4px;
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
   overflow: hidden;
-  background: var(--bg);
-  font-family: var(--sans);
+  background: var(--surface-2);
+  font-family: var(--font-ui);
 }
 .social-preview .domain {
   padding: 10px 12px 4px;
   font-size: 10.5px;
-  color: var(--fg-mute);
-  font-family: var(--mono);
+  color: var(--ink-mute);
+  font-family: var(--font-mono-www);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -528,12 +555,12 @@
   padding: 0 12px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--fg);
+  color: var(--ink);
 }
 .social-preview .desc {
   padding: 4px 12px 12px;
   font-size: 12.5px;
-  color: var(--fg-dim);
+  color: var(--ink-soft);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -542,16 +569,16 @@
 
 /* Media drop zone within editor sidebar */
 .ed-dropzone {
-  border: 1px dashed var(--line-strong);
-  border-radius: 4px;
+  border: 1px dashed var(--line-strong-www);
+  border-radius: var(--radius-sm);
   padding: 16px;
   text-align: center;
   cursor: pointer;
   transition: 120ms;
-  color: var(--fg-dim);
-  font-family: var(--mono);
+  color: var(--ink-soft);
+  font-family: var(--font-mono-www);
   font-size: 11px;
-  background: var(--glass-tint);
+  background: var(--surface-2);
 }
 .ed-dropzone:hover,
 .ed-dropzone.drag {
@@ -560,7 +587,7 @@
   background: var(--accent-soft);
 }
 .ed-dropzone .ico {
-  font-family: var(--serif);
+  font-family: var(--font-read);
   font-size: 22px;
   color: var(--accent);
   margin-bottom: 2px;
@@ -576,9 +603,9 @@
 .recent-media .thumb {
   position: relative;
   aspect-ratio: 1;
-  background: var(--bg-deep);
-  border: 1px solid var(--glass-border);
-  border-radius: 3px;
+  background: var(--surface-3);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
   background-size: cover;
   background-position: center;
   cursor: pointer;
@@ -591,7 +618,7 @@
   position: absolute;
   bottom: 2px;
   right: 2px;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 8px;
   background: rgb(0, 0, 0, 0.5);
   color: var(--accent);
@@ -610,13 +637,13 @@
 
 /* Word count / metrics in topbar */
 .editor-metrics {
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   letter-spacing: 0.04em;
 }
 .editor-metrics b {
-  color: var(--fg-dim);
+  color: var(--ink-soft);
   font-weight: 500;
 }
 
@@ -652,6 +679,11 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 2px;
+  width: fit-content;
+  padding: 3px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-www);
+  border-radius: 999px;
 }
 .te-editor-toolbar-rich.is-disabled {
   opacity: 0.45;
@@ -665,26 +697,27 @@
 .te-tb-divider {
   width: 1px;
   height: 18px;
-  background: var(--glass-border);
+  background: var(--line-www);
   margin: 0 6px;
   display: inline-block;
 }
 
-/* Toolbar buttons themselves. Square-ish, monospace, glyph-only at
+/* Toolbar buttons themselves. Quiet pixel-type chips, glyph-only at
    typical sizes; the visible glyph is decorative and aria-hidden so
    only the aria-label is announced. */
 .te-tb-btn {
   appearance: none;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--fg-dim);
-  font-family: var(--mono);
-  font-size: 12px;
+  color: var(--ink-mute);
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  text-transform: uppercase;
   line-height: 1;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  border-radius: 4px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -695,8 +728,8 @@
     border-color 120ms;
 }
 .te-tb-btn:hover {
-  background: var(--glass-tint);
-  color: var(--fg);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .te-tb-btn:focus-visible {
   outline: 2px solid var(--accent);
@@ -712,22 +745,24 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* B/I/U/S keep their letterform styling in the UI sans so the
+   bold/italic/underline glyphs read as type, not pixels. */
 .te-tb-btn.te-tb-bold .te-tb-glyph {
   font-weight: 700;
-  font-family: var(--serif);
+  font-family: var(--font-ui);
 }
 .te-tb-btn.te-tb-italic .te-tb-glyph {
   font-style: italic;
-  font-family: var(--serif);
+  font-family: var(--font-ui);
 }
 .te-tb-btn.te-tb-underline .te-tb-glyph {
   text-decoration: underline;
   text-underline-offset: 2px;
-  font-family: var(--serif);
+  font-family: var(--font-ui);
 }
 .te-tb-btn.te-tb-strike .te-tb-glyph {
   text-decoration: line-through;
-  font-family: var(--serif);
+  font-family: var(--font-ui);
 }
 .te-tb-btn.is-placeholder {
   opacity: 0.7;
@@ -752,17 +787,14 @@
   z-index: 300;
   min-width: 240px;
   max-width: 320px;
-  background: var(--bg, var(--glass-tint));
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
-  box-shadow: var(--glass-shadow, 0 4px 20px rgb(0, 0, 0, 0.18));
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-pop);
   padding: 4px;
-  font-family: var(--sans);
+  font-family: var(--font-ui);
   max-height: 320px;
   overflow: auto;
-  /* Solid background so the floating list reads over the editor.
-     Use the deepest glass surface available for theme parity. */
-  background-color: var(--bg-deep, var(--bg, #fff));
 }
 .te-slash-list {
   margin: 0;
@@ -770,11 +802,11 @@
   list-style: none;
 }
 .te-slash-group {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--fg-mute);
+  color: var(--ink-faint);
   padding: 8px 8px 4px;
   user-select: none;
 }
@@ -789,10 +821,10 @@
   align-items: baseline;
   gap: 10px;
   padding: 7px 8px;
-  border-radius: 4px;
-  color: var(--fg);
-  font-family: var(--sans);
-  font-size: 13px;
+  border-radius: var(--radius-xs);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
 }
 .te-slash-item .te-slash-label {
   flex: 0 0 auto;
@@ -801,7 +833,7 @@
 .te-slash-item .te-slash-hint {
   flex: 1 1 auto;
   font-size: 11.5px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   text-align: right;
 }
 .te-slash-item.is-active,
@@ -811,7 +843,7 @@
 }
 .te-slash-item.is-active .te-slash-hint,
 .te-slash-item:hover .te-slash-hint {
-  color: color-mix(in srgb, var(--accent) 70%, var(--fg-mute));
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink-mute));
 }
 .te-slash-item.is-placeholder {
   opacity: 0.55;
@@ -819,9 +851,9 @@
 }
 .te-slash-empty {
   padding: 12px 10px;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11.5px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
 }
 
 /* ─── Link dialog ─────────────────────────────────────────────
@@ -831,7 +863,7 @@
 .te-link-dialog {
   position: fixed;
   inset: 0;
-  background: rgb(0, 0, 0, 0.45);
+  background: rgb(14, 41, 96, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -842,11 +874,10 @@
   display: none;
 }
 .te-link-card {
-  background: var(--bg, var(--glass-tint));
-  background-color: var(--bg-deep, var(--bg, #fff));
-  border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  box-shadow: var(--glass-shadow, 0 12px 40px rgb(0, 0, 0, 0.32));
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
   padding: 18px 18px 14px;
   width: min(420px, 100%);
   display: flex;
@@ -855,9 +886,10 @@
 }
 .te-link-card h3 {
   margin: 0 0 4px;
-  font-family: var(--serif);
-  font-size: 17px;
-  color: var(--fg);
+  font-family: var(--font-read);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
 }
 .te-link-field {
   display: flex;
@@ -865,31 +897,32 @@
   gap: 4px;
 }
 .te-link-field label {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
 }
 .te-link-field input {
   appearance: none;
-  background: var(--glass-tint);
-  border: 1px solid var(--glass-border);
-  border-radius: 4px;
-  color: var(--fg);
-  font-family: var(--mono);
-  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
   padding: 7px 9px;
   outline: none;
 }
 .te-link-field input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .te-link-error {
   margin: 0;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11.5px;
-  color: var(--danger, #c00);
+  color: var(--danger);
 }
 .te-link-foot {
   display: flex;
@@ -900,15 +933,15 @@
 }
 .te-link-foot button {
   appearance: none;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--line-www);
   background: transparent;
-  color: var(--fg);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 7px 12px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .te-link-foot button:hover {
@@ -920,13 +953,13 @@
   outline-offset: 1px;
 }
 .te-link-foot .te-link-ok {
-  background: var(--accent);
-  color: var(--bg, #fff);
-  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent-on);
+  border-color: var(--accent-deep);
 }
 .te-link-foot .te-link-ok:hover {
-  filter: brightness(1.1);
-  color: var(--bg, #fff);
+  background: var(--accent-deep);
+  color: var(--accent-on);
 }
 .te-link-foot .te-link-remove[hidden] {
   display: none;
@@ -942,15 +975,15 @@
   width: 100%;
   border-collapse: collapse;
   margin: 0 0 18px;
-  font-family: var(--sans, var(--serif));
-  font-size: 14.5px;
+  font-family: var(--font-ui);
+  font-size: 15px;
   table-layout: fixed;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 .ProseMirror table th,
 .ProseMirror table td {
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--line-www);
   padding: 8px 10px;
   vertical-align: top;
   text-align: left;
@@ -958,16 +991,16 @@
   position: relative;
 }
 .ProseMirror table th {
-  background: var(--glass-tint);
+  background: var(--surface-2);
   font-weight: 600;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--fg);
+  color: var(--ink);
 }
 .ProseMirror table tr:nth-child(2n) td {
-  background: color-mix(in srgb, var(--glass-tint) 50%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
 }
 .ProseMirror table .selectedCell {
   background: var(--accent-soft) !important;
@@ -992,11 +1025,11 @@
   position: absolute;
   top: 6px;
   right: 8px;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 9.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-mute);
+  color: var(--ink-faint);
   pointer-events: none;
 }
 /* Highlight.js token colours — neutral palette that works in both
@@ -1017,13 +1050,13 @@
 .ProseMirror pre .hljs-template-variable,
 .ProseMirror pre .hljs-type,
 .ProseMirror pre .hljs-addition {
-  color: color-mix(in srgb, var(--accent) 70%, var(--fg));
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink));
 }
 .ProseMirror pre .hljs-comment,
 .ProseMirror pre .hljs-quote,
 .ProseMirror pre .hljs-deletion,
 .ProseMirror pre .hljs-meta {
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   font-style: italic;
 }
 .ProseMirror pre .hljs-number,
@@ -1031,7 +1064,7 @@
 .ProseMirror pre .hljs-symbol,
 .ProseMirror pre .hljs-variable,
 .ProseMirror pre .hljs-link {
-  color: var(--warn, color-mix(in srgb, var(--accent) 50%, #c80));
+  color: var(--warn);
 }
 .ProseMirror pre .hljs-doctag,
 .ProseMirror pre .hljs-strong {
@@ -1047,13 +1080,13 @@
 }
 .te-tb-lang {
   appearance: none;
-  background: var(--glass-tint);
-  border: 1px solid var(--glass-border);
-  color: var(--fg);
-  font-family: var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  color: var(--ink);
+  font-family: var(--font-mono-www);
   font-size: 11px;
   padding: 3px 24px 3px 8px;
-  border-radius: 4px;
+  border-radius: 999px;
   cursor: pointer;
 }
 .te-tb-lang:focus-visible {
@@ -1073,20 +1106,20 @@
 .ProseMirror .te-math-inline {
   display: inline-block;
   vertical-align: baseline;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
 }
 .ProseMirror .te-math-block {
   display: block;
   text-align: center;
   margin: 14px 0;
   padding: 12px;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
 }
 .ProseMirror .te-math:hover {
   background: var(--accent-soft);
 }
 .ProseMirror .te-math.is-editing {
-  background: var(--glass-tint);
+  background: var(--surface-2);
   outline: 1px dashed var(--accent);
   cursor: text;
   padding: 4px 6px;
@@ -1100,8 +1133,8 @@
   background: transparent;
   border: 0;
   outline: 0;
-  color: var(--fg);
-  font-family: var(--mono);
+  color: var(--ink);
+  font-family: var(--font-mono-www);
   font-size: 14px;
   resize: vertical;
   padding: 0;
@@ -1110,68 +1143,67 @@
 
 /* ─── Callouts (admonitions) ───────────────────────────────── */
 .ProseMirror aside.callout {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--accent-bg);
   background: var(--accent-soft);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 12px 14px 4px 14px;
   margin: 14px 0;
-  font-family: var(--sans, var(--serif));
-  font-size: 14.5px;
-  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--ink);
   position: relative;
 }
 .ProseMirror aside.callout .callout-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font-pixel);
+  font-size: 13px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 6px;
-  font-weight: 700;
+  font-weight: 400;
 }
 .ProseMirror aside.callout .callout-label::before {
   content: "";
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent-glow, transparent);
+  background: var(--accent-bg);
   display: inline-block;
 }
 .ProseMirror aside.callout.callout-tip {
-  border-left-color: var(--ok, var(--accent));
-  background: var(--ok-soft, var(--accent-soft));
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
 }
 .ProseMirror aside.callout.callout-tip .callout-label,
 .ProseMirror aside.callout.callout-tip .callout-label::before {
-  color: var(--ok, var(--accent));
-  background: var(--ok, var(--accent));
+  color: var(--ok);
+  background: var(--ok);
 }
 .ProseMirror aside.callout.callout-tip .callout-label {
   background: transparent;
 }
 .ProseMirror aside.callout.callout-warn {
-  border-left-color: var(--warn, #c80);
-  background: var(--warn-soft, color-mix(in srgb, #c80 14%, transparent));
+  border-left-color: var(--warn-bright);
+  background: var(--warn-soft);
 }
 .ProseMirror aside.callout.callout-warn .callout-label {
-  color: var(--warn, #c80);
+  color: var(--warn);
 }
 .ProseMirror aside.callout.callout-warn .callout-label::before {
-  background: var(--warn, #c80);
+  background: var(--warn-bright);
 }
 .ProseMirror aside.callout.callout-danger {
-  border-left-color: var(--danger, #c44);
-  background: var(--danger-soft, color-mix(in srgb, #c44 14%, transparent));
+  border-left-color: var(--danger-bright);
+  background: var(--danger-soft);
 }
 .ProseMirror aside.callout.callout-danger .callout-label {
-  color: var(--danger, #c44);
+  color: var(--danger);
 }
 .ProseMirror aside.callout.callout-danger .callout-label::before {
-  background: var(--danger, #c44);
+  background: var(--danger-bright);
 }
 .ProseMirror aside.callout .callout-body > p:last-child {
   margin-bottom: 8px;
@@ -1179,7 +1211,7 @@
 
 /* ─── Footnotes ────────────────────────────────────────────── */
 .ProseMirror sup.footnote-ref {
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 0.72em;
   line-height: 0;
   position: relative;
@@ -1197,10 +1229,10 @@
 .ProseMirror ol.footnote-list {
   margin-top: 28px;
   padding-top: 14px;
-  border-top: 1px solid var(--glass-border);
-  font-family: var(--sans, var(--serif));
-  font-size: 13.5px;
-  color: var(--fg-dim);
+  border-top: 1px solid var(--line-www);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--ink-soft);
   counter-reset: footnote;
   list-style: none;
   padding-left: 22px;
@@ -1211,7 +1243,7 @@
 }
 .ProseMirror ol.footnote-list li[data-footnote-item]::before {
   content: "[" attr(data-label) "]";
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   color: var(--accent);
   font-size: 11px;
   position: absolute;
@@ -1277,10 +1309,10 @@
 }
 
 .ed-aux-panel {
-  background: var(--glass-tint);
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
-  box-shadow: var(--glass-shadow);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1294,12 +1326,12 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--fg-mute);
-  border-bottom: 1px solid var(--glass-border);
+  color: var(--ink-mute);
+  border-bottom: 1px solid var(--line-www);
 }
 .ed-aux-head > span:first-child {
   flex: 1;
@@ -1307,7 +1339,7 @@
 .ed-aux-close {
   background: transparent;
   border: 0;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
@@ -1316,13 +1348,13 @@
 }
 .ed-aux-close:hover,
 .ed-aux-close:focus-visible {
-  color: var(--fg);
-  background: var(--glass-highlight);
+  color: var(--ink);
+  background: var(--surface-2);
   outline: 0;
 }
 .ed-aux-empty {
   margin: 14px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -1344,8 +1376,8 @@
 .ed-toc-link {
   display: block;
   padding: 4px 10px;
-  border-radius: 4px;
-  color: var(--fg-dim);
+  border-radius: var(--radius-xs);
+  color: var(--ink-soft);
   text-decoration: none;
   font-size: 13px;
   line-height: 1.35;
@@ -1354,8 +1386,8 @@
 }
 .ed-toc-link:hover,
 .ed-toc-link:focus-visible {
-  background: var(--glass-highlight);
-  color: var(--fg);
+  background: var(--surface-2);
+  color: var(--ink);
   outline: 0;
 }
 .ed-toc-link.is-current {
@@ -1367,7 +1399,7 @@
 .ed-toc-item.ed-toc-level-1 .ed-toc-link {
   padding-left: 10px;
   font-weight: 600;
-  color: var(--fg);
+  color: var(--ink);
   font-size: 13.5px;
 }
 .ed-toc-item.ed-toc-level-2 .ed-toc-link {
@@ -1395,14 +1427,16 @@
   flex-direction: column;
   gap: 12px;
 }
+/* The SERP preview keeps its Google-ish type/colors, but sits on the
+   v2 card vocabulary (radius + hairline). */
 .serp-card {
-  background: var(--fg-on-accent, #fff);
+  background: #fff;
   color: #202124;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-family: arial, sans-serif;
-  box-shadow: 0 1px 6px rgb(0, 0, 0, 0.12);
-  border: 1px solid rgb(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card-xs);
+  border: 1px solid var(--line-www);
 }
 :root[data-theme="dark"] .serp-card {
   background: #2c2c2c;
@@ -1459,9 +1493,9 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 6px 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--fg-mute);
+  font-family: var(--font-mono-www);
+  font-size: 10.5px;
+  color: var(--ink-mute);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1469,7 +1503,7 @@
   grid-column: 1 / -1;
   display: block;
   height: 4px;
-  background: var(--glass-highlight);
+  background: var(--surface-3);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -1478,20 +1512,20 @@
   display: block;
   height: 100%;
   width: 0;
-  background: var(--accent);
+  background: var(--accent-bg);
   transition: width 120ms ease-out;
 }
 .ed-seo-bar.is-over .ed-seo-bar-fill {
-  background: var(--warn, #c80);
+  background: var(--warn-bright);
 }
 .ed-seo-count {
   font-variant-numeric: tabular-nums;
-  color: var(--fg);
+  color: var(--ink);
 }
 .ed-seo-hint {
   margin: 0;
   font-size: 11px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   line-height: 1.5;
 }
 
@@ -1502,10 +1536,10 @@
   gap: 14px;
   flex-wrap: wrap;
   padding: 10px 20px;
-  border-top: 1px solid var(--glass-border);
-  font-family: var(--mono);
+  border-top: 1px solid var(--line-www);
+  font-family: var(--font-mono-www);
   font-size: 11px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   letter-spacing: 0.04em;
 }
 .editor-foot-stats {
@@ -1544,45 +1578,41 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--fg-mute);
+  background: var(--ink-faint);
   display: inline-block;
 }
 .autosave-indicator[data-state="idle"] {
-  color: var(--fg-mute);
+  color: var(--ink-mute);
 }
 .autosave-indicator[data-state="dirty"] {
-  color: var(--warn, #c80);
+  color: var(--warn);
 }
 .autosave-indicator[data-state="dirty"] .autosave-pip {
-  background: var(--warn, #c80);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--warn, #c80) 60%, transparent);
+  background: var(--warn-bright);
 }
 .autosave-indicator[data-state="saving"] {
-  color: var(--fg-dim);
+  color: var(--ink-soft);
 }
 .autosave-indicator[data-state="saving"] .autosave-pip {
-  background: var(--accent);
+  background: var(--accent-bg);
   animation: te-autosave-spin 900ms linear infinite;
-  box-shadow: 0 0 6px var(--accent-glow, transparent);
 }
 .autosave-indicator[data-state="saved"] {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: var(--accent-soft);
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  background: var(--ok-soft);
 }
 .autosave-indicator[data-state="saved"] .autosave-pip {
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent-glow, transparent);
+  background: var(--ok);
 }
 .autosave-indicator[data-state="error"] {
-  color: var(--danger, #c44);
-  border-color: color-mix(in srgb, var(--danger, #c44) 40%, transparent);
-  background: var(--danger-soft, color-mix(in srgb, #c44 14%, transparent));
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: var(--danger-soft);
   cursor: pointer;
 }
 .autosave-indicator[data-state="error"] .autosave-pip {
-  background: var(--danger, #c44);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--danger, #c44) 60%, transparent);
+  background: var(--danger-bright);
 }
 @keyframes te-autosave-spin {
   0% {
@@ -1605,10 +1635,10 @@
   top: 14px;
   right: 14px;
   z-index: 200;
-  background: var(--bg-card);
-  border: var(--border-soft);
-  border-radius: 8px;
-  box-shadow: var(--shadow-card);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-pop);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -1616,7 +1646,7 @@
   min-width: 320px;
   max-width: calc(100% - 28px);
   box-sizing: border-box;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 12px;
 }
 .te-find-modal[hidden] {
@@ -1639,12 +1669,12 @@
 .te-find-input {
   flex: 1;
   min-width: 0;
-  background: var(--glass-highlight);
-  color: var(--fg);
-  border: 1px solid var(--glass-border);
-  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
   padding: 5px 8px;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 12px;
 }
 .te-find-input:focus-visible {
@@ -1652,16 +1682,16 @@
   outline-offset: 1px;
 }
 .te-find-input[aria-invalid="true"] {
-  border-color: var(--danger, #c44);
+  border-color: var(--danger);
 }
 .te-find-btn {
   background: transparent;
-  border: 1px solid var(--glass-border);
-  color: var(--fg-dim);
-  border-radius: 4px;
+  border: 1px solid var(--line-www);
+  color: var(--ink-soft);
+  border-radius: var(--radius-xs);
   padding: 4px 8px;
   cursor: pointer;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11px;
   line-height: 1.2;
 }
@@ -1675,7 +1705,7 @@
   margin-left: 4px;
 }
 .te-find-count {
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   font-variant-numeric: tabular-nums;
   font-size: 11px;
   padding: 0 4px;
@@ -1689,7 +1719,7 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
   cursor: pointer;
 }
 .te-find-opt input {
@@ -1697,7 +1727,7 @@
   cursor: pointer;
 }
 .te-find-err {
-  color: var(--danger, #c44);
+  color: var(--danger);
   font-size: 11px;
   margin-left: auto;
 }
@@ -1709,8 +1739,8 @@
   padding: 0 1px;
 }
 .ProseMirror .te-find-match-active {
-  background: color-mix(in srgb, var(--warn, #c80) 56%, transparent);
-  outline: 1px solid var(--warn, #c80);
+  background: color-mix(in srgb, var(--warn-bright) 56%, transparent);
+  outline: 1px solid var(--warn-bright);
 }
 
 /* ─── Drag handle (Phase 3d) ────────────────────────────────── */
@@ -1729,7 +1759,7 @@
   cursor: grab;
   border-radius: 4px;
   background-color: transparent;
-  background-image: radial-gradient(circle, var(--fg-mute) 1.2px, transparent 1.4px);
+  background-image: radial-gradient(circle, var(--ink-faint) 1.2px, transparent 1.4px);
   background-size: 6px 6px;
   background-position: center;
   background-repeat: repeat;
@@ -1739,7 +1769,7 @@
 }
 .drag-handle:hover {
   opacity: 1;
-  background-color: var(--glass-highlight);
+  background-color: var(--surface-2);
 }
 .ProseMirror:hover ~ .drag-handle,
 .ProseMirror:focus ~ .drag-handle,
@@ -1760,10 +1790,9 @@
 /* Drop-cursor line shown while dragging */
 .prosemirror-dropcursor-block,
 .ProseMirror-dropcursor {
-  background: var(--accent) !important;
+  background: var(--accent-bg) !important;
   height: 2px !important;
   border-radius: 1px;
-  box-shadow: 0 0 4px var(--accent-glow, transparent);
 }
 
 /* ============================================================
@@ -1784,12 +1813,15 @@
     right: 0;
     bottom: 0;
     z-index: 80;
-    background: var(--bg-elev);
-    border-top: 1px solid var(--glass-border);
+    width: auto;
+    background: var(--surface);
+    border: 0;
+    border-top: 1px solid var(--line-www);
+    border-radius: 0;
     padding: 6px 10px;
     overflow-x: auto;
     flex-wrap: nowrap;
-    box-shadow: 0 -12px 32px rgb(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-pop);
   }
   .te-editor-toolbar-rich .te-tb-divider {
     margin: 0 4px;
@@ -1810,10 +1842,10 @@
   display: inline-block;
   margin-top: 6px;
   padding: 3px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--accent-soft);
   color: var(--accent);
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 10.5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1822,12 +1854,12 @@
 #preview-link-out {
   margin-top: 8px;
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  color: var(--fg);
+  background: var(--surface-2);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
+  color: var(--ink);
   padding: 6px 8px;
-  font-family: var(--mono);
+  font-family: var(--font-mono-www);
   font-size: 11px;
 }
 
@@ -1836,12 +1868,12 @@
    Three buttons: Insert embed (primary), Insert link, Cancel. */
 .te-embed-paste {
   display: none;
-  background: var(--bg-elev, #111);
-  border: 1px solid var(--line, currentColor);
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-sm);
   padding: 6px;
-  box-shadow: 0 6px 20px rgb(0, 0, 0, 0.45);
-  font-family: var(--mono, monospace);
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-mono-www);
   font-size: 12px;
   max-width: 520px;
 }
@@ -1852,39 +1884,39 @@
   gap: 6px;
 }
 .te-embed-paste-msg {
-  color: var(--fg-dim, currentColor);
+  color: var(--ink-soft);
   padding: 0 6px;
 }
 .te-embed-paste-btn {
-  font-family: var(--mono, monospace);
+  font-family: var(--font-mono-www);
   font-size: 12px;
   padding: 5px 10px;
-  border: 1px solid var(--line, currentColor);
+  border: 1px solid var(--line-www);
   background: transparent;
-  color: var(--fg, currentColor);
-  border-radius: 3px;
+  color: var(--ink);
+  border-radius: var(--radius-xs);
   cursor: pointer;
 }
 .te-embed-paste-btn:hover,
 .te-embed-paste-btn:focus-visible {
-  border-color: var(--accent, currentColor);
-  color: var(--accent, currentColor);
+  border-color: var(--accent);
+  color: var(--accent);
   outline: none;
 }
 .te-embed-paste-btn.primary {
-  background: var(--accent, currentColor);
-  color: var(--accent-on, #000);
-  border-color: var(--accent, currentColor);
+  background: var(--accent-bg);
+  color: var(--accent-on);
+  border-color: var(--accent-deep);
 }
 .te-embed-paste-btn.primary:hover,
 .te-embed-paste-btn.primary:focus-visible {
-  background: var(--bg, transparent);
-  color: var(--accent, currentColor);
+  background: var(--accent-deep);
+  color: var(--accent-on);
 }
 .te-embed-paste-btn.ghost {
   padding: 5px 8px;
   border-color: transparent;
-  color: var(--fg-mute, currentColor);
+  color: var(--ink-mute);
 }
 .te-embed-paste-btn:disabled {
   opacity: 0.6;

@@ -109,8 +109,12 @@ describe('TE.dropzone', () => {
 
   it('click on the zone triggers the hidden file input click', () => {
     dropzone(target, { onUpload: () => {} });
-    const hidden = target.querySelector('input[type=file]');
-    expect(hidden).toBeTruthy();
+    // The hidden input is a SIBLING of the zone, not a child — nesting
+    // an <input> inside the role="button" zone is an axe
+    // nested-interactive violation.
+    const hidden = target.nextElementSibling;
+    expect(hidden && hidden.matches('input[type=file]')).toBe(true);
+    expect(target.querySelector('input[type=file]')).toBeNull();
     const clickSpy = vi.spyOn(/** @type {HTMLElement} */ (hidden), 'click');
     target.click();
     expect(clickSpy).toHaveBeenCalled();
@@ -118,7 +122,7 @@ describe('TE.dropzone', () => {
 
   it('Enter/Space on a non-native target opens the file picker', () => {
     dropzone(target, { onUpload: () => {} });
-    const hidden = target.querySelector('input[type=file]');
+    const hidden = target.nextElementSibling;
     const clickSpy = vi.spyOn(/** @type {HTMLElement} */ (hidden), 'click');
     target.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),

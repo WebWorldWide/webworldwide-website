@@ -108,7 +108,15 @@
     fileInput.tabIndex = -1;
     if (multiple) fileInput.multiple = true;
     if (accept) fileInput.accept = accept;
-    target.appendChild(fileInput);
+    // Sibling, not child: the dropzone container carries role="button",
+    // and an interactive descendant (even one with tabindex=-1) trips
+    // axe's nested-interactive. Body dropzones keep the child append
+    // (document.body has no interactive role).
+    if (target === document.body) {
+      target.appendChild(fileInput);
+    } else {
+      target.insertAdjacentElement('afterend', fileInput);
+    }
 
     // ── State ──
     let depth = 0; // dragenter/leave counter; required for nested children

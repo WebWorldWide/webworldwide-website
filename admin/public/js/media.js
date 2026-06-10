@@ -601,6 +601,7 @@
     if (!drawer) return;
     drawer.classList.add('open');
     drawer.removeAttribute('aria-hidden');
+    drawer.inert = false;
     const body = $('media-drawer-body');
     if (body) body.innerHTML = '<p class="te-media-loading">Loading…</p>';
     try {
@@ -616,6 +617,7 @@
     if (!drawer) return;
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
+    drawer.inert = true;
   }
 
   function renderDrawer(m) {
