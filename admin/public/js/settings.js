@@ -34,19 +34,21 @@
       root.innerHTML = `<div class="posts-empty">Failed to load settings: ${escape(err.message)}</div>`;
       return;
     }
+    // `hugo` is the parsed site.toml (the API field name is legacy).
     const hugo = cache.hugo || {};
-    const params = hugo.params || {};
+    const site = hugo.site || {};
+    const siteSocial = hugo.social || {};
     const author = cache.author || {};
     const social = author.social || {};
 
     root.innerHTML = `
       <section class="te-form-group" data-group="site">
         <h3>Site identity</h3>
-        ${field('Title', 'site.title', hugo.title || '')}
-        ${field('Description', 'site.description', hugo.description || '', 'textarea')}
-        ${field('Base URL', 'site.baseURL', hugo.baseURL || '', 'url')}
-        ${field('Copyright', 'site.copyright', hugo.copyright || '')}
-        ${field('Tagline', 'params.tagline', params.tagline || '')}
+        ${field('Title', 'site.title', site.title || '')}
+        ${field('Description', 'site.description', site.description || '', 'textarea')}
+        ${field('Base URL', 'site.url', site.url || '', 'url')}
+        ${field('Copyright', 'site.copyright', site.copyright || '')}
+        ${field('Tagline', 'site.tagline', site.tagline || '')}
       </section>
       <section class="te-form-group" data-group="analytics">
         <h3>Analytics</h3>
@@ -57,8 +59,8 @@
       </section>
       <section class="te-form-group" data-group="social">
         <h3>Site social</h3>
-        ${field('YouTube URL', 'params.youtubeURL', params.youtubeURL || '', 'url')}
-        ${field('RSS URL', 'params.rssURL', params.rssURL || '')}
+        ${field('YouTube URL', 'social.youtube', siteSocial.youtube || '', 'url')}
+        ${field('YouTube handle', 'social.youtube_handle', siteSocial.youtube_handle || '')}
       </section>
       <section class="te-form-group" data-group="author">
         <h3>Author profile</h3>
@@ -83,10 +85,9 @@
     root.querySelectorAll('input,textarea').forEach((el) => {
       const name = el.getAttribute('name') || '';
       const val = /** @type {HTMLInputElement} */ (el).value;
-      if (name.startsWith('site.')) {
-        // Top-level hugo.toml key (title, baseURL, etc.)
-        hugoChanges[name.slice('site.'.length)] = val;
-      } else if (name.startsWith('params.')) {
+      if (!name.startsWith('author.')) {
+        // Dotted site.toml path ("site.title", "analytics.site_id", …) —
+        // the backend's flatToChanges maps it straight onto the file.
         hugoChanges[name] = val;
       } else if (name === 'author.name') author.name = val;
       else if (name === 'author.bio') author.bio = val;
