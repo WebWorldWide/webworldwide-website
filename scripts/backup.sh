@@ -93,14 +93,17 @@ else
     echo "WARNING: $BACKUP_REPO_DIR/public.key not found. Not backing up .env"
 fi
 
-# 6. Commit and push to GitHub
+# 6. Commit and push to GitHub. Identity is passed inline — the cron
+# runs as root, whose global git config has none (a fresh clone
+# otherwise dies at "unable to auto-detect email" right here).
 echo "Pushing to GitHub..."
 cd "$BACKUP_REPO_DIR"
 git add .
 if git diff --cached --quiet; then
     echo "Nothing new to back up."
 else
-    git commit -m "Automated backup: $TIMESTAMP"
+    git -c user.name="Web World Wide Pi" -c user.email="pi@webworldwide.online" \
+        commit -m "Automated backup: $TIMESTAMP"
     git push origin main
 fi
 
