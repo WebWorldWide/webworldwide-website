@@ -44,7 +44,8 @@ describe('settings.js', () => {
     globalThis.fetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          hugo: { title: 'T', baseURL: 'https://x', params: { tagline: 'Tag' } },
+          // Parsed site.toml shape: [site] section + [social] section.
+          hugo: { site: { title: 'T', url: 'https://x', tagline: 'Tag' }, social: {} },
           author: { name: 'A', social: { bluesky: 'b' } },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },

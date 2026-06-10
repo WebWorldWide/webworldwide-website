@@ -1238,6 +1238,42 @@ body {
   .shell {
     grid-template-columns: 1fr;
   }
+  /* Topbar: the crumb eyebrow and the secondary actions don't fit a
+     phone — View site lives in the sidebar footer, Publish on the
+     Posts view. Keep hamburger, title, + New Post, logout. */
+  .crumb .c-eyebrow {
+    display: none;
+  }
+  .topbar-actions .btn:not(.solid):not([aria-label]) {
+    display: none;
+  }
+  .topbar {
+    gap: 8px;
+  }
+  /* Overview: one stat per row; inbox cards two-up. */
+  .stat-row,
+  .stat-row.three {
+    grid-template-columns: 1fr;
+  }
+  .te-cm-inbox {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Posts table: title + status pill only — length/date drop out. */
+  .row-grid .r-link .r-status,
+  .row-grid .r-link .r-date,
+  .row-grid.head .r-status,
+  .row-grid.head .r-date {
+    display: none;
+  }
+  /* Homepage editor: stack the rail above a full-width preview. */
+  .hp {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(320px, 48vh);
+  }
+  .hp-rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-www);
+  }
   .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
