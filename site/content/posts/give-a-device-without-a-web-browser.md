@@ -3,7 +3,6 @@ title: "Does your game need to be connected to the internet?"
 date: 2025-12-10T12:48:56.000Z
 slug: "give-a-device-without-a-web-browser"
 draft: false
-tags: ["opinion", "tech"]
 ---
 I recently booted up my brother's Nintendo 3DS from a drawer. I just popped in one of my old Mario Kart DS cartridges and it was off to the races. After pulling it out of a drawer in which it had sat for many years, I could just charge it, turn it on, and start playing my games. If you exclude charge time, the time from cold boot to gameplay was less than what most modern games need to load from when I double-click them on my desktop. That is excluding updates.
 

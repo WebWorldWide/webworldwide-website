@@ -3,7 +3,6 @@ title: "Escape the Datacenter: Local AI Is the Future."
 date: 2025-12-20T15:48:25.000Z
 slug: "escape-the-datacenter-local-ai-is-the-future"
 draft: false
-tags: ["opinion", "tech"]
 ---
 ![Construction photo for a datacenter.](/images/2025/12/image-15.webp)
 

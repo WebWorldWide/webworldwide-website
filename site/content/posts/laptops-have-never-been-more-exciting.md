@@ -4,9 +4,6 @@ slug: laptops-have-never-been-more-exciting
 draft: false
 date: '2025-12-28T13:39:00.000Z'
 excerpt: ''
-tags:
-  - tech
-  - opinion
 ---
 ![Back of Acer Predator 21X laptop](/images/2025/12/image-19.webp)
 

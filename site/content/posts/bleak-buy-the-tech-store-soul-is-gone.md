@@ -3,7 +3,6 @@ title: "Bleak Buy: The Tech Store Soul is Gone"
 date: 2025-12-14T17:08:54.000Z
 slug: "bleak-buy-the-tech-store-soul-is-gone"
 draft: false
-tags: ["tech", "opinion", "culture"]
 ---
 ![Patrick asking Squidward "May I take you hat, sir?" meme image.](/images/2025/12/image-6.webp)
 

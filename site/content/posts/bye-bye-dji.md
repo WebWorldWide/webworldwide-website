@@ -3,7 +3,6 @@ title: "Bye Bye DJI"
 date: 2025-12-23T13:40:20.000Z
 slug: "bye-bye-dji"
 draft: false
-tags: ["news", "culture"]
 ---
 ![DJI Phantom 3](/images/2025/12/image-17.webp)
 

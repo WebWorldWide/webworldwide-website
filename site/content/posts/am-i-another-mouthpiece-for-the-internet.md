@@ -3,7 +3,6 @@ title: "Am I Another Mouthpiece for the Internet?"
 date: 2025-12-16T14:02:22.000Z
 slug: "am-i-another-mouthpiece-for-the-internet"
 draft: false
-tags: ["opinion", "culture", "personal"]
 ---
 The internet is rich with discussion. I can find an opinion or idea on literally any topic. I am able to develop a thought on any topic within seconds on the internet. However, I fear that as a developing writer, blogger, creator, and person, I sometimes forgo originality in my thought and instead become a mouthpiece for the ideas presented to me.
 

@@ -3,7 +3,6 @@ title: "Christmas 2025"
 date: 2025-12-25T16:48:15.000Z
 slug: "christmas-2025"
 draft: false
-tags: ["personal"]
 ---
 In a world full of fake AI everything, online rage, and distrust in just about everything, be thankful this Christmas for the things in your life that do actually matter: family and friends.
 

@@ -3,7 +3,6 @@ title: "iRobot is Gone."
 date: 2025-12-15T23:04:27.000Z
 slug: "irobot-is-gone"
 draft: false
-tags: ["news", "tech", "opinion"]
 ---
 ![Still image of Sonny from I, Robot looking at camera.](/images/2025/12/image-9.webp)
 

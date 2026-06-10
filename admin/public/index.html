@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="/css/media.css" />
     <link rel="stylesheet" href="/css/homepage.css" />
     <link rel="stylesheet" href="/css/settings.css" />
-    <link rel="stylesheet" href="/css/taxonomies.css" />
     <link rel="stylesheet" href="/css/redirects.css" />
     <link rel="stylesheet" href="/css/activity.css" />
     <link rel="stylesheet" href="/css/comments.css" />
@@ -35,7 +34,7 @@
           ></span>
           <span class="name">
             Web World <b>Wide</b>
-            <span>admin · v2</span>
+            <span>admin</span>
           </span>
         </a>
 
@@ -92,10 +91,6 @@
         <details class="side-more">
           <summary class="side-group-label">More</summary>
           <nav aria-label="Utilities">
-            <a class="side-item" href="/index.html#tags" data-route="tags">
-              <span class="ico" aria-hidden="true" data-icon="tag"></span><span>Tags</span
-              ><span></span>
-            </a>
             <a class="side-item" href="/index.html#redirects" data-route="redirects">
               <span class="ico" aria-hidden="true" data-icon="redirects"></span
               ><span>Redirects</span><span></span>
@@ -199,7 +194,6 @@
                 <div class="sec-sub" id="dash-sub">Loading…</div>
               </div>
               <div class="sec-actions">
-                <a class="btn-mini" href="/index.html#tags">Manage tags →</a>
                 <a class="btn" href="/editor.html">+ Draft</a>
                 <button type="button" class="btn primary" id="btn-publish-2">Publish</button>
               </div>
@@ -283,7 +277,7 @@
                 <span class="r-link">
                   <span class="r-num">№</span>
                   <span class="r-title-wrap">Title</span>
-                  <span class="r-status" style="text-align: right">Tags</span>
+                  <span class="r-status" style="text-align: right">Length</span>
                   <span class="r-date">Date</span>
                 </span>
                 <span class="r-actions"></span>
@@ -485,25 +479,6 @@
           </div>
 
           <!-- ============ TAGS VIEW (Phase 5e) ============ -->
-          <div id="view-tags" hidden>
-            <div class="sec-head">
-              <div>
-                <h1 class="sec-title">Tags</h1>
-                <div class="sec-sub">Rename, merge, or remove tags across every post.</div>
-              </div>
-              <div class="sec-actions"></div>
-            </div>
-            <div class="panel">
-              <div class="panel-head">
-                <span class="panel-title"
-                  ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span>Tag
-                  index</span
-                >
-                <span class="panel-head-r" id="tags-total">—</span>
-              </div>
-              <div id="tags-table" class="te-tag-table">Loading…</div>
-            </div>
-          </div>
 
           <!-- ============ REDIRECTS VIEW (Phase 5e) ============ -->
           <div id="view-redirects" hidden>
@@ -562,7 +537,7 @@
             </div>
           </div>
 
-          <!-- ============ OVERVIEW VIEW (v2) ============ -->
+          <!-- ============ OVERVIEW VIEW ============ -->
           <div id="view-overview" hidden>
             <div class="ov-hero">
               <h1 class="ov-hi" id="ov-greeting">Good day, <em>operator</em>.</h1>
@@ -677,7 +652,7 @@
             </div>
           </div>
 
-          <!-- ============ HOMEPAGE EDITOR VIEW (v2) ============ -->
+          <!-- ============ HOMEPAGE EDITOR VIEW ============ -->
           <div id="view-homepage" hidden>
             <div id="homepage-root">
               <div class="empty">
@@ -687,7 +662,7 @@
             </div>
           </div>
 
-          <!-- ============ ANALYTICS VIEW (v2) ============ -->
+          <!-- ============ ANALYTICS VIEW ============ -->
           <div id="view-analytics" hidden>
             <div id="analytics-root">
               <div class="empty">
@@ -697,7 +672,7 @@
             </div>
           </div>
 
-          <!-- ============ SYSTEM VIEW (v2) ============ -->
+          <!-- ============ SYSTEM VIEW ============ -->
           <div id="view-system" hidden>
             <div class="sec-head">
               <div>
@@ -831,7 +806,6 @@ Allowed commands run with timeout=15s. Type a command and press Enter.
       <span><b id="posts-bulk-count">0</b> selected</span>
       <button type="button" class="btn" data-bulk-action="publish">Publish</button>
       <button type="button" class="btn" data-bulk-action="unpublish">Draft</button>
-      <button type="button" class="btn" id="btn-bulk-add-tag">+ Tag</button>
       <button type="button" class="btn danger" data-bulk-action="delete">Delete</button>
       <button type="button" class="btn ghost" id="btn-bulk-clear">Clear</button>
     </div>
@@ -967,13 +941,12 @@ Allowed commands run with timeout=15s. Type a command and press Enter.
     <!-- Phase 5e -->
     <script src="/js/posts-bulk.js"></script>
     <script src="/js/settings.js"></script>
-    <script src="/js/taxonomies.js"></script>
     <script src="/js/redirects.js"></script>
     <script src="/js/activity.js"></script>
     <script src="/js/shortcodes.js"></script>
     <!-- Phase 8.5 -->
     <script src="/js/comments.js"></script>
-    <!-- v2 views -->
+    <!-- views -->
     <script src="/js/overview.js"></script>
     <script src="/js/analytics.js"></script>
     <script src="/js/system.js"></script>

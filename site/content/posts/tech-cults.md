@@ -4,7 +4,6 @@ slug: tech-cults
 draft: false
 date: '2026-01-02T12:49:00.000Z'
 excerpt: ''
-tags: []
 ---
 ![Cult of Mac logo](/images/2026/01/image-1.webp)
 

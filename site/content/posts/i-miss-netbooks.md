@@ -3,7 +3,6 @@ title: "I miss Netbooks"
 date: 2025-12-27T13:28:34.000Z
 slug: "i-miss-netbooks"
 draft: false
-tags: ["tech", "personal"]
 ---
 I never had one, but I want one now.
 

@@ -3,7 +3,6 @@ title: "Save Your Christmas Movies"
 date: 2025-12-24T12:55:38.000Z
 slug: "save-your-christmas-movies"
 draft: false
-tags: ["culture", "personal"]
 ---
 It is Christmas Eve, and if you celebrate Christmas, I am sure you have many family traditions that you must follow every year. But I bet there is one you make sure never to forget: the family Christmas movie.
 

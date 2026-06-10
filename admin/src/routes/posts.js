@@ -5,7 +5,7 @@
  * Phase 5e adds (without changing the existing CRUD contract):
  *   POST   /api/posts/:filename/duplicate  → clone with `-copy` suffix
  *   POST   /api/posts/:filename/preview    → signed JWT preview link
- *   POST   /api/posts/bulk                 → delete/publish/tag in bulk
+ *   POST   /api/posts/bulk                 → delete/publish in bulk
  *
  * Activity log integration is fire-and-forget — `logActivity(...)` is
  * called without `await` so a logger hiccup never breaks a save.
@@ -39,7 +39,6 @@ function getAllPosts() {
         slug: data.slug || file.replace('.md', ''),
         date: data.date || stats.mtime.toISOString(),
         draft: data.draft === true,
-        tags: data.tags || [],
         // Phase 5e additions — null when unset.
         publish_at: data.publish_at || null,
         series: data.series || null,
@@ -82,20 +81,10 @@ router.get('/', (req, res) => {
  *   - 'delete'         → remove the files
  *   - 'publish'        → flip draft → false
  *   - 'unpublish'      → flip draft → true
- *   - 'add-tag'        → payload: { tag } — push to tags[] (dedup)
- *   - 'remove-tag'     → payload: { tag } — drop from tags[]
- *   - 'change-tag'     → payload: { from, to } — rename within tags[]
  *
  * One round-trip per action; the response summarizes successes.
  */
-const BULK_ACTIONS = new Set([
-  'delete',
-  'publish',
-  'unpublish',
-  'add-tag',
-  'remove-tag',
-  'change-tag',
-]);
+const BULK_ACTIONS = new Set(['delete', 'publish', 'unpublish']);
 
 router.post('/bulk', (req, res) => {
   try {
@@ -145,38 +134,6 @@ router.post('/bulk', (req, res) => {
           }
         } else if (action === 'unpublish') {
           data.draft = true;
-        } else if (action === 'add-tag') {
-          const tag = String(payload?.tag || '').trim();
-          if (!tag) {
-            errors.push({ filename, error: 'tag_required' });
-            continue;
-          }
-          const tags = Array.isArray(data.tags) ? data.tags.slice() : [];
-          if (!tags.includes(tag)) tags.push(tag);
-          data.tags = tags;
-        } else if (action === 'remove-tag') {
-          const tag = String(payload?.tag || '').trim();
-          if (!tag) {
-            errors.push({ filename, error: 'tag_required' });
-            continue;
-          }
-          data.tags = Array.isArray(data.tags) ? data.tags.filter((t) => t !== tag) : [];
-        } else if (action === 'change-tag') {
-          const from = String(payload?.from || '').trim();
-          const to = String(payload?.to || '').trim();
-          if (!from || !to) {
-            errors.push({ filename, error: 'from_and_to_required' });
-            continue;
-          }
-          const tags = Array.isArray(data.tags) ? data.tags.slice() : [];
-          const idx = tags.indexOf(from);
-          if (idx >= 0) {
-            tags.splice(idx, 1, to);
-            // dedup
-            data.tags = Array.from(new Set(tags));
-          } else {
-            data.tags = tags;
-          }
         }
 
         writeFileSync(filePath, serializePost(data, content || ''));
