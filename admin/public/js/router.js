@@ -18,7 +18,7 @@
  *   #analytics            → umami analytics
  *   #settings             → site + author settings
  *   #system | #terminal   → health / containers / backups / terminal
- *   #tags #redirects #activity #shortcodes → utility views ("More")
+ *   #redirects #activity #shortcodes → utility views ("More")
  */
 (function () {
   // Boot on the shell page only — '/', '/index.html', or any path that
@@ -41,7 +41,6 @@
     settings: 'view-settings',
     system: 'view-system',
     terminal: 'view-system', // legacy deep link → System view's terminal tab
-    tags: 'view-tags',
     redirects: 'view-redirects',
     activity: 'view-activity',
     shortcodes: 'view-shortcodes',
@@ -112,8 +111,6 @@
       case 'system':
       case 'terminal':
         return 'System';
-      case 'tags':
-        return 'Tags';
       case 'redirects':
         return 'Redirects';
       case 'activity':

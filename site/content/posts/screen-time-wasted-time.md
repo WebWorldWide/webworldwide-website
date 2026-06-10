@@ -3,7 +3,6 @@ title: "Screen Time: Wasted Time"
 date: 2025-12-19T00:17:52.000Z
 slug: "screen-time-wasted-time"
 draft: false
-tags: ["culture", "opinion", "tech"]
 ---
 ![Wojack laying in bed with phone screen glowing. He looks upset.](/images/2025/12/image-13.webp)
 

@@ -3,7 +3,6 @@ title: "The Little Things"
 date: 2026-01-01T16:00:04.000Z
 slug: "the-little-things"
 draft: false
-tags: []
 ---
 ![LG Freedom II Phone](/images/2026/01/image.webp)
 

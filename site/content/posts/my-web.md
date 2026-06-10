@@ -4,9 +4,6 @@ slug: my-web
 draft: false
 date: '2025-12-08T00:45:00.000Z'
 excerpt: ''
-tags:
-  - personal
-  - random
 ---
 This is a new blog by me, really just for me. I have a lot of ideas and opinions on technology and its implications on the world and on culture. I would love for people to read, but at the end of the day, this is all kind of therapeutic in a sense.
 

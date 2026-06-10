@@ -3,7 +3,6 @@ title: "My Steam Backlog Beackons Me"
 date: 2025-12-29T13:07:05.000Z
 slug: "my-steam-backlog-beackons-me"
 draft: false
-tags: ["random", "culture"]
 ---
 ![Stean Winter Sale 2025 banner](/images/2025/12/image-20.webp)
 

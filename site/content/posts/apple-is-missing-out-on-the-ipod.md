@@ -3,7 +3,6 @@ title: "Apple is missing out on the iPod"
 date: 2025-12-13T01:07:24.000Z
 slug: "apple-is-missing-out-on-the-ipod"
 draft: false
-tags: ["tech", "opinion"]
 ---
 The Apple iPod was a revolutionary device. Okay, but in all seriousness, it sold revolutionarily well. The iPod Classic was killed in 2014, the Shuffle and Nano going dodo in 2017, and the iPod Touch (the only iPod I ever owned) biting the dust in 2022. Now, I can wax poetic about the iPod Touch, but killing it was the right decision for Apple, and it has no reason to really come back. The standalone music devices are exactly what Apple needs right now.
 

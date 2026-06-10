@@ -4,7 +4,7 @@
  * posts table without modifying dashboard.js. Listens to DOM changes
  * via MutationObserver on #posts-rows so it survives every re-render.
  *
- * Actions: publish, unpublish, add-tag, delete. The bulk action bar
+ * Actions: publish, unpublish, delete. The bulk action bar
  * (#posts-bulk-bar) is declared in index.html; this module shows/hides
  * it based on selection size and fires POST /api/posts/bulk.
  */
@@ -99,13 +99,6 @@
         runBulk(action);
       });
     });
-    const addTag = document.getElementById('btn-bulk-add-tag');
-    if (addTag) {
-      addTag.addEventListener('click', () => {
-        const tag = window.prompt('Tag to add to selected posts:');
-        if (tag) runBulk('add-tag', { tag });
-      });
-    }
     const clear = document.getElementById('btn-bulk-clear');
     if (clear) {
       clear.addEventListener('click', () => {

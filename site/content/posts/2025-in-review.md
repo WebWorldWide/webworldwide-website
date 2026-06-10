@@ -3,7 +3,6 @@ title: "2025 in Review"
 date: 2025-12-31T12:55:43.000Z
 slug: "2025-in-review"
 draft: false
-tags: ["tech", "culture"]
 ---
 It's the last day of the year. For me, this is one of the most important days of the year. That's because I go over and look at everything I did, good and bad. I see where I should improve and the things that I need to keep doing. So, for my first-ever blog post for a year in review, let's get into it.
 

@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * admin-pages.vitest.test.js — Phase 5e jsdom tests for the new admin
- * frontend modules (settings, taxonomies, redirects, activity,
+ * frontend modules (settings, redirects, activity,
  * shortcodes). We load each IIFE under a jsdom DOM that mirrors the
  * relevant slice of index.html and stub fetch.
  */
@@ -59,30 +59,6 @@ describe('settings.js', () => {
     expect(html).toContain('value="Tag"');
     expect(html).toContain('value="A"');
     expect(html).toContain('value="b"');
-  });
-});
-
-describe('taxonomies.js', () => {
-  it('renders tag rows with counts', async () => {
-    document.body.innerHTML += `<div id="tags-table"></div><span id="tags-total"></span>`;
-    globalThis.fetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify([
-          { name: 'foo', count: 3, posts: ['a.md', 'b.md', 'c.md'] },
-          { name: 'bar', count: 1, posts: ['a.md'] },
-        ]),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
-    );
-    loadCommon();
-    runScript('taxonomies.js');
-    window.TE.routes.tags();
-    await flush();
-    const table = document.getElementById('tags-table').innerHTML;
-    expect(table).toContain('#foo');
-    expect(table).toContain('#bar');
-    expect(table).toContain('>3<');
-    expect(document.getElementById('tags-total').textContent).toBe('2 unique');
   });
 });
 

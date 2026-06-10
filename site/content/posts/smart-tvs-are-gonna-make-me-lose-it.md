@@ -3,7 +3,6 @@ title: "Smart TVs Are Gonna Make Me Lose It"
 date: 2025-12-30T12:52:34.000Z
 slug: "smart-tvs-are-gonna-make-me-lose-it"
 draft: false
-tags: ["opinion", "tech"]
 ---
 ![Panasonic TV input label screen on non-smart TV](/images/2025/12/image-21.webp)
 

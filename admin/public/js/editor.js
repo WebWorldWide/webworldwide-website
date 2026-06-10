@@ -37,7 +37,6 @@
   const slugEl = $('post-slug');
   const dateEl = $('post-date');
   const draftEl = $('post-draft');
-  const tagsEl = $('post-tags');
   const descEl = $('post-desc');
   const editorRoot = $('editor-root');
   // Phase 3a: `bodyEl` is the façade returned by the bundle's mount().
@@ -62,7 +61,6 @@
   const crumbEditor = $('crumb-editor');
   const spTitle = $('sp-title');
   const spDesc = $('sp-desc');
-  const tagDataList = $('tag-suggestions');
   const fileFoot = $('foot-file');
   // Phase 3d: autosave status pip in the editor status bar + the
   // existing "Saved/Unsaved/Saving…/Error saving" text used in the
@@ -279,21 +277,14 @@
     if (crumbEditor) crumbEditor.textContent = filename || 'New post';
   }
 
-  // ── Load tags into <datalist> for autocomplete ────────────
-  async function loadTagSuggestions() {
-    if (!tagDataList) return;
+  // ── Load series names into <datalist> for autocomplete ────
+  async function loadSeriesSuggestions() {
     try {
       const posts = await TE.fetchJSON('/api/posts');
-      const set = new Set();
       const seriesSet = new Set();
       (posts || []).forEach((p) => {
-        (p.tags || []).forEach((t) => set.add(t));
         if (p.series) seriesSet.add(p.series);
       });
-      tagDataList.innerHTML = Array.from(set)
-        .sort()
-        .map((t) => `<option value="${TE.escape(t)}">`)
-        .join('');
       const seriesDataList = $('series-suggestions');
       if (seriesDataList) {
         seriesDataList.innerHTML = Array.from(seriesSet)
@@ -403,7 +394,6 @@
       draftEl.value = data.draft ? 'true' : 'false';
       // The blog reads frontmatter `excerpt` for the hook line + SEO description.
       descEl.value = data.excerpt || '';
-      tagsEl.value = (data.tags || []).join(', ');
       if (data.date) {
         const d = new Date(data.date);
         // Adjust for local TZ so the datetime-local input shows the
@@ -501,10 +491,6 @@
       draft: draftEl.value === 'true',
       date: dateEl.value ? new Date(dateEl.value).toISOString() : new Date().toISOString(),
       excerpt: descEl.value.trim(),
-      tags: tagsEl.value
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean),
     };
     // Phase 5e: scoop optional fields. Empty strings are dropped so
     // the front-matter object stays clean.
@@ -824,7 +810,7 @@
     });
 
     // Dirty-tracking + UI updates
-    [slugEl, dateEl, draftEl, tagsEl].forEach((el) =>
+    [slugEl, dateEl, draftEl].forEach((el) =>
       el.addEventListener('input', () => {
         updateSeoPreview();
         markDirty();
@@ -979,7 +965,7 @@
       setSaved('');
       setAutoState('idle', 'Ready');
     }
-    loadTagSuggestions();
+    loadSeriesSuggestions();
 
     // Phase 5e wiring — only fires when the corresponding sidebar
     // panels are present in the DOM (editor.html includes them).

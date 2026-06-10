@@ -22,10 +22,9 @@ import postsRoutes from './src/routes/posts.js';
 import mediaRoutes from './src/routes/media.js';
 import publishRoutes from './src/routes/publish.js';
 import healthRoutes from './src/routes/health.js';
-// Phase 5e CMS-completeness routes — site settings, taxonomies,
-// redirects, and the activity log dashboard widget.
+// Phase 5e CMS-completeness routes — site settings, redirects, and
+// the activity log dashboard widget.
 import settingsRoutes from './src/routes/settings.js';
-import taxonomiesRoutes from './src/routes/taxonomies.js';
 import redirectsRoutes from './src/routes/redirects.js';
 import activityRoutes from './src/routes/activity.js';
 // Phase 7: paste-to-embed lookup. Resolves YouTube/Vimeo/Bluesky/…
@@ -354,7 +353,6 @@ app.use('/api/publish', publishRoutes);
 app.use('/api/health', healthRoutes);
 // Phase 5e
 app.use('/api/settings', settingsRoutes);
-app.use('/api/taxonomies', taxonomiesRoutes);
 app.use('/api/redirects', redirectsRoutes);
 app.use('/api/activity', activityRoutes);
 // Umami analytics proxy — degrades to { configured: false } when the

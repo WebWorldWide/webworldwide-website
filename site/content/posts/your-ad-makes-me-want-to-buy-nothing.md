@@ -3,7 +3,6 @@ title: "Your Ad Makes Me Want To Buy Nothing"
 date: 2025-12-22T13:25:35.000Z
 slug: "your-ad-makes-me-want-to-buy-nothing"
 draft: false
-tags: ["opinion", "culture"]
 ---
 I can't take it anymore.
 

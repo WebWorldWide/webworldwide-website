@@ -111,24 +111,6 @@ test('bulk publish flips draft → false', skipOpts(), async () => {
   assert.match(raw, /draft: false/);
 });
 
-test('bulk add-tag pushes into tags[]', skipOpts(), async () => {
-  const res = await fetch(`${baseUrl}/api/posts/bulk`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'add-tag',
-      filenames: ['one.md', 'three.md'],
-      payload: { tag: 'newtag' },
-    }),
-  });
-  const body = await res.json();
-  assert.equal(body.ok.length, 2);
-  const one = readFileSync(join(postsDir, 'one.md'), 'utf-8');
-  const three = readFileSync(join(postsDir, 'three.md'), 'utf-8');
-  assert.match(one, /newtag/);
-  assert.match(three, /newtag/);
-});
-
 test('bulk delete removes files', skipOpts(), async () => {
   const res = await fetch(`${baseUrl}/api/posts/bulk`, {
     method: 'POST',

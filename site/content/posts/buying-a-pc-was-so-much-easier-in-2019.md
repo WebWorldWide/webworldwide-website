@@ -3,7 +3,6 @@ title: "Buying a PC was so much easier in 2019."
 date: 2025-12-26T14:03:48.000Z
 slug: "buying-a-pc-was-so-much-easier-in-2019"
 draft: false
-tags: ["tech", "personal"]
 ---
 ![A photo of my gaming PC being built on my kitchen table.](/images/2025/12/image-18-1.webp)
 

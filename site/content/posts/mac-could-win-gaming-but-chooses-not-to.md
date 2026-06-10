@@ -3,7 +3,6 @@ title: "Mac Could Win Gaming, But Chooses Not To"
 date: 2025-12-19T13:57:19.000Z
 slug: "mac-could-win-gaming-but-chooses-not-to"
 draft: false
-tags: ["tech", "opinion"]
 ---
 ![A desk setup with a Mac Studio running Cyberpunk 2077.](/images/2025/12/image-14.webp)
 

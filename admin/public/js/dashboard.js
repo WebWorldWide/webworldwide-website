@@ -96,11 +96,9 @@
     let visible = allPosts.filter((p) => activeTab === 'all' || postStatus(p) === activeTab);
     if (search) {
       visible = visible.filter((p) => {
-        const tags = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
         return (
           (p.title || '').toLowerCase().includes(search) ||
-          (p.slug || '').toLowerCase().includes(search) ||
-          tags.includes(search)
+          (p.slug || '').toLowerCase().includes(search)
         );
       });
     }
@@ -135,7 +133,7 @@
               <span class="r-pill ${pillCls}">${pillLabel}</span>
               <span class="r-title">${title}</span>
             </span>
-            <span class="r-status" style="text-align:right;">${TE.escape((p.tags || []).join(', ') || '—')}</span>
+            <span class="r-status" style="text-align:right;">${p.word_count ? `${p.word_count} words` : '—'}</span>
             <span class="r-date">${fmtDate(p.date)}</span>
           </a>
           <span class="r-actions">

@@ -3,7 +3,6 @@ title: "The Terminal"
 date: 2025-12-08T00:45:21.000Z
 slug: "the-terminal"
 draft: false
-tags: ["personal", "random", "personal", "random"]
 ---
 This is a new blog by me, really just for me. I have a lot of ideas and opinions on technology and its implications on the world and on culture. I would love for people to read, but at the end of the day, this is all kind of therapeutic in a sense.
 

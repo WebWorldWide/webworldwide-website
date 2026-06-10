@@ -3,7 +3,6 @@ title: "Traveling for the Holidays"
 date: 2025-12-21T19:18:12.000Z
 slug: "traveling-for-the-holidays"
 draft: false
-tags: ["culture", "personal", "tech"]
 ---
 ![Kevin in Home Alone 2 holding his tape recorder.](/images/2025/12/image-16.webp)
 

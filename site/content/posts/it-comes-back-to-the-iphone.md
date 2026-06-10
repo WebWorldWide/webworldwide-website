@@ -4,10 +4,6 @@ slug: it-comes-back-to-the-iphone
 draft: false
 date: '2025-12-17T14:07:00.000Z'
 excerpt: ''
-tags:
-  - culture
-  - tech
-  - opinion
 ---
 ![Someone celebrating after buying an iPhone outside an Apple Store](/images/2025/12/image-12.webp)
 

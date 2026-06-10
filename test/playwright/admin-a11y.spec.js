@@ -4,7 +4,7 @@
  *
  * Targets every static surface the admin shell exposes:
  *   - /login.html
- *   - /index.html (dashboard, plus #media #comments #settings #tags
+ *   - /index.html (dashboard, plus #media #comments #settings
  *                  #redirects #activity #shortcodes hash routes)
  *   - /editor.html
  *
@@ -142,7 +142,6 @@ test.describe('admin a11y', () => {
     { hash: '#media', label: 'media library' },
     { hash: '#comments', label: 'comments moderation' },
     { hash: '#settings', label: 'settings' },
-    { hash: '#tags', label: 'taxonomies / tags' },
     { hash: '#redirects', label: 'redirects' },
     { hash: '#activity', label: 'activity feed' },
     { hash: '#shortcodes', label: 'shortcodes reference' },
