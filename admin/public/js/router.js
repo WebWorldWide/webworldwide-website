@@ -207,6 +207,9 @@
     const canonical = (r) => (r === 'terminal' ? 'system' : r === 'dashboard' ? 'posts' : r);
 
     let activeRoute = currentRoute();
+    // currentRoute() strips ?params, so the restore-on-cancel keeps
+    // the full hash separately (#comments?status=spam must survive).
+    let activeHash = window.location.hash || '#overview';
     show(activeRoute);
     window.addEventListener('hashchange', () => {
       const next = currentRoute();
@@ -219,11 +222,12 @@
           // would add a step), and replaceState fires no hashchange,
           // so no restore-flag dance is needed. The view never
           // changed; only the URL is put back.
-          window.history.replaceState(null, '', `#${activeRoute}`);
+          window.history.replaceState(null, '', activeHash);
           return;
         }
       }
       activeRoute = next;
+      activeHash = window.location.hash || `#${next}`;
       show(next);
     });
     wireMobileNav();
