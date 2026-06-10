@@ -52,22 +52,35 @@ gzip -f "$BACKUP_REPO_DIR/umami_backup.sql"
 # 3. Backup Remark42 BoltDB (brief stop for data consistency).
 # `docker cp` reads from the container filesystem (works while stopped)
 # — never reach into /var/lib/docker/volumes, whose layout is not ours.
+# Copy the WHOLE data dir: the bolt store is per-site ({site}.db) and
+# created lazily, so on a fresh container the file may not exist yet —
+# a missing store must warn and continue, never abort the script
+# (the 2026-06 incident, second verse).
 if docker ps -a --format '{{.Names}}' | grep -qx 'remark42'; then
     echo "Backing up Remark42..."
     docker compose stop remark42
     STOPPED_SERVICES="$STOPPED_SERVICES remark42"
-    docker cp remark42:/srv/var/remark.db "$BACKUP_REPO_DIR/remark42_backup.db"
+    if docker cp remark42:/srv/var "$BACKUP_REPO_DIR/remark42_var.tmp" 2>/dev/null; then
+        rm -rf "$BACKUP_REPO_DIR/remark42_var"
+        mv "$BACKUP_REPO_DIR/remark42_var.tmp" "$BACKUP_REPO_DIR/remark42_var"
+    else
+        echo "WARNING: could not copy remark42 /srv/var (fresh store?) — skipping its backup."
+        rm -rf "$BACKUP_REPO_DIR/remark42_var.tmp"
+    fi
     docker compose start remark42
     STOPPED_SERVICES="${STOPPED_SERVICES// remark42/}"
 else
     echo "WARNING: remark42 container not found — skipping its backup."
 fi
 
-# 4. Backup CMS SQLite DB (same brief-stop + docker cp pattern)
+# 4. Backup CMS SQLite DB (same brief-stop + docker cp pattern; same
+# warn-don't-abort posture so the .env backup + push always run)
 echo "Backing up CMS Auth DB..."
 docker compose stop cms
 STOPPED_SERVICES="$STOPPED_SERVICES cms"
-docker cp cms:/app/data/auth.db "$BACKUP_REPO_DIR/cms_auth_backup.db"
+if ! docker cp cms:/app/data/auth.db "$BACKUP_REPO_DIR/cms_auth_backup.db" 2>/dev/null; then
+    echo "WARNING: could not copy cms auth.db — skipping its backup."
+fi
 docker compose start cms
 STOPPED_SERVICES="${STOPPED_SERVICES// cms/}"
 
