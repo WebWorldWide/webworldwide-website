@@ -58,6 +58,10 @@ services:
       - GIT_AUTHOR_EMAIL=cms@webworldwide.online
       - GIT_COMMITTER_NAME=Web World Wide CMS
       - GIT_COMMITTER_EMAIL=cms@webworldwide.online
+      # Remark42 ingestion for the admin Comments view — without these
+      # the poller silently skips and moderation shows nothing.
+      - REMARK42_URL=${REMARK42_INTERNAL_URL:-http://remark42:8080}
+      - REMARK42_SITE_ID=${REMARK42_SITE_ID:-webworldwide}
       # Umami proxy for the admin Analytics view (server-side only).
       - UMAMI_API_URL=${UMAMI_INTERNAL_URL:-http://umami:3000}
       - UMAMI_ADMIN_USER=${UMAMI_ADMIN_USER:-}
