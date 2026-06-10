@@ -29,60 +29,86 @@
       <!-- ============ SIDEBAR ============ -->
       <aside class="sidebar" aria-label="Main navigation">
         <a class="side-brand" href="/index.html">
-          <span class="tmark s32" aria-hidden="true"></span>
+          <span class="gmark" aria-hidden="true"
+            ><canvas id="brand-globe" width="68" height="68"></canvas
+          ></span>
           <span class="name">
             Web World <b>Wide</b>
-            <span>Admin</span>
+            <span>admin · v2</span>
           </span>
         </a>
 
-        <nav class="side-group" aria-label="Workspace">
-          <div class="side-group-label">Workspace</div>
-          <a class="side-item" href="/index.html" aria-current="page" data-route="dashboard">
-            <span class="ico" aria-hidden="true" data-icon="home"></span><span>Dashboard</span
+        <div class="side-new">
+          <button type="button" class="btn-new" data-new-post>
+            <span class="plus" aria-hidden="true">+</span> New post
+          </button>
+        </div>
+
+        <nav class="side-group" aria-label="Content">
+          <div class="side-group-label">Content</div>
+          <a class="side-item" href="/index.html#overview" data-route="overview">
+            <span class="ico" aria-hidden="true" data-icon="overview"></span><span>Overview</span
             ><span></span>
           </a>
           <a class="side-item" href="/index.html#posts" data-route="posts">
             <span class="ico" aria-hidden="true" data-icon="posts"></span><span>Posts</span
             ><span class="badge ok" id="side-badge-posts">—</span>
           </a>
+          <a class="side-item" href="/index.html#homepage" data-route="homepage">
+            <span class="ico" aria-hidden="true" data-icon="homepage"></span><span>Homepage</span
+            ><span></span>
+          </a>
           <a class="side-item" href="/index.html#media" data-route="media">
             <span class="ico" aria-hidden="true" data-icon="media"></span><span>Media</span
             ><span></span>
           </a>
-          <a class="side-item" href="/index.html#tags" data-route="tags">
-            <span class="ico" aria-hidden="true" data-icon="tag"></span><span>Tags</span
-            ><span></span>
-          </a>
+        </nav>
+
+        <nav class="side-group" aria-label="Audience">
+          <div class="side-group-label">Audience</div>
           <a class="side-item" href="/index.html#comments" data-route="comments">
             <span class="ico" aria-hidden="true" data-icon="comments"></span><span>Comments</span
             ><span class="badge cm zero" id="side-badge-comments">0</span>
+          </a>
+          <a class="side-item" href="/index.html#analytics" data-route="analytics">
+            <span class="ico" aria-hidden="true" data-icon="analytics"></span><span>Analytics</span
+            ><span></span>
           </a>
         </nav>
 
         <nav class="side-group" aria-label="System">
           <div class="side-group-label">System</div>
-          <a class="side-item" href="/index.html#activity" data-route="activity">
-            <span class="ico" aria-hidden="true" data-icon="activity"></span><span>Activity</span
-            ><span></span>
-          </a>
-          <a class="side-item" href="/index.html#redirects" data-route="redirects">
-            <span class="ico" aria-hidden="true" data-icon="redirects"></span><span>Redirects</span
-            ><span></span>
-          </a>
-          <a class="side-item" href="/index.html#shortcodes" data-route="shortcodes">
-            <span class="ico" aria-hidden="true" data-icon="shortcodes"></span
-            ><span>Shortcodes</span><span></span>
-          </a>
           <a class="side-item" href="/index.html#settings" data-route="settings">
             <span class="ico" aria-hidden="true" data-icon="settings"></span><span>Settings</span
             ><span></span>
           </a>
-          <button type="button" class="side-item" id="btn-open-terminal" data-route="terminal">
-            <span class="ico" aria-hidden="true" data-icon="terminal"></span><span>Terminal</span
+          <a class="side-item" href="/index.html#system" data-route="system">
+            <span class="ico" aria-hidden="true" data-icon="system"></span><span>System</span
             ><span></span>
-          </button>
+          </a>
         </nav>
+
+        <details class="side-more">
+          <summary class="side-group-label">More</summary>
+          <nav aria-label="Utilities">
+            <a class="side-item" href="/index.html#tags" data-route="tags">
+              <span class="ico" aria-hidden="true" data-icon="tag"></span><span>Tags</span
+              ><span></span>
+            </a>
+            <a class="side-item" href="/index.html#redirects" data-route="redirects">
+              <span class="ico" aria-hidden="true" data-icon="redirects"></span
+              ><span>Redirects</span><span></span>
+            </a>
+            <a class="side-item" href="/index.html#shortcodes" data-route="shortcodes">
+              <span class="ico" aria-hidden="true" data-icon="shortcodes"></span
+              ><span>Shortcodes</span><span></span>
+            </a>
+            <a class="side-item" href="/index.html#activity" data-route="activity">
+              <span class="ico" aria-hidden="true" data-icon="activity"></span><span>Activity</span
+              ><span></span>
+            </a>
+          </nav>
+        </details>
 
         <div class="side-foot">
           <div class="row">
@@ -91,6 +117,13 @@
           </div>
           <div class="row"><span>UPTIME</span><span class="uptime" id="side-uptime">—</span></div>
           <div class="row"><span>CPU</span><span id="side-cpu">—</span></div>
+          <a
+            class="sf-link"
+            href="https://webworldwide.online"
+            target="_blank"
+            rel="noopener noreferrer"
+            >View site ↗</a
+          >
         </div>
       </aside>
 
@@ -98,8 +131,8 @@
       <main id="main" class="main" tabindex="-1">
         <header class="topbar">
           <div class="crumb">
-            <span class="tmark s24" aria-hidden="true"></span>
-            <span>· <b id="crumb-section">Dashboard</b></span>
+            <span class="c-eyebrow" aria-hidden="true">Admin /</span>
+            <b class="c-title" id="crumb-section">Overview</b>
           </div>
           <div class="topbar-spacer"></div>
           <div class="topbar-search" role="search">
@@ -143,10 +176,11 @@
           <div id="view-dashboard">
             <div class="sec-head">
               <div>
-                <h1 class="sec-title">Dashboard</h1>
+                <h1 class="sec-title">Posts</h1>
                 <div class="sec-sub" id="dash-sub">Loading…</div>
               </div>
               <div class="sec-actions">
+                <a class="btn-mini" href="/index.html#tags">Manage tags →</a>
                 <a class="btn" href="/editor.html">+ Draft</a>
                 <button type="button" class="btn primary" id="btn-publish-2">Publish</button>
               </div>
@@ -241,141 +275,6 @@
               <div class="posts-foot">
                 <span id="posts-foot-text">—</span>
                 <a href="/editor.html">+ New post →</a>
-              </div>
-            </div>
-
-            <!-- System health + security side panels -->
-            <div class="dash-grid" style="margin-top: 24px">
-              <div class="panel health-panel" id="health-panel" aria-label="Pi system health">
-                <div class="panel-head">
-                  <span class="panel-title"
-                    ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span>Pi
-                    Health</span
-                  >
-                  <div class="panel-head-r">
-                    <span>UP <b id="health-uptime" style="color: var(--fg)">—</b></span>
-                    <button type="button" class="btn-mini" id="btn-refresh-health">Refresh</button>
-                  </div>
-                </div>
-                <div class="panel-body">
-                  <div class="metric" id="metric-cpu">
-                    <span class="metric-label">CPU</span>
-                    <span class="metric-val" id="metric-cpu-val">—</span>
-                    <span class="metric-bar"><i id="metric-cpu-bar" style="width: 0%"></i></span>
-                  </div>
-                  <div class="metric" id="metric-ram">
-                    <span class="metric-label">RAM</span>
-                    <span class="metric-val" id="metric-ram-val">—</span>
-                    <span class="metric-bar"><i id="metric-ram-bar" style="width: 0%"></i></span>
-                  </div>
-                  <div class="metric" id="metric-temp">
-                    <span class="metric-label">TEMP</span>
-                    <span class="metric-val" id="metric-temp-val">—</span>
-                    <span class="metric-bar"><i id="metric-temp-bar" style="width: 0%"></i></span>
-                  </div>
-                  <div class="metric" id="metric-disk">
-                    <span class="metric-label">DISK</span>
-                    <span class="metric-val" id="metric-disk-val">—</span>
-                    <span class="metric-bar"><i id="metric-disk-bar" style="width: 0%"></i></span>
-                  </div>
-                  <div class="metric" id="metric-swap">
-                    <span class="metric-label">SWAP</span>
-                    <span class="metric-val" id="metric-swap-val">—</span>
-                    <span class="metric-bar"><i id="metric-swap-bar" style="width: 0%"></i></span>
-                  </div>
-
-                  <h4 class="health-section-label">Storage &amp; power</h4>
-                  <div id="sdpower-status" class="health-status">—</div>
-
-                  <h4 class="health-section-label">Docker containers</h4>
-                  <div id="docker-list">
-                    <div class="docker">
-                      <span class="ddot" aria-hidden="true"></span><span class="name">…</span
-                      ><span class="status">loading</span>
-                    </div>
-                  </div>
-
-                  <h4 class="health-section-label">Backup</h4>
-                  <div id="backup-status" class="health-status">—</div>
-                </div>
-              </div>
-
-              <div class="panel" id="security-panel" aria-label="Security">
-                <div class="panel-head">
-                  <span class="panel-title"
-                    ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span
-                    >Security</span
-                  >
-                  <span id="passkey-status" class="panel-head-r" aria-live="polite"></span>
-                </div>
-                <div class="panel-body">
-                  <p style="margin: 0 0 12px; color: var(--fg-dim)">
-                    Register a passkey on this device to sign in with Face ID or Touch ID next time.
-                  </p>
-                  <button type="button" class="btn primary" id="btn-register-passkey">
-                    Register passkey
-                  </button>
-                  <p style="margin: 14px 0 0; color: var(--fg-mute); font-size: 11px">
-                    Passkeys and password sign-in are both supported.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Phase 8.5: inbox (comments + pending mentions) widget -->
-            <div class="panel" id="inbox-widget" style="margin-top: 24px" aria-label="Inbox">
-              <div class="panel-head">
-                <span class="panel-title"
-                  ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span>Inbox</span
-                >
-                <div class="panel-head-r">
-                  <a class="btn-mini" href="/index.html#comments">View all →</a>
-                </div>
-              </div>
-              <div class="panel-body">
-                <div class="te-cm-inbox" id="inbox-grid">
-                  <a class="te-cm-inbox-card" href="/index.html#comments?status=visible">
-                    <span class="label">Comments (24h)</span>
-                    <span class="val" id="inbox-comments-24h">—</span>
-                    <span class="sub" id="inbox-comments-total">—</span>
-                  </a>
-                  <a class="te-cm-inbox-card" href="/index.html#comments?status=pending">
-                    <span class="label">Pending webmentions</span>
-                    <span class="val" id="inbox-webmentions-pending">—</span>
-                    <span class="sub" id="inbox-webmentions-total">—</span>
-                  </a>
-                  <a class="te-cm-inbox-card" href="/index.html#comments?status=spam">
-                    <span class="label">Marked spam</span>
-                    <span class="val" id="inbox-spam">—</span>
-                    <span class="sub">All time</span>
-                  </a>
-                  <a class="te-cm-inbox-card" href="/index.html#comments?status=blocked">
-                    <span class="label">Blocked users</span>
-                    <span class="val" id="inbox-blocked">—</span>
-                    <span class="sub">Active blocks</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <!-- Phase 5e: recent activity widget -->
-            <div
-              class="panel"
-              id="activity-widget"
-              style="margin-top: 24px"
-              aria-label="Recent activity"
-            >
-              <div class="panel-head">
-                <span class="panel-title"
-                  ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span>Recent
-                  activity</span
-                >
-                <div class="panel-head-r">
-                  <a class="btn-mini" href="/index.html#activity">View all →</a>
-                </div>
-              </div>
-              <div class="panel-body">
-                <div id="activity-widget-body" class="te-activity-table">Loading…</div>
               </div>
             </div>
           </div>
@@ -542,6 +441,28 @@
               </div>
             </div>
             <div id="settings-form" class="te-form-grid">Loading…</div>
+            <div class="settings-security" style="margin-top: 24px">
+              <div class="panel" id="security-panel" aria-label="Security">
+                <div class="panel-head">
+                  <span class="panel-title"
+                    ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span
+                    >Security</span
+                  >
+                  <span id="passkey-status" class="panel-head-r" aria-live="polite"></span>
+                </div>
+                <div class="panel-body">
+                  <p style="margin: 0 0 12px; color: var(--fg-dim)">
+                    Register a passkey on this device to sign in with Face ID or Touch ID next time.
+                  </p>
+                  <button type="button" class="btn primary" id="btn-register-passkey">
+                    Register passkey
+                  </button>
+                  <p style="margin: 14px 0 0; color: var(--fg-mute); font-size: 11px">
+                    Passkeys and password sign-in are both supported.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- ============ TAGS VIEW (Phase 5e) ============ -->
@@ -619,6 +540,261 @@
             </div>
             <div class="panel">
               <div id="shortcodes-list">Loading…</div>
+            </div>
+          </div>
+
+          <!-- ============ OVERVIEW VIEW (v2) ============ -->
+          <div id="view-overview" hidden>
+            <div class="ov-hero">
+              <h1 class="ov-hi" id="ov-greeting">Good day, <em>operator</em>.</h1>
+              <div class="ov-date" id="ov-date">Loading…</div>
+            </div>
+
+            <div class="stat-row three" id="ov-stats" aria-label="Site stats">
+              <div class="stat">
+                <div class="stat-label">Pageviews · 30d</div>
+                <div class="stat-val" id="ov-stat-pageviews">—</div>
+                <div class="stat-delta" id="ov-stat-pageviews-delta"></div>
+                <div class="stat-spark" id="ov-stat-pageviews-spark" aria-hidden="true"></div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Visitors · 30d</div>
+                <div class="stat-val" id="ov-stat-visitors">—</div>
+                <div class="stat-delta" id="ov-stat-visitors-delta"></div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Comments</div>
+                <div class="stat-val" id="ov-stat-comments">—</div>
+                <div class="stat-delta flat" id="ov-stat-comments-delta"></div>
+              </div>
+            </div>
+
+            <div class="grid-2 lean-right">
+              <div class="panel" aria-label="Drafts in progress">
+                <div class="panel-head">
+                  <span class="panel-title"
+                    ><span class="ind" aria-hidden="true">✎</span>Pick up where you left off</span
+                  >
+                  <div class="panel-head-r">
+                    <a class="btn-mini" href="/index.html#posts">all posts →</a>
+                  </div>
+                </div>
+                <div class="panel-body tight" id="ov-drafts-body">
+                  <div class="empty">
+                    <div class="e-mark">…</div>
+                    <div class="e-text">Loading drafts…</div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel" aria-label="Needs you">
+                <div class="panel-head">
+                  <span class="panel-title"
+                    ><span class="ind" aria-hidden="true">!</span>Needs you</span
+                  >
+                </div>
+                <div class="panel-body tight" id="ov-needs-body">
+                  <div class="empty">
+                    <div class="e-mark">…</div>
+                    <div class="e-text">Checking…</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 8.5: inbox (comments + pending mentions) widget -->
+            <div class="panel" id="inbox-widget" style="margin-top: 24px" aria-label="Inbox">
+              <div class="panel-head">
+                <span class="panel-title"
+                  ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span>Inbox</span
+                >
+                <div class="panel-head-r">
+                  <a class="btn-mini" href="/index.html#comments">View all →</a>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="te-cm-inbox" id="inbox-grid">
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=visible">
+                    <span class="label">Comments (24h)</span>
+                    <span class="val" id="inbox-comments-24h">—</span>
+                    <span class="sub" id="inbox-comments-total">—</span>
+                  </a>
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=pending">
+                    <span class="label">Pending webmentions</span>
+                    <span class="val" id="inbox-webmentions-pending">—</span>
+                    <span class="sub" id="inbox-webmentions-total">—</span>
+                  </a>
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=spam">
+                    <span class="label">Marked spam</span>
+                    <span class="val" id="inbox-spam">—</span>
+                    <span class="sub">All time</span>
+                  </a>
+                  <a class="te-cm-inbox-card" href="/index.html#comments?status=blocked">
+                    <span class="label">Blocked users</span>
+                    <span class="val" id="inbox-blocked">—</span>
+                    <span class="sub">Active blocks</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <!-- Phase 5e: recent activity widget -->
+            <div
+              class="panel"
+              id="activity-widget"
+              style="margin-top: 24px"
+              aria-label="Recent activity"
+            >
+              <div class="panel-head">
+                <span class="panel-title"
+                  ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span>Recent
+                  activity</span
+                >
+                <div class="panel-head-r">
+                  <a class="btn-mini" href="/index.html#activity">View all →</a>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="activity-widget-body" class="te-activity-table">Loading…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ HOMEPAGE EDITOR VIEW (v2) ============ -->
+          <div id="view-homepage" hidden>
+            <div id="homepage-root">
+              <div class="empty">
+                <div class="e-mark">…</div>
+                <div class="e-text">Loading homepage editor…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ ANALYTICS VIEW (v2) ============ -->
+          <div id="view-analytics" hidden>
+            <div id="analytics-root">
+              <div class="empty">
+                <div class="e-mark">…</div>
+                <div class="e-text">Loading analytics…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ SYSTEM VIEW (v2) ============ -->
+          <div id="view-system" hidden>
+            <div class="sec-head">
+              <div>
+                <h1 class="sec-title">System</h1>
+                <div class="sec-sub">
+                  Health · Containers · Backups · Terminal — the Pi at a glance.
+                </div>
+              </div>
+              <div class="sec-actions">
+                <button type="button" class="btn-mini" id="btn-refresh-health">Refresh</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="tabs" role="tablist" aria-label="System sections" id="system-tabs">
+                <button
+                  type="button"
+                  class="tab active"
+                  role="tab"
+                  data-systab="health"
+                  aria-selected="true"
+                >
+                  Health
+                </button>
+                <button
+                  type="button"
+                  class="tab"
+                  role="tab"
+                  data-systab="containers"
+                  aria-selected="false"
+                >
+                  Containers
+                </button>
+                <button
+                  type="button"
+                  class="tab"
+                  role="tab"
+                  data-systab="backups"
+                  aria-selected="false"
+                >
+                  Backups
+                </button>
+                <button
+                  type="button"
+                  class="tab"
+                  role="tab"
+                  data-systab="terminal"
+                  aria-selected="false"
+                >
+                  Terminal
+                </button>
+              </div>
+
+              <div class="panel-body" id="systab-health" role="tabpanel">
+                <div class="panel-head-r" style="margin-bottom: 10px">
+                  <span>UP <b id="health-uptime" style="color: var(--fg)">—</b></span>
+                </div>
+                <div class="metric" id="metric-cpu">
+                  <span class="metric-label">CPU</span>
+                  <span class="metric-val" id="metric-cpu-val">—</span>
+                  <span class="metric-bar"><i id="metric-cpu-bar" style="width: 0%"></i></span>
+                </div>
+                <div class="metric" id="metric-ram">
+                  <span class="metric-label">RAM</span>
+                  <span class="metric-val" id="metric-ram-val">—</span>
+                  <span class="metric-bar"><i id="metric-ram-bar" style="width: 0%"></i></span>
+                </div>
+                <div class="metric" id="metric-temp">
+                  <span class="metric-label">TEMP</span>
+                  <span class="metric-val" id="metric-temp-val">—</span>
+                  <span class="metric-bar"><i id="metric-temp-bar" style="width: 0%"></i></span>
+                </div>
+                <div class="metric" id="metric-disk">
+                  <span class="metric-label">DISK</span>
+                  <span class="metric-val" id="metric-disk-val">—</span>
+                  <span class="metric-bar"><i id="metric-disk-bar" style="width: 0%"></i></span>
+                </div>
+                <div class="metric" id="metric-swap">
+                  <span class="metric-label">SWAP</span>
+                  <span class="metric-val" id="metric-swap-val">—</span>
+                  <span class="metric-bar"><i id="metric-swap-bar" style="width: 0%"></i></span>
+                </div>
+                <h4 class="health-section-label">Storage &amp; power</h4>
+                <div id="sdpower-status" class="health-status">—</div>
+              </div>
+
+              <div class="panel-body" id="systab-containers" role="tabpanel" hidden>
+                <div id="docker-list">
+                  <div class="docker">
+                    <span class="ddot" aria-hidden="true"></span><span class="name">…</span
+                    ><span class="status">loading</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-body" id="systab-backups" role="tabpanel" hidden>
+                <div id="backup-status" class="health-status">—</div>
+              </div>
+
+              <div class="panel-body" id="systab-terminal" role="tabpanel" hidden>
+                <pre class="terminal-output" id="terminal-output" aria-live="polite">
+Welcome to the Web World Wide Pi shell.
+Allowed commands run with timeout=15s. Type a command and press Enter.
+</pre
+                >
+                <form class="terminal-form" id="terminal-form" autocomplete="off">
+                  <span class="terminal-prompt" aria-hidden="true">&gt;</span>
+                  <label for="terminal-input" class="sr-only">Command</label>
+                  <input
+                    type="text"
+                    id="terminal-input"
+                    placeholder="e.g. uptime"
+                    autocomplete="off"
+                  />
+                  <button type="submit" class="btn primary">Run</button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -723,42 +899,6 @@
     </aside>
 
     <!-- Terminal modal -->
-    <div
-      class="modal"
-      id="terminal-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden="true"
-      aria-labelledby="terminal-modal-title"
-    >
-      <div class="modal-card" style="max-width: 820px">
-        <div class="modal-head">
-          <h3 id="terminal-modal-title">Terminal</h3>
-          <button
-            type="button"
-            class="btn ghost"
-            id="btn-close-terminal"
-            aria-label="Close terminal"
-          >
-            <span class="ico" aria-hidden="true" data-icon="close"></span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <pre class="terminal-output" id="terminal-output" aria-live="polite">
-Welcome to the Web World Wide Pi shell.
-Allowed commands run with timeout=15s. Type a command and press Enter.
-</pre
-          >
-          <form class="terminal-form" id="terminal-form" autocomplete="off">
-            <span class="terminal-prompt" aria-hidden="true">&gt;</span>
-            <label for="terminal-input" class="sr-only">Command</label>
-            <input type="text" id="terminal-input" placeholder="e.g. uptime" autocomplete="off" />
-            <button type="submit" class="btn primary">Run</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
     <!-- Delete-post confirm modal -->
     <div
       class="modal"
@@ -798,6 +938,7 @@ Allowed commands run with timeout=15s. Type a command and press Enter.
     <script src="/js/a11y.js"></script>
     <script src="/js/icons.js"></script>
     <script src="/js/common.js"></script>
+    <script src="/js/globe-mark.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/terminal.js"></script>
     <script src="/js/dashboard.js"></script>
@@ -812,6 +953,11 @@ Allowed commands run with timeout=15s. Type a command and press Enter.
     <script src="/js/shortcodes.js"></script>
     <!-- Phase 8.5 -->
     <script src="/js/comments.js"></script>
+    <!-- v2 views -->
+    <script src="/js/overview.js"></script>
+    <script src="/js/analytics.js"></script>
+    <script src="/js/system.js"></script>
+    <script src="/js/homepage.js"></script>
     <script src="/js/router.js"></script>
   </body>
 </html>

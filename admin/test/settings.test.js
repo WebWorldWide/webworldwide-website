@@ -153,3 +153,301 @@ test('helper apply directly preserves blank lines + comments', skipOpts(), async
   assert.equal(reparsed.params.tagline, 'new');
   assert.equal(reparsed.title, 'Example');
 });
+
+/* ------------------------------------------------------------------ *
+ * Homepage editor — GET/PATCH /api/settings/homepage                  *
+ * ------------------------------------------------------------------ */
+
+const DEFAULT_MODEL = {
+  hero: { words: ['Web', 'World', 'Wide'], tagline: 'W · W · W' },
+  apps: {
+    items: [
+      { name: 'FileID', status: 'live', link: '', icon: '/assets/fileid.png' },
+      { name: 'Document Finder', status: 'soon', link: '', icon: '/assets/doc-finder.png' },
+      { name: 'Untitled', status: 'soon', link: '', icon: '' },
+    ],
+  },
+  videos: { episode: 'EP. 001', film_title: 'First video — coming soon' },
+  socials: {
+    order: [
+      'youtube',
+      'github',
+      'twitter',
+      'bluesky',
+      'mastodon',
+      'reddit',
+      'instagram',
+      'threads',
+    ],
+    hidden: [],
+  },
+  blog_cta: { kicker: 'Latest', title: 'The Web World Wide', title_accent: 'Blog', url: '/blog/' },
+  sections: { hero: true, apps: true, videos: true, socials: true, blog_cta: true },
+  section_order: ['hero', 'apps', 'videos', 'socials', 'blog_cta'],
+};
+
+// Fully-populated fixture with non-default values + a canary comment that
+// PATCH writes must never eat.
+const FULL_HOMEPAGE_TOML = `baseURL = "https://example.com"
+
+[site]
+tagline = "My World on the Web"
+
+[apps]
+fileid = "https://example.com/fileid"
+doc_finder = ""
+
+# canary: hand-written comment — must survive PATCH writes
+[homepage]
+section_order = ["videos", "hero", "apps", "socials", "blog_cta"]
+
+[homepage.sections]
+hero = true
+apps = true
+videos = false
+socials = true
+blog_cta = true
+
+[homepage.hero]
+words = ["Hello", "Wide", "Web"]
+tagline = "Testing tagline"
+
+[homepage.apps]
+items = [ { name = "FileID", status = "live", link = "https://example.com/fileid", icon = "/assets/fileid.png" }, { name = "Lab Thing", status = "lab", link = "/lab/", icon = "" } ]
+
+[homepage.videos]
+episode = "EP. 042"
+film_title = "Some film"
+
+[homepage.socials]
+order = ["github", "youtube"]
+hidden = ["twitter", "email"]
+
+[homepage.blog_cta]
+kicker = "Fresh"
+title = "Read the"
+title_accent = "Blog"
+url = "https://example.com/blog/"
+`;
+
+test('GET /homepage returns complete defaults on a minimal site.toml', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), SAMPLE_TOML); // no [site]/[apps]/[homepage]
+  const res = await fetch(`${baseUrl}/api/settings/homepage`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), DEFAULT_MODEL);
+});
+
+test('GET /homepage derives defaults from legacy [site]/[apps] keys', skipOpts(), async () => {
+  const legacy = `${SAMPLE_TOML}
+[site]
+tagline = "My World on the Web"
+
+[apps]
+fileid = "https://example.com/fileid"
+doc_finder = ""
+`;
+  writeFileSync(join(siteDir, 'site.toml'), legacy);
+  const res = await fetch(`${baseUrl}/api/settings/homepage`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.hero.tagline, 'My World on the Web');
+  assert.equal(body.apps.items[0].link, 'https://example.com/fileid');
+  assert.equal(body.apps.items[0].name, 'FileID');
+  assert.equal(body.apps.items[1].status, 'soon');
+  assert.deepEqual(body.section_order, DEFAULT_MODEL.section_order);
+});
+
+test('GET /homepage reflects a fully-populated toml', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
+  const res = await fetch(`${baseUrl}/api/settings/homepage`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), {
+    hero: { words: ['Hello', 'Wide', 'Web'], tagline: 'Testing tagline' },
+    apps: {
+      items: [
+        {
+          name: 'FileID',
+          status: 'live',
+          link: 'https://example.com/fileid',
+          icon: '/assets/fileid.png',
+        },
+        { name: 'Lab Thing', status: 'lab', link: '/lab/', icon: '' },
+      ],
+    },
+    videos: { episode: 'EP. 042', film_title: 'Some film' },
+    socials: { order: ['github', 'youtube'], hidden: ['twitter', 'email'] },
+    blog_cta: {
+      kicker: 'Fresh',
+      title: 'Read the',
+      title_accent: 'Blog',
+      url: 'https://example.com/blog/',
+    },
+    sections: { hero: true, apps: true, videos: false, socials: true, blog_cta: true },
+    section_order: ['videos', 'hero', 'apps', 'socials', 'blog_cta'],
+  });
+});
+
+test('PATCH /homepage round-trips edits and re-GET matches', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
+  const patch = {
+    hero: { words: ['Brand', 'New'], tagline: 'Patched tagline' },
+    apps: {
+      items: [
+        {
+          name: 'FileID Renamed',
+          status: 'live',
+          link: 'https://example.com/fileid',
+          icon: '/assets/fileid.png',
+        },
+        { name: 'Lab Thing', status: 'lab', link: '/lab/', icon: '' },
+      ],
+    },
+    sections: { videos: true, socials: false },
+    section_order: ['blog_cta', 'socials', 'videos', 'apps', 'hero'],
+  };
+  const res = await fetch(`${baseUrl}/api/settings/homepage`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  assert.equal(res.status, 200);
+  const updated = await res.json();
+  assert.deepEqual(updated.hero, patch.hero);
+  assert.deepEqual(updated.apps.items, patch.apps.items);
+  assert.equal(updated.sections.videos, true);
+  assert.equal(updated.sections.socials, false);
+  assert.deepEqual(updated.section_order, patch.section_order);
+  // Untouched fields keep their fixture values.
+  assert.equal(updated.videos.episode, 'EP. 042');
+  assert.deepEqual(updated.socials.hidden, ['twitter', 'email']);
+  // Re-GET returns exactly the PATCH response.
+  const res2 = await fetch(`${baseUrl}/api/settings/homepage`);
+  assert.deepEqual(await res2.json(), updated);
+});
+
+test('PATCH /homepage rejects invalid payloads with 400', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
+  const cases = [
+    {
+      label: 'bad app status',
+      body: { apps: { items: [{ name: 'X', status: 'beta', link: '', icon: '' }] } },
+      match: /status/,
+    },
+    {
+      label: 'too many apps',
+      body: {
+        apps: {
+          items: Array.from({ length: 9 }, (_, i) => ({
+            name: `App ${i}`,
+            status: 'soon',
+            link: '',
+            icon: '',
+          })),
+        },
+      },
+      match: /at most 8/,
+    },
+    {
+      label: 'junk section id',
+      body: { sections: { junk: true } },
+      match: /junk/,
+    },
+    {
+      label: 'non-permutation section_order',
+      body: { section_order: ['hero', 'apps', 'videos', 'socials'] },
+      match: /permutation/,
+    },
+    {
+      label: 'duplicate section_order entries',
+      body: { section_order: ['hero', 'hero', 'videos', 'socials', 'blog_cta'] },
+      match: /permutation/,
+    },
+    {
+      label: 'bad blog_cta url',
+      body: { blog_cta: { url: 'example.com/blog' } },
+      match: /blog_cta\.url/,
+    },
+    {
+      label: 'bad app link scheme',
+      body: { apps: { items: [{ name: 'X', status: 'live', link: 'ftp://nope', icon: '' }] } },
+      match: /link/,
+    },
+    {
+      label: 'too many hero words',
+      body: { hero: { words: ['a', 'b', 'c', 'd', 'e', 'f'] } },
+      match: /hero\.words/,
+    },
+    {
+      label: 'unknown social key',
+      body: { socials: { hidden: ['myspace'] } },
+      match: /myspace/,
+    },
+    {
+      label: 'unknown top-level field',
+      body: { bogus: { a: 1 } },
+      match: /unknown field/,
+    },
+  ];
+  const before = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
+  for (const c of cases) {
+    const res = await fetch(`${baseUrl}/api/settings/homepage`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(c.body),
+    });
+    assert.equal(res.status, 400, `${c.label} → 400`);
+    const body = await res.json();
+    assert.match(String(body.message), c.match, `${c.label} message`);
+  }
+  // No invalid payload may touch the file.
+  assert.equal(readFileSync(join(siteDir, 'site.toml'), 'utf-8'), before);
+});
+
+test(
+  'PATCH /homepage preserves unrelated comments and the file still parses',
+  skipOpts(),
+  async () => {
+    writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
+    const res = await fetch(`${baseUrl}/api/settings/homepage`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videos: { episode: 'EP. 043' } }),
+    });
+    assert.equal(res.status, 200);
+    const onDisk = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
+    // Canary comment survives the write.
+    assert.match(onDisk, /# canary: hand-written comment — must survive PATCH writes/);
+    // Untouched lines stay byte-identical.
+    assert.match(onDisk, /episode = "EP\. 043"/);
+    assert.match(onDisk, /film_title = "Some film"/);
+    // The file still parses and reflects the edit.
+    const { parse } = await import('../src/utils/toml-roundtrip.js');
+    const parsed = parse(onDisk);
+    assert.equal(parsed.homepage.videos.episode, 'EP. 043');
+    assert.equal(parsed.site.tagline, 'My World on the Web');
+  },
+);
+
+test('PATCH /homepage creates [homepage.*] sections in an old toml', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), SAMPLE_TOML); // pre-homepage toml
+  const res = await fetch(`${baseUrl}/api/settings/homepage`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hero: { tagline: 'Created from scratch' },
+      sections: { videos: false },
+    }),
+  });
+  assert.equal(res.status, 200);
+  const updated = await res.json();
+  assert.equal(updated.hero.tagline, 'Created from scratch');
+  assert.equal(updated.sections.videos, false);
+  const onDisk = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
+  assert.match(onDisk, /\[homepage\.hero\]/);
+  assert.match(onDisk, /# Pagination/); // pre-existing comment intact
+});
+
+test('normalizeHomepage fills a complete model from an empty parse', skipOpts(), async () => {
+  const { normalizeHomepage } = await import('../src/routes/settings.js');
+  assert.deepEqual(normalizeHomepage({}), DEFAULT_MODEL);
+});

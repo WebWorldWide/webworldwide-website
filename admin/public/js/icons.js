@@ -35,6 +35,16 @@
   const ICONS = {
     // ── Sidebar / chrome ──────────────────────────────────────
     home: svg('<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>'),
+    overview: svg(
+      '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+    ),
+    homepage: svg(
+      '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="6" cy="6.5" r="0.6"/><circle cx="8.5" cy="6.5" r="0.6"/><path d="M7 13h6M7 16h4"/>',
+    ),
+    analytics: svg('<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'),
+    system: svg(
+      '<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/>',
+    ),
     posts: svg('<path d="M4 6h16M4 12h16M4 18h11"/>'),
     media: svg(
       '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',

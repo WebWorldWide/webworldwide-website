@@ -1,15 +1,81 @@
 /* ============================================================
-   Self-hosted WWW fonts (Latin subset)
+   Self-hosted WWW admin fonts (Latin subsets, woff2 only)
    Admin runs on its own origin (admin.webworldwide.online), so
    we ship these alongside the SPA — can't reuse the public site's
-   /fonts/ path cross-origin.
+   /fonts/ path cross-origin, and we never load from CDNs.
 
-   System sans (system-ui) — UI, headings, reading + writing
-   Space Mono              — meta / data labels
-   Cormorant Garamond      — the "Web World Wide" sidebar / login wordmark
-   VT323                   — legacy (retired; left for cache compatibility)
+   Hanken Grotesk     — UI: nav, labels, panels, buttons, body
+   Newsreader         — the writing surface (post editor body/title)
+   Space Mono         — meta / data labels / tabular numbers
+   VT323              — pixel accents: group labels, pills, buttons
+   Cormorant Garamond — site font; used ONLY where the admin mirrors
+                        the public site (brand wordmark, homepage
+                        editor live preview)
    ============================================================ */
 
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: Newsreader;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/newsreader-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: Newsreader;
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/newsreader-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: Newsreader;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/newsreader-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: Newsreader;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/newsreader-600.woff2") format("woff2");
+}
 @font-face {
   font-family: "Space Mono";
   font-style: normal;
@@ -25,11 +91,25 @@
   src: url("/fonts/space-mono-700.woff2") format("woff2");
 }
 @font-face {
+  font-family: "VT323";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/vt323-400.woff2") format("woff2");
+}
+@font-face {
   font-family: "Cormorant Garamond";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url("/fonts/cormorant-garamond-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/cormorant-garamond-400-italic.woff2") format("woff2");
 }
 @font-face {
   font-family: "Cormorant Garamond";
@@ -39,9 +119,9 @@
   src: url("/fonts/cormorant-garamond-500.woff2") format("woff2");
 }
 @font-face {
-  font-family: "VT323";
+  font-family: "Cormorant Garamond";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 600;
   font-display: swap;
-  src: url("/fonts/vt323-400.woff2") format("woff2");
+  src: url("/fonts/cormorant-garamond-600.woff2") format("woff2");
 }

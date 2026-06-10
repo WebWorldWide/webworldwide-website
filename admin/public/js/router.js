@@ -1,21 +1,24 @@
 // @ts-check
 /**
- * router.js — Phase 5e SPA hash router.
+ * router.js — SPA hash router (admin v2).
  *
- * The admin shell now hosts six top-level views (dashboard, media,
- * tags, redirects, activity, shortcodes, settings) instead of two.
- * Rather than re-architect the page, we hide-show `#view-<name>` divs
- * on hash change. Each page module wires its own boot inside an
- * `init()` exposed on window.TE.routes.
+ * The shell hosts the v2 views — Content (Overview, Posts, Homepage,
+ * Media), Audience (Comments, Analytics), System (Settings, System) —
+ * plus the tucked-away utility views (Tags, Redirects, Shortcodes,
+ * Activity). Rather than re-architect the page, we hide-show
+ * `#view-<name>` divs on hash change. Each page module wires its own
+ * boot inside an `init()` exposed on window.TE.routes.
  *
  * Honors:
- *   #dashboard | #posts → show dashboard
- *   #media              → show media library
- *   #tags               → tag manager
- *   #redirects          → redirects table
- *   #activity           → activity log table
- *   #shortcodes         → shortcode docs
- *   #settings           → site + author settings
+ *   (default) | #overview → overview
+ *   #dashboard | #posts   → posts table (the old dashboard view div)
+ *   #homepage             → homepage editor
+ *   #media                → media library
+ *   #comments             → comment moderation
+ *   #analytics            → umami analytics
+ *   #settings             → site + author settings
+ *   #system | #terminal   → health / containers / backups / terminal
+ *   #tags #redirects #activity #shortcodes → utility views ("More")
  */
 (function () {
   if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') return;
@@ -24,21 +27,26 @@
   const initialized = {};
 
   const VIEW_MAP = {
-    dashboard: 'view-dashboard',
+    overview: 'view-overview',
+    dashboard: 'view-dashboard', // legacy alias for posts
     posts: 'view-dashboard',
+    homepage: 'view-homepage',
     media: 'view-media',
+    comments: 'view-comments',
+    analytics: 'view-analytics',
+    settings: 'view-settings',
+    system: 'view-system',
+    terminal: 'view-system', // legacy deep link → System view's terminal tab
     tags: 'view-tags',
     redirects: 'view-redirects',
     activity: 'view-activity',
     shortcodes: 'view-shortcodes',
-    settings: 'view-settings',
-    comments: 'view-comments',
   };
 
   function currentRoute() {
     const hash = (window.location.hash || '').replace(/^#/, '').split('?')[0];
     if (hash && VIEW_MAP[hash]) return hash;
-    return 'dashboard';
+    return 'overview';
   }
 
   function show(route) {
@@ -48,10 +56,16 @@
       if (!el) continue;
       el.hidden = id !== target;
     }
-    // Update sidebar aria-current
+    // Update sidebar aria-current. Legacy aliases highlight their v2
+    // home: #dashboard → Posts, #terminal → System.
     document.querySelectorAll('.side-item[data-route]').forEach((el) => {
       const r = el.getAttribute('data-route');
-      if (r === route || (route === 'posts' && r === 'dashboard')) {
+      if (
+        r === route ||
+        (route === 'dashboard' && r === 'posts') ||
+        (route === 'posts' && r === 'dashboard') ||
+        (route === 'terminal' && r === 'system')
+      ) {
         el.setAttribute('aria-current', 'page');
       } else {
         el.removeAttribute('aria-current');
@@ -61,10 +75,11 @@
     const crumb = document.getElementById('crumb-section');
     if (crumb) crumb.textContent = labelFor(route);
 
-    // Lazy init for the active view
-    const initFn = (window.TE && window.TE.routes && window.TE.routes[route]) || null;
-    if (initFn && !initialized[route]) {
-      initialized[route] = true;
+    // Lazy init for the active view (aliases init their v2 module).
+    const initRoute = route === 'terminal' ? 'system' : route === 'dashboard' ? 'posts' : route;
+    const initFn = (window.TE && window.TE.routes && window.TE.routes[initRoute]) || null;
+    if (initFn && !initialized[initRoute]) {
+      initialized[initRoute] = true;
       try {
         initFn();
       } catch (err) {
@@ -75,10 +90,24 @@
 
   function labelFor(route) {
     switch (route) {
+      case 'overview':
+        return 'Overview';
       case 'dashboard':
-        return 'Dashboard';
+      case 'posts':
+        return 'Posts';
+      case 'homepage':
+        return 'Homepage';
       case 'media':
         return 'Media library';
+      case 'comments':
+        return 'Comments';
+      case 'analytics':
+        return 'Analytics';
+      case 'settings':
+        return 'Settings';
+      case 'system':
+      case 'terminal':
+        return 'System';
       case 'tags':
         return 'Tags';
       case 'redirects':
@@ -87,12 +116,8 @@
         return 'Activity';
       case 'shortcodes':
         return 'Shortcodes';
-      case 'settings':
-        return 'Settings';
-      case 'comments':
-        return 'Comments';
       default:
-        return 'Dashboard';
+        return 'Overview';
     }
   }
 

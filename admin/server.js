@@ -45,6 +45,10 @@ import {
 // every comment from one place.
 import commentsRoutes from './src/routes/comments.js';
 import * as remark42Poller from './src/services/remark42-poller.js';
+// Server-side Umami analytics proxy — the dashboard traffic widgets
+// read /api/analytics/* so the browser never talks to Umami directly
+// (credentials stay server-side; responses cached 5 min for the Pi).
+import analyticsRoutes from './src/routes/analytics.js';
 // Phase 4: tiny migration runner — applies any pending DDL in
 // `src/db/migrations/` (auth tables, media table, …) before we serve
 // the first request. Safe to call on every boot; already-applied
@@ -346,6 +350,9 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/taxonomies', taxonomiesRoutes);
 app.use('/api/redirects', redirectsRoutes);
 app.use('/api/activity', activityRoutes);
+// Umami analytics proxy — degrades to { configured: false } when the
+// UMAMI_* env vars are absent, so dev sessions without docker up work.
+app.use('/api/analytics', analyticsRoutes);
 // Phase 7
 app.use('/api/embed', embedRoutes);
 // Phase 8 — admin moderation surface for inbound webmentions. Sits

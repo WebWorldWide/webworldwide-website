@@ -30,7 +30,7 @@ function getAllPosts() {
     const files = readdirSync(postsDir).filter((f) => f.endsWith('.md'));
     const posts = files.map((file) => {
       const content = readFileSync(join(postsDir, file), 'utf-8');
-      const { data } = parsePost(content);
+      const { data, content: body } = parsePost(content);
       const stats = statSync(join(postsDir, file));
 
       return {
@@ -44,6 +44,11 @@ function getAllPosts() {
         publish_at: data.publish_at || null,
         series: data.series || null,
         cover: data.cover || null,
+        // v2 Overview additions — drafts list shows real progress.
+        word_count: String(body || '')
+          .split(/\s+/)
+          .filter(Boolean).length,
+        modified: stats.mtime.toISOString(),
       };
     });
 
