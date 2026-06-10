@@ -676,15 +676,20 @@
     });
 
     // Text edits: update the draft + re-render only the preview so the
-    // input keeps focus. 'change' covers <select>.
+    // input keeps focus. 'change' covers <select>. The preview is a
+    // full innerHTML rebuild — too heavy per keystroke on a Pi — so it
+    // trails the typing by 180ms; the dirty indicator updates
+    // immediately (a cheap class toggle).
+    let previewTimer = 0;
     /** @param {Event} e */
     const onEdit = (e) => {
       const t = /** @type {HTMLInputElement | HTMLSelectElement} */ (e.target);
       const path = t && t.getAttribute && t.getAttribute('data-path');
       if (!path) return;
       setPath(path, t.value);
-      renderPreview();
       renderDirty();
+      window.clearTimeout(previewTimer);
+      previewTimer = window.setTimeout(renderPreview, 180);
     };
     el.addEventListener('input', onEdit);
     el.addEventListener('change', onEdit);
@@ -695,6 +700,11 @@
         e.returnValue = '';
       }
     });
+    // beforeunload only fires on full page loads; the router consults
+    // this guard before switching views on a hash change.
+    window.TE.viewGuards = window.TE.viewGuards || {};
+    window.TE.viewGuards.homepage = () =>
+      draft && isDirty() ? 'You have unsaved homepage changes.' : null;
   }
 
   function renderShell() {

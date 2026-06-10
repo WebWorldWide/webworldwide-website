@@ -512,7 +512,8 @@
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  background: var(--accent-bg);
+  /* AA: white text needs the dark accent tier. */
+  background: var(--accent);
   border-radius: 4px;
   opacity: 0;
   transition: opacity 0.12s ease;

@@ -104,9 +104,11 @@ body[data-page="login"] {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--accent-bg);
+  /* AA: white text needs the dark accent tier — raw --accent-bg
+     orange is only ~3.5:1 under white. */
+  background: var(--accent);
   color: var(--accent-on);
-  border: 1px solid var(--accent-deep);
+  border: 1px solid var(--accent-fill-hover);
   font-family: var(--font-pixel);
   font-size: 17px;
   font-weight: 400;
@@ -122,9 +124,9 @@ body[data-page="login"] {
 }
 .auth-card .btn-primary:hover,
 .auth-card .btn-primary:focus-visible {
-  background: var(--accent-deep);
+  background: var(--accent-fill-hover);
   color: var(--accent-on);
-  border-color: var(--accent-deep);
+  border-color: var(--accent-fill-hover);
   box-shadow: var(--shadow-button-hover);
   transform: translateY(-1px);
 }

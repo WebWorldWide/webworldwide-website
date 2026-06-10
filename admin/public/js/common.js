@@ -217,6 +217,10 @@
     }
     returnFocus.delete(container);
   }
+  // Shared with other modules (router.js uses them for the mobile nav
+  // drawer, which follows the same modal keyboard pattern).
+  TE.trapFocus = trapFocus;
+  TE.releaseFocus = releaseFocus;
 
   // ── Modals ─────────────────────────────────────────────────
   /** @param {string} id */
@@ -308,7 +312,11 @@
           <input id="cmdk-input" type="text" placeholder="Search posts, pages, actions…" autocomplete="off" />
           <span class="kbd">ESC</span>
         </div>
-        <ul class="cmdk-list" id="cmdk-list" role="listbox" aria-label="Commands"></ul>
+        <!-- tabindex: the results list scrolls when long, and a
+             scrollable region must be keyboard-reachable (axe
+             scrollable-region-focusable). Arrow-key navigation lives
+             on the input; Tab reaches the list for direct scrolling. -->
+        <ul class="cmdk-list" id="cmdk-list" role="listbox" aria-label="Commands" tabindex="0"></ul>
         <div class="cmdk-foot"><span class="kbd">↑↓</span> navigate <span class="kbd">↵</span> run <span class="kbd">ESC</span> close</div>
       </div>`;
     document.body.appendChild(wrap);

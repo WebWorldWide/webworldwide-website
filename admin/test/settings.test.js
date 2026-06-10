@@ -164,7 +164,10 @@ const DEFAULT_MODEL = {
     items: [
       { name: 'FileID', status: 'live', link: '', icon: '/assets/fileid.png' },
       { name: 'Document Finder', status: 'soon', link: '', icon: '/assets/doc-finder.png' },
-      { name: 'Untitled', status: 'soon', link: '', icon: '' },
+      // Mirrors site/src/lib/site-config.ts normalizeHomepage exactly —
+      // see the comment in settings.js where these defaults live.
+      { name: 'Untitled', status: 'lab', link: '', icon: '' },
+      { name: 'Untitled', status: 'lab', link: '', icon: '' },
     ],
   },
   videos: { episode: 'EP. 001', film_title: 'First video — coming soon' },

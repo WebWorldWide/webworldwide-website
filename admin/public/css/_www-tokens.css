@@ -6,12 +6,15 @@
    Canonical source: the Admin.html design handoff (calm
    workhorse — WWW identity at the edges, clean working surface).
 
-   Two-tier accent (a11y): the design's orange #ec5a2b is ~3:1 on
-   white — fine for fills, large display text and decoration, but
-   it FAILS AA for body text. So:
-     --accent      → #b04708 (AA ≥4.5:1) — text, links, active states
-     --accent-bg   → #ec5a2b — button fills, badges (white text on top)
-     --accent-deep → #c8430f — hover tier for fills
+   Two-tier accent (a11y): the design's orange #ec5a2b is ~3.5:1
+   under white text — it FAILS AA wherever readable text sits on it.
+   So:
+     --accent      → #b04708 (AA ≥4.5:1) — text, links, AND any fill
+                     that carries white text (buttons, badges, tags)
+     --accent-bg   → #ec5a2b — DECORATION ONLY: bars, pips, sparks,
+                     drop cursors. Never put text on it.
+     --accent-fill-hover → #8f3a06 — hover tier for white-text fills
+     --accent-deep → #c8430f — hover tier for decoration
    ============================================================ */
 
 :root,

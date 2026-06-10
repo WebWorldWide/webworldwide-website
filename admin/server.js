@@ -294,8 +294,15 @@ app.use(
   }),
 );
 
-// Auth routes (rate limited)
-app.use('/auth', authLimiter, authRoutes);
+// Auth routes. The brute-force limiter must cover credential attempts
+// (every sensitive /auth endpoint is a POST) but NOT GET /auth/status —
+// the SPA pings status on every page load, and metering it locks a
+// normal user out of their own admin within minutes.
+app.use(
+  '/auth',
+  (req, res, next) => (req.method === 'POST' ? authLimiter(req, res, next) : next()),
+  authRoutes,
+);
 
 // Phase 8: Webmention receiver. Public-facing endpoint (no session
 // required) — mounted BEFORE the /api auth middleware so the

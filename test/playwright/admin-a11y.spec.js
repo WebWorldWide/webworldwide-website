@@ -25,6 +25,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { startStaticAdmin } from './helpers/static-admin.js';
+import { loginDevAdmin } from './helpers/login.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -172,7 +173,7 @@ test.describe('admin a11y', () => {
   // when `npm run dev:all` is up. CI runs against the static surface
   // only; the live-server scenario is documented in CONTRIBUTING.md.
   const stackUp = process.env.DEV_STACK_RUNNING === 'true' || process.env.DEV_STACK_RUNNING === '1';
-  const liveAdminUrl = process.env.ADMIN_ORIGIN || 'http://127.0.0.1:8787';
+  const liveAdminUrl = process.env.ADMIN_ORIGIN || 'http://127.0.0.1:3000';
 
   test.describe('with live admin (DEV_STACK_RUNNING=1)', () => {
     test.skip(
@@ -182,6 +183,7 @@ test.describe('admin a11y', () => {
 
     test('index.html with Cmd+K palette open — zero blocking violations', async ({ page }) => {
       muteExpectedConsole(page);
+      await loginDevAdmin(page, liveAdminUrl);
       await page.goto(`${liveAdminUrl}/index.html`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => Boolean(/** @type {any} */ (window).TE));
       await page.evaluate(() => /** @type {any} */ (window).TE.__test.openPalette());
@@ -192,6 +194,7 @@ test.describe('admin a11y', () => {
 
     test('index.html with New Post modal open — zero blocking violations', async ({ page }) => {
       muteExpectedConsole(page);
+      await loginDevAdmin(page, liveAdminUrl);
       await page.goto(`${liveAdminUrl}/index.html`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => Boolean(/** @type {any} */ (window).TE));
       await page.evaluate(() => /** @type {any} */ (window).TE.openModal('template-modal'));
