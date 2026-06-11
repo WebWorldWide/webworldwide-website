@@ -1,9 +1,9 @@
 // @ts-nocheck
 /**
  * admin-pages.vitest.test.js — Phase 5e jsdom tests for the new admin
- * frontend modules (settings, redirects, activity,
- * shortcodes). We load each IIFE under a jsdom DOM that mirrors the
- * relevant slice of index.html and stub fetch.
+ * frontend modules (settings, redirects, activity). We load each IIFE
+ * under a jsdom DOM that mirrors the relevant slice of index.html and
+ * stub fetch.
  */
 
 import { readFileSync } from 'node:fs';
@@ -106,24 +106,5 @@ describe('activity.js', () => {
     const table = document.getElementById('activity-table').innerHTML;
     expect(table).toContain('post.create');
     expect(table).toContain('a.md');
-  });
-});
-
-describe('shortcodes.js', () => {
-  it('renders shortcode cards from docs scan', async () => {
-    document.body.innerHTML += `<div id="shortcodes-list"></div>`;
-    globalThis.fetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify([{ name: 'gallery', doc: 'Pictures in a grid', usage: '{{< gallery >}}' }]),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
-    );
-    loadCommon();
-    runScript('shortcodes.js');
-    window.TE.routes.shortcodes();
-    await flush();
-    const html = document.getElementById('shortcodes-list').innerHTML;
-    expect(html).toContain('gallery');
-    expect(html).toContain('Pictures in a grid');
   });
 });

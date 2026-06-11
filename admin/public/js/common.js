@@ -14,8 +14,6 @@
  *   openModal(id) / closeModal(id)  // also installs Esc + focus-trap
  *
  * Also installs (no caller needed):
- *   - Theme toggle for every #btn-theme on the page (FOUC-safe; the
- *     inline <script> in <head> runs before paint to pick light/dark)
  *   - [data-modal-close="id"] click-to-close + Esc close-top-modal
  *   - Cmd/Ctrl-K command palette (#cmdk) — opens, filter, Enter to act
  */
@@ -283,11 +281,6 @@
     { label: 'Dashboard', hint: 'Go to dashboard', href: '/index.html' },
     { label: 'New post', hint: 'Open a blank editor', href: '/editor.html' },
     { label: 'View site', hint: 'Open the public site', href: 'https://webworldwide.online' },
-    {
-      label: 'Toggle theme',
-      hint: 'Dark ↔ light',
-      run: () => /** @type {HTMLElement | null} */ (document.getElementById('btn-theme'))?.click(),
-    },
     {
       label: 'Sign out',
       hint: 'End the admin session',

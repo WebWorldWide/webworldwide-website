@@ -31,7 +31,6 @@ before(async () => {
   process.env.NODE_ENV = 'test';
   siteDir = join(tempDir, 'site');
   mkdirSync(join(siteDir, 'data'), { recursive: true });
-  mkdirSync(join(siteDir, 'layouts', 'shortcodes'), { recursive: true });
   process.env.SITE_DIR = siteDir;
 
   try {
@@ -109,24 +108,4 @@ test('DELETE removes a redirect', skipOpts(), async () => {
   assert.equal(res.status, 204);
   const after = await (await fetch(`${baseUrl}/api/redirects`)).json();
   assert.equal(after.length, 0);
-});
-
-test('shortcode docs scan extracts doc + usage', skipOpts(), async () => {
-  const { writeFileSync } = await import('node:fs');
-  writeFileSync(
-    join(siteDir, 'layouts', 'shortcodes', 'demo.html'),
-    `{{/*
-      A demo shortcode.
-      ---
-      Usage:
-        {{< demo >}}
-    */}}
-    <div>Demo</div>`,
-  );
-  const res = await fetch(`${baseUrl}/api/redirects/_shortcodes`);
-  const items = await res.json();
-  const demo = items.find((i) => i.name === 'demo');
-  assert.ok(demo);
-  assert.match(demo.doc, /A demo shortcode/);
-  assert.match(demo.usage, /< demo >/);
 });

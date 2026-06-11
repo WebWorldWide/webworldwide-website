@@ -3,14 +3,13 @@
  * redirects.js — Phase 5e site-wide redirect manager.
  *
  * Backing store: `site/data/redirects.json`, a flat array of
- * `{ id, from, to, code }`. Hugo reads this at build time via a
- * generator template that emits a meta-refresh HTML file at each
- * `from` path. (See site/layouts/_default/redirect.html — added by
- * this phase.)
+ * `{ id, from, to, code }`. The Astro build reads this at build time:
+ * site/scripts/prebuild.mjs merges these entries into
+ * legacy-redirects.json, which astro.config.mjs turns into
+ * meta-refresh redirect pages.
  *
- * For per-post redirects, prefer Hugo's built-in `aliases:` front-matter
- * field; this manager is for site-wide / one-off redirects (typos,
- * deleted posts, vanity URLs).
+ * This manager is for site-wide / one-off redirects (typos, deleted
+ * posts, vanity URLs).
  *
  * Endpoints:
  *   GET    /api/redirects
@@ -20,7 +19,7 @@
  */
 
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { nanoid } from 'nanoid';
 import { logActivity } from '../services/activity.js';
@@ -120,66 +119,5 @@ router.delete('/:id', (req, res) => {
   logActivity({ req, action: 'redirect.delete', target: id });
   res.status(204).end();
 });
-
-/**
- * GET /api/redirects/_shortcodes — read-only docs scan of
- * site/layouts/shortcodes/*.html. Lives here as a sibling because the
- * shortcode manager UI is a sibling tab to redirects; keeping the
- * route module count low. The "settings" router would be wrong since
- * settings owns hugo.toml/author.json mutations.
- *
- * Returns: [{ name, doc, usage }]
- */
-const SHORTCODES_DIR = join(SITE_DIR, 'layouts', 'shortcodes');
-
-router.get('/_shortcodes', (_req, res) => {
-  if (!existsSync(SHORTCODES_DIR)) return res.json([]);
-  const items = [];
-  for (const file of readdirSync(SHORTCODES_DIR)) {
-    if (!file.endsWith('.html')) continue;
-    const full = join(SHORTCODES_DIR, file);
-    let raw;
-    try {
-      raw = readFileSync(full, 'utf-8');
-    } catch {
-      continue;
-    }
-    items.push({
-      name: file.replace(/\.html$/, ''),
-      ...extractShortcodeDoc(raw),
-      modified: statSync(full).mtime.toISOString(),
-    });
-  }
-  items.sort((a, b) => a.name.localeCompare(b.name));
-  res.json(items);
-});
-
-/**
- * Pull the first Hugo comment block (delimited by the canonical Hugo
- * comment markers) from a shortcode template and split it into
- * `{ doc, usage }`. The marker is `{ { / *  ... * / } }` (spaces added
- * here only so this JSDoc block doesn't confuse the JS parser).
- *
- * Convention used inside shortcode templates:
- *
- *   - The body before a `---` separator becomes `doc`.
- *   - Anything after `---` becomes `usage`.
- *
- * If no comment block exists, both fields are empty strings.
- *
- * @param {string} src
- * @returns {{ doc: string, usage: string }}
- */
-function extractShortcodeDoc(src) {
-  const m = src.match(/\{\{\/\*\s*([\s\S]*?)\s*\*\/\}\}/);
-  if (!m) return { doc: '', usage: '' };
-  const block = m[1].trim();
-  const sep = block.indexOf('---');
-  if (sep === -1) return { doc: block, usage: '' };
-  return {
-    doc: block.slice(0, sep).trim(),
-    usage: block.slice(sep + 3).trim(),
-  };
-}
 
 export default router;
