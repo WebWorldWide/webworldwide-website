@@ -252,7 +252,13 @@ const tokenSpec = {
     getAttrs: (tok) => ({
       src: tok.attrGet('src'),
       title: tok.attrGet('title') || null,
-      alt: (tok.children && tok.children[0] && tok.children[0].content) || null,
+      alt:
+        (tok.children && tok.children[0] && tok.children[0].content) || tok.attrGet('alt') || null,
+      // Alignment round-trips through a `<figure class="img-align-…">`
+      // wrapper (see splitBlockHtml + the `image` serializer). A plain
+      // `![alt](url)` has no align attr, so this stays null for every
+      // existing post — zero diff.
+      align: tok.attrGet('align') || null,
     }),
   },
   attachment: { node: 'attachment', getAttrs: (tok) => ({ id: tok.content || '' }) },
@@ -518,6 +524,35 @@ function buildParser(schema) {
         out.push(t);
         continue;
       }
+      // Aligned image → a `<figure class="img-align-…">` wrapping a single
+      // `<img>` (emitted by the image serializer when the node has an align
+      // attr). Pull it back into a paragraph-wrapped `image` node so the
+      // editor shows it aligned and the next round-trip is stable. We wrap in
+      // paragraph_open/close because the `image` node is inline (group:
+      // inline) and can't sit directly under the doc.
+      const figM =
+        /<figure\b[^>]*\bclass\s*=\s*"[^"]*\bimg-align-(left|right|center|full)\b[^"]*"[\s\S]*?<\/figure>/i.exec(
+          tk.content,
+        );
+      if (figM) {
+        const align = figM[1];
+        const imgTag = (/<img\b[^>]*>/i.exec(figM[0]) || [''])[0];
+        const src = (/\bsrc\s*=\s*"([^"]*)"/i.exec(imgTag) || ['', ''])[1];
+        const altM = /\balt\s*=\s*"([^"]*)"/i.exec(imgTag);
+        const titleM = /\btitle\s*=\s*"([^"]*)"/i.exec(imgTag);
+        const pOpen = new TokCtor('paragraph_open', 'p', 1);
+        pOpen.block = true;
+        const imgTok = new TokCtor('image', 'img', 0);
+        imgTok.attrSet('src', htmlAttrUnescape(src));
+        if (altM) imgTok.attrSet('alt', htmlAttrUnescape(altM[1]));
+        if (titleM) imgTok.attrSet('title', htmlAttrUnescape(titleM[1]));
+        imgTok.attrSet('align', align);
+        imgTok.children = [];
+        const pClose = new TokCtor('paragraph_close', 'p', -1);
+        pClose.block = true;
+        out.push(pOpen, imgTok, pClose);
+        continue;
+      }
       // Any other block HTML (iframe embeds + any raw HTML) → an `embed`
       // passthrough node, so prosemirror-markdown never sees an unmapped
       // html_block (which would throw → blank doc) and the content round-trips.
@@ -588,6 +623,24 @@ function buildParser(schema) {
 // Serializer
 // ─────────────────────────────────────────────────────────────────
 
+// HTML-attribute escaping for the aligned-image `<figure>` round-trip.
+// `htmlAttrUnescape` is the exact inverse so repeated round-trips stay a
+// fixed point.
+function htmlAttrEscape(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+function htmlAttrUnescape(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
 const nodeSerializers = {
   blockquote(state, node) {
     state.wrapBlock('> ', null, node, () => state.renderContent(node));
@@ -643,6 +696,31 @@ const nodeSerializers = {
     state.closeBlock(node);
   },
   image(state, node) {
+    const align = node.attrs.align;
+    // Aligned images serialise as a single-line `<figure>` so the live
+    // Astro site (which renders raw HTML in markdown) gets the alignment
+    // class. A plain image with no align attr serialises exactly as before
+    // — `![alt](url)` — so every existing post is byte-identical.
+    if (align) {
+      const src = htmlAttrEscape(node.attrs.src || '');
+      const altAttr = node.attrs.alt ? ' alt="' + htmlAttrEscape(node.attrs.alt) + '"' : ' alt=""';
+      const titleAttr = node.attrs.title ? ' title="' + htmlAttrEscape(node.attrs.title) + '"' : '';
+      // `loading`/`decoding` are baked in because Astro emits markdown's
+      // raw HTML verbatim (its lazy-image rehype pass can't see inside a
+      // raw block), so a wrapped image would otherwise miss lazy-loading
+      // that plain `![](…)` images get.
+      state.write(
+        '<figure class="img-align-' +
+          align +
+          '"><img src="' +
+          src +
+          '"' +
+          altAttr +
+          titleAttr +
+          ' loading="lazy" decoding="async"></figure>',
+      );
+      return;
+    }
     state.write(
       '![' +
         state.esc(node.attrs.alt || '') +
@@ -928,12 +1006,9 @@ export function looksLikeSingleUrlPaste(text) {
 }
 
 /**
- * Fallback when the host page didn't wire `te-slash-embed`. Prompts for
- * a URL inline, calls /api/embed, and inserts the returned shortcode.
- */
-/**
  * Insert a resolved embed value: an `embed` node when it's raw iframe HTML
- * (Astro-native), or plain text for the legacy shortcode fallback.
+ * (Astro-native), or plain text otherwise (defensive — resolveEmbed only
+ * returns HTML or null these days).
  */
 function insertEmbedValue(editor, value) {
   if (!value) return;
@@ -952,6 +1027,11 @@ function insertEmbedValue(editor, value) {
   }
 }
 
+/**
+ * Fallback when the host page didn't wire `te-slash-embed`. Prompts for
+ * a URL inline, calls /api/embed, and inserts the returned embed — or a
+ * plain link when the URL has no real embed.
+ */
 function triggerEmbedPrompt(editor) {
   const url = window.prompt('Embed URL (YouTube, Bluesky, Spotify, …)');
   if (!url) return;
@@ -961,7 +1041,18 @@ function triggerEmbedPrompt(editor) {
   }
   resolveEmbed(url)
     .then((value) => {
-      insertEmbedValue(editor, value);
+      if (value) {
+        insertEmbedValue(editor, value);
+      } else {
+        // No embed for this URL — degrade to a real link so the action
+        // never dead-ends (serializes as a plain markdown link).
+        const href = url.trim();
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] })
+          .run();
+      }
       return null;
     })
     .catch((err) => {
@@ -971,9 +1062,15 @@ function triggerEmbedPrompt(editor) {
 }
 
 /**
- * Call /api/embed and resolve with the shortcode string, or `null` if
- * the upstream returned an error. The editor's host page is also free
- * to call this directly (it's exported on the namespace).
+ * Call /api/embed and resolve with the embed's iframe HTML, or `null`
+ * when the URL has no real embed (or the upstream errored). The editor's
+ * host page is also free to call this directly (it's exported on the
+ * namespace).
+ *
+ * Note: the API also returns a legacy Hugo `shortcode` field for
+ * unrecognized providers, but the Astro site has no shortcode pipeline —
+ * inserting it would publish literal `{{< … >}}` text — so we ignore it
+ * and let callers degrade to a plain link instead.
  *
  * @param {string} url
  * @returns {Promise<string | null>}
@@ -988,11 +1085,7 @@ export async function resolveEmbed(url) {
     if (!res.ok) return null;
     const body = await res.json();
     if (!body) return null;
-    // Prefer the provider's raw iframe HTML — the Astro site renders it
-    // natively. Fall back to the legacy shortcode only when no html is offered
-    // (it inserts as plain text rather than breaking the editor).
     if (typeof body.html === 'string' && body.html.trim()) return body.html;
-    if (typeof body.shortcode === 'string') return body.shortcode;
     return null;
   } catch (err) {
     console.warn('[embed] /api/embed failed', err);
@@ -1113,10 +1206,10 @@ const SLASH_ITEMS = [
     run: (editor, range) => {
       editor.chain().focus().deleteRange(range).run();
       // Phase 6: dispatch a DOM event so editor.js can open the media
-      // library and insert an `{{< attachment id="..." >}}` shortcode on
-      // selection. Keeping the dispatch here (instead of doing it inline)
-      // mirrors the `te-slash-image` pattern and avoids re-importing the
-      // media client into the bundle.
+      // library and insert the right markup for the picked file (image /
+      // video / plain link). Keeping the dispatch here (instead of doing
+      // it inline) mirrors the `te-slash-image` pattern and avoids
+      // re-importing the media client into the bundle.
       try {
         editor.view.dom.dispatchEvent(new CustomEvent('te-slash-attachment', { bubbles: true }));
       } catch (_) {
@@ -1133,7 +1226,7 @@ const SLASH_ITEMS = [
     run: (editor, range) => {
       // Phase 7: drop the `/embed` marker, then prompt for a URL and
       // hand off to the page-level wiring (which calls the admin's
-      // /api/embed lookup and inserts the resulting shortcode). If the
+      // /api/embed lookup and inserts the resulting embed). If the
       // host page didn't wire a handler, fall back to an inline prompt
       // so the slash item still does something coherent.
       editor.chain().focus().deleteRange(range).run();
@@ -1257,10 +1350,8 @@ function filterSlashItems(query) {
 //   3. Cancel (ESC)   — leaves the URL but dismisses the picker
 //
 // We don't render a server-side preview thumbnail in this iteration —
-// the placeholder shortcode already renders a thumb on the published
-// page, and an extra round-trip just to preview in the editor would
-// double the latency. We do show the resolved provider name once the
-// embed succeeds (the shortcode itself is human-readable).
+// the embed node renders the real iframe in the editor anyway, and an
+// extra round-trip just to preview would double the latency.
 function createEmbedPasteUI() {
   const root = document.createElement('div');
   root.className = 'te-embed-paste';
@@ -1362,13 +1453,13 @@ function createEmbedPasteUI() {
 
 /**
  * Find the most recently inserted instance of `url` in the document and
- * replace it (plus any auto-link mark) with the given shortcode block.
+ * replace it (plus any auto-link mark) with the resolved embed.
  * We scan from the current selection backwards because the paste just
  * happened — the URL is essentially always at or before the cursor.
  *
  * @param {import('@tiptap/core').Editor} editor
  * @param {string} url
- * @param {string} value resolved embed — iframe HTML (→ embed node) or a shortcode string
+ * @param {string} value resolved embed — iframe HTML (→ embed node)
  */
 function replacePastedUrlWith(editor, url, value) {
   const { state } = editor;
@@ -1394,8 +1485,8 @@ function replacePastedUrlWith(editor, url, value) {
     }
     return true;
   });
-  // Astro-native embed: an `embed` node for iframe HTML, else the literal
-  // shortcode text as a fallback.
+  // Astro-native embed: an `embed` node for iframe HTML, else literal
+  // text (defensive — callers only pass iframe HTML these days).
   const isHtml = /^\s*</.test(value);
   const content = isHtml ? { type: 'embed', attrs: { html: value.trim() } } : value + '\n';
   if (from < 0) {
@@ -1404,7 +1495,7 @@ function replacePastedUrlWith(editor, url, value) {
     return;
   }
   // Delete the URL text (and any link mark that covers it) and insert the
-  // embed node (or shortcode literal) in its place.
+  // embed node in its place.
   editor
     .chain()
     .focus()
@@ -2384,7 +2475,22 @@ function buildExtensions(slashExt) {
       protocols: ['http', 'https', 'mailto'],
       HTMLAttributes: { rel: 'noopener noreferrer' },
     }),
-    Image.configure({ inline: true, allowBase64: false }),
+    // Extend the stock Image with an `align` attribute (left / center /
+    // right / full). It surfaces on the rendered `<img>` as `data-align`
+    // so the .ProseMirror surface can style it to match the published
+    // page; it serialises to a `<figure class="img-align-…">` wrapper.
+    Image.extend({
+      addAttributes() {
+        return {
+          ...(this.parent ? this.parent() : {}),
+          align: {
+            default: null,
+            parseHTML: (el) => el.getAttribute('data-align') || null,
+            renderHTML: (attrs) => (attrs.align ? { 'data-align': attrs.align } : {}),
+          },
+        };
+      },
+    }).configure({ inline: true, allowBase64: false }),
     Attachment,
     Video,
     Embed,
@@ -3239,11 +3345,11 @@ export function mount(rootEl, initialMarkdown, options) {
   // see what's happening), and float a small action bar offering
   // "Insert embed" / "Insert link instead" / cancel. "Insert embed"
   // calls /api/embed and replaces the URL line with the returned
-  // shortcode. "Insert link" leaves the auto-linked URL in place
+  // embed. "Insert link" leaves the auto-linked URL in place
   // (TipTap's Link extension handles auto-linking).
   //
   // We do NOT touch paste events in source (CodeMirror) mode — the
-  // user there is intentionally editing the shortcode literal.
+  // user there is intentionally editing the raw markdown.
   const embedPasteUI = createEmbedPasteUI();
   wysiwygMount.addEventListener('paste', (e) => {
     if (mode !== 'wysiwyg') return;
@@ -3260,22 +3366,24 @@ export function mount(rootEl, initialMarkdown, options) {
       url,
       onEmbed: async () => {
         embedPasteUI.setBusy(true);
-        let shortcode = null;
+        let embedHtml = null;
         try {
-          shortcode = await resolveEmbed(url);
+          embedHtml = await resolveEmbed(url);
         } catch (err) {
           console.warn('[embed] resolve failed', err);
         }
         embedPasteUI.hide();
-        if (!shortcode) {
-          alert('Could not resolve that URL for embed.');
+        if (!embedHtml) {
+          // The pasted URL is already auto-linked in place, so nothing
+          // is lost — just say why no embed appeared.
+          alert('No embed available for that URL — kept it as a link.');
           return;
         }
         // Replace the just-pasted URL (and any auto-link wrapper) with
-        // the shortcode. The auto-linked text node still says the URL,
-        // so we walk back from the cursor and remove text matching it
-        // before inserting the shortcode.
-        replacePastedUrlWith(editor, url, shortcode);
+        // the embed. The auto-linked text node still says the URL, so
+        // we walk back from the cursor and remove text matching it
+        // before inserting the embed node.
+        replacePastedUrlWith(editor, url, embedHtml);
       },
       onLink: () => embedPasteUI.hide(),
       onCancel: () => embedPasteUI.hide(),
@@ -3508,6 +3616,48 @@ export function mount(rootEl, initialMarkdown, options) {
   // including the shortcut), and an `update()` callback that re-reads
   // the live editor state and toggles aria-pressed / aria-disabled.
   const toolbarButtons = [];
+  // Inline-SVG icons for the toolbar controls whose glyphs were cryptic at
+  // small sizes (link, image, embed, undo/redo, alignment, …). Lucide-style
+  // 24×24 line icons, stroke=currentColor so they inherit the button's
+  // hover/active/focus colours. Kept inline (no sprite, no extra request) —
+  // a handful of short path strings, negligible bundle weight.
+  const TB_ICON = (inner) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    inner +
+    '</svg>';
+  const TB_ICONS = {
+    link: TB_ICON(
+      '<path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/>',
+    ),
+    unlink: TB_ICON('<path d="M3 3l18 18M9 17H7A5 5 0 0 1 4.5 8.6M15 7h2a5 5 0 0 1 3.5 8.4"/>'),
+    clear: TB_ICON(
+      '<path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8L12 4.6a2 2 0 0 1 2.8 0l4.6 4.6a2 2 0 0 1 0 2.8L13 18"/><path d="M7 21h12"/>',
+    ),
+    rule: TB_ICON('<path d="M4 12h16"/>'),
+    image: TB_ICON(
+      '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+    ),
+    embed: TB_ICON(
+      '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    ),
+    undo: TB_ICON('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/>'),
+    redo: TB_ICON('<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/>'),
+    footnote: TB_ICON(
+      '<path d="M5 5h9M5 11h6"/><path d="M14 19h5M16.5 16v6"/><path d="M14 14l5 8"/>',
+    ),
+    align_left: TB_ICON(
+      '<rect x="3" y="5" width="10" height="9" rx="1"/><path d="M16 7h5M16 11h5M3 18h18M3 21h12"/>',
+    ),
+    align_center: TB_ICON(
+      '<rect x="6" y="5" width="12" height="9" rx="1"/><path d="M4 18h16M7 21h10"/>',
+    ),
+    align_right: TB_ICON(
+      '<rect x="11" y="5" width="10" height="9" rx="1"/><path d="M3 7h5M3 11h5M3 18h18M9 21h12"/>',
+    ),
+    align_full: TB_ICON('<rect x="3" y="5" width="18" height="10" rx="1"/><path d="M3 19h18"/>'),
+    align_none: TB_ICON('<path d="M3 6h13M3 12h18M3 18h10"/>'),
+  };
   function tbBtn(spec) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -3515,7 +3665,17 @@ export function mount(rootEl, initialMarkdown, options) {
     if (spec.className) btn.classList.add(spec.className);
     btn.setAttribute('aria-label', spec.label);
     btn.title = spec.shortcut ? `${spec.label} (${spec.shortcut})` : spec.label;
-    if (spec.glyph) {
+    // Prefer a real inline-SVG icon (legible at any size) where the glyph
+    // would be cryptic; fall back to the pixel-type glyph for the marks
+    // and headings that read clearly as letterforms.
+    const iconMarkup = spec.icon ? TB_ICONS[spec.icon] : '';
+    if (iconMarkup) {
+      const g = document.createElement('span');
+      g.className = 'te-tb-glyph te-tb-icon';
+      g.setAttribute('aria-hidden', 'true');
+      g.innerHTML = iconMarkup;
+      btn.appendChild(g);
+    } else if (spec.glyph) {
       const g = document.createElement('span');
       g.className = 'te-tb-glyph';
       g.setAttribute('aria-hidden', 'true');
@@ -3621,6 +3781,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Link',
       shortcut: `${mod}+K`,
       glyph: '⇒',
+      icon: 'link',
       className: 'te-tb-link',
       active: () => editor.isActive('link'),
       run: () => openLinkDialog(),
@@ -3630,6 +3791,7 @@ export function mount(rootEl, initialMarkdown, options) {
     tbBtn({
       label: 'Clear formatting',
       glyph: '⌧',
+      icon: 'clear',
       className: 'te-tb-clear',
       active: () => false,
       run: () => editor.chain().focus().unsetAllMarks().run(),
@@ -3756,6 +3918,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Horizontal rule',
       shortcut: `${mod}+${shift}+H`,
       glyph: '―',
+      icon: 'rule',
       active: () => false,
       run: () => editor.chain().focus().setHorizontalRule().run(),
     }),
@@ -3765,6 +3928,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Image',
       shortcut: '',
       glyph: '▣',
+      icon: 'image',
       active: () => false,
       run: () => {
         // Phase 4: open the editor's hidden file input via the existing
@@ -3793,6 +3957,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Embed',
       shortcut: '',
       glyph: '⧉',
+      icon: 'embed',
       active: () => false,
       run: () => {
         // Phase 7: dispatch the same event the slash menu uses so the
@@ -3814,6 +3979,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Undo',
       shortcut: `${mod}+Z`,
       glyph: '↶',
+      icon: 'undo',
       active: () => false,
       canRun: () => editor.can().undo(),
       run: () => editor.chain().focus().undo().run(),
@@ -3824,6 +3990,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Redo',
       shortcut: `${mod}+${shift}+Z`,
       glyph: '↷',
+      icon: 'redo',
       active: () => false,
       canRun: () => editor.can().redo(),
       run: () => editor.chain().focus().redo().run(),
@@ -3882,6 +4049,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Footnote',
       shortcut: '',
       glyph: '†',
+      icon: 'footnote',
       active: () => false,
       run: () => insertFootnote(editor, null),
     }),
@@ -3959,6 +4127,34 @@ export function mount(rootEl, initialMarkdown, options) {
   );
   richToolbar.appendChild(gTable);
 
+  // ─── Image contextual group ────────────────────────────────
+  //
+  // Only meaningful when an image node is selected. Sets the `align`
+  // attribute that the serializer turns into a `<figure class="img-align-…">`
+  // wrapper so the published page matches the editor. "Reset" clears the
+  // attribute, returning the image to a plain `![alt](url)`.
+  richToolbar.appendChild(tbDivider());
+  const gImage = tbGroup('Image alignment');
+  gImage.classList.add('te-tb-image-group');
+  function imgAlignBtn(label, icon, align) {
+    return tbBtn({
+      label,
+      shortcut: '',
+      icon,
+      className: 'te-tb-img-align',
+      canRun: () => editor.isActive('image'),
+      active: () =>
+        editor.isActive('image') && (editor.getAttributes('image').align || null) === align,
+      run: () => editor.chain().focus().updateAttributes('image', { align }).run(),
+    });
+  }
+  gImage.appendChild(imgAlignBtn('Align image left', 'align_left', 'left'));
+  gImage.appendChild(imgAlignBtn('Center image', 'align_center', 'center'));
+  gImage.appendChild(imgAlignBtn('Align image right', 'align_right', 'right'));
+  gImage.appendChild(imgAlignBtn('Full-width image', 'align_full', 'full'));
+  gImage.appendChild(imgAlignBtn('Reset image alignment', 'align_none', null));
+  richToolbar.appendChild(gImage);
+
   function refreshToolbarState() {
     toolbarButtons.forEach((b) => {
       try {
@@ -3973,10 +4169,13 @@ export function mount(rootEl, initialMarkdown, options) {
     // discovery is preserved when in the right context.
     const inTable = editor.isActive('table');
     const inCode = editor.isActive('codeBlock');
+    const onImage = editor.isActive('image');
     gTable.classList.toggle('is-visible', inTable);
     gTable.classList.toggle('is-hidden', !inTable);
     gCode.classList.toggle('is-visible', inCode);
     gCode.classList.toggle('is-hidden', !inCode);
+    gImage.classList.toggle('is-visible', onImage);
+    gImage.classList.toggle('is-hidden', !onImage);
     if (inCode) {
       const attrs = editor.getAttributes('codeBlock');
       const lang = attrs && attrs.language ? String(attrs.language) : '';

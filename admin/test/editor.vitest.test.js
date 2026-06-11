@@ -1183,3 +1183,111 @@ describe('Phase 3d: SEO preview formula', () => {
     expect(effective.length).toBeGreaterThan(0);
   });
 });
+
+// ─── Editor polish: image alignment round-trip ──────────────────
+//
+// Aligned images serialise to a single-line `<figure class="img-align-…">`
+// wrapper (the site renders raw HTML in markdown). A plain image keeps the
+// `![alt](url)` form, so existing posts are byte-identical. These tests
+// exercise the *real* bundle parser/serializer (not the Node mirror) by
+// mounting the editor and reading `instance.value`.
+describe('Editor polish: image alignment', () => {
+  let mount;
+  let rootEl;
+  let instance;
+
+  beforeAll(async () => {
+    installProseMirrorPolyfills();
+    mount = await loadEntry();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="r"></div>';
+    rootEl = document.getElementById('r');
+  });
+
+  afterEach(() => {
+    if (instance && typeof instance.destroy === 'function') {
+      try {
+        instance.destroy();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    instance = null;
+    document.body.innerHTML = '';
+  });
+
+  it('serialises a centered image as an img-align-center figure', () => {
+    instance = mount(rootEl, '');
+    const ed = instance._tiptap;
+    ed.chain()
+      .focus()
+      .insertContent({
+        type: 'image',
+        attrs: { src: '/img/a.webp', alt: 'A cat', align: 'center' },
+      })
+      .run();
+    expect(instance.value).toContain('<figure class="img-align-center">');
+    expect(instance.value).toContain(
+      '<img src="/img/a.webp" alt="A cat" loading="lazy" decoding="async">',
+    );
+    // No plain-markdown image form leaks out alongside the figure.
+    expect(instance.value).not.toMatch(/!\[A cat\]/);
+  });
+
+  it('round-trips a centered image back into an aligned node on reload', () => {
+    const md =
+      '<figure class="img-align-center"><img src="/img/a.webp" alt="A cat" loading="lazy" decoding="async"></figure>';
+    instance = mount(rootEl, md);
+    const ed = instance._tiptap;
+    let found = null;
+    ed.state.doc.descendants((node) => {
+      if (node.type.name === 'image') found = node;
+    });
+    expect(found).not.toBeNull();
+    expect(found.attrs.align).toBe('center');
+    expect(found.attrs.src).toBe('/img/a.webp');
+    expect(found.attrs.alt).toBe('A cat');
+    // Re-serialising is a fixed point.
+    expect(instance.value.trim()).toBe(md);
+  });
+
+  it('renders data-align on the editor img so the surface can style it', () => {
+    const md = '<figure class="img-align-right"><img src="/img/b.webp" alt=""></figure>';
+    instance = mount(rootEl, md);
+    const img = rootEl.querySelector('.ProseMirror img[data-align="right"]');
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toBe('/img/b.webp');
+  });
+
+  it('clearing alignment returns the image to a plain markdown form', () => {
+    instance = mount(rootEl, '');
+    const ed = instance._tiptap;
+    ed.chain()
+      .focus()
+      .insertContent({ type: 'image', attrs: { src: '/img/c.webp', alt: 'Pic', align: 'left' } })
+      .run();
+    expect(instance.value).toContain('img-align-left');
+    // Select the image node, then clear its align attribute.
+    ed.commands.selectAll();
+    ed.commands.updateAttributes('image', { align: null });
+    expect(instance.value).not.toContain('<figure');
+    expect(instance.value).toContain('![Pic](/img/c.webp)');
+  });
+
+  it('exposes the contextual image-alignment toolbar group', () => {
+    instance = mount(rootEl, '');
+    const tb = rootEl.querySelector('.te-editor-toolbar-rich');
+    const group = tb.querySelector('.te-tb-image-group');
+    expect(group).not.toBeNull();
+    const btns = group.querySelectorAll('button.te-tb-btn');
+    // left / center / right / full / reset
+    expect(btns.length).toBe(5);
+    // Each renders a real inline-SVG icon (no cryptic glyph).
+    btns.forEach((b) => {
+      expect(b.querySelector('svg')).not.toBeNull();
+      expect(b.getAttribute('aria-label')).toBeTruthy();
+    });
+  });
+});
