@@ -376,6 +376,36 @@ body[data-page="editor"] {
   display: block;
   margin: 8px 0;
 }
+/* Image alignment — WYSIWYG mirror of the published `.post-body
+   figure.img-align-*` styles so what's set here matches the live page.
+   No `data-align` attr (every existing image) keeps the default above. */
+.ProseMirror img[data-align="center"] {
+  margin-inline: auto;
+  max-width: min(100%, 600px);
+}
+.ProseMirror img[data-align="full"] {
+  width: 100%;
+  max-width: 100%;
+}
+.ProseMirror img[data-align="left"] {
+  float: left;
+  max-width: min(48%, 360px);
+  margin: 6px 20px 10px 0;
+}
+.ProseMirror img[data-align="right"] {
+  float: right;
+  max-width: min(48%, 360px);
+  margin: 6px 0 10px 20px;
+}
+@media (max-width: 700px) {
+  /* No float on narrow surfaces — wrapping reads badly under ~700px. */
+  .ProseMirror img[data-align="left"],
+  .ProseMirror img[data-align="right"] {
+    float: none;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+}
 /* Inline media nodes — library attachments (img.te-attachment) and the
    self-hosted video node (video.te-video). Keep them bounded to the writing
    column so backfilled media / inserted video never blow out the layout. */
@@ -696,7 +726,7 @@ body[data-page="editor"] {
 }
 .te-tb-divider {
   width: 1px;
-  height: 18px;
+  height: 24px;
   background: var(--line-www);
   margin: 0 6px;
   display: inline-block;
@@ -711,12 +741,12 @@ body[data-page="editor"] {
   border: 1px solid transparent;
   color: var(--ink-mute);
   font-family: var(--font-pixel);
-  font-size: 14px;
+  font-size: 16px;
   text-transform: uppercase;
   line-height: 1;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 7px;
+  min-width: 34px;
+  height: 36px;
+  padding: 0 8px;
   border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
@@ -728,12 +758,15 @@ body[data-page="editor"] {
     border-color 120ms;
 }
 .te-tb-btn:hover {
+  /* --ink (AA on --accent-soft) rather than --accent so the hovered
+     control keeps a high-contrast glyph even before it's active. */
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--ink);
 }
 .te-tb-btn:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+  color: var(--ink);
 }
 .te-tb-btn.is-active,
 .te-tb-btn[aria-pressed="true"] {
@@ -771,6 +804,21 @@ body[data-page="editor"] {
   pointer-events: none;
   user-select: none;
   letter-spacing: 0;
+  font-size: 17px;
+}
+/* Inline-SVG icons fill a fixed 18px box, centred. They inherit
+   `stroke: currentColor`, so hover/active/focus recolour them with the
+   surrounding button text. */
+.te-tb-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+}
+.te-tb-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 /* Underline mark inside the WYSIWYG body. */
@@ -1006,13 +1054,16 @@ body[data-page="editor"] {
 .ProseMirror table .selectedCell {
   background: var(--accent-soft) !important;
 }
-/* The table toolbar group only renders when the cursor is in a table. */
+/* The table/code/image toolbar groups only render in their context
+   (cursor in a table, in a code block, or an image node selected). */
 .te-tb-table-group.is-hidden,
-.te-tb-code-group.is-hidden {
+.te-tb-code-group.is-hidden,
+.te-tb-image-group.is-hidden {
   display: none;
 }
 .te-tb-table-group.is-visible,
-.te-tb-code-group.is-visible {
+.te-tb-code-group.is-visible,
+.te-tb-image-group.is-visible {
   display: inline-flex;
 }
 
@@ -1276,6 +1327,19 @@ body[data-page="editor"] {
 .editor-layout[data-toc-open="false"][data-seo-open="false"] .ed-aux {
   display: none;
 }
+
+/* Base .ed-aux must precede the @media hides below — media queries add no
+   specificity, so source order is what lets the responsive display:none win. */
+.ed-aux {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.ed-aux[hidden] {
+  display: none;
+}
+
 /* Mid-band: below 1280px the 260px aux + 340px sidebar crowd the writing
    column, so drop the aux track first (TOC/SEO stay reachable via their
    toggles). The full single-column collapse still kicks in at 1180px. */
@@ -1297,16 +1361,6 @@ body[data-page="editor"] {
   .ed-side {
     display: none;
   }
-}
-
-.ed-aux {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-.ed-aux[hidden] {
-  display: none;
 }
 
 .ed-aux-panel {

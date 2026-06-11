@@ -186,7 +186,8 @@
     const displayTitle = title || 'Untitled post';
     const displayDesc = desc || 'Description appears here.';
     if (serpDomain) serpDomain.textContent = siteDomain();
-    if (serpSlug) serpSlug.textContent = slug;
+    // Posts publish under /blog/<slug>/ — mirror the real URL path.
+    if (serpSlug) serpSlug.textContent = `blog › ${slug}`;
     if (serpTitle) serpTitle.textContent = displayTitle;
     if (serpDesc) {
       // Truncate at 160 chars per Google's common limit.
@@ -929,8 +930,9 @@
       // Phase 6: the slash menu's "File attachment" entry routes here.
       // We reuse the same file picker the image flow uses — the upload
       // handler is content-agnostic — and the success callback inserts
-      // an `{{< attachment id="..." >}}` shortcode. If the page hosts a
-      // proper media-library modal in future, swap this for `openLibrary()`.
+      // the right markup per kind (image/video/plain link) via
+      // insertMediaIntoEditor. If the page hosts a proper media-library
+      // modal in future, swap this for `openLibrary()`.
       editorRoot.addEventListener('te-slash-attachment', () => {
         const input = document.getElementById('ed-file-input');
         if (input && typeof input.click === 'function') input.click();
