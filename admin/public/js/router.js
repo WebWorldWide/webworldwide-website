@@ -4,8 +4,8 @@
  *
  * The shell hosts the v2 views — Content (Overview, Posts, Homepage,
  * Media), Audience (Comments, Analytics), System (Settings, System) —
- * plus the tucked-away utility views (Tags, Redirects, Shortcodes,
- * Activity). Rather than re-architect the page, we hide-show
+ * plus the tucked-away utility views (Redirects, Activity).
+ * Rather than re-architect the page, we hide-show
  * `#view-<name>` divs on hash change. Each page module wires its own
  * boot inside an `init()` exposed on window.TE.routes.
  *
@@ -18,7 +18,7 @@
  *   #analytics            → umami analytics
  *   #settings             → site + author settings
  *   #system | #terminal   → health / containers / backups / terminal
- *   #redirects #activity #shortcodes → utility views ("More")
+ *   #redirects #activity  → utility views ("More")
  */
 (function () {
   // Boot on the shell page only — '/', '/index.html', or any path that
@@ -43,7 +43,6 @@
     terminal: 'view-system', // legacy deep link → System view's terminal tab
     redirects: 'view-redirects',
     activity: 'view-activity',
-    shortcodes: 'view-shortcodes',
   };
 
   function currentRoute() {
@@ -115,8 +114,6 @@
         return 'Redirects';
       case 'activity':
         return 'Activity';
-      case 'shortcodes':
-        return 'Shortcodes';
       default:
         return 'Overview';
     }

@@ -57,14 +57,6 @@ export function parsePost(fileContent) {
  * @returns {string} Combined markdown string with YAML frontmatter.
  */
 export function serializePost(data, content) {
-  // Ensure tags are an array
-  if (typeof data.tags === 'string') {
-    data.tags = data.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-  }
-
   // js-yaml options (passed through by gray-matter to safeDump):
   //   lineWidth: -1 — never wrap long strings (URLs in front-matter
   //     would otherwise fold across newlines and break parsers).

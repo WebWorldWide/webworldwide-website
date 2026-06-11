@@ -1355,7 +1355,7 @@ body[data-page="login"] {
   /* Phase 5e mobile: collapse posts table to single-column cards;
      ensure ≥44×44 tap targets per WCAG AA. The original Phase 2
      two-column layout (title + date) is replaced with a single
-     title-only stack — date and tags drop out at <800 px. */
+     title-only stack — the date drops out at <800 px. */
   .row-grid {
     grid-template-columns: 1fr auto;
   }

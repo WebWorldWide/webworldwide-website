@@ -58,41 +58,6 @@
   }
 }
 
-/* Shortcodes cards */
-.te-sc-card {
-  border: 1px solid var(--glass-border);
-  background: var(--bg-card);
-  border-radius: 4px;
-  padding: 14px 18px;
-  margin: 0 16px 12px;
-}
-
-.te-sc-card h3 {
-  margin: 0 0 6px;
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--accent);
-}
-
-.te-sc-doc {
-  color: var(--fg-dim);
-  font-size: 12.5px;
-}
-.te-sc-nodoc {
-  color: var(--fg-mute);
-  font-style: italic;
-}
-
-.te-sc-usage {
-  margin: 8px 0 0;
-  padding: 10px 12px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  font-size: 11.5px;
-  overflow-x: auto;
-}
-
 /* Template picker list */
 .te-template-list {
   list-style: none;
