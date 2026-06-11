@@ -7,15 +7,15 @@
  * pick up the site's lazy-loading rehype pass.
  *
  * We run the same `@astrojs/markdown-remark` processor Astro uses for `.md`
- * content, with a copy of astro.config.mjs's `rehypeLazyImages` plugin, so
- * this asserts the real rendered output rather than a hand-rolled mock.
+ * content, with a rehype pass mirroring the image hygiene the build applies
+ * (scripts/postbuild-image-dimensions.mjs stamps lazy/async onto dist HTML),
+ * so this asserts the real rendered output rather than a hand-rolled mock.
  */
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import { describe, expect, it, beforeAll } from 'vitest';
 
-/** Mirror of astro.config.mjs's rehypeLazyImages (kept tiny + dependency-free). */
+/** Mirror of the build's image hygiene (kept tiny + dependency-free). */
 function rehypeLazyImages() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const visit = (node: any) => {
     if (node.type === 'element' && node.tagName === 'img') {
       node.properties ??= {};
@@ -24,12 +24,11 @@ function rehypeLazyImages() {
     }
     if (Array.isArray(node.children)) node.children.forEach(visit);
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (tree: any) => visit(tree);
 }
 
 describe('post body image alignment pipeline', () => {
-  let render: (md: string) => Promise<string>;
+  let render: (_md: string) => Promise<string>;
 
   beforeAll(async () => {
     const processor = await createMarkdownProcessor({
