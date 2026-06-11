@@ -45,7 +45,7 @@ site_id = "webworldwide"
 # Umami self-hosted privacy-friendly analytics
 provider = "umami"
 url = "https://analytics.webworldwide.online"
-site_id = ""  # Fill after Umami setup
+site_id = "680f36bd-688c-4816-b764-685860911396"
 
 [rss]
 url = "/rss.xml"
