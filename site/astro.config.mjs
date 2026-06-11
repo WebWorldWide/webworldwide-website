@@ -20,30 +20,15 @@ const siteToml = /** @type {{ site: { url: string } }} */ (
 // The map is generated at build time by scripts/prebuild.mjs and imported here.
 import legacyRedirects from './scripts/legacy-redirects.json' with { type: 'json' };
 
-// Mark every markdown-rendered <img> as lazy-loaded + async-decoded so post
-// images below the fold don't block the initial paint. Tiny hand-rolled
-// rehype plugin (no extra dependency).
-function rehypeLazyImages() {
-  /** @param {any} node */
-  const visit = (node) => {
-    if (node.type === 'element' && node.tagName === 'img') {
-      node.properties ??= {};
-      node.properties.loading ??= 'lazy';
-      node.properties.decoding ??= 'async';
-    }
-    if (Array.isArray(node.children)) node.children.forEach(visit);
-  };
-  /** @param {any} tree */
-  return (tree) => visit(tree);
-}
+// NOTE: markdown image hygiene (loading=lazy / decoding=async) is an Astro 6
+// default, and intrinsic width/height stamping happens in
+// scripts/postbuild-image-dimensions.mjs over the built dist/ — Astro 6 no
+// longer applies config-level `markdown.rehypePlugins` to
+// import.meta.glob-loaded markdown, so a rehype plugin here is dead code.
 
 export default defineConfig({
   site: siteToml.site.url,
   trailingSlash: 'always',
-
-  markdown: {
-    rehypePlugins: [rehypeLazyImages],
-  },
 
   // 301 (meta-refresh) every old `/<slug>/` URL to `/blog/<slug>/`.
   redirects: Object.fromEntries(
