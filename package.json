@@ -27,7 +27,7 @@
     "test:admin": "npm --prefix admin run test",
     "test:e2e": "playwright test --config=playwright.config.js",
     "test:e2e:install": "playwright install --with-deps",
-    "test:lighthouse": "lhci autorun --config=lighthouserc.json",
+    "test:lighthouse": "node scripts/run-lhci.mjs",
     "test:a11y": "playwright test test/playwright/a11y.spec.js test/playwright/admin-a11y.spec.js --project=chromium",
     "build": "npm --prefix site run build",
     "build:check": "npm run build && npm run lint:html-site",
