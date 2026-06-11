@@ -60,10 +60,16 @@
       });
       const okN = (res.ok || []).length;
       const errN = (res.errors || []).length;
-      window.TE.toast(
-        `${action}: ${okN} succeeded${errN ? `, ${errN} failed` : ''}.`,
-        errN ? 'warn' : 'info',
-      );
+      // User-facing copy — the internal action verbs ("unpublish") never
+      // appear in the UI, so the toast can't lead with them.
+      const noun = `${okN} post${okN === 1 ? '' : 's'}`;
+      const done =
+        new Map([
+          ['publish', `Published ${noun}`],
+          ['unpublish', `Moved ${noun} to draft`],
+          ['delete', `Deleted ${noun}`],
+        ]).get(action) || `${okN} succeeded`;
+      window.TE.toast(`${done}${errN ? `, ${errN} failed` : ''}.`, errN ? 'warn' : 'info');
       selected.clear();
       renderSelectionUI();
       // Ask the dashboard to refresh by faking a tab click (cheap).

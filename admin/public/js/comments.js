@@ -205,8 +205,13 @@
 
   async function fetchCounts() {
     // Counts come from the same list endpoint — we run a tiny "all"
-    // query that returns totals, then break it down by status.
-    const data = await TE.fetchJSON(`/api/comments?status=all&page=1&limit=200`);
+    // query that returns totals, then break it down by status. Blocked
+    // users never appear in the comment list (they live in their own
+    // endpoint), so their badge is counted from /blocks separately.
+    const [data, blocks] = await Promise.all([
+      TE.fetchJSON(`/api/comments?status=all&page=1&limit=200`),
+      fetchBlocks().catch(() => null),
+    ]);
     const counts = { all: 0, visible: 0, pinned: 0, spam: 0, deleted: 0, pending: 0, blocked: 0 };
     for (const c of data.items || []) {
       counts.all += 1;
@@ -216,6 +221,7 @@
         counts[c.status] += 1;
       }
     }
+    if (blocks) counts.blocked = Number(blocks.total) || (blocks.items || []).length;
     return counts;
   }
 

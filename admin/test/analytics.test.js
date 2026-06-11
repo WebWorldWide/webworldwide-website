@@ -77,7 +77,7 @@ function defaultMock() {
         { x: 'US', y: 9 },
         { x: 'XX', y: 1 },
       ],
-      url: [
+      path: [
         { x: '/blog/my-post/', y: 10 },
         { x: '/about/', y: 4 },
       ],
@@ -127,6 +127,9 @@ async function umamiFetch(url, init = {}) {
   }
   if (m[2] === 'pageviews') return json(mock.pageviews);
   const type = u.searchParams.get('type');
+  // Umami v3 retired the `url` metric type (it's `path` now) and 400s on
+  // it — mirror that so the route can never regress to the old name.
+  if (type === 'url') return json({ error: 'invalid type' }, 400);
   return json(mock.metrics[type] ?? []);
 }
 

@@ -381,7 +381,9 @@ router.get('/pages', async (req, res) => {
     const base = `/api/websites/${encodeURIComponent(cfg.siteId)}`;
     const rows = await umamiGet(
       cfg,
-      `${base}/metrics?type=url&startAt=${startAt}&endAt=${endAt}&limit=10`,
+      // Umami v3 renamed the page-path metric from `url` to `path`; `url`
+      // now 400s, which the catch below would mislabel as unreachable.
+      `${base}/metrics?type=path&startAt=${startAt}&endAt=${endAt}&limit=10`,
     );
     const items = (Array.isArray(rows) ? rows : []).map((row) => {
       const path = String(row?.x ?? '');

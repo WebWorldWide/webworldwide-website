@@ -142,7 +142,8 @@
             // ~800 words ≈ a "complete" post for the progress bar; honest
             // heuristic, clearly labeled with the real word count.
             const pct = Math.min(100, Math.round((words / 800) * 100));
-            const read = Math.max(1, Math.round(words / 200));
+            // 250 wpm — keep in lockstep with the editor's computeMetrics().
+            const read = Math.max(1, Math.round(words / 250));
             const edited = p.modified ? ` · edited ${timeAgo(p.modified)}` : '';
             return `
             <div class="draft-card" data-file="${TE.escape(p.filename)}">
