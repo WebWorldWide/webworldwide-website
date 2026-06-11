@@ -36,14 +36,14 @@ export function pad2(n: number): string {
 }
 
 /**
- * Average adult reading speed is ~225 wpm. We use 220 as a slightly
- * conservative round number that matches Hugo's `.ReadingTime` default.
+ * 250 wpm — keep in lockstep with the admin editor's computeMetrics()
+ * so every surface quotes the same minutes for the same post.
  * Frontmatter `read` (minutes) wins if present.
  */
 export function readingTime(post: PostEntry, body: string): number {
   if (typeof post.data.read === 'number') return post.data.read;
   const words = body.trim().split(/\s+/).length;
-  return Math.max(1, Math.round(words / 220));
+  return Math.max(1, Math.round(words / 250));
 }
 
 export function sortByDateDesc(a: PostEntry, b: PostEntry): number {

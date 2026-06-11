@@ -20,7 +20,6 @@ describe('postSchema (shared admin ↔ Astro)', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.draft).toBe(false);
-      expect(result.data.tags).toEqual([]);
     }
   });
 
@@ -41,7 +40,6 @@ describe('postSchema (shared admin ↔ Astro)', () => {
       date: '2024-01-15',
       slug: 'full-payload',
       draft: false,
-      tags: ['tech', 'meta'],
       series: 'first-month',
       cover: '/images/cover.avif',
       cover_alt: 'A cover image',
@@ -89,7 +87,6 @@ describe('validatePost helper', () => {
   it('returns { ok: false, errors } with useful paths for malformed input', () => {
     const result = validatePost({
       date: 'not-a-date',
-      tags: 'should-be-array',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {

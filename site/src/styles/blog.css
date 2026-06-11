@@ -529,20 +529,25 @@ a.pager-btn:focus-visible {
 
 /* ----- Rendered markdown body ----- */
 .post-body {
+  /* flow-root contains floated figures (img-align-left/right) so they
+     can never overlap the end-of-post actions that follow the body. */
+  display: flow-root;
   font-family: var(--font-serif);
   font-size: 20px;
   line-height: 1.66;
   color: var(--ink);
   font-weight: 500;
 }
-/* Lede = first paragraph: larger, bold, with a monospace drop cap.
-   Markdown emits a bare <p>, so target the first paragraph directly. */
-.post-body > p:first-of-type {
+/* Lede = first TEXT paragraph: larger, bold, with a monospace drop cap.
+   Many posts open with a cover image (markdown emits it as <p><img></p>),
+   so "first paragraph" must skip image-only paragraphs or the lede
+   styling lands on the image and the real opening line gets nothing. */
+.post-body > p:nth-child(1 of p:not(:has(img))) {
   font-size: 22px;
   line-height: 1.55;
   font-weight: 700;
 }
-.post-body > p:first-of-type::first-letter {
+.post-body > p:nth-child(1 of p:not(:has(img)))::first-letter {
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 66px;
@@ -632,6 +637,47 @@ a.pager-btn:focus-visible {
   margin: 1.4em 0;
   width: 100%;
   height: auto;
+}
+/* Aligned images authored in the CMS round-trip through a
+   `<figure class="img-align-…">` wrapper (see admin editor serializer).
+   A plain `![alt](url)` emits a bare <img> and keeps the rule above, so
+   every existing post is unchanged. The figure owns the width/float so the
+   inner <img> just fills it. */
+.post-body figure {
+  margin: 1.4em 0;
+}
+.post-body figure img {
+  margin: 0;
+  width: 100%;
+}
+.post-body figure.img-align-center {
+  margin-inline: auto;
+  max-width: min(100%, 640px);
+}
+.post-body figure.img-align-full {
+  /* Breakout: extend past the body padding to the card edges. */
+  width: auto;
+  max-width: none;
+  margin-inline: calc(-1 * clamp(22px, 5vw, 60px));
+}
+.post-body figure.img-align-left {
+  float: left;
+  width: min(46%, 360px);
+  margin: 0.4em 1.6em 1em 0;
+}
+.post-body figure.img-align-right {
+  float: right;
+  width: min(46%, 360px);
+  margin: 0.4em 0 1em 1.6em;
+}
+@media (max-width: 700px) {
+  /* No float on narrow screens — wrapped text reads badly under ~700px. */
+  .post-body figure.img-align-left,
+  .post-body figure.img-align-right {
+    float: none;
+    width: 100%;
+    margin: 1.4em 0;
+  }
 }
 .post-body hr {
   border: 0;
@@ -810,6 +856,12 @@ a.pager-btn:focus-visible {
   }
   .post .body {
     padding: 30px 20px 38px;
+  }
+  .post-body figure.img-align-full {
+    /* Keep the breakout in lockstep with the reduced 20px body padding
+       above — the desktop clamp() floor is 22px, which would overhang
+       the card edge and get clipped by the card's overflow: hidden. */
+    margin-inline: -20px;
   }
   .end-actions {
     grid-template-columns: 1fr 1fr;

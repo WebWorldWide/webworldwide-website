@@ -22,7 +22,6 @@ export const postSchema = z
     date: z.coerce.date(),
     slug: z.string().optional(),
     draft: z.boolean().default(false),
-    tags: z.array(z.string()).default([]),
     series: z.string().optional(),
     publish_at: z.coerce.date().optional(),
     cover: z.string().optional(),
