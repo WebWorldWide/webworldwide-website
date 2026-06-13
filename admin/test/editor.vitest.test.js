@@ -129,7 +129,7 @@ describe('markdown serializer/parser', () => {
     // And the first pass must preserve the meaningful content:
     // image, link URLs, prose. We're flexible on exact mark layout
     // because CommonMark normalises overlapping marks.
-    expect(once).toContain('![DJI Phantom 3](/images/2025/12/image-17.webp)');
+    expect(once).toContain('![DJI Phantom 3](/images/2025/12/bye-bye-dji.webp)');
     expect(once).toContain('theverge.com/news/849460/fcc-foreign-drone-ban-dji');
     expect(once).toContain('YouTube videos');
     // No trailing whitespace junk:
