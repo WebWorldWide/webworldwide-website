@@ -152,8 +152,14 @@
                 <div class="ed-slug">
                   <span class="root">webworldwide.online/blog/</span>
                   <label class="sr-only" for="post-slug">Slug</label>
-                  <input id="post-slug" placeholder="post-slug" autocomplete="off" />
+                  <input
+                    id="post-slug"
+                    placeholder="post-slug"
+                    autocomplete="off"
+                    aria-describedby="slug-msg"
+                  />
                 </div>
+                <div class="ed-slug-msg" id="slug-msg" aria-live="polite"></div>
               </div>
 
               <div class="ed-body">

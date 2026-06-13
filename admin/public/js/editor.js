@@ -258,6 +258,67 @@
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
   }
+
+  // ── Live slug validation ──────────────────────────────────
+  // Catch a taken/invalid slug AS the writer types, not at save time — the
+  // server still guards (409 slug_taken), but a quiet inline hint is far
+  // friendlier than a failed save.
+  let slugCheckTimer = null;
+  function setSlugMsg(text, kind) {
+    const el = $('slug-msg');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'ed-slug-msg' + (text ? ` ${kind || 'warn'}` : '');
+  }
+  async function checkSlug() {
+    const raw = (slugEl?.value || '').trim();
+    if (!raw) {
+      // Empty is fine — save derives the slug from the title.
+      setSlugMsg('');
+      return;
+    }
+    if (raw !== slugify(raw)) {
+      setSlugMsg('Use lowercase letters, numbers and hyphens only.', 'warn');
+      return;
+    }
+    try {
+      const posts = await TE.fetchJSON('/api/posts');
+      // A clash is any OTHER post (not the one we're editing) using this slug.
+      const clash = posts.find((p) => p.slug === raw && p.filename !== currentFile);
+      if (clash) {
+        setSlugMsg(`Already used by “${clash.title || clash.slug}”. Pick another.`, 'err');
+      } else {
+        setSlugMsg('Available', 'ok');
+      }
+    } catch {
+      setSlugMsg('');
+    }
+  }
+  function scheduleSlugCheck() {
+    clearTimeout(slugCheckTimer);
+    slugCheckTimer = setTimeout(checkSlug, 350);
+  }
+
+  // Count images in the markdown body that ship without alt text — empty
+  // `![](url)` and `<img>` tags whose alt is missing/blank. Used to warn
+  // before publishing (bad for screen readers AND SEO).
+  function imagesMissingAlt(md) {
+    const text = String(md || '');
+    let n = 0;
+    // Markdown images: ![alt](url) — alt is the bit between ! [ and ].
+    const mdImg = /!\[([^\]]*)\]\([^)]*\)/g;
+    let m;
+    while ((m = mdImg.exec(text)) !== null) {
+      if (!m[1].trim()) n += 1;
+    }
+    // Raw <img …> tags: flag when there's no alt="non-empty".
+    const htmlImg = /<img\b[^>]*>/gi;
+    while ((m = htmlImg.exec(text)) !== null) {
+      const alt = /\balt\s*=\s*"([^"]*)"/i.exec(m[0]);
+      if (!alt || !alt[1].trim()) n += 1;
+    }
+    return n;
+  }
   function markDirty() {
     isDirty = true;
     setSaved('Unsaved changes');
@@ -721,6 +782,15 @@
   }
 
   async function publishSite() {
+    // Accessibility/SEO guard: warn (don't block) when images lack alt text.
+    const missing = imagesMissingAlt(bodyEl?.value || '');
+    if (missing > 0) {
+      const ok = window.confirm(
+        `${missing} image${missing === 1 ? '' : 's'} ${missing === 1 ? 'has' : 'have'} no alt text — ` +
+          'bad for screen readers and SEO. Publish anyway?',
+      );
+      if (!ok) return;
+    }
     if (!(await savePost())) return;
     btnPub.disabled = btnPub2.disabled = true;
     try {
@@ -957,6 +1027,7 @@
       }
       updateSocialPreview();
       updateSeoPreview();
+      scheduleSlugCheck();
       markDirty();
     });
 
@@ -964,6 +1035,7 @@
     [slugEl, dateEl, draftEl].forEach((el) =>
       el.addEventListener('input', () => {
         updateSeoPreview();
+        if (el === slugEl) scheduleSlugCheck();
         markDirty();
       }),
     );
