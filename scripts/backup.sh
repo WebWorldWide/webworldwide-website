@@ -74,13 +74,30 @@ else
 fi
 
 # 4. Backup CMS SQLite DB (same brief-stop + docker cp pattern; same
-# warn-don't-abort posture so the .env backup + push always run)
-echo "Backing up CMS Auth DB..."
+# warn-don't-abort posture so the .env backup + push always run).
+#
+# CRITICAL: auth.db runs in WAL mode. Recent writes (comment moderation,
+# webmentions, media, post snapshots, activity) live in `auth.db-wal`
+# until a checkpoint folds them into auth.db — and a *stopped* container
+# never checkpoints. Copying auth.db alone silently loses everything
+# since the last checkpoint. So copy the WAL sidecars too; SQLite replays
+# them when the DB is reopened. The container is stopped here, so the
+# three files are a consistent, race-free snapshot.
+#
+# The `|| rm -f` on each sidecar matters for correctness: if a future run
+# finds the DB already checkpointed (no -wal in the container), we must
+# DELETE any stale -wal/-shm left in the backup repo — applying an old
+# WAL to a newer DB would corrupt the restore.
+echo "Backing up CMS Auth DB (incl. WAL sidecars)..."
 docker compose stop cms
 STOPPED_SERVICES="$STOPPED_SERVICES cms"
 if ! docker cp cms:/app/data/auth.db "$BACKUP_REPO_DIR/cms_auth_backup.db" 2>/dev/null; then
     echo "WARNING: could not copy cms auth.db — skipping its backup."
 fi
+docker cp cms:/app/data/auth.db-wal "$BACKUP_REPO_DIR/cms_auth_backup.db-wal" 2>/dev/null \
+    || rm -f "$BACKUP_REPO_DIR/cms_auth_backup.db-wal"
+docker cp cms:/app/data/auth.db-shm "$BACKUP_REPO_DIR/cms_auth_backup.db-shm" 2>/dev/null \
+    || rm -f "$BACKUP_REPO_DIR/cms_auth_backup.db-shm"
 docker compose start cms
 STOPPED_SERVICES="${STOPPED_SERVICES// cms/}"
 
