@@ -20,7 +20,7 @@ import Database from 'better-sqlite3';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-import { claimNext, markDone, markFailed, enqueueJob } from './queue.js';
+import { claimNext, markDone, markFailed, enqueueJob, reclaimOrphaned } from './queue.js';
 import { handlers, resolveDiskContext } from './index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -53,6 +53,15 @@ export function startWorker(opts) {
   if (state.running) return controller();
   state.running = true;
   state.db = openDb();
+
+  // Recover jobs an earlier crash left stuck in 'running' (claimNext only
+  // picks up 'pending', so they'd otherwise wedge their media forever).
+  try {
+    const reclaimed = reclaimOrphaned({ db: state.db });
+    if (reclaimed) console.log(`[conversion-worker] reclaimed ${reclaimed} orphaned job(s)`);
+  } catch (err) {
+    console.warn('[conversion-worker] orphan reclaim failed:', err?.message || err);
+  }
 
   const concurrency = (opts && opts.concurrency) || DEFAULT_CONCURRENCY;
   const interval = (opts && opts.pollIntervalMs) || POLL_INTERVAL_MS;

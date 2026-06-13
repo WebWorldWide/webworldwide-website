@@ -116,6 +116,25 @@ export function enqueueJob(mediaId, type, opts) {
  * @param {{ db?: Database.Database }} [opts]
  * @returns {Record<string, any> | null}
  */
+/**
+ * Return any job stuck in 'running' back to 'pending'. Called once on
+ * worker startup: at boot nothing is legitimately mid-conversion, so a
+ * 'running' row was orphaned by an ungraceful crash and would otherwise
+ * leave its media "processing" forever (claimNext only ever picks up
+ * 'pending'). Returns the number of jobs reclaimed.
+ *
+ * @param {{ db?: Database.Database }} [opts]
+ * @returns {number}
+ */
+export function reclaimOrphaned(opts) {
+  const db = (opts && opts.db) || getDb();
+  return db
+    .prepare(
+      `UPDATE conversion_jobs SET status = 'pending', started_at = NULL WHERE status = 'running'`,
+    )
+    .run().changes;
+}
+
 export function claimNext(opts) {
   const db = (opts && opts.db) || getDb();
   const now = Date.now();

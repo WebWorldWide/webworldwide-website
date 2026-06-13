@@ -83,6 +83,10 @@ async function tick() {
       const latest = rows[rows.length - 1];
       if (latest && latest.ts > lastTs) lastTs = latest.ts;
     }
+    // Complete the priming pass even when the blog has no comments yet —
+    // otherwise lastTs stays 0, every tick keeps "priming", and the very
+    // first comments ever posted get silently skipped instead of broadcast.
+    if (lastTs === 0) lastTs = Date.now();
     consecutiveFailures = 0;
     nextDelayMs = DEFAULT_INTERVAL_MS;
   } catch (err) {

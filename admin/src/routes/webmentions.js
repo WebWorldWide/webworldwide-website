@@ -163,7 +163,42 @@ export function validatePair(sourceRaw, targetRaw) {
   if (!TARGET_HOSTS.includes(target.hostname.toLowerCase())) {
     return { ok: false, status: 400, error: 'target not on this site' };
   }
+  // SSRF guard: we fetch the source to verify its back-link, so an attacker
+  // could otherwise point it at an internal host. Reject obviously-private
+  // source hosts. (Hostname-level — full DNS-rebinding defence would need
+  // resolve-and-pin; this stops the easy IP-literal / localhost cases.)
+  if (isPrivateHost(source.hostname)) {
+    return { ok: false, status: 400, error: 'source host not allowed' };
+  }
   return { ok: true, source: source.href, target: target.href };
+}
+
+/**
+ * True if a hostname is loopback/link-local/private/non-public — the kind
+ * of host an SSRF probe would target. Conservative: matches localhost,
+ * .local, *.internal, and IPv4/IPv6 literals in private/reserved ranges.
+ *
+ * @param {string} hostname
+ * @returns {boolean}
+ */
+export function isPrivateHost(hostname) {
+  const h = String(hostname || '')
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '');
+  if (!h || h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return true;
+  // IPv6 loopback / unique-local / link-local.
+  if (h === '::1' || /^f[cd][0-9a-f]{2}:/.test(h) || /^fe80:/.test(h)) return true;
+  // IPv4 dotted-quad in a private/reserved range.
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true; // link-local
+    if (a >= 224) return true; // multicast / reserved
+  }
+  return false;
 }
 
 /**
