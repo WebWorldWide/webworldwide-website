@@ -1978,3 +1978,126 @@ body[data-page="editor"] {
   opacity: 0.6;
   cursor: progress;
 }
+
+/* ── Revision history modal ─────────────────────────────────────────
+   Two-pane: a scrollable version list (left) + a read-only preview of the
+   selected version (right). Reuses the base .modal/.modal-* from admin.css. */
+.te-history-card {
+  max-width: 760px;
+}
+.te-history-body {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  max-height: min(60dvh, 540px);
+}
+.te-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  width: 42%;
+  min-width: 220px;
+  overflow-y: auto;
+  border-right: 1px solid var(--glass-border);
+}
+.te-history-empty,
+.te-history-hint {
+  color: var(--fg-mute);
+  font-size: 12px;
+  padding: 12px;
+  margin: 0;
+}
+.te-history-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "kind label" "kind when";
+  column-gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.te-history-row:hover {
+  background: var(--bg-elev-2, rgb(127 127 127 / 8%));
+}
+.te-history-row.active {
+  background: var(--accent-soft, rgb(176 71 8 / 12%));
+  outline: 1px solid var(--accent);
+}
+.te-history-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.te-history-kind {
+  grid-area: kind;
+  align-self: start;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.te-history-kind.k-git {
+  background: var(--accent);
+  color: var(--paper, #fff);
+}
+.te-history-kind.k-snapshot {
+  background: rgb(127 127 127 / 18%);
+  color: var(--fg-dim);
+}
+.te-history-label {
+  grid-area: label;
+  font-size: 12.5px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.te-history-when {
+  grid-area: when;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+}
+.te-history-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.te-history-ptitle {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--fg);
+}
+.te-history-pbody {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.te-history-card .modal-foot {
+  justify-content: space-between;
+  align-items: center;
+}
+.te-history-foot-note {
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+@media (max-width: 640px) {
+  .te-history-body {
+    flex-direction: column;
+    max-height: min(70dvh, 600px);
+  }
+  .te-history-list {
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--glass-border);
+    max-height: 40%;
+  }
+}

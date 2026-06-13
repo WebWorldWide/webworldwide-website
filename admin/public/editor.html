@@ -489,6 +489,15 @@
                   >
                     Save & publish
                   </button>
+                  <button
+                    type="button"
+                    class="btn ghost"
+                    id="btn-history"
+                    style="justify-content: center"
+                  >
+                    <span class="ico" aria-hidden="true" data-icon="activity"></span>
+                    Revision history
+                  </button>
                   <p
                     style="
                       margin: 4px 0 0;
@@ -505,6 +514,46 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Revision history: git-published versions + recent local snapshots.
+         Selecting a version previews it; "Restore" loads it into the editor
+         as unsaved changes (never a silent overwrite). -->
+    <div
+      class="modal"
+      id="history-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="history-modal-title"
+    >
+      <div class="modal-card te-history-card">
+        <div class="modal-head">
+          <h3 id="history-modal-title">Revision history</h3>
+          <button
+            type="button"
+            class="btn ghost"
+            data-modal-close="history-modal"
+            aria-label="Close"
+          >
+            <span class="ico" aria-hidden="true" data-icon="close"></span>
+          </button>
+        </div>
+        <div class="modal-body te-history-body">
+          <ul class="te-history-list" id="history-list" aria-label="Versions">
+            <li class="te-history-empty">Loading…</li>
+          </ul>
+          <div class="te-history-preview" id="history-preview" aria-live="polite">
+            <p class="te-history-hint">Select a version to preview it here.</p>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span class="te-history-foot-note" id="history-foot-note"></span>
+          <button type="button" class="btn solid" id="history-restore" disabled>
+            Restore this version
+          </button>
+        </div>
+      </div>
     </div>
 
     <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>

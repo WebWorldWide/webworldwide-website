@@ -390,6 +390,31 @@
     }
   }
 
+  // Populate every editor field + the body from a {data, content} pair.
+  // Shared by loadPost (fresh GET) and the revision-history restore so
+  // both render identically.
+  function populateFields(data, content, filename) {
+    titleEl.value = data.title || '';
+    slugEl.value = data.slug || (filename ? filename.replace(/\.md$/, '') : '');
+    draftEl.value = data.draft ? 'true' : 'false';
+    // The blog reads frontmatter `excerpt` for the hook line + SEO description.
+    descEl.value = data.excerpt || '';
+    if (data.date) {
+      const d = new Date(data.date);
+      // Adjust for local TZ so the datetime-local input shows the same
+      // wall-clock time the user expects.
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      dateEl.value = d.toISOString().slice(0, 16);
+    }
+    // Phase 5e additions
+    setExtraFields(data);
+    bodyEl.value = content || '';
+    updateMetrics();
+    updateSocialPreview();
+    updateSeoPreview();
+    updateStatusPill();
+  }
+
   // ── Load existing post ────────────────────────────────────
   async function loadPost(filename) {
     try {
@@ -397,33 +422,141 @@
         `/api/posts/${encodeURIComponent(filename)}`,
       );
       loadedMtime = typeof mtime === 'number' ? mtime : null;
-      titleEl.value = data.title || '';
-      slugEl.value = data.slug || filename.replace(/\.md$/, '');
-      draftEl.value = data.draft ? 'true' : 'false';
-      // The blog reads frontmatter `excerpt` for the hook line + SEO description.
-      descEl.value = data.excerpt || '';
-      if (data.date) {
-        const d = new Date(data.date);
-        // Adjust for local TZ so the datetime-local input shows the
-        // same wall-clock time the user expects.
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        dateEl.value = d.toISOString().slice(0, 16);
-      }
-      // Phase 5e additions
-      setExtraFields(data);
-      bodyEl.value = content || '';
+      populateFields(data, content, filename);
       setCurrentFile(filename);
       isDirty = false;
       setSaved('Saved');
       setAutoState('saved', 'Saved');
-      updateMetrics();
-      updateSocialPreview();
-      updateSeoPreview();
-      updateStatusPill();
     } catch (err) {
       setAutoState('error', 'Failed to load');
       TE.toast(err.message || 'Failed to load post.', 'error');
     }
+  }
+
+  // ── Revision history ──────────────────────────────────────
+  // Git-published versions + recent local pre-save snapshots. Selecting a
+  // row previews it; Restore loads it into the editor as unsaved changes
+  // (the writer reviews and saves — never a silent server-side overwrite).
+  let selectedVersion = null;
+
+  function histWhen(v) {
+    if (typeof v === 'number') {
+      const secs = Math.max(1, Math.round((Date.now() - v) / 1000));
+      if (secs < 60) return `${secs}s ago`;
+      const mins = Math.round(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return new Date(v).toLocaleDateString();
+    }
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString();
+  }
+
+  async function openHistory() {
+    if (!currentFile) {
+      TE.toast('Save the post first — history appears once it has versions.', 'warn');
+      return;
+    }
+    const listEl = $('history-list');
+    const previewEl = $('history-preview');
+    const restoreBtn = $('history-restore');
+    selectedVersion = null;
+    if (restoreBtn) restoreBtn.disabled = true;
+    if (previewEl)
+      previewEl.innerHTML = '<p class="te-history-hint">Select a version to preview it here.</p>';
+    if (listEl) listEl.innerHTML = '<li class="te-history-empty">Loading…</li>';
+    TE.openModal('history-modal');
+    let hist;
+    try {
+      hist = await TE.fetchJSON(`/api/posts/${encodeURIComponent(currentFile)}/history`);
+    } catch (_err) {
+      if (listEl) listEl.innerHTML = '<li class="te-history-empty">Couldn’t load history.</li>';
+      return;
+    }
+    const rows = [];
+    for (const s of hist.snapshots || []) {
+      rows.push({
+        source: 'snapshot',
+        ref: s.id,
+        kind: 'Autosave',
+        label: s.title || currentFile,
+        when: s.ts,
+      });
+    }
+    for (const c of hist.git || []) {
+      rows.push({
+        source: 'git',
+        ref: c.hash,
+        kind: 'Published',
+        label: c.message || c.hash.slice(0, 7),
+        when: c.date,
+      });
+    }
+    if (!rows.length) {
+      if (listEl)
+        listEl.innerHTML =
+          '<li class="te-history-empty">No earlier versions yet — they appear here after you save or publish.</li>';
+      return;
+    }
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    rows.forEach((r) => {
+      const li = document.createElement('li');
+      li.className = 'te-history-row';
+      li.setAttribute('role', 'button');
+      li.tabIndex = 0;
+      li.innerHTML =
+        `<span class="te-history-kind k-${r.source}">${TE.escape(r.kind)}</span>` +
+        `<span class="te-history-label">${TE.escape(r.label)}</span>` +
+        `<span class="te-history-when">${TE.escape(histWhen(r.when))}</span>`;
+      const choose = () => selectVersion(r, li);
+      li.addEventListener('click', choose);
+      li.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          choose();
+        }
+      });
+      listEl.appendChild(li);
+    });
+  }
+
+  async function selectVersion(r, li) {
+    const previewEl = $('history-preview');
+    const restoreBtn = $('history-restore');
+    const listEl = $('history-list');
+    if (listEl)
+      listEl.querySelectorAll('.te-history-row').forEach((n) => n.classList.remove('active'));
+    li.classList.add('active');
+    if (previewEl) previewEl.innerHTML = '<p class="te-history-hint">Loading…</p>';
+    if (restoreBtn) restoreBtn.disabled = true;
+    try {
+      const ver = await TE.fetchJSON(
+        `/api/posts/${encodeURIComponent(currentFile)}/version/${r.source}/${encodeURIComponent(r.ref)}`,
+      );
+      selectedVersion = { ...r, data: ver.data || {}, content: ver.content || '' };
+      const title = (ver.data && ver.data.title) || '(untitled)';
+      if (previewEl) {
+        previewEl.innerHTML =
+          `<h4 class="te-history-ptitle">${TE.escape(title)}</h4>` +
+          `<pre class="te-history-pbody">${TE.escape(ver.content || '(empty)')}</pre>`;
+      }
+      if (restoreBtn) restoreBtn.disabled = false;
+    } catch (_err) {
+      if (previewEl)
+        previewEl.innerHTML = '<p class="te-history-hint">Couldn’t load this version.</p>';
+    }
+  }
+
+  function restoreSelected() {
+    if (!selectedVersion) return;
+    populateFields(selectedVersion.data || {}, selectedVersion.content || '', currentFile);
+    isDirty = true;
+    setSaved('Unsaved');
+    setAutoState('idle', 'Restored — Save to apply');
+    TE.closeModal('history-modal');
+    TE.toast('Version loaded into the editor. Review, then Save to apply.', 'info');
   }
 
   // Phase 5e: hydrate the new sidebar fields (series, publish_at,
@@ -911,6 +1044,10 @@
     [btnSave, btnSave2].forEach((b) => b && b.addEventListener('click', savePost));
     [btnPub, btnPub2].forEach((b) => b && b.addEventListener('click', publishSite));
     if (btnDel) btnDel.addEventListener('click', deletePost);
+    const btnHistory = $('btn-history');
+    if (btnHistory) btnHistory.addEventListener('click', openHistory);
+    const btnRestore = $('history-restore');
+    if (btnRestore) btnRestore.addEventListener('click', restoreSelected);
 
     // Keyboard: Cmd/Ctrl + S (fired from anywhere outside the editor).
     // Inside the editor, TipTap's keymap intercepts these first and

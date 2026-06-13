@@ -243,6 +243,56 @@ export function extractChangedPostsFromDiff(diffText) {
   return [...set];
 }
 
+const POSTS_PATH_PREFIX = 'site/content/posts/';
+
+/**
+ * Commit history for a single post, newest first — the published-versions
+ * half of the editor's revision history. Returns [] on any error (e.g. a
+ * post never committed) so the UI degrades gracefully.
+ *
+ * @param {string} filename e.g. `my-post.md`
+ * @param {number} [maxCount]
+ * @returns {Promise<Array<{ hash: string, date: string, message: string, author: string }>>}
+ */
+export async function getPostHistory(filename, maxCount = 50) {
+  const safe = String(filename || '');
+  if (!safe || safe.includes('/') || safe.includes('..')) return [];
+  const git = getGitInstance();
+  try {
+    const log = await git.log({ file: POSTS_PATH_PREFIX + safe, maxCount });
+    return log.all.map((c) => ({
+      hash: c.hash,
+      date: c.date,
+      message: c.message,
+      author: c.author_name,
+    }));
+  } catch (err) {
+    console.warn('[git] post history failed:', err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
+/**
+ * The raw content of a post as of a specific commit — for previewing or
+ * restoring a published version. The hash is validated as hex so it can
+ * never inject extra git args. Returns null on any error.
+ *
+ * @param {string} filename e.g. `my-post.md`
+ * @param {string} hash a commit SHA (7–40 hex chars)
+ * @returns {Promise<string | null>}
+ */
+export async function getPostAtCommit(filename, hash) {
+  const safe = String(filename || '');
+  if (!safe || safe.includes('/') || safe.includes('..')) return null;
+  if (!/^[0-9a-f]{7,40}$/i.test(String(hash))) return null;
+  const git = getGitInstance();
+  try {
+    return await git.show([`${hash}:${POSTS_PATH_PREFIX}${safe}`]);
+  } catch {
+    return null;
+  }
+}
+
 export async function getGitStatus() {
   const git = getGitInstance();
   try {

@@ -196,6 +196,39 @@ test('a legitimate slug rename to a FREE slug moves the file', skipOpts(), async
   assert.match(readFileSync(join(postsDir, 'alpha-renamed.md'), 'utf-8'), /renamed cleanly/);
 });
 
+test('a save snapshots the previous content; history + version expose it', skipOpts(), async () => {
+  // bravo.md currently holds "bravo updated no token" from an earlier test.
+  const before = readFileSync(join(postsDir, 'bravo.md'), 'utf-8');
+  assert.match(before, /bravo updated no token/);
+
+  // Save new content — the PRE-save body should be snapshotted.
+  const get = await (await api('/api/posts/bravo.md')).json();
+  await api('/api/posts/bravo.md', {
+    method: 'PUT',
+    body: JSON.stringify({
+      data: { title: 'Bravo', slug: 'bravo', date: '2024-01-02', draft: false },
+      content: 'bravo NEWEST body',
+      baseMtime: get.mtime,
+    }),
+  });
+
+  const hist = await (await api('/api/posts/bravo.md/history')).json();
+  assert.ok(Array.isArray(hist.git), 'git history is an array (empty without a repo)');
+  assert.ok(hist.snapshots.length >= 1, 'at least one local snapshot recorded');
+
+  // The newest snapshot holds a PRE-save body, never the just-written one
+  // (which post body actually survives depends on the 60s coalesce window,
+  // but it must be an EARLIER revision, not "NEWEST").
+  const snapId = hist.snapshots[0].id;
+  const ver = await (await api(`/api/posts/bravo.md/version/snapshot/${snapId}`)).json();
+  assert.match(ver.content, /bravo/, 'snapshot holds a prior bravo body');
+  assert.doesNotMatch(ver.content, /NEWEST/, 'snapshot is NOT the just-saved content');
+
+  // Unknown version → 404, not a crash.
+  const miss = await api('/api/posts/bravo.md/version/snapshot/nope');
+  assert.equal(miss.status, 404);
+});
+
 function statSyncSafe(p) {
   try {
     statSync(p);

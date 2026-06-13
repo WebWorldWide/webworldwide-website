@@ -164,3 +164,24 @@ test('publishChanges recovers an orphaned commit a prior push failed to send', a
   assert.equal(git(originDir, 'rev-parse', 'main').trim(), headLocal, 'orphan reached origin');
   assert.ok(originTree().includes('site/content/posts/orphan.md'), 'orphan post shipped');
 });
+
+test('getPostHistory + getPostAtCommit surface a post’s git revisions', async () => {
+  const { getPostHistory, getPostAtCommit } = await import('../src/utils/git.js');
+
+  // existing.md has been modified across several commits by earlier tests.
+  const history = await getPostHistory('existing.md');
+  assert.ok(history.length >= 1, 'history has at least one commit');
+  for (const c of history) {
+    assert.match(c.hash, /^[0-9a-f]{7,40}$/i);
+    assert.equal(typeof c.message, 'string');
+  }
+
+  // The content at the most recent commit round-trips.
+  const raw = await getPostAtCommit('existing.md', history[0].hash);
+  assert.equal(typeof raw, 'string');
+  assert.ok(raw.length > 0);
+
+  // Guards: a bogus hash and a traversal filename both return null/[].
+  assert.equal(await getPostAtCommit('existing.md', 'zzz; rm -rf /'), null);
+  assert.deepEqual(await getPostHistory('../../../etc/passwd'), []);
+});
