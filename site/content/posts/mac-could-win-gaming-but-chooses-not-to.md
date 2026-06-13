@@ -4,7 +4,7 @@ date: 2025-12-19T13:57:19.000Z
 slug: "mac-could-win-gaming-but-chooses-not-to"
 draft: false
 ---
-![A desk setup with a Mac Studio running Cyberpunk 2077.](/images/2025/12/image-14.webp)
+![A desk setup with a Mac Studio running Cyberpunk 2077.](/images/2025/12/mac-could-win-gaming-but-chooses-not-to.webp)
 
 The Mac line from Apple has been on an absolute tear the last five years. Since the introduction of Apple Silicon, there isn't anything on the market quite like it. Apple laptops are able to outperform and outlast most of their competitors, even being able to rival the need for a traditional desktop. Meanwhile, Mac desktops now pack chips with an unbelievable amount of power in the size of a tissue box (Mac Pro excluded). It has never been better to be a Mac user, and the performance has never been so fruitful. However, Apple just cannot—and sometimes acts like it will not—let Mac be a gaming platform. Apple could take a major bite out of Windows' market share but, for some reason, chooses not to.
 

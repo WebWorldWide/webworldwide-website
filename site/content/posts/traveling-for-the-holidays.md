@@ -4,7 +4,7 @@ date: 2025-12-21T19:18:12.000Z
 slug: "traveling-for-the-holidays"
 draft: false
 ---
-![Kevin in Home Alone 2 holding his tape recorder.](/images/2025/12/image-16.webp)
+![Kevin in Home Alone 2 holding his tape recorder.](/images/2025/12/traveling-for-the-holidays.webp)
 
 It’s the week of Christmas! If you are going to see family this year, I wish you safe travels on your trip. But there is something about modern technology that makes traveling for the holidays so much easier.
 

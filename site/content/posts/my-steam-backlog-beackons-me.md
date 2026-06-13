@@ -4,7 +4,7 @@ date: 2025-12-29T13:07:05.000Z
 slug: "my-steam-backlog-beackons-me"
 draft: false
 ---
-![Steam Winter Sale 2025 banner](/images/2025/12/image-20.webp)
+![Steam Winter Sale 2025 banner](/images/2025/12/my-steam-backlog-beackons-me.webp)
 
 If you, like me, are a sucker for Steam sales, you might also be a sucker for having a bunch of games you have never played. Honestly, it has come to the point where I look forward to a Steam sale to buy a couple of games I hear that I 'must' play and that playing them helps me further understand and fit into the cultural zeitgeist. But now the time of reckoning has come.
 
