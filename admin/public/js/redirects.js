@@ -53,23 +53,72 @@
     });
   }
 
-  async function add() {
-    const from = window.prompt('Source path (e.g. /old-url/):');
-    if (!from) return;
-    const to = window.prompt('Destination URL or path:');
-    if (!to) return;
-    const codeRaw = window.prompt('Status code (301, 302, 307, 308):', '301');
-    const code = Number(codeRaw || 301);
-    try {
-      await window.TE.fetchJSON('/api/redirects', {
-        method: 'POST',
-        body: JSON.stringify({ from, to, code }),
-      });
-      window.TE.toast('Redirect added.');
-      load();
-    } catch (err) {
-      window.TE.toast(err.message || 'Add failed.', 'error');
+  // Inline add form (replaces three stacked window.prompt dialogs). Renders
+  // into #redirect-form-host above the table with proper fields + validation.
+  function openAddForm() {
+    const host = document.getElementById('redirect-form-host');
+    if (!host) return;
+    if (host.querySelector('.te-redir-form')) {
+      host.querySelector('[name="from"]')?.focus();
+      return;
     }
+    host.innerHTML = `
+      <form class="te-redir-form" novalidate>
+        <div class="te-redir-form-grid">
+          <label class="te-field"><span>From (path)</span>
+            <input name="from" placeholder="/old-url/" autocomplete="off" required /></label>
+          <label class="te-field"><span>To (URL or path)</span>
+            <input name="to" placeholder="/blog/new-url/" autocomplete="off" required /></label>
+          <label class="te-field te-redir-code-field"><span>Code</span>
+            <select name="code">
+              <option value="301">301 — permanent</option>
+              <option value="302">302 — temporary</option>
+              <option value="307">307 — temporary (keep method)</option>
+              <option value="308">308 — permanent (keep method)</option>
+            </select></label>
+        </div>
+        <div class="te-redir-form-err" aria-live="polite"></div>
+        <div class="te-redir-form-actions">
+          <button type="button" class="btn ghost js-cancel">Cancel</button>
+          <button type="submit" class="btn solid">Add redirect</button>
+        </div>
+      </form>
+    `;
+    const form = host.querySelector('.te-redir-form');
+    const errEl = host.querySelector('.te-redir-form-err');
+    host.querySelector('[name="from"]')?.focus();
+    host.querySelector('.js-cancel')?.addEventListener('click', () => {
+      host.innerHTML = '';
+    });
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const from = String(form.from.value || '').trim();
+      const to = String(form.to.value || '').trim();
+      const code = Number(form.code.value || 301);
+      if (!from.startsWith('/')) {
+        errEl.textContent = 'From must be a path starting with “/”.';
+        return;
+      }
+      if (!to) {
+        errEl.textContent = 'Enter a destination.';
+        return;
+      }
+      errEl.textContent = '';
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        await window.TE.fetchJSON('/api/redirects', {
+          method: 'POST',
+          body: JSON.stringify({ from, to, code }),
+        });
+        window.TE.toast('Redirect added.');
+        host.innerHTML = '';
+        load();
+      } catch (err) {
+        errEl.textContent = err.message || 'Add failed.';
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
   }
 
   async function del(id) {
@@ -89,7 +138,7 @@
   function init() {
     load();
     const btn = document.getElementById('btn-redirect-new');
-    if (btn) btn.addEventListener('click', add);
+    if (btn) btn.addEventListener('click', openAddForm);
   }
 
   window.TE = window.TE || {};

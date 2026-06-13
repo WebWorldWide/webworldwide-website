@@ -57,6 +57,17 @@
   border-color: var(--accent);
 }
 
+/* Inline validation error under a field. */
+.te-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.te-field-err {
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
 .te-field textarea {
   font-family: var(--mono);
   font-size: 12px;
