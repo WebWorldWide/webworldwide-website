@@ -1062,20 +1062,19 @@ body {
    EMPTY STATES
    ============================================================ */
 .empty {
-  padding: 48px 20px;
+  padding: 26px 20px;
   color: var(--ink-mute);
   text-align: center;
 }
 .empty .e-mark {
   font-family: var(--font-pixel);
-  font-size: 30px;
-  color: var(--ink-mute);
+  font-size: 22px;
+  color: var(--ink-faint, var(--ink-mute));
 }
 .empty .e-text {
-  margin-top: 6px;
+  margin-top: 4px;
   font-family: var(--font-ui);
-  font-size: 17px;
-  font-style: italic;
+  font-size: 13.5px;
 }
 .empty a {
   color: var(--accent);
