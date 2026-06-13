@@ -72,11 +72,13 @@
       window.TE.toast(`${done}${errN ? `, ${errN} failed` : ''}.`, errN ? 'warn' : 'info');
       selected.clear();
       renderSelectionUI();
-      // Ask the dashboard to refresh by faking a tab click (cheap).
-      const tab = document.querySelector('.tab[aria-selected="true"]');
-      if (tab) /** @type {HTMLElement} */ (tab).click();
-      // Or call dashboard.loadPosts if exposed (it isn't yet; tab-click is good enough).
-      window.location.reload();
+      // Refresh the table in place — preserves the active tab, sort, scroll
+      // and filter (a full page reload threw all of that away).
+      if (window.TE && window.TE.dashboard && typeof window.TE.dashboard.reload === 'function') {
+        await window.TE.dashboard.reload();
+      } else {
+        window.location.reload();
+      }
     } catch (err) {
       window.TE.toast(err.message || 'Bulk failed.', 'error');
     }

@@ -747,10 +747,83 @@ body[data-page="login"] {
   background: var(--danger-soft);
   border-color: var(--danger);
 }
-.btn[disabled] {
-  opacity: 0.55;
+.btn[disabled],
+.btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  pointer-events: none;
+  /* No pointer-events:none — let the not-allowed cursor actually show.
+     Native disabled already blocks clicks, and hover transforms are
+     suppressed below so a disabled button reads as clearly inert. */
+  box-shadow: none;
+  filter: saturate(0.7);
+}
+.btn[disabled]:hover,
+.btn:disabled:hover {
+  transform: none;
+}
+
+/* Reusable spinner — `<span class="te-spinner"></span>` (respects
+   reduced-motion by slowing, not freezing, so it still reads as busy). */
+.te-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, currentcolor 25%, transparent);
+  border-top-color: currentcolor;
+  border-radius: 50%;
+  animation: te-spin 0.7s linear infinite;
+  vertical-align: -2px;
+}
+.te-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-mute);
+  font-size: 13px;
+}
+@keyframes te-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-spinner {
+    animation-duration: 1.6s;
+  }
+}
+
+/* Posts toolbar sort select. */
+.posts-sort {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.posts-sort select {
+  appearance: none;
+  height: 32px;
+  min-width: 150px;
+  background: var(--bg-elev);
+  border: 1px solid var(--glass-border);
+  border-radius: 7px;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 7px 26px 7px 10px;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentcolor 50%),
+    linear-gradient(135deg, currentcolor 50%, transparent 50%);
+  background-position:
+    right 12px center,
+    right 7px center;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+.posts-sort select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .btn-mini {

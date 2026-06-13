@@ -2189,3 +2189,29 @@ body[data-page="editor"] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Focus mode (distraction-free) ──────────────────────────────────
+   Hide the chrome and center a comfortable writing column. Toggle via the
+   topbar button or Esc. */
+body.distraction-free .sidebar,
+body.distraction-free .ed-aux,
+body.distraction-free .ed-side,
+body.distraction-free .editor-metrics {
+  display: none !important;
+}
+body.distraction-free .editor-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+body.distraction-free .editor-pane {
+  max-width: 820px;
+  margin: 0 auto;
+  width: 100%;
+}
+body.distraction-free .shell {
+  /* Reclaim the 232px sidebar track once it's hidden. */
+  grid-template-columns: 1fr;
+}
+body.distraction-free #btn-zen {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
