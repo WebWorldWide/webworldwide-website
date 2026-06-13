@@ -24,9 +24,25 @@ const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 const router = Router();
 const postsDir = join(SITE_DIR, 'content', 'posts');
 
+// Short-lived cache for the list scan. Opening the admin fires GET
+// /api/posts a few times in a burst (dashboard, drafts widget, sidebar
+// badge); a 10s TTL collapses those into one directory scan. Mutations
+// invalidate it immediately (invalidatePostsCache); the TTL is the
+// safety net for out-of-band writes (the scheduler promoting a draft).
+/** @type {{ at: number, list: any[] } | null} */
+let postsListCache = null;
+const POSTS_LIST_TTL_MS = 10_000;
+
+function invalidatePostsCache() {
+  postsListCache = null;
+}
+
 // Utility to get all posts (Phase 2 shape preserved + a few additive
 // fields the dashboard uses for the new "Scheduled" tab and badges).
 function getAllPosts() {
+  if (postsListCache && Date.now() - postsListCache.at < POSTS_LIST_TTL_MS) {
+    return postsListCache.list;
+  }
   try {
     const files = readdirSync(postsDir).filter((f) => f.endsWith('.md'));
     const posts = files.map((file) => {
@@ -53,11 +69,13 @@ function getAllPosts() {
     });
 
     // Sort by date descending
-    return posts.sort(
+    posts.sort(
       (a, b) =>
         new Date(/** @type {string} */ (b.date)).getTime() -
         new Date(/** @type {string} */ (a.date)).getTime(),
     );
+    postsListCache = { at: Date.now(), list: posts };
+    return posts;
   } catch (err) {
     console.error('Error reading posts directory:', err);
     return [];
@@ -145,6 +163,7 @@ router.post('/bulk', (req, res) => {
     }
 
     invalidatePostRefs();
+    invalidatePostsCache();
     logActivity({
       req,
       action: 'post.bulk',
@@ -198,6 +217,7 @@ router.post('/:filename/duplicate', (req, res) => {
 
     writeFileAtomic(join(postsDir, newFilename), serializePost(newData, content || ''));
     invalidatePostRefs();
+    invalidatePostsCache();
     logActivity({ req, action: 'post.duplicate', target: newFilename, meta: { from: src } });
 
     res.json({ success: true, filename: newFilename, slug: newSlug });
@@ -316,6 +336,7 @@ router.post('/', (req, res) => {
     const createPath = join(postsDir, filename);
     writeFileAtomic(createPath, fileContent);
     invalidatePostRefs();
+    invalidatePostsCache();
     logActivity({ req, action: 'post.create', target: filename });
 
     res.json({ success: true, filename, slug, mtime: statSync(createPath).mtimeMs });
@@ -388,6 +409,7 @@ router.put('/:filename', (req, res) => {
       unlinkSync(oldPath);
     }
     invalidatePostRefs();
+    invalidatePostsCache();
     logActivity({ req, action: 'post.update', target: newFilename });
 
     res.json({ success: true, filename: newFilename, slug, mtime: statSync(newPath).mtimeMs });
@@ -403,6 +425,7 @@ router.delete('/:filename', (req, res) => {
     const safeFilename = path.basename(req.params.filename);
     unlinkSync(join(postsDir, safeFilename));
     invalidatePostRefs();
+    invalidatePostsCache();
     logActivity({ req, action: 'post.delete', target: safeFilename });
     res.json({ success: true });
   } catch (err) {
