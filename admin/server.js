@@ -57,6 +57,9 @@ import { runMigrations } from './src/db/migrate.js';
 // `conversion_jobs` table is guaranteed to exist before the worker
 // opens its read cursor. SIGTERM/SIGINT bind a graceful drain.
 import { startWorker, bindShutdownSignals } from './src/services/conversion/index.js';
+// Retention sweeper — keeps the append-only tables (activity_log,
+// embed_cache) bounded for a blog used daily over years.
+import { startRetention } from './src/services/retention.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -109,6 +112,16 @@ if (process.env.CONVERSION_WORKER !== 'off') {
     bindShutdownSignals();
   } catch (workerErr) {
     console.error('[conversion-worker] failed to start:', workerErr);
+  }
+}
+
+// Retention sweep — prune activity_log + embed_cache on boot and daily.
+// Skipped under test (no lingering 24h timer) and via RETENTION=off.
+if (process.env.NODE_ENV !== 'test' && process.env.RETENTION !== 'off') {
+  try {
+    startRetention();
+  } catch (retentionErr) {
+    console.error('[retention] failed to start:', retentionErr);
   }
 }
 
