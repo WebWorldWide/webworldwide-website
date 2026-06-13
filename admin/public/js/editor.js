@@ -92,6 +92,10 @@
   let currentFile =
     urlParams.get('file') || (urlParams.get('slug') ? `${urlParams.get('slug')}.md` : null);
 
+  // Optimistic-concurrency token: the file mtime we loaded/last saved. Sent
+  // back on save so the server can 409 rather than clobber a newer copy.
+  let loadedMtime = null;
+
   let isDirty = false;
   let autosaveTimer = null;
 
@@ -389,7 +393,10 @@
   // ── Load existing post ────────────────────────────────────
   async function loadPost(filename) {
     try {
-      const { data, content } = await TE.fetchJSON(`/api/posts/${encodeURIComponent(filename)}`);
+      const { data, content, mtime } = await TE.fetchJSON(
+        `/api/posts/${encodeURIComponent(filename)}`,
+      );
+      loadedMtime = typeof mtime === 'number' ? mtime : null;
       titleEl.value = data.title || '';
       slugEl.value = data.slug || filename.replace(/\.md$/, '');
       draftEl.value = data.draft ? 'true' : 'false';
@@ -516,6 +523,10 @@
     const content = bodyEl.value || '';
     const url = currentFile ? `/api/posts/${encodeURIComponent(currentFile)}` : '/api/posts';
     const method = currentFile ? 'PUT' : 'POST';
+    // Optimistic concurrency: tell the server which version we loaded so
+    // it can refuse to clobber a newer on-disk copy.
+    const payload = { data, content };
+    if (method === 'PUT' && typeof loadedMtime === 'number') payload.baseMtime = loadedMtime;
 
     setSaved('Saving…');
     setAutoState('saving', 'Saving…');
@@ -525,8 +536,9 @@
     try {
       const result = await TE.fetchJSON(url, {
         method,
-        body: JSON.stringify({ data, content }),
+        body: JSON.stringify(payload),
       });
+      if (typeof result.mtime === 'number') loadedMtime = result.mtime;
       isDirty = false;
       setSaved('Saved');
       setAutoState('saved', 'Saved');
@@ -546,8 +558,12 @@
       updateStatusPill();
       return true;
     } catch (err) {
-      setSaved('Save failed');
-      setAutoState('error', 'Error saving');
+      // 409 = a guard fired (stale copy / slug already taken). These are
+      // recoverable user states, not crashes — surface the server's
+      // human-readable message and don't pretend a generic save failure.
+      const isConflict = err && err.status === 409;
+      setSaved(isConflict ? 'Not saved' : 'Save failed');
+      setAutoState('error', isConflict ? 'Conflict' : 'Error saving');
       if (editorRoot) {
         editorRoot.dispatchEvent(
           new CustomEvent('autosave-error', {
@@ -556,7 +572,8 @@
           }),
         );
       }
-      TE.toast(err.message || 'Save failed.', 'error');
+      const msg = (err && err.data && err.data.message) || (err && err.message) || 'Save failed.';
+      TE.toast(msg, isConflict ? 'warn' : 'error');
       return false;
     }
   }

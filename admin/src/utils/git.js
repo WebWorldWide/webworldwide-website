@@ -17,9 +17,58 @@ import { join } from 'path';
 const getGitInstance = () => {
   const siteDir = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
   const repoPath = join(siteDir, '..');
-  const git = simpleGit(repoPath);
+  // `timeout.block` kills a git child that produces no output for 30s, so a
+  // stalled push (flaky Cloudflare Tunnel) can never hang the publish
+  // request — and the event loop — indefinitely.
+  const git = simpleGit(repoPath, { timeout: { block: 30_000 } });
   return git;
 };
+
+/**
+ * Push HEAD to origin/main, retrying a few times to ride out a transient
+ * tunnel/network blip (the realistic failure on the Pi). We deliberately
+ * do NOT `pull --rebase` on failure: the cms container's worktree is
+ * permanently "dirty" (admin/ etc. read as deleted — see SITE_PATHSPEC),
+ * so a rebase would abort. A genuine non-fast-forward (someone else
+ * pushed) is essentially impossible for this repo; if it ever happens the
+ * push keeps failing and we throw a clear error, leaving the commit local
+ * for `reconcileUnpushed` to retry on the next publish.
+ *
+ * @param {import('simple-git').SimpleGit} git
+ * @param {number} attempts
+ */
+async function pushMain(git, attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      await git.push('origin', 'main');
+      return;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[git] push attempt ${i + 1}/${attempts} failed: ${err.message}`);
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Count commits on HEAD that origin/main doesn't have yet. A failed push
+ * leaves the commit local AND leaves the local `origin/main` ref stale,
+ * so `origin/main..HEAD` reveals it WITHOUT a network round-trip — and
+ * `rev-list` ignores worktree state, so the container's dirty layout
+ * can't break it. Returns 0 on any error (never block a publish on this).
+ *
+ * @param {import('simple-git').SimpleGit} git
+ * @returns {Promise<number>}
+ */
+async function countUnpushedCommits(git) {
+  try {
+    const out = await git.raw(['rev-list', '--count', 'origin/main..HEAD']);
+    return Number(String(out).trim()) || 0;
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * The publish flow may run inside the cms container, where the repo
@@ -61,15 +110,25 @@ export async function publishChanges() {
     // cached diff would be empty and we'd lose the per-file list that
     // the cross-post hook needs.
     const stagedDiff = await git.diff(['--cached', '--name-status']);
-    if (!stagedDiff.trim()) {
-      return { success: true, message: 'Nothing to commit. Site is up to date.', changed: false };
+    const hasStaged = Boolean(stagedDiff.trim());
+
+    if (hasStaged) {
+      const commitMsg = `Update blog content: ${new Date().toISOString()}`;
+      await git.commit(commitMsg);
+    } else {
+      // Nothing new to commit — but a PREVIOUS publish may have committed
+      // and then failed to push (transient tunnel error), orphaning the
+      // commit locally. Detect and push it so it isn't stranded forever.
+      const unpushed = await countUnpushedCommits(git);
+      if (unpushed === 0) {
+        return { success: true, message: 'Nothing to commit. Site is up to date.', changed: false };
+      }
+      console.log(`[git] ${unpushed} unpushed commit(s) from a prior publish — pushing now.`);
     }
 
-    const changedPosts = extractChangedPostsFromDiff(stagedDiff);
+    const changedPosts = hasStaged ? extractChangedPostsFromDiff(stagedDiff) : [];
 
-    const commitMsg = `Update blog content: ${new Date().toISOString()}`;
-    await git.commit(commitMsg);
-    await git.push('origin', 'main');
+    await pushMain(git);
 
     // Hash of the commit we just made — useful for the activity log
     // entry the publish route writes.
@@ -112,7 +171,7 @@ export async function commitAndPush(message) {
       return { success: true, message: 'nothing to commit' };
     }
     await git.commit(message);
-    await git.push('origin', 'main');
+    await pushMain(git);
     let commitHash = '';
     try {
       const head = await git.log({ maxCount: 1 });
