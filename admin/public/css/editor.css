@@ -2101,3 +2101,22 @@ body[data-page="editor"] {
     max-height: 40%;
   }
 }
+
+/* Live slug validation hint under the slug field. */
+.ed-slug-msg {
+  font-family: var(--font-mono-www);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+  min-height: 14px;
+  color: var(--ink-mute);
+}
+.ed-slug-msg.ok {
+  color: var(--ok, #2c7a4b);
+}
+.ed-slug-msg.warn {
+  color: var(--warn-strong, var(--warn));
+}
+.ed-slug-msg.err {
+  color: var(--danger);
+}
