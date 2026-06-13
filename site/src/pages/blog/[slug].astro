@@ -56,6 +56,8 @@ const remarkUrl =
   description={dek || undefined}
   ogType="article"
   ogImage={cover?.src}
+  ogImageAlt={cover?.alt}
+  publishedTime={post.data.date instanceof Date ? post.data.date.toISOString() : undefined}
   canonical={post.data.canonical_url ?? Astro.url.toString()}
 >
   <div class="frame">
