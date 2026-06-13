@@ -137,7 +137,10 @@ export function webUrlToAtUri(webUrl) {
   } catch {
     return null;
   }
-  if (!/bsky\.app$/i.test(u.hostname)) return null;
+  // Exact host or a real subdomain only — a bare `bsky\.app$` regex also
+  // matches look-alike registrable domains like `notbsky.app`.
+  const host = u.hostname.toLowerCase();
+  if (host !== 'bsky.app' && !host.endsWith('.bsky.app')) return null;
   // Expected path: /profile/<handle>/post/<rkey>
   const parts = u.pathname.split('/').filter(Boolean);
   if (parts.length < 4) return null;
@@ -318,8 +321,13 @@ export async function postThread(agent, input) {
   }
 
   // Chain continuation posts (reply.root + reply.parent both point at root).
+  // The root is already posted and is IRREVERSIBLE, so a continuation
+  // failure must NOT throw — if it did, the caller wouldn't record the root
+  // URI and the next publish would re-post the whole thread, duplicating the
+  // root. Instead we stop, keep the root, and report the thread as partial.
   let parentUri = rootUri;
   let parentCid = rootCid;
+  let partial = false;
   for (let i = 1; i < posts.length; i++) {
     // eslint-disable-next-line security/detect-object-injection -- i is a bounded loop index
     const text = posts[i].text;
@@ -332,12 +340,21 @@ export async function postThread(agent, input) {
         parent: { uri: parentUri, cid: parentCid },
       },
     };
-    const r = await agent.post(reply);
-    parentUri = r?.uri || parentUri;
-    parentCid = r?.cid || parentCid;
+    try {
+      const r = await agent.post(reply);
+      parentUri = r?.uri || parentUri;
+      parentCid = r?.cid || parentCid;
+    } catch (err) {
+      console.warn(
+        `[bluesky] continuation ${i}/${posts.length - 1} failed; thread is partial (root kept):`,
+        err?.message || err,
+      );
+      partial = true;
+      break;
+    }
   }
 
-  return { rootUri, rootCid };
+  return { rootUri, rootCid, partial };
 }
 
 /**

@@ -233,7 +233,11 @@ router.post('/passkey/register/finish', async (req, res) => {
       ).run(
         passkeyId,
         challengeRow.user_id,
-        Buffer.from(cred.id).toString('base64url'),
+        // @simplewebauthn v13 already gives cred.id as a base64url STRING;
+        // re-encoding it (Buffer.from(string)) double-encoded it, so the
+        // login assertion's credential id never matched and passkey login
+        // was silently broken. Store as-is (defensive for byte-array forms).
+        typeof cred.id === 'string' ? cred.id : Buffer.from(cred.id).toString('base64url'),
         Buffer.from(cred.publicKey).toString('base64'),
         cred.counter,
         JSON.stringify(credential.response?.transports || []),

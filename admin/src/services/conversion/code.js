@@ -29,7 +29,7 @@
  */
 
 import { basename, extname, join } from 'path';
-import { readFileSync, writeFileSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, statSync, openSync, readSync, closeSync } from 'fs';
 
 import { getHighlighter } from './codeHighlighter.js';
 
@@ -39,6 +39,24 @@ import { getHighlighter } from './codeHighlighter.js';
  * dumps anyway.
  */
 export const MAX_HIGHLIGHT_BYTES = 1 * 1024 * 1024;
+
+/**
+ * Read at most `maxBytes` from the start of a file (UTF-8) without loading
+ * the whole thing into memory — used for the truncated preview of an
+ * oversize upload.
+ * @param {string} path @param {number} maxBytes @returns {string}
+ * @param maxBytes
+ */
+function readPrefix(path, maxBytes) {
+  const fd = openSync(path, 'r');
+  try {
+    const buf = Buffer.alloc(maxBytes);
+    const n = readSync(fd, buf, 0, maxBytes, 0);
+    return buf.subarray(0, n).toString('utf8');
+  } finally {
+    closeSync(fd);
+  }
+}
 
 /**
  * Theme name. github-dark is bundled with Shiki and matches the
@@ -113,8 +131,14 @@ export async function processCode(ctx) {
   const txtPath = join(diskDir, txtName);
 
   // Read the file. UTF-8 + replacement char so binary uploads that
-  // sneaked through the extension filter don't blow up the worker.
-  const raw = readFileSync(diskPath, 'utf8');
+  // sneaked through the extension filter don't blow up the worker. For an
+  // oversize file (uploads cap at 100MB) don't pull the whole thing into
+  // memory just to wrap it in <pre> — the preview is truncated anyway, so
+  // read at most a 1MB prefix.
+  const raw =
+    size > MAX_HIGHLIGHT_BYTES
+      ? readPrefix(diskPath, MAX_HIGHLIGHT_BYTES)
+      : readFileSync(diskPath, 'utf8');
   const lineCount = countLines(raw);
   const charCount = raw.length;
 

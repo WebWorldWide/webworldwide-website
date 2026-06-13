@@ -145,7 +145,9 @@ export async function readCappedText(res, maxBytes) {
     }
     chunks.push(value);
   }
-  // Use TextDecoder so we handle multi-byte UTF-8 cleanly.
+  // Decode the WHOLE byte stream at once — decoding each chunk
+  // independently corrupts any multi-byte UTF-8 character that straddles a
+  // chunk boundary.
   const decoder = new TextDecoder('utf-8');
-  return chunks.map((c) => decoder.decode(c, { stream: false })).join('');
+  return decoder.decode(Buffer.concat(chunks.map((c) => Buffer.from(c))));
 }
