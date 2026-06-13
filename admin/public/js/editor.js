@@ -311,11 +311,14 @@
     while ((m = mdImg.exec(text)) !== null) {
       if (!m[1].trim()) n += 1;
     }
-    // Raw <img …> tags: flag when there's no alt="non-empty".
+    // Raw <img …> tags: flag when there's no non-empty alt. Handle double-,
+    // single-, and unquoted alt values so we don't over-count an image that
+    // actually has alt text written in another quoting style.
     const htmlImg = /<img\b[^>]*>/gi;
     while ((m = htmlImg.exec(text)) !== null) {
-      const alt = /\balt\s*=\s*"([^"]*)"/i.exec(m[0]);
-      if (!alt || !alt[1].trim()) n += 1;
+      const alt = /\balt\s*=\s*("([^"]*)"|'([^']*)'|([^\s">]+))/i.exec(m[0]);
+      const val = alt ? (alt[2] ?? alt[3] ?? alt[4] ?? '') : '';
+      if (!val.trim()) n += 1;
     }
     return n;
   }
@@ -1178,9 +1181,17 @@
         setZen(!document.body.classList.contains('distraction-free')),
       );
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.body.classList.contains('distraction-free')) {
-          setZen(false);
+        if (e.key !== 'Escape' || !document.body.classList.contains('distraction-free')) return;
+        // Don't steal Escape from an open overlay (history modal, image
+        // picker, command palette, find/replace) — let it close that first;
+        // only exit focus mode when Escape would otherwise do nothing.
+        if (e.defaultPrevented) return;
+        if (
+          document.querySelector('.modal:not([aria-hidden="true"]), .te-find-modal, .cmdk.open')
+        ) {
+          return;
         }
+        setZen(false);
       });
     }
 
