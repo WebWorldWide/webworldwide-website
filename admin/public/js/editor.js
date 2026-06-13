@@ -624,6 +624,7 @@
     });
   }
 
+  let versionReqSeq = 0;
   async function selectVersion(r, li) {
     const previewEl = $('history-preview');
     const restoreBtn = $('history-restore');
@@ -633,10 +634,14 @@
     li.classList.add('active');
     if (previewEl) previewEl.innerHTML = '<p class="te-history-hint">Loading…</p>';
     if (restoreBtn) restoreBtn.disabled = true;
+    // Guard against out-of-order responses: rapidly clicking rows could let
+    // a slow earlier fetch overwrite a newer selection's preview/restore.
+    const seq = ++versionReqSeq;
     try {
       const ver = await TE.fetchJSON(
         `/api/posts/${encodeURIComponent(currentFile)}/version/${r.source}/${encodeURIComponent(r.ref)}`,
       );
+      if (seq !== versionReqSeq) return; // a newer selection superseded this one
       selectedVersion = { ...r, data: ver.data || {}, content: ver.content || '' };
       const title = (ver.data && ver.data.title) || '(untitled)';
       if (previewEl) {
@@ -646,7 +651,7 @@
       }
       if (restoreBtn) restoreBtn.disabled = false;
     } catch (_err) {
-      if (previewEl)
+      if (seq === versionReqSeq && previewEl)
         previewEl.innerHTML = '<p class="te-history-hint">Couldn’t load this version.</p>';
     }
   }

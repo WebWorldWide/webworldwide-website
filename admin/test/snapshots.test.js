@@ -89,3 +89,38 @@ test('prunes to the 15 most-recent per file', skipOpts(), () => {
 test('listSnapshots is per-file and newest-first', skipOpts(), () => {
   assert.equal(snaps.listSnapshots('does-not-exist.md').length, 0);
 });
+
+test('a metadata-only change is NOT deduped (same body, different frontmatter)', skipOpts(), () => {
+  snaps.recordSnapshot(
+    'meta.md',
+    { data: { title: 'A', draft: true }, content: 'same body' },
+    5_000_000,
+  );
+  // Same body, different frontmatter (draft flipped), past the 60s window.
+  const second = snaps.recordSnapshot(
+    'meta.md',
+    { data: { title: 'A', draft: false }, content: 'same body' },
+    5_100_000,
+  );
+  assert.ok(second, 'frontmatter-only revision is kept');
+  assert.equal(snaps.listSnapshots('meta.md').length, 2);
+  // Truly identical (body + frontmatter) is still deduped.
+  const third = snaps.recordSnapshot(
+    'meta.md',
+    { data: { title: 'A', draft: false }, content: 'same body' },
+    5_200_000,
+  );
+  assert.equal(third, null);
+});
+
+test('renameSnapshots carries history to the new filename', skipOpts(), () => {
+  snaps.recordSnapshot('old-name.md', { content: 'v1' }, 6_000_000);
+  snaps.recordSnapshot('old-name.md', { content: 'v2' }, 6_100_000);
+  assert.equal(snaps.listSnapshots('old-name.md').length, 2);
+  snaps.renameSnapshots('old-name.md', 'new-name.md');
+  assert.equal(snaps.listSnapshots('old-name.md').length, 0, 'old name has none');
+  assert.equal(snaps.listSnapshots('new-name.md').length, 2, 'new name inherited them');
+  // No-op cases never throw.
+  snaps.renameSnapshots('new-name.md', 'new-name.md');
+  snaps.renameSnapshots('', 'x.md');
+});

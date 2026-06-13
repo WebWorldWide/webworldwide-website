@@ -47,17 +47,26 @@ export function recordSnapshot(filename, snap, now = Date.now()) {
   const d = db();
   try {
     const newest = d
-      .prepare('SELECT ts, content FROM post_snapshots WHERE filename = ? ORDER BY ts DESC LIMIT 1')
+      .prepare(
+        'SELECT ts, content, data_json FROM post_snapshots WHERE filename = ? ORDER BY ts DESC LIMIT 1',
+      )
       .get(filename);
     const content = snap?.content ?? '';
-    // Coalesce: skip if the last snapshot is recent OR byte-identical.
-    if (newest && (now - newest.ts < MIN_INTERVAL_MS || newest.content === content)) {
+    const dataJson = JSON.stringify(snap?.data || {});
+    // Coalesce: skip if the last snapshot is recent, OR identical in BOTH
+    // body and frontmatter (a metadata-only edit — e.g. a draft→publish
+    // flip or a title change — is still a revision worth keeping).
+    if (
+      newest &&
+      (now - newest.ts < MIN_INTERVAL_MS ||
+        (newest.content === content && newest.data_json === dataJson))
+    ) {
       return null;
     }
     const id = nanoid();
     d.prepare(
       'INSERT INTO post_snapshots (id, filename, ts, title, data_json, content) VALUES (?, ?, ?, ?, ?, ?)',
-    ).run(id, filename, now, snap?.title || null, JSON.stringify(snap?.data || {}), content);
+    ).run(id, filename, now, snap?.title || null, dataJson, content);
     // Prune to the most recent MAX_PER_FILE for this file.
     d.prepare(
       `DELETE FROM post_snapshots WHERE filename = ? AND id NOT IN (
@@ -70,6 +79,25 @@ export function recordSnapshot(filename, snap, now = Date.now()) {
     // not break a save.
     console.warn('[snapshots] record failed:', err instanceof Error ? err.message : err);
     return null;
+  }
+}
+
+/**
+ * Move a post's snapshot history to a new filename — called when a slug
+ * rename changes the post's on-disk name, so its History panel doesn't lose
+ * the pre-rename revisions. Idempotent; safe when there's nothing to move.
+ *
+ * @param {string} oldFilename
+ * @param {string} newFilename
+ */
+export function renameSnapshots(oldFilename, newFilename) {
+  if (!oldFilename || !newFilename || oldFilename === newFilename) return;
+  try {
+    db()
+      .prepare('UPDATE post_snapshots SET filename = ? WHERE filename = ?')
+      .run(newFilename, oldFilename);
+  } catch (err) {
+    console.warn('[snapshots] rename failed:', err instanceof Error ? err.message : err);
   }
 }
 

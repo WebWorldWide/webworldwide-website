@@ -20,7 +20,12 @@ import { writeFileAtomic } from '../utils/atomicWrite.js';
 import { invalidatePostRefs } from '../utils/postRefs.js';
 import { logActivity } from '../services/activity.js';
 import { getPostHistory, getPostAtCommit } from '../utils/git.js';
-import { recordSnapshot, listSnapshots, getSnapshot } from '../services/snapshots.js';
+import {
+  recordSnapshot,
+  listSnapshots,
+  getSnapshot,
+  renameSnapshots,
+} from '../services/snapshots.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 const router = Router();
@@ -475,6 +480,9 @@ router.put('/:filename', (req, res) => {
     writeFileAtomic(newPath, fileContent);
     if (oldFilename !== newFilename) {
       unlinkSync(oldPath);
+      // The post's identity moved to newFilename — carry its snapshot
+      // history along so the renamed post keeps its revisions.
+      renameSnapshots(oldFilename, newFilename);
     }
     invalidatePostRefs();
     invalidatePostsCache();
