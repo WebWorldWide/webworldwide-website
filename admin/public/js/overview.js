@@ -58,10 +58,8 @@
   }
 
   function renderGreeting() {
-    const h = new Date().getHours();
-    const part = h < 5 ? 'night' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
-    const el = $('ov-greeting');
-    if (el) el.innerHTML = `Good <em>${part}</em>, operator.`;
+    // Heading is a plain, purposeful "Overview" (set in index.html). The
+    // date line below carries the friendly context — no cutesy copy.
   }
 
   async function loadStats() {
@@ -134,7 +132,7 @@
         .sort((a, b) => new Date(b.modified || b.date) - new Date(a.modified || a.date))
         .slice(0, 4);
       if (!drafts.length) {
-        draftsBody.innerHTML = `<div class="empty"><div class="e-mark">✓</div><div class="e-text">No drafts in flight — start something new.</div></div>`;
+        draftsBody.innerHTML = `<div class="empty"><div class="e-mark">✓</div><div class="e-text">No drafts.</div></div>`;
       } else {
         draftsBody.innerHTML = drafts
           .map((p) => {
@@ -212,7 +210,7 @@
 
     needsBody.innerHTML = items.length
       ? items.join('')
-      : `<div class="empty"><div class="e-mark">✓</div><div class="e-text">All clear — nothing needs you.</div></div>`;
+      : `<div class="empty"><div class="e-mark">✓</div><div class="e-text">All clear.</div></div>`;
   }
 
   function init() {

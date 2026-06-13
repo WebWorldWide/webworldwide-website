@@ -21,11 +21,11 @@
 :root,
 [data-theme="dark"],
 [data-theme="light"] {
-  --accent: var(--cherry-strong);
-  --accent-soft: rgb(236 90 43 / 12%);
-  --accent-glow: rgb(236 90 43 / 34%);
+  --accent: var(--sky-deep);
+  --accent-soft: rgb(30 104 240 / 12%);
+  --accent-glow: rgb(30 104 240 / 34%);
   --accent-on: #ffffff;
-  --selection: rgb(236 90 43 / 25%);
+  --selection: rgb(30 104 240 / 25%);
   --warn: #b87a16;
   --warn-soft: rgb(214 143 30 / 16%);
   --warn-glow: rgb(214 143 30 / 32%);

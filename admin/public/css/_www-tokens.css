@@ -45,19 +45,22 @@
   --line-www: rgb(14, 41, 96, 0.18);
   --line-strong-www: rgb(14, 41, 96, 0.42);
 
-  /* Accent family (see header note) */
+  /* Accent family — the brand BLUE (matches the public site's --sky), in
+     the two-tier WCAG arrangement: --accent (sky-deep #1450c8, 7.6:1 with
+     white text) for text + any fill carrying white text; --accent-bg (sky
+     #1e68f0) is decoration-only. Cherry stays defined for warm decor. */
   --cherry: #ec5a2b;
   --cherry-deep: #c8430f;
   --cherry-strong: #b04708;
-  --accent: var(--cherry-strong);
-  --accent-bg: var(--cherry);
-  --accent-deep: var(--cherry-deep);
+  --accent: var(--sky-deep);
+  --accent-bg: var(--sky);
+  --accent-deep: #103a8e;
   /* Hover tier for AA accent FILLS (white text): darker than
      --accent so the hover keeps ≥4.5:1. */
-  --accent-fill-hover: #8f3a06;
-  --accent-soft: rgb(236, 90, 43, 0.12);
-  --accent-line: rgb(236, 90, 43, 0.32);
-  --accent-glow: rgb(236, 90, 43, 0.34);
+  --accent-fill-hover: #0f3e9c;
+  --accent-soft: rgb(30, 104, 240, 0.12);
+  --accent-line: rgb(30, 104, 240, 0.32);
+  --accent-glow: rgb(30, 104, 240, 0.34);
   --accent-on: #ffffff;
   --fg-on-accent: var(--accent-on);
   --selection: rgb(236, 90, 43, 0.25);

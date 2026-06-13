@@ -3657,6 +3657,50 @@ export function mount(rootEl, initialMarkdown, options) {
     ),
     align_full: TB_ICON('<rect x="3" y="5" width="18" height="10" rx="1"/><path d="M3 19h18"/>'),
     align_none: TB_ICON('<path d="M3 6h13M3 12h18M3 18h10"/>'),
+    // Inline marks + blocks — one consistent line-icon family (Lucide-style)
+    // so the toolbar reads as a single set, not a mix of letters and glyphs.
+    bold: TB_ICON(
+      '<path d="M6 5h7a3.5 3.5 0 0 1 0 7H6z"/><path d="M6 12h8a3.5 3.5 0 0 1 0 7H6z"/>',
+    ),
+    italic: TB_ICON(
+      '<line x1="19" y1="5" x2="11" y2="5"/><line x1="13" y1="19" x2="5" y2="19"/><line x1="15" y1="5" x2="9" y2="19"/>',
+    ),
+    underline: TB_ICON('<path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="5" y1="20" x2="19" y2="20"/>'),
+    strike: TB_ICON(
+      '<path d="M16 5H10a3 3 0 0 0-2.7 4.3"/><path d="M13 13a3.5 3.5 0 0 1-1 7H8"/><line x1="4" y1="12" x2="20" y2="12"/>',
+    ),
+    code: TB_ICON('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
+    h1: TB_ICON(
+      '<path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="m17 11 3-1.5V18"/>',
+    ),
+    h2: TB_ICON(
+      '<path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17 10c0-1 .9-2 2.2-2s2.3 1 2.3 2.2c0 1.6-2 2.6-4.5 5.8h4.5"/>',
+    ),
+    h3: TB_ICON(
+      '<path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.2 9.3c.4-.7 1.2-1.3 2.3-1.3 1.3 0 2.3.8 2.3 1.9 0 1-.8 1.7-1.9 1.8 1.2.1 2.1.8 2.1 1.9 0 1.2-1.1 2.1-2.5 2.1-1.2 0-2.1-.6-2.5-1.4"/>',
+    ),
+    paragraph: TB_ICON(
+      '<path d="M13 5v14"/><path d="M17 5v14"/><path d="M17 5H9.5a4.5 4.5 0 0 0 0 9H13"/>',
+    ),
+    quote: TB_ICON(
+      '<path d="M10 11H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7c0 2.2-1.2 3.4-3 4"/><path d="M20 11h-5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7c0 2.2-1.2 3.4-3 4"/>',
+    ),
+    list_bullet: TB_ICON(
+      '<line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.1"/><circle cx="4" cy="12" r="1.1"/><circle cx="4" cy="18" r="1.1"/>',
+    ),
+    list_ordered: TB_ICON(
+      '<line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6.5 17.5c0-.6-.5-1-1.2-1s-1.3.4-1.3 1M4 20h2.5"/>',
+    ),
+    list_task: TB_ICON(
+      '<path d="m3 5 1.4 1.4L7 4"/><path d="m3 12 1.4 1.4L7 10"/><path d="m3 19 1.4 1.4L7 17"/><line x1="11" y1="5" x2="21" y2="5"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="11" y1="19" x2="21" y2="19"/>',
+    ),
+    table: TB_ICON(
+      '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="4" x2="9" y2="20"/>',
+    ),
+    math: TB_ICON('<path d="M18 5V4H6l6 8-6 8h12v-1"/>'),
+    code_block: TB_ICON(
+      '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m9 10-2 2 2 2"/><path d="m15 10 2 2-2 2"/>',
+    ),
   };
   function tbBtn(spec) {
     const btn = document.createElement('button');
@@ -3731,6 +3775,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Bold',
       shortcut: `${mod}+B`,
       glyph: 'B',
+      icon: 'bold',
       className: 'te-tb-bold',
       active: () => editor.isActive('bold'),
       run: () => editor.chain().focus().toggleBold().run(),
@@ -3741,6 +3786,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Italic',
       shortcut: `${mod}+I`,
       glyph: 'I',
+      icon: 'italic',
       className: 'te-tb-italic',
       active: () => editor.isActive('italic'),
       run: () => editor.chain().focus().toggleItalic().run(),
@@ -3751,6 +3797,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Underline',
       shortcut: `${mod}+${shift}+U`,
       glyph: 'U',
+      icon: 'underline',
       className: 'te-tb-underline',
       active: () => editor.isActive('underline'),
       run: () => editor.chain().focus().toggleUnderline().run(),
@@ -3761,6 +3808,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Strikethrough',
       shortcut: `${mod}+${shift}+X`,
       glyph: 'S',
+      icon: 'strike',
       className: 'te-tb-strike',
       active: () => editor.isActive('strike'),
       run: () => editor.chain().focus().toggleStrike().run(),
@@ -3771,6 +3819,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Inline code',
       shortcut: `${mod}+E`,
       glyph: '</>',
+      icon: 'code',
       className: 'te-tb-code',
       active: () => editor.isActive('code'),
       run: () => editor.chain().focus().toggleCode().run(),
@@ -3807,6 +3856,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Heading 1',
       shortcut: `${mod}+${alt}+1`,
       glyph: 'H1',
+      icon: 'h1',
       active: () => editor.isActive('heading', { level: 1 }),
       run: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
     }),
@@ -3816,6 +3866,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Heading 2',
       shortcut: `${mod}+${alt}+2`,
       glyph: 'H2',
+      icon: 'h2',
       active: () => editor.isActive('heading', { level: 2 }),
       run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
     }),
@@ -3825,6 +3876,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Heading 3',
       shortcut: `${mod}+${alt}+3`,
       glyph: 'H3',
+      icon: 'h3',
       active: () => editor.isActive('heading', { level: 3 }),
       run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
     }),
@@ -3834,6 +3886,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Paragraph',
       shortcut: `${mod}+${alt}+0`,
       glyph: '¶',
+      icon: 'paragraph',
       active: () => editor.isActive('paragraph') && !editor.isActive('heading'),
       run: () => editor.chain().focus().setParagraph().run(),
     }),
@@ -3843,6 +3896,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Blockquote',
       shortcut: `${mod}+${shift}+B`,
       glyph: '“”',
+      icon: 'quote',
       active: () => editor.isActive('blockquote'),
       run: () => editor.chain().focus().toggleBlockquote().run(),
     }),
@@ -3857,6 +3911,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Bullet list',
       shortcut: `${mod}+${shift}+8`,
       glyph: '•',
+      icon: 'list_bullet',
       active: () => editor.isActive('bulletList'),
       run: () => editor.chain().focus().toggleBulletList().run(),
     }),
@@ -3866,6 +3921,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Ordered list',
       shortcut: `${mod}+${shift}+7`,
       glyph: '1.',
+      icon: 'list_ordered',
       active: () => editor.isActive('orderedList'),
       run: () => editor.chain().focus().toggleOrderedList().run(),
     }),
@@ -3875,6 +3931,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Task list',
       shortcut: `${mod}+${shift}+9`,
       glyph: '☑',
+      icon: 'list_task',
       active: () => editor.isActive('taskList'),
       run: () => editor.chain().focus().toggleTaskList().run(),
     }),
@@ -4010,6 +4067,7 @@ export function mount(rootEl, initialMarkdown, options) {
       label: 'Math (inline)',
       shortcut: '',
       glyph: '∑',
+      icon: 'math',
       active: () => editor.isActive('mathInline') || editor.isActive('mathBlock'),
       run: () => {
         editor
