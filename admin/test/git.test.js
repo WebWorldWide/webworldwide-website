@@ -142,3 +142,25 @@ test('extractChangedPostsFromDiff parses add/modify/rename and ignores deletes',
   assert.deepEqual(extractChangedPostsFromDiff(''), []);
   assert.deepEqual(extractChangedPostsFromDiff(null), []);
 });
+
+test('publishChanges recovers an orphaned commit a prior push failed to send', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+
+  // Simulate the aftermath of a transient push failure: a real commit
+  // exists locally on top of origin/main but was never pushed. Scope to
+  // site/ exactly as the publish flow does, so the dirty container layout
+  // (admin/ "deleted") doesn't sneak phantom deletions into the commit.
+  writeFileSync(join(containerDir, 'site/content/posts/orphan.md'), 'recovered post\n');
+  git(containerDir, 'add', 'site');
+  git(containerDir, 'commit', '-m', 'orphaned by a failed push');
+
+  const originBefore = git(originDir, 'rev-parse', 'main').trim();
+  const headLocal = git(containerDir, 'rev-parse', 'HEAD').trim();
+  assert.notEqual(originBefore, headLocal, 'precondition: local is ahead of origin');
+
+  // Nothing NEW is staged, yet publishChanges must still push the orphan.
+  const result = await publishChanges();
+  assert.equal(result.success, true);
+  assert.equal(git(originDir, 'rev-parse', 'main').trim(), headLocal, 'orphan reached origin');
+  assert.ok(originTree().includes('site/content/posts/orphan.md'), 'orphan post shipped');
+});

@@ -383,6 +383,16 @@ app.use((req, res, next) => {
   res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
+// Final error handler — must be last in the chain. Express 5 forwards
+// async-route rejections here automatically; without it Express would
+// leak an HTML stack trace to the client. Log the detail server-side and
+// return a clean JSON 500 (or the error's own status, if it set one).
+app.use((err, req, res, _next) => {
+  console.error('[error]', req.method, req.path, '—', err?.stack || err?.message || err);
+  if (res.headersSent) return;
+  res.status(err?.status || err?.statusCode || 500).json({ error: 'internal_error' });
+});
+
 // Export SITE_DIR (+ the app, for the boot smoke test) for use elsewhere.
 export { SITE_DIR, app };
 
@@ -391,6 +401,21 @@ export { SITE_DIR, app };
 // relies on to catch registration-time crashes (e.g. an Express-incompatible
 // route) that per-router unit tests never exercise.
 if (process.env.NODE_ENV !== 'test') {
+  // Process-level safety nets. The CMS does fire-and-forget work
+  // (un-awaited logActivity, the remark42 poller, the conversion worker)
+  // whose rejections would otherwise be unhandled.
+  process.on('unhandledRejection', (reason) => {
+    // Log and keep serving — a single stray rejection must never take the
+    // whole CMS down for the day.
+    console.error('[fatal] unhandledRejection:', reason);
+  });
+  process.on('uncaughtException', (err) => {
+    // After an uncaught throw the process state is undefined; exit so the
+    // container's `restart: unless-stopped` policy hands us a clean one.
+    console.error('[fatal] uncaughtException — exiting for a clean restart:', err);
+    process.exit(1);
+  });
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  ■ Web World Wide CMS`);
     console.log(`  ├─ Admin: http://localhost:${PORT}`);

@@ -12,10 +12,11 @@
  */
 
 import { Router } from 'express';
-import { readdirSync, readFileSync, writeFileSync, unlinkSync, statSync } from 'fs';
+import { readdirSync, readFileSync, unlinkSync, statSync } from 'fs';
 import path, { join } from 'path';
 import crypto from 'crypto';
 import { parsePost, serializePost, validateForPublish } from '../utils/frontmatter.js';
+import { writeFileAtomic } from '../utils/atomicWrite.js';
 import { invalidatePostRefs } from '../utils/postRefs.js';
 import { logActivity } from '../services/activity.js';
 
@@ -136,7 +137,7 @@ router.post('/bulk', (req, res) => {
           data.draft = true;
         }
 
-        writeFileSync(filePath, serializePost(data, content || ''));
+        writeFileAtomic(filePath, serializePost(data, content || ''));
         ok.push(filename);
       } catch (err) {
         errors.push({ filename, error: err.message || 'failed' });
@@ -195,7 +196,7 @@ router.post('/:filename/duplicate', (req, res) => {
     delete newData.publish_at;
     newData.date = new Date().toISOString();
 
-    writeFileSync(join(postsDir, newFilename), serializePost(newData, content || ''));
+    writeFileAtomic(join(postsDir, newFilename), serializePost(newData, content || ''));
     invalidatePostRefs();
     logActivity({ req, action: 'post.duplicate', target: newFilename, meta: { from: src } });
 
@@ -254,9 +255,14 @@ router.post('/:filename/preview', (req, res) => {
 router.get('/:filename', (req, res) => {
   try {
     const safeFilename = path.basename(req.params.filename);
-    const fileContent = readFileSync(join(postsDir, safeFilename), 'utf-8');
+    const filePath = join(postsDir, safeFilename);
+    const fileContent = readFileSync(filePath, 'utf-8');
     const { data, content } = parsePost(fileContent);
-    res.json({ data, content });
+    // `mtime` is the optimistic-concurrency token: the editor sends it
+    // back on save so the server can refuse to clobber a newer copy
+    // written by another tab/device/the scheduler in the meantime.
+    const mtime = statSync(filePath).mtimeMs;
+    res.json({ data, content, mtime });
   } catch (_err) {
     res.status(404).json({ error: 'Post not found' });
   }
@@ -307,11 +313,12 @@ router.post('/', (req, res) => {
     }
 
     const fileContent = serializePost(data, content || '');
-    writeFileSync(join(postsDir, filename), fileContent);
+    const createPath = join(postsDir, filename);
+    writeFileAtomic(createPath, fileContent);
     invalidatePostRefs();
     logActivity({ req, action: 'post.create', target: filename });
 
-    res.json({ success: true, filename, slug });
+    res.json({ success: true, filename, slug, mtime: statSync(createPath).mtimeMs });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create post' });
@@ -321,18 +328,48 @@ router.post('/', (req, res) => {
 // UPDATE post
 router.put('/:filename', (req, res) => {
   try {
-    const { data, content } = req.body;
+    const { data, content, baseMtime } = req.body;
     const oldFilename = path.basename(req.params.filename);
     const rawSlug = data.slug || oldFilename.replace('.md', '');
     const slug = path.basename(rawSlug);
     const newFilename = `${slug}.md`;
+    const oldPath = join(postsDir, oldFilename);
+    const newPath = join(postsDir, newFilename);
 
-    // Validate publish_at only when first being set on an existing post
-    // (a writer editing a scheduled post with a past timestamp is a
-    // common "I forgot to update" case — we don't block in that case,
-    // the scheduler will simply pick it up on its next tick).
-    if (data.publish_at && !data.draft) {
-      // publish_at only matters for drafts; ignore for live posts.
+    // Optimistic concurrency: if the client tells us which version it
+    // loaded (`baseMtime`), refuse to overwrite a copy that changed on
+    // disk since — another tab/device, or the scheduler flipping a
+    // scheduled draft live. Without it we'd silently clobber their work.
+    if (typeof baseMtime === 'number') {
+      try {
+        const current = statSync(oldPath).mtimeMs;
+        // 1ms slack for filesystem mtime granularity.
+        if (current > baseMtime + 1) {
+          return res.status(409).json({
+            error: 'conflict',
+            message:
+              'This post changed since you opened it (another tab, device, or the scheduler). Reload to get the latest before saving.',
+            currentMtime: current,
+          });
+        }
+      } catch {
+        /* old file vanished — fall through; the write recreates it */
+      }
+    }
+
+    // A slug rename must NEVER clobber a different existing post. CREATE
+    // guards this; UPDATE must too, or renaming post A's slug onto B's
+    // would destroy B.
+    if (newFilename !== oldFilename) {
+      try {
+        statSync(newPath);
+        return res.status(409).json({
+          error: 'slug_taken',
+          message: `A different post already uses the slug "${slug}". Choose another.`,
+        });
+      } catch {
+        /* target free — good */
+      }
     }
 
     // Single-source-of-truth schema check (shared with Astro build).
@@ -344,17 +381,16 @@ router.put('/:filename', (req, res) => {
 
     const fileContent = serializePost(data, content || '');
 
-    // Write new content
-    writeFileSync(join(postsDir, newFilename), fileContent);
-
-    // Delete old file if name changed
+    // Write new content atomically (temp + rename), then drop the old
+    // file if the slug changed.
+    writeFileAtomic(newPath, fileContent);
     if (oldFilename !== newFilename) {
-      unlinkSync(join(postsDir, oldFilename));
+      unlinkSync(oldPath);
     }
     invalidatePostRefs();
     logActivity({ req, action: 'post.update', target: newFilename });
 
-    res.json({ success: true, filename: newFilename, slug });
+    res.json({ success: true, filename: newFilename, slug, mtime: statSync(newPath).mtimeMs });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update post' });
