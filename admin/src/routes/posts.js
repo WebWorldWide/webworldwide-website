@@ -19,6 +19,8 @@ import { parsePost, serializePost, validateForPublish } from '../utils/frontmatt
 import { writeFileAtomic } from '../utils/atomicWrite.js';
 import { invalidatePostRefs } from '../utils/postRefs.js';
 import { logActivity } from '../services/activity.js';
+import { getPostHistory, getPostAtCommit } from '../utils/git.js';
+import { recordSnapshot, listSnapshots, getSnapshot } from '../services/snapshots.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 const router = Router();
@@ -271,6 +273,57 @@ router.post('/:filename/preview', (req, res) => {
   }
 });
 
+/**
+ * GET /api/posts/:filename/history
+ *
+ * Revision history for the editor's History panel: published versions
+ * from git (newest first) plus recent local pre-save snapshots (covers
+ * drafts). Both are restorable via the version endpoint below.
+ */
+router.get('/:filename/history', async (req, res) => {
+  try {
+    const filename = path.basename(req.params.filename);
+    const [git, snapshots] = await Promise.all([
+      getPostHistory(filename),
+      Promise.resolve(listSnapshots(filename)),
+    ]);
+    res.json({ git, snapshots });
+  } catch (err) {
+    console.error('[posts] history failed:', err);
+    res.status(500).json({ error: 'history_failed', message: err.message });
+  }
+});
+
+/**
+ * GET /api/posts/:filename/version/:source/:ref
+ *
+ * The full {data, content} of a historical version — `source` is `git`
+ * (ref = commit hash) or `snapshot` (ref = snapshot id). The editor loads
+ * the result as unsaved changes so a restore is always reviewed before it
+ * becomes current (never a silent server-side overwrite).
+ */
+router.get('/:filename/version/:source/:ref', async (req, res) => {
+  try {
+    const filename = path.basename(req.params.filename);
+    const { source, ref } = req.params;
+    if (source === 'git') {
+      const raw = await getPostAtCommit(filename, ref);
+      if (raw === null) return res.status(404).json({ error: 'version_not_found' });
+      const { data, content } = parsePost(raw);
+      return res.json({ data, content, source, ref });
+    }
+    if (source === 'snapshot') {
+      const snap = getSnapshot(ref);
+      if (!snap) return res.status(404).json({ error: 'version_not_found' });
+      return res.json({ data: snap.data, content: snap.content, source, ref, ts: snap.ts });
+    }
+    return res.status(400).json({ error: 'unknown_source' });
+  } catch (err) {
+    console.error('[posts] version fetch failed:', err);
+    res.status(500).json({ error: 'version_failed', message: err.message });
+  }
+});
+
 // GET single post (left near the bottom so /bulk and /:filename/* land first)
 router.get('/:filename', (req, res) => {
   try {
@@ -401,6 +454,21 @@ router.put('/:filename', (req, res) => {
     }
 
     const fileContent = serializePost(data, content || '');
+
+    // Snapshot the PREVIOUS on-disk content before we overwrite it, so the
+    // History panel can roll back recent saves (covers drafts too). Best
+    // effort — never block a save on the safety net.
+    try {
+      const prev = readFileSync(oldPath, 'utf-8');
+      const parsedPrev = parsePost(prev);
+      recordSnapshot(oldFilename, {
+        title: parsedPrev.data?.title,
+        data: parsedPrev.data,
+        content: parsedPrev.content,
+      });
+    } catch {
+      /* first save / unreadable previous — nothing to snapshot */
+    }
 
     // Write new content atomically (temp + rename), then drop the old
     // file if the slug changed.
