@@ -9,7 +9,7 @@
  */
 import type { GetStaticPaths } from 'astro';
 import { getPosts, getPostContent } from '@/lib/posts';
-import { postSlug, postUrl, fmtDate, coverImage } from '@/lib/post-utils';
+import { postSlug, postUrl, fmtDate, coverImage, deriveExcerpt } from '@/lib/post-utils';
 import type { PostEntry } from '@/lib/post-utils';
 import { siteConfig } from '@/lib/site-config';
 import BaseLayout from '@layouts/BaseLayout.astro';
@@ -42,6 +42,11 @@ const slug = postSlug(post);
 // Hook line only when authored in the admin (frontmatter `excerpt`); otherwise
 // none — and no reading-time.
 const dek = post.data.excerpt ?? '';
+// SEO meta description: the authored excerpt, else an auto-derived one from
+// the body — so every post has a UNIQUE, relevant description with zero
+// effort (a blank excerpt no longer falls back to the generic site blurb).
+// The visible deck above stays authored-only by design.
+const metaDescription = dek || deriveExcerpt(post.body ?? '') || undefined;
 const cover = coverImage(post, post.body ?? '');
 
 // Real comments via Remark42. Use the local container in dev, prod host otherwise.
@@ -53,7 +58,7 @@ const remarkUrl =
 
 <BaseLayout
   title={post.data.title}
-  description={dek || undefined}
+  description={metaDescription}
   ogType="article"
   ogImage={cover?.src}
   ogImageAlt={cover?.alt}
