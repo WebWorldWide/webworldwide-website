@@ -52,18 +52,24 @@ async function pushMain(git, attempts = 3) {
 }
 
 /**
- * Count commits on HEAD that origin/main doesn't have yet. A failed push
- * leaves the commit local AND leaves the local `origin/main` ref stale,
- * so `origin/main..HEAD` reveals it WITHOUT a network round-trip — and
- * `rev-list` ignores worktree state, so the container's dirty layout
- * can't break it. Returns 0 on any error (never block a publish on this).
+ * Count commits on local `main` that origin/main doesn't have yet. A failed
+ * push leaves the commit local AND leaves the local `origin/main` ref stale,
+ * so `origin/main..main` reveals it WITHOUT a network round-trip — and
+ * `rev-list` ignores worktree state, so the container's dirty layout can't
+ * break it. Returns 0 on any error (never block a publish on this).
+ *
+ * We deliberately range over `main`, NOT `HEAD`: pushMain runs
+ * `git push origin main`, which moves the local `main` ref. If HEAD is ever
+ * on another branch (e.g. a shared bind-mounted .git checked out elsewhere),
+ * `origin/main..HEAD` would count unrelated commits and trigger a no-op push
+ * that falsely reports success. `main` matches exactly what the push moves.
  *
  * @param {import('simple-git').SimpleGit} git
  * @returns {Promise<number>}
  */
 async function countUnpushedCommits(git) {
   try {
-    const out = await git.raw(['rev-list', '--count', 'origin/main..HEAD']);
+    const out = await git.raw(['rev-list', '--count', 'origin/main..main']);
     return Number(String(out).trim()) || 0;
   } catch {
     return 0;
