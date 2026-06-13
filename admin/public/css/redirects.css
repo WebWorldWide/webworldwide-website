@@ -107,3 +107,63 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* Inline "add redirect" form (replaces the old triple window.prompt). */
+.te-redir-form {
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--bg-card, var(--bg-elev));
+  padding: 14px 16px;
+  margin: 0 16px 14px;
+}
+.te-redir-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 200px;
+  gap: 12px;
+}
+.te-redir-form .te-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.te-redir-form .te-field > span {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.te-redir-form input,
+.te-redir-form select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 100%;
+}
+.te-redir-form input:focus,
+.te-redir-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.te-redir-form-err {
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 11px;
+  min-height: 14px;
+  margin-top: 8px;
+}
+.te-redir-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+@media (max-width: 640px) {
+  .te-redir-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -77,6 +77,56 @@
     `;
   }
 
+  // Inline validation. URL/email fields are optional (empty is fine), but a
+  // non-empty value must be well-formed — a typo'd analytics or comments URL
+  // would silently break the live site otherwise.
+  function setFieldError(input, msg) {
+    const label = input.closest('.te-field');
+    if (!label) return;
+    let err = label.querySelector('.te-field-err');
+    if (msg) {
+      if (!err) {
+        err = document.createElement('small');
+        err.className = 'te-field-err';
+        label.appendChild(err);
+      }
+      err.textContent = msg;
+      input.setAttribute('aria-invalid', 'true');
+    } else if (err) {
+      err.remove();
+      input.removeAttribute('aria-invalid');
+    }
+  }
+
+  function validUrl(v) {
+    try {
+      const u = new URL(v);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  function validate() {
+    const root = document.getElementById('settings-form');
+    if (!root) return { ok: true };
+    let firstBad = null;
+    root.querySelectorAll('input').forEach((el) => {
+      const input = /** @type {HTMLInputElement} */ (el);
+      const v = input.value.trim();
+      setFieldError(input, '');
+      if (!v) return; // optional
+      if (input.type === 'url' && !validUrl(v)) {
+        setFieldError(input, 'Enter a full URL (https://…).');
+        if (!firstBad) firstBad = input;
+      } else if (input.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+        setFieldError(input, 'Enter a valid email address.');
+        if (!firstBad) firstBad = input;
+      }
+    });
+    return { ok: !firstBad, firstBad };
+  }
+
   function collect() {
     const root = document.getElementById('settings-form');
     if (!root) return { hugo: {}, author: {} };
@@ -101,6 +151,12 @@
   }
 
   async function save() {
+    const v = validate();
+    if (!v.ok) {
+      window.TE.toast('Fix the highlighted fields before saving.', 'warn');
+      if (v.firstBad) v.firstBad.focus();
+      return;
+    }
     const btn = document.getElementById('btn-save-settings');
     if (btn) /** @type {HTMLButtonElement} */ (btn).disabled = true;
     try {
