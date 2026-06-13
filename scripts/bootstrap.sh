@@ -442,8 +442,16 @@ $CRON_MARKER backup (daily 2am)
 0 2 * * * $APP_DIR/scripts/backup.sh >> /var/log/wwwide-backup.log 2>&1
 $CRON_MARKER auto-update (every 5 min)
 */5 * * * * $APP_DIR/scripts/auto-update.sh >> /var/log/wwwide-update.log 2>&1
-$CRON_MARKER maintenance (sun 3am)
+$CRON_MARKER maintenance-daily (4am)
+0 4 * * * $APP_DIR/scripts/maintenance-daily.sh >> /var/log/wwwide-maint.log 2>&1
+$CRON_MARKER maintenance weekly (sun 3am)
 0 3 * * 0 $APP_DIR/scripts/maintenance.sh >> /var/log/wwwide-maint.log 2>&1
+$CRON_MARKER maintenance-monthly (1st, 3:30am)
+30 3 1 * * $APP_DIR/scripts/maintenance-monthly.sh >> /var/log/wwwide-maint.log 2>&1
+$CRON_MARKER maintenance-yearly (Jan 1, 4:30am)
+30 4 1 1 * $APP_DIR/scripts/maintenance-yearly.sh >> /var/log/wwwide-maint.log 2>&1
+$CRON_MARKER watchdog self-heal (every 5 min)
+*/5 * * * * $APP_DIR/scripts/watchdog.sh >> /var/log/wwwide-watchdog.log 2>&1
 $CRON_MARKER promote-scheduled (every 5 min)
 */5 * * * * $APP_DIR/scripts/promote-scheduled.sh >> /var/log/wwwide-promote.log 2>&1
 $CRON_MARKER dump-webmentions (every 15 min)
