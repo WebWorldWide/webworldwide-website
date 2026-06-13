@@ -4,7 +4,7 @@ date: 2026-01-01T16:00:04.000Z
 slug: "the-little-things"
 draft: false
 ---
-![LG Freedom II Phone](/images/2026/01/image.webp)
+![LG Freedom II Phone](/images/2026/01/the-little-things.webp)
 
 Remember when everything was small? Cellphones were little flippy things that would float in your pocket. The Nintendo DS or GameBoy were these tiny little game consoles that you could bring with you anywhere. Everything now is big!
 

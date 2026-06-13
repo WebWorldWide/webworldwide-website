@@ -5,7 +5,7 @@ draft: false
 date: '2026-01-02T12:49:00.000Z'
 excerpt: ''
 ---
-![Cult of Mac logo](/images/2026/01/image-1.webp)
+![Cult of Mac logo](/images/2026/01/tech-cults.webp)
 
 If there is a company, product, or brand in the tech space, you can guarantee there are people who stand with it in an almost cult-like fashion. The biggest example of this is just Apple and its legions of fans who identify with the brand and its vision. Or it can be the Crypto people who believe that it is the future of currency, or AR/VR evangelists who claim we will live in a fully digital world. If it is 'tech', then the cult following will follow.
 

@@ -4,7 +4,7 @@ date: 2025-12-30T12:52:34.000Z
 slug: "smart-tvs-are-gonna-make-me-lose-it"
 draft: false
 ---
-![Panasonic TV input label screen on non-smart TV](/images/2025/12/image-21.webp)
+![Panasonic TV input label screen on non-smart TV](/images/2025/12/smart-tvs-are-gonna-make-me-lose-it.webp)
 
 I have an Amazon Fire TV. Not the stick; the TV literally has Fire OS built into it. I got it back a while ago... maybe around 7 years at this point? Either way, the TV has been unbearably slow for *years* at this point. I love the TV itself; the color and sound are good for the unbelievable price I got it for on Prime Day all those years ago, but the actual TV software interface is basically unusable. Just trying to click from one box on the home grid to another has multiple seconds of lag. It is just infuriating when you want to watch something fast.
 

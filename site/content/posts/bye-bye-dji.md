@@ -4,7 +4,7 @@ date: 2025-12-23T13:40:20.000Z
 slug: "bye-bye-dji"
 draft: false
 ---
-![DJI Phantom 3](/images/2025/12/image-17.webp)
+![DJI Phantom 3](/images/2025/12/bye-bye-dji.webp)
 
 Today, [*The Verge* reported that the FCC drone ban is in effect](https://www.theverge.com/news/849460/fcc-foreign-drone-ban-dji-congress-deadline). This means that you can no longer buy DJI drones in the USA. In my opinion, the consumer drone market now is basically dead. If you wanted the de facto choice for aerial photography or even recreational drone use, it's gone.
 

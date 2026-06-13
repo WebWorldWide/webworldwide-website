@@ -5,7 +5,7 @@ draft: false
 date: '2025-12-28T13:39:00.000Z'
 excerpt: ''
 ---
-![Back of Acer Predator 21X laptop](/images/2025/12/image-19.webp)
+![Back of Acer Predator 21X laptop](/images/2025/12/laptops-have-never-been-more-exciting.webp)
 
 Moving on from my post from yesterday, talking about missing netbooks, I realized just how phenomenal our modern laptop world is right now. Basically, since 2020, we have had an influx of new laptop technology that has made the space so much better.
 
