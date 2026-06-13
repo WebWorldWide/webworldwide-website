@@ -562,6 +562,44 @@
       </div>
     </div>
 
+    <!-- Visual image picker (cover image, and reusable elsewhere). Replaces
+         the old "type a number from a list" prompt. -->
+    <div
+      class="modal"
+      id="image-picker-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="image-picker-title"
+    >
+      <div class="modal-card te-imgpick-card">
+        <div class="modal-head">
+          <h3 id="image-picker-title">Choose an image</h3>
+          <button
+            type="button"
+            class="btn ghost"
+            data-modal-close="image-picker-modal"
+            aria-label="Close"
+          >
+            <span class="ico" aria-hidden="true" data-icon="close"></span>
+          </button>
+        </div>
+        <div class="modal-body te-imgpick-body">
+          <input
+            type="search"
+            id="imgpick-search"
+            class="te-imgpick-search"
+            placeholder="Search images…"
+            aria-label="Search images"
+            autocomplete="off"
+          />
+          <div class="te-imgpick-grid" id="imgpick-grid" role="listbox" aria-label="Images">
+            <p class="te-history-hint">Loading…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="toast-root" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <script src="/js/a11y.js"></script>
