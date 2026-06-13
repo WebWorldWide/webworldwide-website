@@ -61,6 +61,9 @@
     logout: svg(
       '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
     ),
+    maximize: svg(
+      '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+    ),
     passkey: svg(
       '<circle cx="9" cy="9" r="4"/><path d="M14.5 9a4 4 0 1 0 4 4"/><path d="M2 21a7 7 0 0 1 11.5-5.4"/>',
     ),

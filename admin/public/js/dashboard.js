@@ -18,6 +18,7 @@
   // ── State ─────────────────────────────────────────────────
   let allPosts = [];
   let activeTab = 'all';
+  let sortKey = 'date-desc';
   let pendingDelete = null;
   let healthTimer = null;
 
@@ -72,6 +73,33 @@
     }
   }
 
+  // Sort the visible rows in place per the chosen key. Date is the API's
+  // default order; the others are client-side (personal-scale lists).
+  function sortPosts(list) {
+    const byDate = (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime();
+    const byTitle = (a, b) =>
+      String(a.title || a.filename).localeCompare(String(b.title || b.filename), undefined, {
+        sensitivity: 'base',
+      });
+    switch (sortKey) {
+      case 'date-asc':
+        list.sort((a, b) => byDate(b, a));
+        break;
+      case 'title-asc':
+        list.sort(byTitle);
+        break;
+      case 'title-desc':
+        list.sort((a, b) => byTitle(b, a));
+        break;
+      case 'words-desc':
+        list.sort((a, b) => (b.word_count || 0) - (a.word_count || 0));
+        break;
+      default: // date-desc
+        list.sort(byDate);
+    }
+    return list;
+  }
+
   function renderCounts() {
     const counts = { all: allPosts.length, draft: 0, scheduled: 0, published: 0 };
     for (const p of allPosts) counts[postStatus(p)]++;
@@ -102,6 +130,8 @@
         );
       });
     }
+
+    sortPosts(visible);
 
     $('posts-visible').textContent = `${visible.length} visible`;
     $('posts-foot-text').textContent = `Showing ${visible.length} of ${allPosts.length}`;
@@ -200,6 +230,13 @@
       search.addEventListener('input', () => {
         clearTimeout(t);
         t = setTimeout(renderPosts, 80);
+      });
+    }
+    const sortSel = $('posts-sort');
+    if (sortSel) {
+      sortSel.addEventListener('change', () => {
+        sortKey = sortSel.value || 'date-desc';
+        renderPosts();
       });
     }
     // Topbar search filters the posts table too
@@ -445,6 +482,11 @@
       set('inbox-blocked', '—');
     }
   }
+
+  // Expose a reload so posts-bulk.js can refresh the table in place
+  // instead of a full page reload (preserves tab + scroll + sort).
+  window.TE = window.TE || {};
+  window.TE.dashboard = { reload: loadPosts };
 
   // ── Boot ──────────────────────────────────────────────────
   function boot() {

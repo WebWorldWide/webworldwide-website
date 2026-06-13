@@ -18,7 +18,7 @@
   async function load() {
     const root = document.getElementById('redirects-table');
     if (!root) return;
-    root.textContent = 'Loading…';
+    root.innerHTML = '<div class="te-loading"><span class="te-spinner"></span> Loading…</div>';
     try {
       rows = await window.TE.fetchJSON('/api/redirects');
     } catch (err) {

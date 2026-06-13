@@ -447,7 +447,8 @@
         imgPickTimer = setTimeout(() => loadImgPickerGrid(search.value.trim()), 250);
       };
     }
-    if (grid) grid.innerHTML = '<p class="te-history-hint">Loading…</p>';
+    if (grid)
+      grid.innerHTML = '<p class="te-history-hint"><span class="te-spinner"></span> Loading…</p>';
     TE.openModal('image-picker-modal');
     loadImgPickerGrid('');
   }
@@ -564,7 +565,9 @@
     if (restoreBtn) restoreBtn.disabled = true;
     if (previewEl)
       previewEl.innerHTML = '<p class="te-history-hint">Select a version to preview it here.</p>';
-    if (listEl) listEl.innerHTML = '<li class="te-history-empty">Loading…</li>';
+    if (listEl)
+      listEl.innerHTML =
+        '<li class="te-history-empty"><span class="te-spinner"></span> Loading…</li>';
     TE.openModal('history-modal');
     let hist;
     try {
@@ -1158,6 +1161,23 @@
     if (btnHistory) btnHistory.addEventListener('click', openHistory);
     const btnRestore = $('history-restore');
     if (btnRestore) btnRestore.addEventListener('click', restoreSelected);
+
+    // Focus mode: hide the panels for a calm full-width writing surface.
+    const btnZen = $('btn-zen');
+    function setZen(on) {
+      document.body.classList.toggle('distraction-free', on);
+      if (btnZen) btnZen.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    if (btnZen) {
+      btnZen.addEventListener('click', () =>
+        setZen(!document.body.classList.contains('distraction-free')),
+      );
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.body.classList.contains('distraction-free')) {
+          setZen(false);
+        }
+      });
+    }
 
     // Keyboard: Cmd/Ctrl + S (fired from anywhere outside the editor).
     // Inside the editor, TipTap's keymap intercepts these first and
