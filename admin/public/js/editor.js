@@ -397,34 +397,72 @@
   // Phase 5e: pick a cover image from the media library (simple prompt
   // fallback when the modal picker isn't wired). Future iterations can
   // replace this with the full media library modal.
-  async function pickCover() {
+  // ── Visual image picker (cover image) ─────────────────────
+  // A real thumbnail grid with search, replacing the old "type a number"
+  // prompt. `onChoose(mediaItem)` fires when a tile is clicked.
+  let imgPickOnChoose = null;
+  let imgPickTimer = null;
+
+  async function loadImgPickerGrid(q) {
+    const grid = $('imgpick-grid');
+    if (!grid) return;
     try {
-      const list = await TE.fetchJSON('/api/media?type=image&limit=50');
+      const qs = new URLSearchParams({ type: 'image', limit: '60' });
+      if (q) qs.set('q', q);
+      const list = await TE.fetchJSON('/api/media?' + qs.toString());
       const items = list.items || [];
       if (!items.length) {
-        TE.toast('No images in library yet.', 'warn');
+        grid.innerHTML = `<p class="te-history-hint">${q ? 'No images match.' : 'No images in the library yet.'}</p>`;
         return;
       }
-      const choices = items
-        .slice(0, 20)
-        .map((m, i) => `${i + 1}. ${m.original_name || m.filename} (${m.url})`)
-        .join('\n');
-      const idx = Number(
-        window.prompt(`Pick an image (1-${Math.min(items.length, 20)}):\n\n${choices}`, '1'),
-      );
-      if (!Number.isFinite(idx) || idx < 1 || idx > items.length) return;
-      const m = items[idx - 1];
+      grid.innerHTML = '';
+      items.forEach((m) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'te-imgpick-item';
+        btn.setAttribute('role', 'option');
+        btn.title = m.original_name || m.filename || '';
+        btn.innerHTML =
+          `<img src="${TE.escape(m.url || '')}" alt="" loading="lazy" decoding="async" />` +
+          `<span class="te-imgpick-name">${TE.escape(m.original_name || m.filename || '')}</span>`;
+        btn.addEventListener('click', () => {
+          if (imgPickOnChoose) imgPickOnChoose(m);
+          TE.closeModal('image-picker-modal');
+        });
+        grid.appendChild(btn);
+      });
+    } catch (_err) {
+      grid.innerHTML = '<p class="te-history-hint">Couldn’t load images.</p>';
+    }
+  }
+
+  function openImagePicker(onChoose) {
+    imgPickOnChoose = onChoose;
+    const search = $('imgpick-search');
+    const grid = $('imgpick-grid');
+    if (search) {
+      search.value = '';
+      search.oninput = () => {
+        clearTimeout(imgPickTimer);
+        imgPickTimer = setTimeout(() => loadImgPickerGrid(search.value.trim()), 250);
+      };
+    }
+    if (grid) grid.innerHTML = '<p class="te-history-hint">Loading…</p>';
+    TE.openModal('image-picker-modal');
+    loadImgPickerGrid('');
+  }
+
+  function pickCover() {
+    openImagePicker((m) => {
       const coverEl = $('post-cover');
       const altEl = $('post-cover-alt');
       if (coverEl) coverEl.value = m.url || '';
-      // Prefill only from real library alt text — never the filename
-      // (an empty field + placeholder beats a filename-alt shipping).
+      // Prefill only from real library alt text — never the filename (an
+      // empty field + placeholder beats a filename-alt shipping).
       if (altEl && !altEl.value) altEl.value = m.alt_text || '';
       updateCoverPreview();
       markDirty();
-    } catch (err) {
-      TE.toast(err.message || 'Library load failed.', 'error');
-    }
+    });
   }
 
   // Phase 5e: load a template into a fresh editor when ?template=name.
