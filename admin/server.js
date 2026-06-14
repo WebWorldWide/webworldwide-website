@@ -179,6 +179,8 @@ app.use(
           'https://w.soundcloud.com',
           'https://codepen.io',
           'https://www.tiktok.com',
+          // Homepage editor "Live" preview iframes the published public site.
+          'https://webworldwide.online',
         ],
         'object-src': ["'none'"],
         'base-uri': ["'self'"],

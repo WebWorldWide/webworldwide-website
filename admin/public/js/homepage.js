@@ -176,6 +176,8 @@
   let open = 'hero';
   /** @type {'desktop' | 'phone'} */
   let device = 'desktop';
+  /** @type {'draft' | 'live'} — the unsaved-draft replica vs an iframe of the published site. */
+  let viewMode = 'draft';
   /** True after a successful Save until the next Publish. */
   let savedNotLive = false;
   let wired = false;
@@ -979,6 +981,20 @@
           b.setAttribute('aria-pressed', String(on));
         });
         renderPreview();
+        applyViewMode();
+        return;
+      }
+
+      // Source segmented control: draft replica ⇄ live published site.
+      const modeSeg = target.closest('[data-mode]');
+      if (modeSeg) {
+        viewMode = modeSeg.getAttribute('data-mode') === 'live' ? 'live' : 'draft';
+        document.querySelectorAll('.hp-seg-mode [data-mode]').forEach((b) => {
+          const on = b.getAttribute('data-mode') === viewMode;
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+        applyViewMode();
       }
     });
 
@@ -1014,6 +1030,29 @@
       draft && isDirty() ? 'You have unsaved homepage changes.' : null;
   }
 
+  /**
+   * Toggle the preview between the unsaved-draft replica and an iframe of the
+   * published site, keeping the device width in sync. The iframe src is set
+   * lazily on first switch to Live so it doesn't load until asked for.
+   */
+  function applyViewMode() {
+    const canvas = document.getElementById('hp-canvas');
+    const frame = /** @type {HTMLIFrameElement | null} */ (document.getElementById('hp-live'));
+    const label = document.getElementById('hp-pb-label');
+    const live = viewMode === 'live';
+    if (frame) {
+      frame.classList.toggle('phone', device === 'phone');
+      if (live && !frame.getAttribute('src')) frame.setAttribute('src', SITE_URL + '/');
+      frame.hidden = !live;
+    }
+    if (canvas) canvas.hidden = live;
+    if (label) {
+      label.innerHTML = live
+        ? '<span class="live" aria-hidden="true"></span>Live site · published'
+        : '<span class="live" aria-hidden="true"></span>Draft preview';
+    }
+  }
+
   function renderShell() {
     const el = root();
     if (!el) return;
@@ -1035,7 +1074,11 @@
         </div>
         <div class="hp-preview">
           <div class="hp-preview-bar">
-            <span class="pb-label"><span class="live" aria-hidden="true"></span>Live preview</span>
+            <span class="pb-label" id="hp-pb-label"><span class="live" aria-hidden="true"></span>Draft preview</span>
+            <div class="hp-seg hp-seg-mode" role="group" aria-label="Preview source">
+              <button type="button" class="on" data-mode="draft" aria-pressed="true">Draft</button>
+              <button type="button" data-mode="live" aria-pressed="false">Live</button>
+            </div>
             <div class="hp-seg" role="group" aria-label="Preview device">
               <button type="button" class="on" data-device="desktop" aria-pressed="true">Desktop</button>
               <button type="button" data-device="phone" aria-pressed="false">Phone</button>
@@ -1044,6 +1087,7 @@
           </div>
           <div class="hp-preview-scroll">
             <div class="hp-canvas" id="hp-canvas"></div>
+            <iframe class="hp-live" id="hp-live" title="Live site preview" loading="lazy" hidden></iframe>
           </div>
         </div>
       </div>`;
