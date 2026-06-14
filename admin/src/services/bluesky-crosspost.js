@@ -25,9 +25,10 @@
  */
 
 import { join } from 'path';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 
 import { parsePost, serializePost } from '../utils/frontmatter.js';
+import { writeFileAtomic } from '../utils/atomicWrite.js';
 import * as bluesky from './bluesky.js';
 import { logActivity } from './activity.js';
 
@@ -150,7 +151,10 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
       // is now idempotent.
       data.bluesky_uri = result.rootUri;
       const serialized = serializePost(data, parsed.content || '');
-      writeFileSync(fullPath, serialized, 'utf-8');
+      // Atomic + durable: this rewrites the published source-of-truth post.
+      // A torn write here would corrupt the post; a lost write would re-post
+      // a duplicate thread on the next run.
+      writeFileAtomic(fullPath, serialized);
       report.posted.push({ filename, uri: result.rootUri });
       logActivity({
         user: 'system',

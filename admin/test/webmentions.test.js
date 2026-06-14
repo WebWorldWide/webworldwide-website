@@ -344,6 +344,31 @@ test('validateMention rejects when source fetch fails', skipOpts(), async () => 
   assert.equal(row.status, 'rejected');
 });
 
+test('validateMention refuses an SSRF redirect to a private host', skipOpts(), async () => {
+  const target = 'https://webworldwide.online/hello-world/';
+  const source = 'https://evil.example/ssrf';
+  const internal = 'http://127.0.0.1:8080/admin';
+  let privateHit = false;
+  resetFetch();
+  // The (public, allowed) source 302-redirects toward an internal address.
+  registerFetch(source, () => new Response('', { status: 302, headers: { Location: internal } }));
+  // If the server ever follows the redirect to the internal host, flag it.
+  registerFetch(internal, () => {
+    privateHit = true;
+    return new Response('<p>secret</p>', { status: 200 });
+  });
+  const res = await fetch(`${publicUrl}/webmention`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ source, target }).toString(),
+  });
+  const body = await res.json();
+  await validateMention(body.id);
+  const row = await (await fetch(`${publicUrl}/webmention/${body.id}`)).json();
+  assert.equal(row.status, 'rejected', 'redirect to private host must be rejected');
+  assert.equal(privateHit, false, 'server must NOT fetch the internal redirect target');
+});
+
 // ── Admin approve / reject / feed ────────────────────────────────────
 
 test('admin approve + feed surfaces the mention', skipOpts(), async () => {

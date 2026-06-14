@@ -65,6 +65,7 @@ const TARGET_HOSTS = (process.env.WEBMENTION_HOSTS || 'webworldwide.online')
   .filter(Boolean);
 const FETCH_TIMEOUT_MS = Number(process.env.WEBMENTION_FETCH_TIMEOUT_MS || 8000);
 const MAX_BODY_BYTES = Number(process.env.WEBMENTION_MAX_BYTES || 5 * 1024 * 1024); // 5 MB
+const MAX_REDIRECTS = Number(process.env.WEBMENTION_MAX_REDIRECTS || 5);
 const STATUSES = /** @type {const} */ (['pending', 'approved', 'rejected']);
 
 // ── Test seam: pluggable fetch (defaults to globalThis.fetch). ───────
@@ -211,14 +212,35 @@ async function fetchSource(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetchImpl(url, {
-      headers: {
-        'User-Agent': 'WebWorldWide-Webmention/1.0 (+https://webworldwide.online)',
-        Accept: 'text/html, application/xhtml+xml',
-      },
-      redirect: 'follow',
-      signal: controller.signal,
-    });
+    // Follow redirects MANUALLY so every hop is re-screened. The one-time
+    // isPrivateHost check in validatePair only covers the *initial* host;
+    // with redirect:'follow' an attacker-controlled source could 3xx toward
+    // an internal address (LAN, loopback, link-local) and turn this public,
+    // unauthenticated endpoint into an SSRF/port-scan probe. Re-validate the
+    // protocol + host of the start URL and of each Location before fetching.
+    let current = url;
+    let res;
+    for (let hop = 0; ; hop++) {
+      const u = new URL(current);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+        throw new Error(`refusing non-http(s) URL: ${u.protocol}`);
+      }
+      if (isPrivateHost(u.hostname)) {
+        throw new Error('refusing fetch to a private/non-public host');
+      }
+      res = await fetchImpl(current, {
+        headers: {
+          'User-Agent': 'WebWorldWide-Webmention/1.0 (+https://webworldwide.online)',
+          Accept: 'text/html, application/xhtml+xml',
+        },
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+      const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+      if (!location) break;
+      if (hop >= MAX_REDIRECTS) throw new Error('too many redirects');
+      current = new URL(location, current).href; // resolve relative Location
+    }
     if (!res.ok) {
       throw new Error(`fetch returned ${res.status}`);
     }
