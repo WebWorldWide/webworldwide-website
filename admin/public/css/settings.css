@@ -6,6 +6,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  align-items: start;
 }
 
 .te-form-group {
@@ -27,34 +28,40 @@
 .te-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 10px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .te-field > span {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--fg-mute);
+  color: var(--ink-mute);
 }
 
 .te-field input,
 .te-field textarea {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  color: var(--fg);
-  font-family: var(--sans);
-  font-size: 13px;
-  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong-www);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  padding: 8px var(--space-3);
   outline: none;
   width: 100%;
+  min-height: 36px;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .te-field input:focus,
 .te-field textarea:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* Inline validation error under a field. */
@@ -63,14 +70,14 @@
 }
 .te-field-err {
   color: var(--danger);
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
   margin-top: 2px;
 }
 
 .te-field textarea {
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--font-data);
+  font-size: var(--fs-xs);
   resize: vertical;
   min-height: 56px;
 }

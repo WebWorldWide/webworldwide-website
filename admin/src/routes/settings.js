@@ -22,6 +22,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { parse as parseToml, apply as applyToml, flatToChanges } from '../utils/toml-roundtrip.js';
 import { logActivity } from '../services/activity.js';
+import { getFileHistory, getFileAtCommit } from '../utils/git.js';
+import { recordSnapshot, listSnapshots, getSnapshot } from '../services/snapshots.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 // Astro replaced Hugo in Phase 3: user-editable params live in site.toml.
@@ -29,6 +31,12 @@ const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 // staging deployment can still point at a different file if needed.
 const SETTINGS_TOML = process.env.SETTINGS_TOML || join(SITE_DIR, 'site.toml');
 const AUTHOR_JSON = join(SITE_DIR, 'data', 'author.json');
+
+// Revision-history keys for the homepage editor (mirrors the posts pattern).
+// `SITE_TOML_RELPATH` is the repo-relative path git logs/shows; the snapshot
+// key namespaces the homepage's local pre-save snapshots within site.toml.
+const HOMEPAGE_SNAPSHOT_KEY = 'site.toml#homepage';
+const SITE_TOML_RELPATH = 'site/site.toml';
 
 const router = Router();
 
@@ -142,7 +150,7 @@ const asStringArray = (v) => (Array.isArray(v) && v.every((x) => typeof x === 's
  * keys seed the default app tiles. Exported for tests.
  *
  * @param {Record<string, unknown> & { homepage?: any, site?: any, apps?: any }} parsed  output of toml-roundtrip parse()
- * @returns {{ hero: { words: string[], tagline: string }, apps: { items: { name: string, status: string, link: string, icon: string }[] }, videos: { episode: string, film_title: string }, socials: { order: string[], hidden: string[] }, blog_cta: { kicker: string, title: string, title_accent: string, url: string }, sections: Record<string, boolean>, section_order: string[] }}
+ * @returns {{ hero: { words: string[], tagline: string, subtitle: string }, apps: { items: { name: string, status: string, link: string, icon: string }[] }, videos: { episode: string, film_title: string }, socials: { order: string[], hidden: string[] }, blog_cta: { kicker: string, title: string, title_accent: string, url: string, description: string }, sections: Record<string, boolean>, section_order: string[] }}
  */
 export function normalizeHomepage(parsed) {
   const p = parsed || {};
@@ -152,6 +160,7 @@ export function normalizeHomepage(parsed) {
   const hero = {
     words: words && words.length ? words : ['Web', 'World', 'Wide'],
     tagline: asString(hp.hero?.tagline, asString(p.site?.tagline, 'W · W · W')),
+    subtitle: asString(hp.hero?.subtitle, ''),
   };
 
   let items = Array.isArray(hp.apps?.items) ? hp.apps.items : null;
@@ -206,6 +215,7 @@ export function normalizeHomepage(parsed) {
     title: asString(hp.blog_cta?.title, 'The Web World Wide'),
     title_accent: asString(hp.blog_cta?.title_accent, 'Blog'),
     url: asString(hp.blog_cta?.url) || '/blog/',
+    description: asString(hp.blog_cta?.description, ''),
   };
 
   /** @type {Record<string, boolean>} */
@@ -257,6 +267,9 @@ function validateHomepage(m) {
   }
   if (typeof m.hero?.tagline !== 'string' || m.hero.tagline.length > 80) {
     errors.push('hero.tagline must be a string of at most 80 characters');
+  }
+  if (typeof m.hero?.subtitle !== 'string' || m.hero.subtitle.length > 120) {
+    errors.push('hero.subtitle must be a string of at most 120 characters');
   }
 
   // apps
@@ -330,6 +343,9 @@ function validateHomepage(m) {
   ) {
     errors.push('blog_cta.url is required and must be /-relative or https://…');
   }
+  if (typeof m.blog_cta?.description !== 'string' || m.blog_cta.description.length > 160) {
+    errors.push('blog_cta.description must be a string of at most 160 characters');
+  }
 
   // sections
   if (!m.sections || typeof m.sections !== 'object' || Array.isArray(m.sections)) {
@@ -370,6 +386,7 @@ function mergeHomepage(current, body) {
   if (body.hero) {
     if ('words' in body.hero) merged.hero.words = body.hero.words;
     if ('tagline' in body.hero) merged.hero.tagline = body.hero.tagline;
+    if ('subtitle' in body.hero) merged.hero.subtitle = body.hero.subtitle;
   }
   if (body.apps && 'items' in body.apps) merged.apps.items = body.apps.items;
   if (body.videos) {
@@ -381,7 +398,7 @@ function mergeHomepage(current, body) {
     if ('hidden' in body.socials) merged.socials.hidden = body.socials.hidden;
   }
   if (body.blog_cta) {
-    for (const field of ['kicker', 'title', 'title_accent', 'url']) {
+    for (const field of ['kicker', 'title', 'title_accent', 'url', 'description']) {
       // eslint-disable-next-line security/detect-object-injection -- field from a constant list
       if (field in body.blog_cta) merged.blog_cta[field] = body.blog_cta[field];
     }
@@ -422,6 +439,9 @@ function homepageChanges(body, merged) {
     if ('tagline' in body.hero) {
       changes.push({ section: 'homepage.hero', key: 'tagline', value: merged.hero.tagline });
     }
+    if ('subtitle' in body.hero) {
+      changes.push({ section: 'homepage.hero', key: 'subtitle', value: merged.hero.subtitle });
+    }
   }
   if (body.apps && 'items' in body.apps) {
     const items = merged.apps.items.map((it) => ({
@@ -453,7 +473,7 @@ function homepageChanges(body, merged) {
     }
   }
   if (body.blog_cta) {
-    for (const field of ['kicker', 'title', 'title_accent', 'url']) {
+    for (const field of ['kicker', 'title', 'title_accent', 'url', 'description']) {
       if (field in body.blog_cta) {
         // eslint-disable-next-line security/detect-object-injection -- field from a constant list
         changes.push({ section: 'homepage.blog_cta', key: field, value: merged.blog_cta[field] });
@@ -522,6 +542,11 @@ router.patch('/homepage', (req, res) => {
     } catch (parseErr) {
       return res.status(400).json({ error: 'invalid_toml_after_edit', message: parseErr.message });
     }
+    // Snapshot the PREVIOUS homepage state before we overwrite site.toml, so
+    // the History panel can roll back recent saves (mirrors how posts
+    // snapshot before overwrite). Best effort — recordSnapshot swallows its
+    // own errors and never throws.
+    recordSnapshot(HOMEPAGE_SNAPSHOT_KEY, { title: 'Homepage', data: current, content: src });
     writeFileSync(SETTINGS_TOML, next);
     logActivity({
       req,
@@ -533,6 +558,59 @@ router.patch('/homepage', (req, res) => {
   } catch (err) {
     console.error('[settings] homepage patch failed:', err);
     res.status(500).json({ error: 'write_failed', message: err.message });
+  }
+});
+
+/**
+ * GET /api/settings/homepage/history
+ *
+ * Revision history for the homepage editor's History panel: published
+ * versions of site.toml from git (newest first) plus recent local pre-save
+ * snapshots. Both are restorable via the version endpoint below. Mirrors
+ * GET /api/posts/:filename/history. Registered AFTER the exact `/homepage`
+ * routes above; `/homepage/history` is a distinct (longer) path so Express
+ * never routes it into the exact `/homepage` handler — no shadowing.
+ */
+router.get('/homepage/history', async (req, res) => {
+  try {
+    const [git, snapshots] = await Promise.all([
+      getFileHistory(SITE_TOML_RELPATH),
+      Promise.resolve(listSnapshots(HOMEPAGE_SNAPSHOT_KEY)),
+    ]);
+    res.json({ git, snapshots });
+  } catch (err) {
+    console.error('[settings] homepage history failed:', err);
+    res.status(500).json({ error: 'history_failed', message: err.message });
+  }
+});
+
+/**
+ * GET /api/settings/homepage/version/:source/:ref
+ *
+ * The normalized homepage MODEL of a historical version — `source` is `git`
+ * (ref = commit hash; site.toml from that commit is parsed + normalized) or
+ * `snapshot` (ref = snapshot id; its stored model is returned as-is). The
+ * editor loads the result as unsaved changes so a restore is always
+ * reviewed before it becomes current (never a silent server-side overwrite).
+ * Mirrors GET /api/posts/:filename/version/:source/:ref.
+ */
+router.get('/homepage/version/:source/:ref', async (req, res) => {
+  try {
+    const { source, ref } = req.params;
+    if (source === 'git') {
+      const raw = await getFileAtCommit(SITE_TOML_RELPATH, ref);
+      if (!raw) return res.status(404).json({ error: 'version_not_found' });
+      return res.json(normalizeHomepage(parseToml(raw)));
+    }
+    if (source === 'snapshot') {
+      const snap = getSnapshot(ref);
+      if (!snap) return res.status(404).json({ error: 'version_not_found' });
+      return res.json(snap.data);
+    }
+    return res.status(400).json({ error: 'unknown_source' });
+  } catch (err) {
+    console.error('[settings] homepage version fetch failed:', err);
+    res.status(500).json({ error: 'version_failed', message: err.message });
   }
 });
 

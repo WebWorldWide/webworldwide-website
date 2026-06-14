@@ -23,7 +23,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-mute);
-  background: var(--glass-tint);
+  background: var(--surface-3);
 }
 
 .te-act-when {

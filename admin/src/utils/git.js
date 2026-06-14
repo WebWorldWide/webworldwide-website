@@ -299,6 +299,55 @@ export async function getPostAtCommit(filename, hash) {
   }
 }
 
+/**
+ * Commit history for an arbitrary repo-relative file, newest first — the
+ * generic counterpart to getPostHistory for non-post files (e.g. the
+ * homepage's `site/site.toml`). Returns the SAME per-commit shape as
+ * getPostHistory. `relPath` is a TRUSTED server constant, not user input,
+ * so there is no traversal guard. Returns [] on any error (e.g. a file
+ * never committed) so the UI degrades gracefully.
+ *
+ * @param {string} relPath repo-relative path, e.g. `site/site.toml`
+ * @param {number} [maxCount]
+ * @returns {Promise<Array<{ hash: string, date: string, message: string, author: string }>>}
+ */
+export async function getFileHistory(relPath, maxCount = 50) {
+  const git = getGitInstance();
+  try {
+    const log = await git.log({ file: relPath, maxCount });
+    return log.all.map((c) => ({
+      hash: c.hash,
+      date: c.date,
+      message: c.message,
+      author: c.author_name,
+    }));
+  } catch (err) {
+    console.warn('[git] file history failed:', err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
+/**
+ * The raw content of an arbitrary repo-relative file as of a specific
+ * commit — the generic counterpart to getPostAtCommit. The hash is
+ * validated as hex so it can never inject extra git args; `relPath` is a
+ * trusted server constant (no user path traversal). Returns null on any
+ * error.
+ *
+ * @param {string} relPath repo-relative path, e.g. `site/site.toml`
+ * @param {string} hash a commit SHA (7–40 hex chars)
+ * @returns {Promise<string | null>}
+ */
+export async function getFileAtCommit(relPath, hash) {
+  if (!/^[0-9a-f]{7,40}$/i.test(String(hash))) return null;
+  const git = getGitInstance();
+  try {
+    return await git.show([`${hash}:${relPath}`]);
+  } catch {
+    return null;
+  }
+}
+
 export async function getGitStatus() {
   const git = getGitInstance();
   try {

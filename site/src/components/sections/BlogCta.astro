@@ -6,12 +6,13 @@
  */
 import { homepage } from '@/lib/site-config';
 
-const { kicker, title, title_accent, url } = homepage.blog_cta;
+const { kicker, title, title_accent, url, description } = homepage.blog_cta;
 ---
 <a class="blog-cta" href={url}>
   <div>
     <div class="blog-cta-label">{kicker}</div>
     <div class="blog-cta-title">{title_accent ? <>{`${title} `}<em>{title_accent}</em></> : title}</div>
+    {description && <div class="blog-cta-desc">{description}</div>}
   </div>
   <span class="blog-cta-arrow" aria-hidden="true">→</span>
 </a>
@@ -57,6 +58,14 @@ const { kicker, title, title_accent, url } = homepage.blog_cta;
   .blog-cta-title em {
     font-style: italic;
     color: var(--cherry-strong);
+  }
+  .blog-cta-desc {
+    max-width: 60ch;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-soft);
   }
   .blog-cta-arrow {
     font-family: var(--font-mono);

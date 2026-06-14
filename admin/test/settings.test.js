@@ -159,7 +159,7 @@ test('helper apply directly preserves blank lines + comments', skipOpts(), async
  * ------------------------------------------------------------------ */
 
 const DEFAULT_MODEL = {
-  hero: { words: ['Web', 'World', 'Wide'], tagline: 'W · W · W' },
+  hero: { words: ['Web', 'World', 'Wide'], tagline: 'W · W · W', subtitle: '' },
   apps: {
     items: [
       { name: 'FileID', status: 'live', link: '', icon: '/assets/fileid.png' },
@@ -184,7 +184,13 @@ const DEFAULT_MODEL = {
     ],
     hidden: [],
   },
-  blog_cta: { kicker: 'Latest', title: 'The Web World Wide', title_accent: 'Blog', url: '/blog/' },
+  blog_cta: {
+    kicker: 'Latest',
+    title: 'The Web World Wide',
+    title_accent: 'Blog',
+    url: '/blog/',
+    description: '',
+  },
   sections: { hero: true, apps: true, videos: true, socials: true, blog_cta: true },
   section_order: ['hero', 'apps', 'videos', 'socials', 'blog_cta'],
 };
@@ -265,7 +271,7 @@ test('GET /homepage reflects a fully-populated toml', skipOpts(), async () => {
   const res = await fetch(`${baseUrl}/api/settings/homepage`);
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), {
-    hero: { words: ['Hello', 'Wide', 'Web'], tagline: 'Testing tagline' },
+    hero: { words: ['Hello', 'Wide', 'Web'], tagline: 'Testing tagline', subtitle: '' },
     apps: {
       items: [
         {
@@ -284,6 +290,7 @@ test('GET /homepage reflects a fully-populated toml', skipOpts(), async () => {
       title: 'Read the',
       title_accent: 'Blog',
       url: 'https://example.com/blog/',
+      description: '',
     },
     sections: { hero: true, apps: true, videos: false, socials: true, blog_cta: true },
     section_order: ['videos', 'hero', 'apps', 'socials', 'blog_cta'],
@@ -293,7 +300,7 @@ test('GET /homepage reflects a fully-populated toml', skipOpts(), async () => {
 test('PATCH /homepage round-trips edits and re-GET matches', skipOpts(), async () => {
   writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
   const patch = {
-    hero: { words: ['Brand', 'New'], tagline: 'Patched tagline' },
+    hero: { words: ['Brand', 'New'], tagline: 'Patched tagline', subtitle: '' },
     apps: {
       items: [
         {
@@ -381,6 +388,16 @@ test('PATCH /homepage rejects invalid payloads with 400', skipOpts(), async () =
       match: /hero\.words/,
     },
     {
+      label: 'hero.subtitle too long',
+      body: { hero: { subtitle: 'x'.repeat(121) } },
+      match: /hero\.subtitle/,
+    },
+    {
+      label: 'blog_cta.description too long',
+      body: { blog_cta: { description: 'x'.repeat(161) } },
+      match: /blog_cta\.description/,
+    },
+    {
       label: 'unknown social key',
       body: { socials: { hidden: ['myspace'] } },
       match: /myspace/,
@@ -448,6 +465,37 @@ test('PATCH /homepage creates [homepage.*] sections in an old toml', skipOpts(),
   const onDisk = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
   assert.match(onDisk, /\[homepage\.hero\]/);
   assert.match(onDisk, /# Pagination/); // pre-existing comment intact
+});
+
+test('PATCH /homepage round-trips hero.subtitle + blog_cta.description', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
+  const res = await fetch(`${baseUrl}/api/settings/homepage`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hero: { subtitle: 'A calmer supporting line' },
+      blog_cta: { description: 'Field notes from building the small web.' },
+    }),
+  });
+  assert.equal(res.status, 200);
+  const updated = await res.json();
+  assert.equal(updated.hero.subtitle, 'A calmer supporting line');
+  assert.equal(updated.blog_cta.description, 'Field notes from building the small web.');
+  const onDisk = readFileSync(join(siteDir, 'site.toml'), 'utf-8');
+  assert.match(onDisk, /subtitle = "A calmer supporting line"/);
+  assert.match(onDisk, /description = "Field notes from building the small web\."/);
+  const reread = await (await fetch(`${baseUrl}/api/settings/homepage`)).json();
+  assert.equal(reread.hero.subtitle, 'A calmer supporting line');
+  assert.equal(reread.blog_cta.description, 'Field notes from building the small web.');
+});
+
+test('GET /homepage/history returns git + snapshots arrays', skipOpts(), async () => {
+  writeFileSync(join(siteDir, 'site.toml'), FULL_HOMEPAGE_TOML);
+  const res = await fetch(`${baseUrl}/api/settings/homepage/history`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.git), 'git is an array');
+  assert.ok(Array.isArray(body.snapshots), 'snapshots is an array');
 });
 
 test('normalizeHomepage fills a complete model from an empty parse', skipOpts(), async () => {

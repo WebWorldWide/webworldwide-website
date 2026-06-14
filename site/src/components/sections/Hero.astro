@@ -13,7 +13,7 @@
  */
 import { homepage } from '@/lib/site-config';
 
-const { words, tagline } = homepage.hero;
+const { words, tagline, subtitle } = homepage.hero;
 const wordmark = words.join(' • ');
 
 const escapeHtml = (s: string): string =>
@@ -34,7 +34,20 @@ const taglineHtml = tagline
     </div>
   </div>
   <p class="tagline" aria-hidden="true" set:html={taglineHtml} />
+  {subtitle && <p class="hero-subtitle">{subtitle}</p>}
 </header>
+
+<style>
+  .hero-subtitle {
+    max-width: 46ch;
+    margin: 18px auto 0;
+    font-family: var(--font-serif);
+    font-size: clamp(16px, 2.2vw, 20px);
+    line-height: 1.5;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+</style>
 
 <script>
   import('../../scripts/wordmark-warp.ts');

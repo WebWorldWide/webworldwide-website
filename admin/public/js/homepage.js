@@ -149,6 +149,12 @@
     globe: svg(
       '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.5 9h17M3.5 15h17"/>',
     ),
+    image: svg(
+      '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+    ),
+    history: svg(
+      '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    ),
   };
 
   /**
@@ -240,6 +246,10 @@
       <div class="hp-field" style="margin-top:8px">
         <label for="hp-hero-tagline">Tagline</label>
         <input id="hp-hero-tagline" type="text" maxlength="80" value="${esc(draft.hero.tagline)}" data-path="hero.tagline" />
+      </div>
+      <div class="hp-field" style="margin-top:8px">
+        <label for="hp-hero-subtitle">Subtitle</label>
+        <input id="hp-hero-subtitle" type="text" maxlength="120" value="${esc(draft.hero.subtitle || '')}" data-path="hero.subtitle" placeholder="Optional supporting line" />
       </div>`;
   }
 
@@ -276,13 +286,17 @@
               </select>
             </div>
             <div class="hp-field">
-              <label for="hp-app-icon-${i}">Icon path</label>
-              <input id="hp-app-icon-${i}" type="text" placeholder="/assets/icon.png" value="${esc(a.icon)}" data-path="apps.items.${i}.icon" />
+              <label for="hp-app-link-${i}">Link</label>
+              <input id="hp-app-link-${i}" type="text" placeholder="https://…" value="${esc(a.link)}" data-path="apps.items.${i}.link" />
             </div>
           </div>
-          <div class="hp-field">
-            <label for="hp-app-link-${i}">Link</label>
-            <input id="hp-app-link-${i}" type="text" placeholder="https://…" value="${esc(a.link)}" data-path="apps.items.${i}.link" />
+          <div class="hp-field hp-icon-field">
+            <label for="hp-app-icon-${i}">Icon</label>
+            <div class="hp-icon-pick">
+              <span class="hp-icon-thumb">${a.icon ? `<img src="${esc(a.icon)}" alt="" />` : IC.image}</span>
+              <input id="hp-app-icon-${i}" type="text" placeholder="/images/icon.png" value="${esc(a.icon)}" data-path="apps.items.${i}.icon" />
+              <button type="button" class="btn sm" data-act="app-icon-pick" data-i="${i}">Choose…</button>
+            </div>
           </div>
         </div>`,
         )
@@ -349,6 +363,10 @@
       <div class="hp-field">
         <label for="hp-cta-url">Link target</label>
         <input id="hp-cta-url" type="text" maxlength="80" value="${esc(draft.blog_cta.url)}" data-path="blog_cta.url" />
+      </div>
+      <div class="hp-field">
+        <label for="hp-cta-desc">Description</label>
+        <input id="hp-cta-desc" type="text" maxlength="160" value="${esc(draft.blog_cta.description || '')}" data-path="blog_cta.description" placeholder="Optional supporting line" />
       </div>`;
   }
 
@@ -437,6 +455,7 @@
             .join('')}
         </div>
         <div class="pv-tagline">${esc(draft.hero.tagline)}</div>
+        ${draft.hero.subtitle ? `<div class="pv-subtitle">${esc(draft.hero.subtitle)}</div>` : ''}
       </div>`;
   }
 
@@ -515,11 +534,18 @@
       <div class="pv-footer">
         <div class="pv-footer-kicker">${esc(draft.blog_cta.kicker)}</div>
         <div class="pv-footer-card">
-          <div class="pv-footer-label">${esc(draft.blog_cta.title)}${
-            draft.blog_cta.title_accent
-              ? ` <span class="accent">${esc(draft.blog_cta.title_accent)}</span>`
-              : ''
-          }</div>
+          <div class="pv-footer-text">
+            <div class="pv-footer-label">${esc(draft.blog_cta.title)}${
+              draft.blog_cta.title_accent
+                ? ` <span class="accent">${esc(draft.blog_cta.title_accent)}</span>`
+                : ''
+            }</div>
+            ${
+              draft.blog_cta.description
+                ? `<div class="pv-footer-desc">${esc(draft.blog_cta.description)}</div>`
+                : ''
+            }
+          </div>
           <div class="pv-footer-arrow">→</div>
         </div>
       </div>`;
@@ -631,6 +657,200 @@
     renderAll();
   }
 
+  // ── Revision history ────────────────────────────────────────
+  // Git-published versions of site.toml + recent local pre-save snapshots
+  // (GET /api/settings/homepage/history). Selecting a row fetches that
+  // version's MODEL and enables Restore, which loads it into the editor as
+  // unsaved changes — the user reviews and Saves; never a silent
+  // server-side overwrite. Mirrors the post editor's history panel. The
+  // modal is lazily injected into <body> the first time, like image-picker.
+  const HISTORY_MODAL_ID = 'hp-history-modal';
+  /**
+   * The currently-selected version + its fetched model, or null.
+   * @type {{ source: string, ref: string, model: any } | null}
+   */
+  let histSelected = null;
+  // Guards against out-of-order responses: rapidly clicking rows could let
+  // a slow earlier fetch overwrite a newer selection's restore state.
+  let histReqSeq = 0;
+
+  /**
+   * Human-friendly time: relative for snapshot epoch-ms, locale string for
+   * git ISO dates (mirrors editor.js histWhen).
+   * @param {number | string} v
+   */
+  function histWhen(v) {
+    if (typeof v === 'number') {
+      const secs = Math.max(1, Math.round((Date.now() - v) / 1000));
+      if (secs < 60) return `${secs}s ago`;
+      const mins = Math.round(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return new Date(v).toLocaleDateString();
+    }
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString();
+  }
+
+  /** Lazily build + inject the history modal; returns the element. */
+  function ensureHistoryModal() {
+    let modal = document.getElementById(HISTORY_MODAL_ID);
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = HISTORY_MODAL_ID;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('aria-labelledby', 'hp-history-title');
+    modal.innerHTML = `
+      <div class="modal-card hp-history-card">
+        <div class="modal-head">
+          <h3 id="hp-history-title">Revision history</h3>
+          <button type="button" class="btn ghost" data-modal-close="${HISTORY_MODAL_ID}" aria-label="Close">
+            <span class="ico" aria-hidden="true" data-icon="close"></span>
+          </button>
+        </div>
+        <div class="modal-body hp-history-body">
+          <ul class="hp-history-list" id="hp-history-list" aria-label="Versions">
+            <li class="hp-history-empty">Loading…</li>
+          </ul>
+        </div>
+        <div class="modal-foot hp-history-foot">
+          <span class="hp-history-note" id="hp-history-note">Select a version to restore it into the editor.</span>
+          <button type="button" class="btn solid" id="hp-history-restore" disabled>Restore this version</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    if (typeof TE.fillIcons === 'function') TE.fillIcons(modal);
+    const restoreBtn = modal.querySelector('#hp-history-restore');
+    if (restoreBtn) restoreBtn.addEventListener('click', restoreSelected);
+    return modal;
+  }
+
+  async function openHistory() {
+    ensureHistoryModal();
+    const listEl = document.getElementById('hp-history-list');
+    const restoreBtn = /** @type {HTMLButtonElement | null} */ (
+      document.getElementById('hp-history-restore')
+    );
+    const noteEl = document.getElementById('hp-history-note');
+    histSelected = null;
+    if (restoreBtn) restoreBtn.disabled = true;
+    if (noteEl) noteEl.textContent = 'Select a version to restore it into the editor.';
+    if (listEl)
+      listEl.innerHTML =
+        '<li class="hp-history-empty"><span class="te-spinner"></span> Loading…</li>';
+    TE.openModal(HISTORY_MODAL_ID);
+    /** @type {{ git?: any[], snapshots?: any[] }} */
+    let hist;
+    try {
+      hist = await TE.fetchJSON('/api/settings/homepage/history');
+    } catch (_err) {
+      if (listEl) listEl.innerHTML = '<li class="hp-history-empty">Couldn’t load history.</li>';
+      return;
+    }
+    /** @type {Array<{ source: string, ref: string, kind: string, label: string, when: number | string, hash: string }>} */
+    const rows = [];
+    for (const s of hist.snapshots || []) {
+      rows.push({
+        source: 'snapshot',
+        ref: s.id,
+        kind: 'Autosave',
+        label: s.title || 'Homepage',
+        when: s.ts,
+        hash: '',
+      });
+    }
+    for (const c of hist.git || []) {
+      const short = String(c.hash || '').slice(0, 7);
+      rows.push({
+        source: 'git',
+        ref: c.hash,
+        kind: 'Published',
+        label: c.message || short,
+        when: c.date,
+        hash: short,
+      });
+    }
+    if (!rows.length) {
+      if (listEl)
+        listEl.innerHTML =
+          '<li class="hp-history-empty">No earlier versions yet — they appear here after you save or publish.</li>';
+      return;
+    }
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    rows.forEach((r) => {
+      const li = document.createElement('li');
+      li.className = 'hp-history-row';
+      li.setAttribute('role', 'button');
+      li.tabIndex = 0;
+      li.innerHTML =
+        `<span class="hp-history-kind k-${r.source}">${esc(r.kind)}</span>` +
+        `<span class="hp-history-label">${esc(r.label)}</span>` +
+        `<span class="hp-history-meta"><span class="hp-history-when">${esc(histWhen(r.when))}</span>` +
+        (r.hash ? `<span class="hp-history-hash">${esc(r.hash)}</span>` : '') +
+        `</span>`;
+      const choose = () => selectVersion(r, li);
+      li.addEventListener('click', choose);
+      li.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          choose();
+        }
+      });
+      listEl.appendChild(li);
+    });
+  }
+
+  /**
+   * Fetch the model for a version, mark its row active, and enable Restore.
+   * @param {{ source: string, ref: string, when: number | string }} r
+   * @param {Element} li
+   */
+  async function selectVersion(r, li) {
+    const listEl = document.getElementById('hp-history-list');
+    const restoreBtn = /** @type {HTMLButtonElement | null} */ (
+      document.getElementById('hp-history-restore')
+    );
+    const noteEl = document.getElementById('hp-history-note');
+    if (listEl)
+      listEl.querySelectorAll('.hp-history-row').forEach((n) => n.classList.remove('active'));
+    li.classList.add('active');
+    if (restoreBtn) restoreBtn.disabled = true;
+    if (noteEl) noteEl.textContent = 'Loading…';
+    const seq = ++histReqSeq;
+    try {
+      const model = await TE.fetchJSON(
+        '/api/settings/homepage/version/' +
+          encodeURIComponent(r.source) +
+          '/' +
+          encodeURIComponent(r.ref),
+      );
+      if (seq !== histReqSeq) return; // a newer selection superseded this one
+      histSelected = { source: r.source, ref: r.ref, model };
+      if (noteEl)
+        noteEl.textContent = `Ready to restore (${histWhen(r.when)}) — loads into the editor for review.`;
+      if (restoreBtn) restoreBtn.disabled = false;
+    } catch (_err) {
+      if (seq === histReqSeq && noteEl) noteEl.textContent = 'Couldn’t load this version.';
+    }
+  }
+
+  /**
+   * Load the selected version into the editor as unsaved changes, then close
+   * the modal. Never writes to the server — the user reviews and Saves.
+   */
+  function restoreSelected() {
+    if (!histSelected || !histSelected.model) return;
+    draft = clone(histSelected.model);
+    renderAll();
+    TE.closeModal(HISTORY_MODAL_ID);
+    TE.toast('Version loaded into the editor. Review, then Save to apply.', 'info');
+  }
+
   /**
    * Select a section: highlight its preview block, expand + scroll its
    * rail card into view.
@@ -661,6 +881,9 @@
         return;
       case 'publish':
         onPublish();
+        return;
+      case 'history':
+        openHistory();
         return;
       case 'sec-head': {
         const id = el.getAttribute('data-id') || '';
@@ -697,6 +920,15 @@
       case 'app-down':
         if (!swap(draft.apps.items, i, act === 'app-up' ? -1 : 1)) return;
         break;
+      case 'app-icon-pick':
+        if (window.TE && typeof window.TE.pickImage === 'function') {
+          window.TE.pickImage((m) => {
+            // eslint-disable-next-line security/detect-object-injection -- bounds-checked row index
+            if (draft.apps.items[i]) draft.apps.items[i].icon = (m && m.url) || '';
+            renderAll();
+          });
+        }
+        return;
       case 'soc-up':
       case 'soc-down':
         if (!swap(draft.socials.order, i, act === 'soc-up' ? -1 : 1)) return;
@@ -793,6 +1025,7 @@
             <span class="hp-dirty" id="hp-dirty" role="status"><span class="d" aria-hidden="true"></span><span id="hp-dirty-text">All changes saved</span></span>
           </div>
           <div class="hp-rail-actions">
+            <button type="button" class="btn hp-history-btn" id="hp-history" data-act="history" title="Revision history" aria-label="Revision history">${IC.history}</button>
             <button type="button" class="btn" id="hp-discard" data-act="discard" disabled>${IC.refresh} Discard</button>
             <button type="button" class="btn" id="hp-save" data-act="save" disabled>${IC.check} Save</button>
             <button type="button" class="btn solid" id="hp-publish" data-act="publish">${IC.rocket} Publish</button>

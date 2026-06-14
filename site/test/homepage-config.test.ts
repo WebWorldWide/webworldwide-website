@@ -38,7 +38,7 @@ describe('normalizeHomepage', () => {
     expect(hp).toEqual({
       section_order: ['hero', 'apps', 'videos', 'socials', 'blog_cta'],
       sections: { hero: true, apps: true, videos: true, socials: true, blog_cta: true },
-      hero: { words: ['Web', 'World', 'Wide'], tagline: 'W · W · W' },
+      hero: { words: ['Web', 'World', 'Wide'], tagline: 'W · W · W', subtitle: '' },
       apps: {
         items: [
           {
@@ -71,6 +71,7 @@ describe('normalizeHomepage', () => {
         title: 'The Web World Wide',
         title_accent: 'Blog',
         url: '/blog/',
+        description: '',
       },
     });
   });
@@ -134,6 +135,7 @@ url = "/posts/"
     expect(hp.hero).toEqual({
       words: ['Hello', 'Wide', 'Web', 'Of', 'Mine'],
       tagline: 'H · W · W',
+      subtitle: '',
     });
     expect(hp.apps.items).toEqual([
       { name: 'Solo', status: 'live', link: 'https://solo.example', icon: '/assets/solo.png' },
@@ -145,6 +147,7 @@ url = "/posts/"
       title: 'Read the',
       title_accent: 'Posts',
       url: '/posts/',
+      description: '',
     });
   });
 
@@ -164,7 +167,7 @@ items = [ { name = "OnlyApp", status = "soon", link = "", icon = "" } ]
 `),
     );
 
-    expect(hp.hero).toEqual({ words: ['Two', 'Words'], tagline: 'T · W' });
+    expect(hp.hero).toEqual({ words: ['Two', 'Words'], tagline: 'T · W', subtitle: '' });
     expect(hp.videos).toEqual({ episode: 'EP. 010', film_title: 'Tenth' });
     expect(hp.apps.items).toEqual([{ name: 'OnlyApp', status: 'soon', link: '', icon: '' }]);
   });
