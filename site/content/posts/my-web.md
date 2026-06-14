@@ -1,7 +1,7 @@
 ---
 title: My Web
 slug: my-web
-draft: false
+draft: true
 date: '2025-12-08T00:45:00.000Z'
 excerpt: ''
 ---
