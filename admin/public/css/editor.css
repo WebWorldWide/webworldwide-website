@@ -370,11 +370,14 @@ body[data-page="editor"] {
   margin-top: 4px;
 }
 .ProseMirror img {
-  max-width: 100%;
-  height: auto;
-  border-radius: var(--radius-xs);
+  /* Centered + bounded by default so inserted images read as deliberate,
+     centred figures (matches the published page) rather than a raw
+     full-bleed block. data-align overrides below opt into left/right/full. */
   display: block;
-  margin: 8px 0;
+  max-width: min(100%, 640px);
+  height: auto;
+  margin: 18px auto;
+  border-radius: var(--radius-xs);
 }
 /* Image alignment — WYSIWYG mirror of the published `.post-body
    figure.img-align-*` styles so what's set here matches the live page.
@@ -705,15 +708,18 @@ body[data-page="editor"] {
    flex spacer, so it stays left-aligned while the mode toggle
    floats right. Buttons are grouped with thin dividers. */
 .te-editor-toolbar-rich {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
-  gap: 2px;
-  width: fit-content;
-  padding: 3px 6px;
+  align-items: center;
+  gap: 3px 4px;
+  min-width: 0;
+  padding: 4px 6px;
   background: var(--surface-2);
   border: 1px solid var(--line-www);
-  border-radius: 999px;
+  /* A rounded RECT (not a 999px pill) so wrapped rows read as one tidy
+     toolbar instead of a lumpy multi-row capsule. */
+  border-radius: var(--radius);
 }
 .te-editor-toolbar-rich.is-disabled {
   opacity: 0.45;

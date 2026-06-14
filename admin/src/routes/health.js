@@ -17,66 +17,33 @@ const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 
 const router = Router();
 
-// Allowed commands for the secure terminal (diagnostics only)
-const ALLOWED_COMMANDS = [
-  'uptime',
-  'df',
-  'free',
-  'top',
-  'htop',
-  'ps',
-  'whoami',
-  'hostname',
-  'date',
-  'uname',
-  'cat',
-  'ls',
-  'pwd',
-  'echo',
-  'docker',
-  'systemctl',
-  'journalctl',
-  'vcgencmd',
-  'ip',
-  'ping',
-  'dig',
-  'curl',
-  'git',
-  'npm',
-  'node',
-];
-
-// Secure Terminal Endpoint
+// Terminal endpoint — full shell access for the authenticated admin.
+// Runs through `/bin/sh -c` (child_process.exec's default) so pipes,
+// redirects, env vars and operators all work. This is an admin-only,
+// auth-gated surface on the operator's own box, so it intentionally does
+// NOT restrict which commands may run. It's bounded only by a timeout and
+// an output cap so a runaway command can't hang the box or exhaust memory.
 router.post('/terminal', async (req, res) => {
   try {
     const { command } = req.body;
-    if (!command) return res.status(400).json({ error: 'Command required' });
-
-    // Extract the base command (first word)
-    const baseCmd = command.trim().split(/\s+/)[0];
-
-    // Block dangerous operators
-    if (/[;&|`$(){}]/.test(command)) {
-      return res.json({
-        output: '[BLOCKED] Shell operators (;, &, |, `, $) are not allowed for security.',
-      });
+    if (!command || typeof command !== 'string') {
+      return res.status(400).json({ error: 'Command required' });
     }
-
-    if (!ALLOWED_COMMANDS.includes(baseCmd)) {
-      return res.json({
-        output: `[BLOCKED] Command "${baseCmd}" is not in the allowlist.\nAllowed: ${ALLOWED_COMMANDS.join(', ')}`,
-      });
-    }
-
-    const { stdout, stderr } = await execAsync(command, { timeout: 15000 });
-
-    res.json({
-      output: stdout + (stderr ? '\n[STDERR]:\n' + stderr : ''),
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 60000,
+      maxBuffer: 8 * 1024 * 1024,
     });
+    res.json({ output: stdout + (stderr ? '\n[stderr]\n' + stderr : '') });
   } catch (err) {
-    res.json({
-      output: (err.stdout || '') + '\n[ERROR]:\n' + (err.stderr || err.message),
-    });
+    // Non-zero exit, timeout, or spawn error — surface whatever we got so
+    // the operator can see the real failure rather than a generic message.
+    const parts = [];
+    if (err.stdout) parts.push(err.stdout);
+    if (err.stderr) parts.push('[stderr]\n' + err.stderr);
+    if (err.killed) parts.push('[timed out after 60s]');
+    else if (typeof err.code === 'number') parts.push('[exit ' + err.code + ']');
+    if (!parts.length) parts.push('[error] ' + err.message);
+    res.json({ output: parts.join('\n') });
   }
 });
 

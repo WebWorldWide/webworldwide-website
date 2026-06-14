@@ -1140,10 +1140,13 @@
     try {
       const tocStored = localStorage.getItem('te-editor-panel-toc');
       const seoStored = localStorage.getItem('te-editor-panel-seo');
-      setPanelOpen('toc', tocStored === null ? true : tocStored === '1');
+      // Default both panels CLOSED so the writing column is wide and
+      // uncluttered; the topbar toggles bring them in on demand. Users who
+      // previously opened a panel keep their saved preference.
+      setPanelOpen('toc', tocStored === '1');
       setPanelOpen('seo', seoStored === '1');
     } catch (_) {
-      setPanelOpen('toc', true);
+      setPanelOpen('toc', false);
       setPanelOpen('seo', false);
     }
     if (btnTocToggle) {
