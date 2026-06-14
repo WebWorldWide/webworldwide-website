@@ -37,6 +37,10 @@ for (const file of files) {
   const fmMatch = raw.match(/^---\n([\s\S]+?)\n---/);
   if (!fmMatch) continue;
   const fm = fmMatch[1];
+  // Skip drafts — getPosts() (site/src/lib/post-utils.ts) excludes them from
+  // the build, so emitting /<slug>/ → /blog/<slug>/ would 301 to a page that
+  // doesn't exist (and would shadow a vanity redirect for the same path).
+  if (/^draft:\s*true\s*$/m.test(fm)) continue;
   const slugLine = fm.match(slugRe);
   const slug = slugLine ? slugLine[1].trim() : file.replace(/\.md$/, '');
   const from = `/${slug}/`;
