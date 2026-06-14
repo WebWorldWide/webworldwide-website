@@ -6,8 +6,8 @@
 .dash-grid {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 13px;
+  margin-bottom: 16px;
 }
 
 .dash-grid.single {
@@ -151,7 +151,7 @@
 }
 
 .posts-empty {
-  padding: 32px 18px;
+  padding: 20px 18px;
   text-align: center;
   color: var(--fg-mute);
   font-family: var(--mono);
