@@ -25,6 +25,7 @@ export interface AppItem {
 interface HeroRaw {
   words?: string[];
   tagline?: string;
+  subtitle?: string;
 }
 interface VideosRaw {
   episode?: string;
@@ -39,7 +40,13 @@ interface HomepageRaw {
   apps?: { items?: Partial<AppItem>[] };
   videos?: VideosRaw;
   socials?: { order?: string[]; hidden?: string[] };
-  blog_cta?: { kicker?: string; title?: string; title_accent?: string; url?: string };
+  blog_cta?: {
+    kicker?: string;
+    title?: string;
+    title_accent?: string;
+    url?: string;
+    description?: string;
+  };
 }
 
 export interface SiteConfig {
@@ -87,11 +94,17 @@ export interface SiteConfig {
 export interface HomepageConfig {
   section_order: string[];
   sections: Record<HomeSectionKey, boolean>;
-  hero: { words: string[]; tagline: string };
+  hero: { words: string[]; tagline: string; subtitle: string };
   apps: { items: AppItem[] };
   videos: { episode: string; film_title: string };
   socials: { order: string[]; hidden: string[] };
-  blog_cta: { kicker: string; title: string; title_accent: string; url: string };
+  blog_cta: {
+    kicker: string;
+    title: string;
+    title_accent: string;
+    url: string;
+    description: string;
+  };
 }
 
 let cache: SiteConfig | null = null;
@@ -178,6 +191,7 @@ export function normalizeHomepage(cfg: Partial<SiteConfig>): HomepageConfig {
     hero: {
       words: isNonEmptyStringArray(hero.words) ? hero.words : ['Web', 'World', 'Wide'],
       tagline: hero.tagline || 'W · W · W',
+      subtitle: hero.subtitle ?? '',
     },
     apps: { items },
     videos: {
@@ -193,6 +207,7 @@ export function normalizeHomepage(cfg: Partial<SiteConfig>): HomepageConfig {
       title: cta.title || 'The Web World Wide',
       title_accent: cta.title_accent ?? 'Blog',
       url: cta.url || '/blog/',
+      description: cta.description ?? '',
     },
   };
 }

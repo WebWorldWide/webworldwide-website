@@ -292,7 +292,7 @@ function numberedSuffix(text, index, total) {
  *
  * @param {any} agent — a pre-authenticated BskyAgent (caller's responsibility)
  * @param {{ title: string, excerpt: string, url: string, coverImageUrl?: string | null }} input
- * @returns {Promise<{ rootUri: string, rootCid: string }>}
+ * @returns {Promise<{ rootUri: string, rootCid: string, partial: boolean }>}
  */
 export async function postThread(agent, input) {
   if (!agent) throw new Error('postThread: agent required');

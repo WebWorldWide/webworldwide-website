@@ -466,9 +466,10 @@ router.put('/:filename', (req, res) => {
     try {
       const prev = readFileSync(oldPath, 'utf-8');
       const parsedPrev = parsePost(prev);
+      const prevData = /** @type {Record<string, unknown>} */ (parsedPrev.data || {});
       recordSnapshot(oldFilename, {
-        title: parsedPrev.data?.title,
-        data: parsedPrev.data,
+        title: typeof prevData.title === 'string' ? prevData.title : undefined,
+        data: prevData,
         content: parsedPrev.content,
       });
     } catch {

@@ -43,8 +43,8 @@
 
 .te-dz.is-dragover {
   color: var(--fg, #fff);
-  background: rgb(108 92 231 / 12%);
-  border-color: rgb(108 92 231 / 80%);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .te-dz-label {
@@ -63,7 +63,7 @@ body.te-has-body-dropzone {
 body.te-has-body-dropzone.is-dragover::after {
   position: fixed;
   inset: 16px;
-  z-index: 9000;
+  z-index: var(--z-drawer);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,8 +72,8 @@ body.te-has-body-dropzone.is-dragover::after {
   color: var(--fg, #fff);
   pointer-events: none;
   content: "DROP TO UPLOAD";
-  background: rgb(108 92 231 / 14%);
-  border: 2px dashed rgb(108 92 231 / 80%);
+  background: var(--accent-soft);
+  border: 2px dashed var(--accent);
   border-radius: 12px;
 }
 
@@ -116,22 +116,22 @@ body.te-has-body-dropzone.is-dragover::after {
 .te-media-chip:hover,
 .te-media-chip:focus-visible {
   color: var(--fg, #fff);
-  background: rgb(255 255 255 / 5%);
-  border-color: rgb(255 255 255 / 25%);
+  background: var(--surface-2);
+  border-color: var(--line-strong-www);
   outline: none;
 }
 
 .te-media-chip.active {
-  color: var(--fg, #fff);
-  background: rgb(108 92 231 / 14%);
-  border-color: rgb(108 92 231 / 50%);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .te-media-chip .count {
   padding: 0 5px;
   font-size: 10px;
   color: inherit;
-  background: rgb(255 255 255 / 8%);
+  background: var(--surface-3);
   border-radius: 4px;
 }
 
@@ -149,13 +149,14 @@ body.te-has-body-dropzone.is-dragover::after {
 
 .te-media-toolbar input[type="search"],
 .te-media-toolbar select {
+  min-height: 36px;
   padding: 6px 10px;
-  font-family: var(--mono, monospace);
+  font-family: var(--font-ui);
   font-size: 12px;
-  color: var(--fg, #fff);
-  background: rgb(255 255 255 / 4%);
-  border: 1px solid var(--glass-border, rgb(255 255 255 / 10%));
-  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong-www);
+  border-radius: var(--radius-sm);
 }
 
 .te-media-toolbar .te-view-toggle {
@@ -177,7 +178,7 @@ body.te-has-body-dropzone.is-dragover::after {
 
 .te-media-toolbar .te-view-toggle button[aria-pressed="true"] {
   color: var(--fg, #fff);
-  background: rgb(255 255 255 / 6%);
+  background: var(--surface-2);
 }
 
 /* Usage filter pills (All / In posts / Unused) — segmented control that
@@ -248,8 +249,8 @@ body.te-has-body-dropzone.is-dragover::after {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: rgb(255 255 255 / 3%);
-  border: 1px solid var(--glass-border, rgb(255 255 255 / 8%));
+  background: var(--surface);
+  border: 1px solid var(--line-www);
   border-radius: 8px;
   transition:
     background 120ms,
@@ -257,13 +258,13 @@ body.te-has-body-dropzone.is-dragover::after {
 }
 
 .te-media-card:hover {
-  background: rgb(255 255 255 / 6%);
-  border-color: rgb(255 255 255 / 18%);
+  background: var(--surface-2);
+  border-color: var(--line-strong-www);
 }
 
 .te-media-card.is-selected {
-  background: rgb(108 92 231 / 12%);
-  border-color: rgb(108 92 231 / 60%);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .te-media-check {
@@ -284,13 +285,13 @@ body.te-has-body-dropzone.is-dragover::after {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   cursor: pointer;
-  background: rgb(0 0 0 / 25%);
+  background: var(--surface-3);
   border: none;
   border-radius: 8px 8px 0 0;
 }
 
 .te-media-thumb:focus-visible {
-  outline: 2px solid rgb(108 92 231 / 80%);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -484,46 +485,32 @@ body.te-has-body-dropzone.is-dragover::after {
   flex: 1;
 }
 
+/* Status chips are absolutely positioned for grid view; in list view the
+   left edge holds the check + thumb, so nudge the no-alt chip to the
+   row's bottom-right to avoid overlapping them. (Grid view unchanged.) */
+#media-grid.view-list .te-media-status.no-alt {
+  top: auto;
+  right: 6px;
+  bottom: 6px;
+  left: auto;
+}
+
 #media-empty {
   padding: 32px;
   font-family: var(--mono, monospace);
   font-size: 12px;
   color: var(--fg-mute, #888);
   text-align: center;
-  background: rgb(255 255 255 / 2%);
+  background: var(--surface-2);
   border: 1px dashed var(--glass-border, rgb(255 255 255 / 8%));
   border-radius: 8px;
-}
-
-/* ── Bulk action bar ───────────────────────────────────────── */
-.te-media-bulk-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  z-index: 50;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 10px 16px;
-  font-family: var(--mono, monospace);
-  font-size: 12px;
-  color: var(--fg, #0e2960);
-  background: var(--bg-elev);
-  border: var(--border-soft);
-  border-radius: 999px;
-  box-shadow: 0 8px 24px rgb(14 41 96 / 18%);
-  transform: translateX(-50%);
-}
-
-.te-media-bulk-bar[hidden] {
-  display: none;
 }
 
 /* ── Detail drawer ─────────────────────────────────────────── */
 .te-media-drawer {
   position: fixed;
   inset: 0 0 0 auto;
-  z-index: 60;
+  z-index: var(--z-drawer);
   display: flex;
   flex-direction: column;
   width: min(480px, 92vw);
@@ -679,7 +666,7 @@ body.te-has-body-dropzone.is-dragover::after {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 80;
+  z-index: calc(var(--z-toast) + 1);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -696,11 +683,12 @@ body.te-has-body-dropzone.is-dragover::after {
   align-items: center;
   padding: 8px 12px;
   font-size: 11px;
-  color: var(--fg, #fff);
+  color: var(--ink);
   pointer-events: auto;
-  background: rgb(20 20 24 / 96%);
-  border: 1px solid var(--glass-border, rgb(255 255 255 / 12%));
+  background: var(--surface);
+  border: 1px solid var(--line-www);
   border-radius: 8px;
+  box-shadow: var(--shadow-pop);
 }
 
 .te-upload-meta {
@@ -717,14 +705,14 @@ body.te-has-body-dropzone.is-dragover::after {
 
 .te-upload-status {
   flex-shrink: 0;
-  color: var(--fg-mute, #aaa);
+  color: var(--ink-mute);
 }
 
 .te-upload-bar {
   grid-column: 1 / 2;
   height: 4px;
   overflow: hidden;
-  background: rgb(255 255 255 / 8%);
+  background: var(--surface-3);
   border-radius: 2px;
 }
 
@@ -732,16 +720,16 @@ body.te-has-body-dropzone.is-dragover::after {
   display: block;
   width: 0%;
   height: 100%;
-  background: rgb(108 92 231 / 80%);
+  background: var(--accent-bg);
   transition: width 120ms;
 }
 
 .te-upload-row.done .te-upload-bar i {
-  background: rgb(70 200 130 / 80%);
+  background: var(--ok);
 }
 
 .te-upload-row.failed .te-upload-bar i {
-  background: rgb(220 80 80 / 80%);
+  background: var(--danger);
 }
 
 .te-upload-x {
@@ -749,7 +737,7 @@ body.te-has-body-dropzone.is-dragover::after {
   grid-column: 2 / 3;
   padding: 0;
   font-size: 14px;
-  color: var(--fg-mute, #aaa);
+  color: var(--ink-mute);
   cursor: pointer;
   background: transparent;
   border: none;

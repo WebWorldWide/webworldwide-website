@@ -1,0 +1,167 @@
+/* ============================================================
+   Web World Wide — Admin base (reset + a11y primitives)
+   ------------------------------------------------------------
+   Loads after tokens.css, before components.css. Holds the reset,
+   document defaults, focus model, screen-reader helpers, the icon
+   sizing helpers, and the shared spinner. No component styling.
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--bg-page);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--ink);
+  background: var(--bg-page);
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Admin chrome stays fixed; the .stage scrolls. Login overrides this. */
+  overflow: hidden;
+}
+
+::selection {
+  /* AA: white text needs the dark accent tier even in selections. */
+  color: #fff;
+  background: var(--accent);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Focus — visible only for keyboard nav. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Screen-reader-only helper. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+/* Skip link — first Tab on load. */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: var(--space-2);
+  z-index: var(--z-skiplink);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: #fff;
+  background: var(--ink);
+  border: 2px solid var(--accent-bg);
+  border-radius: var(--radius-sm);
+  transition: top 0.12s ease;
+}
+.skip-link:focus {
+  top: var(--space-2);
+  text-decoration: none;
+}
+
+/* Inline-SVG icon sizing (icons.js injects into .ico / [data-icon]). */
+.ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ico svg {
+  width: 16px;
+  height: 16px;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+.ind {
+  display: inline-flex;
+  align-items: center;
+}
+.ind svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Reusable spinner — <span class="te-spinner"></span>. */
+.te-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  border: 2px solid color-mix(in srgb, currentcolor 25%, transparent);
+  border-top-color: currentcolor;
+  border-radius: 50%;
+  animation: te-spin 0.7s linear infinite;
+}
+.te-loading {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--fs-body);
+  color: var(--ink-mute);
+}
+@keyframes te-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .te-spinner {
+    animation-duration: 1.6s;
+  }
+}

@@ -30,7 +30,7 @@
   --pad: 18px;
 
   display: grid;
-  grid-template-columns: 392px 1fr;
+  grid-template-columns: clamp(300px, 32vw, 392px) 1fr;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -247,11 +247,12 @@
   width: 100%;
   margin-top: 4px;
   padding: 10px;
-  font-family: "VT323", monospace;
-  font-size: 14px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   color: var(--ink-mute);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-label);
   cursor: pointer;
   background: transparent;
   border: 1px dashed var(--line-strong);
@@ -319,6 +320,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
   margin-bottom: 8px;
 }
 
@@ -327,18 +329,21 @@
 }
 
 .hp-field > label {
-  font-family: "VT323", monospace;
-  font-size: 12px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
   color: var(--ink-mute);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-label);
 }
 
 .hp-field input,
 .hp-field select {
-  padding: 6px 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 10px;
   font-family: var(--font-ui);
-  font-size: 15px;
+  font-size: var(--fs-body);
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-xs);
@@ -355,6 +360,41 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+/* App icon picker control (thumbnail + path input + Choose button). */
+.hp-icon-pick {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.hp-icon-thumb {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  color: var(--ink-faint);
+  background: var(--surface-3);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-xs);
+}
+.hp-icon-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hp-icon-thumb svg {
+  width: 18px;
+  height: 18px;
+}
+.hp-icon-pick input {
+  flex: 1;
+  min-width: 0;
+}
+.hp-icon-pick .btn {
+  flex-shrink: 0;
 }
 
 /* Hero word input + its remove button on one line. */
@@ -397,11 +437,12 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  font-family: "VT323", monospace;
-  font-size: 13px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
   color: rgb(255 255 255 / 80%);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
 }
 
 .hp-preview-bar .pb-label .live {
@@ -438,9 +479,10 @@
 }
 
 .hp-seg button {
-  padding: 3px 12px;
-  font-family: "VT323", monospace;
-  font-size: 13px;
+  padding: 4px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   color: rgb(255 255 255 / 75%);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -584,6 +626,17 @@
   color: #fff;
   text-shadow: 2px 2px 0 var(--ink);
   letter-spacing: 0.3em;
+}
+
+.pv-subtitle {
+  max-width: 44ch;
+  margin: 14px auto 0;
+  font-family: var(--font-ui); /* = Cormorant inside .hp-canvas */
+  font-size: 18px;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 90%);
+  text-align: center;
+  text-shadow: 1px 1px 0 var(--ink);
 }
 
 /* section eyebrow */
@@ -971,6 +1024,19 @@
   color: var(--accent);
 }
 
+.pv-footer-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pv-footer-desc {
+  margin-top: 8px;
+  font-family: "Space Mono", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
 .pv-footer-arrow {
   display: grid;
   flex-shrink: 0;
@@ -984,8 +1050,30 @@
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-@media (max-width: 1080px) {
+/* Below 860px the side-by-side split can't breathe — stack the rail
+   above the preview and let the .stage scroll the whole thing (the old
+   fixed-height + overflow:hidden combo clipped the rail with no
+   scrollbar and pushed the preview off-screen). */
+@media (max-width: 860px) {
+  #view-homepage:not([hidden]),
+  #homepage-root,
   .hp {
-    grid-template-columns: 320px 1fr;
+    height: auto;
+  }
+  .hp {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+  .hp-rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .hp-rail-scroll,
+  .hp-preview,
+  .hp-preview-scroll {
+    overflow: visible;
+  }
+  .hp-preview {
+    min-height: 60vh;
   }
 }

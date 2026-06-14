@@ -1357,9 +1357,15 @@ body[data-page="editor"] {
   .editor-layout[data-toc-open="false"][data-seo-open="false"] {
     grid-template-columns: minmax(0, 1fr);
   }
-  .ed-aux,
-  .ed-side {
+  .ed-aux {
     display: none;
+  }
+  /* Keep frontmatter reachable on tablets/phones — stack it full-width
+     below the writing pane (it used to be display:none, stranding status,
+     date, cover, SEO and revision history). It flows in the page scroll. */
+  .ed-side {
+    order: 2;
+    overflow: visible;
   }
 }
 
@@ -1889,6 +1895,11 @@ body[data-page="editor"] {
   .ed-body {
     /* Leave room for the sticky toolbar so the cursor isn't hidden */
     padding-bottom: 80px;
+  }
+  /* The fixed bottom toolbar would otherwise cover the status foot; its
+     stats (words/chars/read + autosave) are mirrored in the topbar. */
+  .editor-foot {
+    display: none;
   }
 }
 
