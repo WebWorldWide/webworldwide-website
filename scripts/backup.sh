@@ -41,9 +41,12 @@ restart_stopped() {
 }
 trap restart_stopped EXIT
 
-# 1. Backup Umami PostgreSQL
+# 1. Backup Umami PostgreSQL.
+# --clean --if-exists prepends DROP statements so the dump restores cleanly
+# over an already-populated database (idempotent re-restore), not just into
+# an empty one. See restore.sh.
 echo "Dumping Umami database..."
-docker compose exec -T postgres pg_dump -U umami umami > "$BACKUP_REPO_DIR/umami_backup.sql"
+docker compose exec -T postgres pg_dump -U umami --clean --if-exists umami > "$BACKUP_REPO_DIR/umami_backup.sql"
 
 # 2. Compress the SQL dump
 echo "Compressing Umami dump..."

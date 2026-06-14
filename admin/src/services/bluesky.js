@@ -381,10 +381,13 @@ async function buildLinkCard(agent, { url, title, description, coverImageUrl }) 
     },
   };
   if (!coverImageUrl) return card;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    // Fetch the cover as bytes. Skip if the URL is relative or the
-    // platform fetch refuses it.
-    const res = await globalThis.fetch(coverImageUrl);
+    // Fetch the cover as bytes. Skip if the URL is relative or the platform
+    // fetch refuses it. Hard 5s timeout so a slow/hung cover host can't stall
+    // the cross-post leg indefinitely.
+    const res = await globalThis.fetch(coverImageUrl, { signal: controller.signal });
     if (!res.ok) return card;
     const buf = Buffer.from(await res.arrayBuffer());
     if (buf.length > 1_000_000) return card; // Bluesky caps blobs ~1 MB
@@ -395,6 +398,8 @@ async function buildLinkCard(agent, { url, title, description, coverImageUrl }) 
     }
   } catch (_) {
     // Silent — text-only card still renders fine in the app.
+  } finally {
+    clearTimeout(timer);
   }
   return card;
 }

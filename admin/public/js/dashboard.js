@@ -49,20 +49,26 @@
       allPosts = Array.isArray(posts) ? posts : [];
       renderCounts();
       renderPosts();
-      // Register posts as Cmd+K palette entries (in addition to the
-      // static commands installed by common.js).
+      // Register posts as Cmd+K palette entries (in addition to the static
+      // commands installed by common.js). loadPosts() re-runs on boot, after
+      // deletes, and after every bulk action (via TE.dashboard.reload), so we
+      // must REPLACE the prior POST entries each time — drop the ones we added
+      // last pass (tagged 'POST'), then re-add the current set. Appending blindly
+      // would duplicate every post and grow the array without bound.
       if (window.TE && Array.isArray(TE.paletteCommands)) {
-        const staticCount = TE.paletteCommands.findIndex((c) => c.label === 'POST');
-        if (staticCount === -1) {
-          allPosts.slice(0, 30).forEach((p) => {
-            TE.paletteCommands.push({
-              label: p.title || p.filename,
-              hint: `Edit · ${p.filename}`,
-              href: `/editor.html?file=${encodeURIComponent(p.filename)}`,
-              tag: 'POST',
-            });
-          });
+        // Drop our previous POST entries in place (preserve the array
+        // reference common.js holds), then re-add the current set.
+        for (let i = TE.paletteCommands.length - 1; i >= 0; i--) {
+          if (TE.paletteCommands[i].tag === 'POST') TE.paletteCommands.splice(i, 1);
         }
+        allPosts.slice(0, 30).forEach((p) => {
+          TE.paletteCommands.push({
+            label: p.title || p.filename,
+            hint: `Edit · ${p.filename}`,
+            href: `/editor.html?file=${encodeURIComponent(p.filename)}`,
+            tag: 'POST',
+          });
+        });
       }
     } catch (err) {
       if (err.status === 401) return; // auth.js will redirect
