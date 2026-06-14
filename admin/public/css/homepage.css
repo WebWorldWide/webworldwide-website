@@ -528,6 +528,28 @@
     0 24px 60px rgb(0 0 0 / 50%);
 }
 
+/* "Live" preview — an iframe of the published public site. */
+.hp-live {
+  align-self: stretch;
+  width: 100%;
+  max-width: 880px;
+  min-height: 70vh;
+  margin: 0 auto;
+  background: #fff;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 40%);
+}
+.hp-live.phone {
+  max-width: 392px;
+  border: 9px solid #0e0e10;
+  border-radius: 30px;
+}
+.hp-canvas[hidden],
+.hp-live[hidden] {
+  display: none;
+}
+
 /* ── Preview blocks ────────────────────────────────────────── */
 .pv-block {
   position: relative;

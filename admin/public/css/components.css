@@ -366,7 +366,10 @@ body[data-page="login"] {
 .crumb {
   display: flex;
   gap: var(--space-2);
-  align-items: baseline;
+  /* center (not baseline): the small eyebrow / "/" separator and the large
+     title share a row with an icon — baseline made the small parts drop to
+     the title's baseline and read as misaligned. */
+  align-items: center;
   min-width: 0;
   font-family: var(--font-ui);
 }
