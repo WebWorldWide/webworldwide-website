@@ -177,9 +177,10 @@ describe('save / discard', () => {
 });
 
 describe('structural edits', () => {
-  // Open a section card so its field editor (and its add/toggle buttons) render.
+  // Open a section card so its field editor (and its add/toggle buttons)
+  // render. The disclosure is a real <button> (keyboard-operable).
   function openSection(id) {
-    document.querySelector(`.hp-sec[data-id="${id}"] .hp-sec-head`).click();
+    document.querySelector(`.hp-sec[data-id="${id}"] .hp-sec-disclosure`).click();
   }
 
   it('adds an app item to the rail and the preview', async () => {

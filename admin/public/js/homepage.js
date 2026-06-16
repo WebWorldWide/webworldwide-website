@@ -118,6 +118,32 @@
   const MAX_APPS = 8;
   const SITE_URL = 'https://webworldwide.online';
 
+  /**
+   * Colourful placeholder gradients for icon-less / broken-icon app tiles,
+   * cycled per tile — mirrors the FALLBACKS in site Apps.astro so a tile
+   * with no (or a missing) icon reads intentional, never blank or a
+   * broken-image glyph.
+   */
+  const APP_PH_GRADS = [
+    'linear-gradient(135deg,#ffd58b,#ff8a3d)',
+    'linear-gradient(135deg,#a0e8c8,#3ec25d)',
+  ];
+
+  /** The 8 social tiles the live site renders (Socials.astro), default order. */
+  const SITE_SOCIAL_KEYS = [
+    'youtube',
+    'github',
+    'twitter',
+    'bluesky',
+    'mastodon',
+    'reddit',
+    'instagram',
+    'threads',
+  ];
+
+  /** YouTube @handle for the Videos preview — filled from site config on init. */
+  let siteYoutubeHandle = SOCIAL_META.youtube.handle;
+
   // ── Inline icons (stroke = currentColor, same Lucide style as icons.js) ──
   /** @param {string} inner */
   const svg = (inner) =>
@@ -181,6 +207,8 @@
   /** True after a successful Save until the next Publish. */
   let savedNotLive = false;
   let wired = false;
+  /** True for ~1.2s after first load so the preview blocks animate in once. */
+  let introActive = false;
 
   function root() {
     return document.getElementById('homepage-root');
@@ -224,6 +252,76 @@
     // eslint-disable-next-line security/detect-object-injection -- bounds-checked indices
     [arr[i], arr[j]] = [arr[j], arr[i]];
     return true;
+  }
+
+  /**
+   * Placeholder node for an app tile with no icon (or a broken one): a
+   * colourful gradient chip with the app's first initial. Presentation
+   * only — never written back into the model.
+   * @param {string} letter
+   * @param {string} grad
+   * @returns {HTMLElement}
+   */
+  function buildAppPh(letter, grad) {
+    const span = document.createElement('span');
+    span.className = 'ph';
+    if (grad) span.style.setProperty('--ph-bg', grad);
+    span.textContent = letter || '№';
+    return span;
+  }
+
+  /**
+   * Small gradient chip for the rail icon thumbnail when its icon is
+   * empty or fails to load.
+   * @param {string} letter
+   * @param {string} grad
+   * @returns {HTMLElement}
+   */
+  function buildIconChip(letter, grad) {
+    const span = document.createElement('span');
+    span.className = 'hp-icon-chip';
+    if (grad) span.style.setProperty('--ph-bg', grad);
+    span.textContent = letter || '№';
+    return span;
+  }
+
+  /**
+   * First initial of an app name (uppercased) for placeholders.
+   * @param name
+   */
+  const initialOf = (/** @type {string} */ name) => (name || '№').trim().charAt(0).toUpperCase();
+
+  /**
+   * The social keys to render: the model's order plus any site tiles it
+   * omits. The live site appends the rest at the end (Socials.astro) — mirror
+   * that so the preview, the rail and the count reflect every tile.
+   * @returns {string[]}
+   */
+  function socialOrder() {
+    const order = Array.isArray(draft.socials.order) ? draft.socials.order : [];
+    return order.concat(SITE_SOCIAL_KEYS.filter((k) => !order.includes(k)));
+  }
+
+  /**
+   * A usable link/path: http(s):// or site-relative `/…`.
+   * @param v
+   */
+  const isLinkish = (/** @type {string} */ v) =>
+    /^https?:\/\//.test(v) || String(v).startsWith('/');
+
+  /**
+   * Toggle aria-invalid on a field after an edit, giving inline feedback
+   * instead of only failing at Save.
+   * @param {HTMLInputElement | HTMLSelectElement} input
+   * @param {string} path
+   */
+  function validateField(input, path) {
+    let bad = false;
+    if (/^hero\.words\.\d+$/.test(path)) bad = !input.value.trim();
+    else if (/^apps\.items\.\d+\.name$/.test(path)) bad = !input.value.trim();
+    else if (/\.(link|icon)$/.test(path) || path === 'blog_cta.url')
+      bad = Boolean(input.value.trim()) && !isLinkish(input.value.trim());
+    input.setAttribute('aria-invalid', bad ? 'true' : 'false');
   }
 
   // ── Rail: section field editors ────────────────────────────
@@ -295,7 +393,11 @@
           <div class="hp-field hp-icon-field">
             <label for="hp-app-icon-${i}">Icon</label>
             <div class="hp-icon-pick">
-              <span class="hp-icon-thumb">${a.icon ? `<img src="${esc(a.icon)}" alt="" />` : IC.image}</span>
+              <span class="hp-icon-thumb">${
+                a.icon
+                  ? `<img class="hp-icon-img" src="${esc(a.icon)}" alt="" data-letter="${esc(initialOf(a.name))}" data-grad="${esc(APP_PH_GRADS[i % APP_PH_GRADS.length])}" />`
+                  : `<span class="hp-icon-chip" style="--ph-bg:${esc(APP_PH_GRADS[i % APP_PH_GRADS.length])}">${esc(initialOf(a.name))}</span>`
+              }</span>
               <input id="hp-app-icon-${i}" type="text" placeholder="/images/icon.png" value="${esc(a.icon)}" data-path="apps.items.${i}.icon" />
               <button type="button" class="btn sm" data-act="app-icon-pick" data-i="${i}">Choose…</button>
             </div>
@@ -321,7 +423,7 @@
   }
 
   function socialsFields() {
-    const order = draft.socials.order;
+    const order = socialOrder();
     const hidden = draft.socials.hidden;
     return order
       .map((/** @type {string} */ key, /** @type {number} */ i) => {
@@ -400,11 +502,11 @@
       case 'videos':
         return 'channel block';
       case 'socials': {
-        const total = draft.socials.order.length;
-        const shownCount = draft.socials.order.filter(
+        const all = socialOrder();
+        const shownCount = all.filter(
           (/** @type {string} */ k) => !draft.socials.hidden.includes(k),
         ).length;
-        return `${shownCount} of ${total} shown`;
+        return `${shownCount} of ${all.length} shown`;
       }
       case 'blog_cta':
         return 'blog handoff';
@@ -416,29 +518,44 @@
   function renderRail() {
     const scroll = document.getElementById('hp-rail-scroll');
     if (!scroll || !draft) return;
-    scroll.innerHTML = draft.section_order
-      .map((/** @type {string} */ id, /** @type {number} */ i) => {
-        // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
-        const label = SECTION_LABELS[id] || id;
-        // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
-        const on = draft.sections[id] !== false;
-        const isOpen = open === id;
-        return `
+    const build = () => {
+      scroll.innerHTML = draft.section_order
+        .map((/** @type {string} */ id, /** @type {number} */ i) => {
+          // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
+          const label = SECTION_LABELS[id] || id;
+          // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
+          const on = draft.sections[id] !== false;
+          const isOpen = open === id;
+          const bodyId = `hp-secbody-${esc(id)}`;
+          // The card header is a real <button> (the disclosure) so it's
+          // keyboard-operable + announces aria-expanded; the move/hide tools
+          // sit beside it (not nested inside an interactive element).
+          return `
         <div class="hp-sec${selected === id ? ' sel' : ''}${isOpen ? ' open' : ''}${on ? '' : ' off'}" data-id="${esc(id)}">
-          <div class="hp-sec-head" data-act="sec-head" data-id="${esc(id)}">
-            <span class="hp-sec-grab" aria-hidden="true">${IC.drag}</span>
-            <span class="hp-sec-name">${esc(label)}<span class="tiny">${esc(sectionSubtitle(id))}</span></span>
+          <div class="hp-sec-head">
+            <button type="button" class="hp-sec-disclosure" data-act="sec-head" data-id="${esc(id)}" aria-expanded="${isOpen}" aria-controls="${bodyId}">
+              <span class="hp-sec-name">${esc(label)}<span class="tiny">${esc(sectionSubtitle(id))}</span></span>
+              <span class="hp-sec-chev" aria-hidden="true">${IC.chevDown}</span>
+            </button>
             <span class="hp-sec-tools">
-              <button type="button" class="hp-mini-ic" data-act="sec-up" data-i="${i}" title="Move up" ${i === 0 ? 'disabled' : ''}>${IC.chevUp}</button>
-              <button type="button" class="hp-mini-ic" data-act="sec-down" data-i="${i}" title="Move down" ${i === draft.section_order.length - 1 ? 'disabled' : ''}>${IC.chevDown}</button>
-              <button type="button" class="hp-mini-ic${on ? '' : ' off'}" data-act="sec-toggle" data-id="${esc(id)}" title="${on ? 'Hide section' : 'Show section'}" aria-pressed="${on}">${on ? IC.eye : IC.eyeOff}</button>
+              <button type="button" class="hp-mini-ic" data-act="sec-up" data-i="${i}" title="Move up" aria-label="Move ${esc(label)} up" ${i === 0 ? 'disabled' : ''}>${IC.chevUp}</button>
+              <button type="button" class="hp-mini-ic" data-act="sec-down" data-i="${i}" title="Move down" aria-label="Move ${esc(label)} down" ${i === draft.section_order.length - 1 ? 'disabled' : ''}>${IC.chevDown}</button>
+              <button type="button" class="hp-mini-ic${on ? '' : ' off'}" data-act="sec-toggle" data-id="${esc(id)}" title="${on ? 'Hide section' : 'Show section'}" aria-label="${on ? 'Hide' : 'Show'} ${esc(label)} section" aria-pressed="${on}">${on ? IC.eye : IC.eyeOff}</button>
             </span>
-            <span class="hp-sec-chev" aria-hidden="true">${IC.chevDown}</span>
           </div>
-          ${isOpen ? `<div class="hp-sec-body">${sectionFields(id)}</div>` : ''}
+          ${isOpen ? `<div class="hp-sec-body" id="${bodyId}">${sectionFields(id)}</div>` : ''}
         </div>`;
-      })
-      .join('');
+        })
+        .join('');
+      if (window.TE && TE.wireImgFallbacks) {
+        TE.wireImgFallbacks(scroll, '.hp-icon-img', (img) =>
+          buildIconChip(img.getAttribute('data-letter') || '', img.getAttribute('data-grad') || ''),
+        );
+      }
+    };
+    // Reorder/toggle/add/delete rebuild this list — keep keyboard focus.
+    if (window.TE && TE.preserveFocus) TE.preserveFocus(scroll, build);
+    else build();
   }
 
   // ── Preview blocks ──────────────────────────────────────────
@@ -462,17 +579,36 @@
   }
 
   function pvApps() {
+    const items = draft.apps.items || [];
+    if (!items.length) {
+      return `
+      <div class="pv-sec">
+        <div class="pv-eyebrow">${EYEBROW.apps}</div>
+        <div class="pv-empty">No apps yet — add one in the rail.</div>
+      </div>`;
+    }
     return `
       <div class="pv-sec">
         <div class="pv-eyebrow">${EYEBROW.apps}</div>
         <div class="pv-apps">
-          ${draft.apps.items
-            .map((/** @type {any} */ a) => {
+          ${items
+            .map((/** @type {any} */ a, /** @type {number} */ i) => {
               const status = ['live', 'soon', 'lab'].includes(a.status) ? a.status : 'soon';
-              const ph = `<span class="ph">${esc((a.name || '№').charAt(0))}</span>`;
+              const grad = APP_PH_GRADS[i % APP_PH_GRADS.length];
+              const letter = initialOf(a.name);
+              // Real icons load off /assets|/images (admin serves both); a
+              // missing one is swapped for the gradient chip after render
+              // (TE.imgFallback) so the tile never shows a broken glyph.
+              const inner = a.icon
+                ? `<img class="pv-app-img" src="${esc(a.icon)}" alt="" data-letter="${esc(letter)}" data-grad="${esc(grad)}" />`
+                : `<span class="ph" style="--ph-bg:${esc(grad)}">${esc(letter)}</span>`;
               return `
               <div class="pv-app">
-                <div class="pv-app-ico">${a.icon ? `<img src="${esc(a.icon)}" alt="" />` : ph}</div>
+                <div class="pv-app-stage" style="--i:${i}">
+                  <span class="pv-app-halo" aria-hidden="true"></span>
+                  <div class="pv-app-ico">${inner}</div>
+                  <span class="pv-app-shadow" aria-hidden="true"></span>
+                </div>
                 <div class="pv-app-cap">${esc(a.name)}<span class="pv-app-status ${status}">${
                   // eslint-disable-next-line security/detect-object-injection -- status normalized above
                   STATUS_LABEL[status]
@@ -485,24 +621,27 @@
   }
 
   function pvVideos() {
+    const handle = esc(siteYoutubeHandle);
     return `
       <div class="pv-sec">
         <div class="pv-eyebrow">${EYEBROW.videos}</div>
         <div class="pv-film">
-          <div class="pv-film-handle"><span class="rec"></span>@web_world_wide</div>
+          <div class="pv-film-bg" aria-hidden="true"></div>
+          <div class="pv-film-clouds" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="pv-film-handle"><span class="rec"></span>${handle}</div>
           <div class="pv-film-meta"><span>${esc(draft.videos.episode)}</span><span>00:00</span></div>
           <div class="pv-play"><span class="tri"></span></div>
           <div class="pv-film-title">${esc(draft.videos.film_title)}</div>
         </div>
         <div class="pv-sub-row">
           <span class="pv-sub"><span class="g"></span> Subscribe</span>
-          <span class="pv-yt-handle">@web_world_wide</span>
+          <span class="pv-yt-handle">${handle}</span>
         </div>
       </div>`;
   }
 
   function pvSocials() {
-    const shown = draft.socials.order.filter(
+    const shown = socialOrder().filter(
       (/** @type {string} */ k) => !draft.socials.hidden.includes(k),
     );
     return `
@@ -556,28 +695,41 @@
   function renderPreview() {
     const canvas = document.getElementById('hp-canvas');
     if (!canvas || !draft) return;
-    canvas.className = `hp-canvas${device === 'phone' ? ' phone' : ''}`;
+    canvas.className = `hp-canvas${device === 'phone' ? ' phone' : ''}${introActive ? ' intro' : ''}`;
     const visible = draft.section_order.filter(
       // eslint-disable-next-line security/detect-object-injection -- id from the model's own order
       (/** @type {string} */ id) => draft.sections[id] !== false,
     );
-    canvas.innerHTML = visible
-      .map((/** @type {string} */ id) => {
-        let inner = '';
-        if (id === 'hero') inner = pvHero();
-        else if (id === 'apps') inner = pvApps();
-        else if (id === 'videos') inner = pvVideos();
-        else if (id === 'socials') inner = pvSocials();
-        else if (id === 'blog_cta') inner = pvBlogCta();
-        // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
-        const label = SECTION_LABELS[id] || id;
-        return `
-        <div class="pv-block${selected === id ? ' sel' : ''}" data-pv="${esc(id)}">
-          <span class="pv-tag">edit ${esc(label)}</span>
+    // Drifting sky puffs behind the sections so the canvas isn't flat blue.
+    const sky =
+      '<div class="pv-sky" aria-hidden="true"><span></span><span></span><span></span></div>';
+    canvas.innerHTML =
+      sky +
+      visible
+        .map((/** @type {string} */ id) => {
+          let inner = '';
+          if (id === 'hero') inner = pvHero();
+          else if (id === 'apps') inner = pvApps();
+          else if (id === 'videos') inner = pvVideos();
+          else if (id === 'socials') inner = pvSocials();
+          else if (id === 'blog_cta') inner = pvBlogCta();
+          // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
+          const label = SECTION_LABELS[id] || id;
+          // role=button + tabindex so the block is a keyboard-operable
+          // shortcut to its rail card (global Enter/Space handler clicks it).
+          return `
+        <div class="pv-block${selected === id ? ' sel' : ''}" data-pv="${esc(id)}" role="button" tabindex="0" aria-label="Edit ${esc(label)} section">
+          <span class="pv-tag" aria-hidden="true">edit ${esc(label)}</span>
           ${inner}
         </div>`;
-      })
-      .join('');
+        })
+        .join('');
+    // Swap any broken/missing app icon for its gradient placeholder.
+    if (window.TE && TE.wireImgFallbacks) {
+      TE.wireImgFallbacks(canvas, '.pv-app-img', (img) =>
+        buildAppPh(img.getAttribute('data-letter') || '', img.getAttribute('data-grad') || ''),
+      );
+    }
   }
 
   // ── Dirty / action-row state ────────────────────────────────
@@ -647,6 +799,9 @@
       const res = await TE.fetchJSON('/api/publish', { method: 'POST' });
       savedNotLive = false;
       renderAll();
+      // The published site just changed — drop the cached iframe so the
+      // Live tab reflects it instead of the previous publish.
+      refreshLiveFrame();
       TE.toast((res && res.message) || 'Published.');
     } catch (err) {
       renderAll();
@@ -915,9 +1070,13 @@
         if (draft.apps.items.length >= MAX_APPS) return;
         draft.apps.items.push({ name: 'New app', status: 'lab', link: '', icon: '' });
         break;
-      case 'app-del':
+      case 'app-del': {
+        const victim = draft.apps.items[i];
+        const nm = (victim && victim.name) || 'this app';
+        if (!window.confirm(`Remove “${nm}” from the Apps section?`)) return;
         draft.apps.items.splice(i, 1);
         break;
+      }
       case 'app-up':
       case 'app-down':
         if (!swap(draft.apps.items, i, act === 'app-up' ? -1 : 1)) return;
@@ -932,9 +1091,14 @@
         }
         return;
       case 'soc-up':
-      case 'soc-down':
-        if (!swap(draft.socials.order, i, act === 'soc-up' ? -1 : 1)) return;
+      case 'soc-down': {
+        // Operate on the full (order + appended) list so reordering a tile
+        // the TOML omitted persists it into order rather than no-opping.
+        const ord = socialOrder();
+        if (!swap(ord, i, act === 'soc-up' ? -1 : 1)) return;
+        draft.socials.order = ord;
         break;
+      }
       case 'soc-toggle': {
         const key = el.getAttribute('data-key') || '';
         const idx = draft.socials.hidden.indexOf(key);
@@ -1010,12 +1174,18 @@
       const path = t && t.getAttribute && t.getAttribute('data-path');
       if (!path) return;
       setPath(path, t.value);
+      validateField(t, path);
       renderDirty();
       window.clearTimeout(previewTimer);
       previewTimer = window.setTimeout(renderPreview, 180);
     };
     el.addEventListener('input', onEdit);
     el.addEventListener('change', onEdit);
+
+    // Clear the Live-preview loading overlay once the iframe finishes
+    // loading (fires even cross-origin).
+    const liveFrame = document.getElementById('hp-live');
+    if (liveFrame) liveFrame.addEventListener('load', () => setLiveLoading(false));
 
     window.addEventListener('beforeunload', (e) => {
       if (draft && isDirty()) {
@@ -1035,6 +1205,27 @@
    * published site, keeping the device width in sync. The iframe src is set
    * lazily on first switch to Live so it doesn't load until asked for.
    */
+  /**
+   * Toggle the "Loading the live site…" overlay over the iframe.
+   * @param show
+   */
+  function setLiveLoading(show) {
+    const s = document.getElementById('hp-live-status');
+    if (s) s.hidden = !show;
+  }
+
+  /**
+   * Reload the Live iframe (cache-busted) so it reflects the newest publish.
+   * Only shows the loading overlay if the Live tab is currently visible.
+   */
+  function refreshLiveFrame() {
+    const frame = /** @type {HTMLIFrameElement | null} */ (document.getElementById('hp-live'));
+    if (frame && frame.getAttribute('src')) {
+      if (viewMode === 'live') setLiveLoading(true);
+      frame.setAttribute('src', `${SITE_URL}/?t=${Date.now()}`);
+    }
+  }
+
   function applyViewMode() {
     const canvas = document.getElementById('hp-canvas');
     const frame = /** @type {HTMLIFrameElement | null} */ (document.getElementById('hp-live'));
@@ -1042,10 +1233,14 @@
     const live = viewMode === 'live';
     if (frame) {
       frame.classList.toggle('phone', device === 'phone');
-      if (live && !frame.getAttribute('src')) frame.setAttribute('src', SITE_URL + '/');
+      if (live && !frame.getAttribute('src')) {
+        setLiveLoading(true);
+        frame.setAttribute('src', SITE_URL + '/');
+      }
       frame.hidden = !live;
     }
     if (canvas) canvas.hidden = live;
+    if (!live) setLiveLoading(false);
     if (label) {
       label.innerHTML = live
         ? '<span class="live" aria-hidden="true"></span>Live site · published'
@@ -1088,6 +1283,9 @@
           <div class="hp-preview-scroll">
             <div class="hp-canvas" id="hp-canvas"></div>
             <iframe class="hp-live" id="hp-live" title="Live site preview" loading="lazy" hidden></iframe>
+            <div class="hp-live-status" id="hp-live-status" role="status" hidden>
+              <span class="te-spinner" aria-hidden="true"></span> Loading the live site…
+            </div>
           </div>
         </div>
       </div>`;
@@ -1099,8 +1297,15 @@
     if (!el) return;
     /** @type {any} */
     let model;
+    /** @type {any} */
+    let settings;
     try {
-      model = await TE.fetchJSON('/api/settings/homepage');
+      // Site config is best-effort (only the Videos @handle depends on it);
+      // never let it block or fail the editor.
+      [model, settings] = await Promise.all([
+        TE.fetchJSON('/api/settings/homepage'),
+        TE.fetchJSON('/api/settings').catch(() => null),
+      ]);
     } catch (err) {
       el.innerHTML = `
         <div class="panel"><div class="empty">
@@ -1109,14 +1314,25 @@
         </div></div>`;
       return;
     }
+    const yt =
+      settings && settings.hugo && settings.hugo.social && settings.hugo.social.youtube_handle;
+    if (yt) siteYoutubeHandle = yt;
     saved = clone(model);
     draft = clone(model);
     selected = 'hero';
     open = 'hero';
     savedNotLive = false;
+    introActive = true;
     renderShell();
     wire();
     renderAll();
+    // Let the one-shot entrance animation play, then drop the class so
+    // later re-renders (every keystroke) don't replay it.
+    setTimeout(() => {
+      introActive = false;
+      const c = document.getElementById('hp-canvas');
+      if (c) c.classList.remove('intro');
+    }, 1200);
   }
 
   window.TE = window.TE || {};

@@ -307,6 +307,17 @@ app.use(
     maxAge: '7d',
   }),
 );
+// `/assets` holds the static design images (app icons, globe) the homepage
+// references as `/assets/*.png`. Mounting it read-only — like images/files —
+// so the homepage editor preview + media references resolve to real files
+// instead of 404ing into the SPA fallback (broken-image glyphs).
+app.use(
+  '/assets',
+  express.static(join(SITE_PUBLIC_DIR, 'assets'), {
+    fallthrough: false,
+    maxAge: '7d',
+  }),
+);
 
 // Auth routes. The brute-force limiter must cover credential attempts
 // (every sensitive /auth endpoint is a POST) but NOT GET /auth/status —
