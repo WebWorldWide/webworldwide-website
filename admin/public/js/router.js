@@ -110,6 +110,17 @@
       } catch (err) {
         console.warn(`[router] init ${route} failed:`, err);
       }
+    } else if (initialized[initRoute]) {
+      // Revisit: let the view re-pull its data if it registered a refresh
+      // hook (init only runs once, so without this the view stays stale).
+      const refresh = window.TE && window.TE.viewRefresh && window.TE.viewRefresh[initRoute];
+      if (typeof refresh === 'function') {
+        try {
+          refresh();
+        } catch (err) {
+          console.warn(`[router] refresh ${route} failed:`, err);
+        }
+      }
     }
 
     // Every switch starts the new view at the top — the .stage scroll

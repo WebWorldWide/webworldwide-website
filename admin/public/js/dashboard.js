@@ -418,6 +418,21 @@
     } catch (err) {
       if (err.status === 401) return;
       console.warn('health poll failed', err);
+      // Surface the failure instead of leaving the panes stuck on
+      // 'loading…' / '—' forever.
+      const sys = $('side-system');
+      if (sys) sys.textContent = 'OFFLINE';
+      const pip = $('side-pip');
+      if (pip) {
+        pip.classList.remove('warn');
+        pip.classList.add('bad');
+      }
+      const list = $('docker-list');
+      if (list) {
+        list.innerHTML = `<div class="docker"><span class="ddot bad" aria-hidden="true"></span><span class="name">Health check unavailable</span><span class="status">offline</span></div>`;
+      }
+      const sdp = $('sdpower-status');
+      if (sdp && /collecting/i.test(sdp.textContent || '')) sdp.textContent = 'unavailable';
     }
   }
 
