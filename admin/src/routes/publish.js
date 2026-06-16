@@ -64,7 +64,10 @@ router.post('/', async (req, res) => {
 
     res.json({ ...result, bluesky: blueskyReport });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // Don't leak git/fs internals (absolute Pi paths, library detail) to
+    // the client — log the detail, return a generic code.
+    console.error('[publish] publish failed:', err);
+    res.status(500).json({ error: 'internal_error' });
   }
 });
 
@@ -74,7 +77,8 @@ router.get('/status', async (req, res) => {
     const status = await getGitStatus();
     res.json(status);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[publish] status failed:', err);
+    res.status(500).json({ error: 'internal_error' });
   }
 });
 

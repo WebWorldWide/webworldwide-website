@@ -50,6 +50,7 @@ import { nanoid } from 'nanoid';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdirSync } from 'fs';
+import { promises as dnsPromises } from 'node:dns';
 
 import { parseSource, normaliseUrl } from '../services/microformats.js';
 import { logActivity } from '../services/activity.js';
@@ -71,11 +72,16 @@ const STATUSES = /** @type {const} */ (['pending', 'approved', 'rejected']);
 // ── Test seam: pluggable fetch (defaults to globalThis.fetch). ───────
 /** @type {typeof globalThis.fetch} */
 let fetchImpl = (input, init) => globalThis.fetch(input, init);
+// Real-DNS rebinding screen runs only on the production fetch path. When a
+// test injects its own fetch it owns networking, so skip the live lookup
+// (test hosts like *.example are NXDOMAIN and would otherwise be rejected).
+let screenDns = true;
 /**
  * @param {typeof globalThis.fetch | null | undefined} fn
  */
 export function setFetchImpl(fn) {
   fetchImpl = fn || ((input, init) => globalThis.fetch(input, init));
+  screenDns = !fn;
 }
 
 /** @type {Database.Database | null} */
@@ -203,6 +209,54 @@ export function isPrivateHost(hostname) {
 }
 
 /**
+ * Is a RESOLVED IP address (v4 or v6, incl. IPv4-mapped) private/reserved?
+ * @param {string} ip
+ * @returns {boolean}
+ */
+export function ipIsPrivate(ip) {
+  const h = String(ip || '')
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '');
+  const mapped = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(h);
+  const v4 = mapped ? mapped[1] : h;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(v4);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+  // IPv6: loopback / unspecified / unique-local (fc00::/7) / link-local (fe80::/10).
+  if (h === '::1' || h === '::') return true;
+  if (/^f[cd][0-9a-f]{2}:/.test(h)) return true;
+  if (/^fe[89ab][0-9a-f]:/.test(h)) return true;
+  return false;
+}
+
+/**
+ * Resolve `hostname` and reject if ANY A/AAAA record is private/reserved.
+ * Closes the DNS-rebinding gap the string-only isPrivateHost can't catch
+ * (a public name pointing at an internal IP). Best-effort pre-connect
+ * check: a narrow TOCTOU window remains vs the runtime's own resolve, but
+ * this removes the trivial public-name → private-IP bypass.
+ * @param {string} hostname
+ */
+async function assertPublicHost(hostname) {
+  let addrs;
+  try {
+    addrs = await dnsPromises.lookup(hostname, { all: true });
+  } catch {
+    throw new Error('refusing fetch: host did not resolve');
+  }
+  if (!addrs.length || addrs.some((a) => ipIsPrivate(a.address))) {
+    throw new Error('refusing fetch to a private/non-public host');
+  }
+}
+
+/**
  * Fetch the source URL with a hard timeout + size cap. Returns the
  * decoded body, or throws. Used by the background validator.
  *
@@ -228,6 +282,8 @@ async function fetchSource(url) {
       if (isPrivateHost(u.hostname)) {
         throw new Error('refusing fetch to a private/non-public host');
       }
+      // Also resolve + screen the actual A/AAAA records (DNS-rebinding).
+      if (screenDns) await assertPublicHost(u.hostname);
       res = await fetchImpl(current, {
         headers: {
           'User-Agent': 'WebWorldWide-Webmention/1.0 (+https://webworldwide.online)',
@@ -283,11 +339,15 @@ export async function validateMention(id) {
   try {
     body = await fetchSource(row.source);
   } catch (err) {
+    // Store a generic marker, not err.message: the detail can distinguish
+    // internal hosts/ports (an SSRF oracle) and is surfaced via the admin
+    // API. The full reason is logged server-side only.
+    console.error('[webmention] fetch failed for', row.id, '-', err && err.message);
     db()
       .prepare(
         `UPDATE webmentions SET status = 'rejected', validated_at = ?, raw_html = ? WHERE id = ?`,
       )
-      .run(Date.now(), `fetch_failed: ${err.message}`.slice(0, 1024), id);
+      .run(Date.now(), 'fetch_failed', id);
     return;
   }
 
@@ -301,9 +361,11 @@ export async function validateMention(id) {
     return;
   }
 
-  // Truncate body for storage — useful for moderation diffing, never
-  // rendered to readers.
-  const stored = body.slice(0, 16 * 1024);
+  // Do NOT persist the fetched body: storing response bytes from a
+  // (best-effort screened) external fetch in a column the admin API
+  // returns is needless exposure. The parsed `content` is what moderation
+  // needs; raw_html holds only a short status marker.
+  const stored = 'ok';
 
   // Default to `pending` so admin can moderate before publishing.
   // Override with `WEBMENTION_AUTO_APPROVE=1` for a low-friction
@@ -495,7 +557,8 @@ adminRouter.get('/', (req, res) => {
   } else {
     rows = db().prepare(`SELECT * FROM webmentions ORDER BY received_at DESC LIMIT ?`).all(limit);
   }
-  res.json(rows);
+  // Never expose raw_html (fetch-time marker) over the moderation API.
+  res.json(rows.map(({ raw_html: _omit, ...r }) => r));
 });
 
 adminRouter.post('/:id/approve', (req, res) => {
