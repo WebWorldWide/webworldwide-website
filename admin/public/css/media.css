@@ -307,6 +307,16 @@ body.te-has-body-dropzone.is-dragover::after {
   justify-content: center;
   color: var(--ink-mute, #5a72b0);
 }
+
+/* "Showing first N of M" note when the library exceeds the 200-item cap. */
+.te-media-more {
+  grid-column: 1 / -1;
+  padding: var(--space-3, 12px) var(--space-2, 8px);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm, 13px);
+  color: var(--ink-mute, #5a72b0);
+  text-align: center;
+}
 .te-media-glyph svg {
   width: 32px;
   height: 32px;
