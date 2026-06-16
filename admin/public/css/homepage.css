@@ -145,27 +145,44 @@
 
 .hp-sec-head {
   display: grid;
-  grid-template-columns: 22px 1fr auto auto;
-  gap: 9px;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  padding: 9px 11px;
-  cursor: pointer;
   user-select: none;
 }
 
-.hp-sec-head:hover {
+/* The disclosure is a real <button> spanning the name + chevron, so the
+   card is keyboard-operable; the move/hide tools sit beside it. */
+.hp-sec-disclosure {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 4px 9px 12px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.hp-sec-disclosure:hover {
   background: var(--surface-2);
 }
 
-.hp-sec-grab {
-  display: grid;
-  place-items: center;
-  color: var(--ink-faint);
+.hp-sec-disclosure:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
-.hp-sec-grab svg {
-  width: 16px;
-  height: 16px;
+.hp-sec-disclosure .hp-sec-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.hp-sec-disclosure .hp-sec-chev {
+  flex-shrink: 0;
 }
 
 .hp-sec-name {
@@ -187,6 +204,7 @@
   display: flex;
   gap: 2px;
   align-items: center;
+  padding-right: 7px;
 }
 
 .hp-mini-ic {
@@ -356,6 +374,13 @@
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+/* Inline validation: a bad/empty required field reads as a problem
+   immediately, not only when Save is rejected by the server. */
+.hp-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px var(--danger-soft);
+}
+
 .hp-field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -388,6 +413,20 @@
 .hp-icon-thumb svg {
   width: 18px;
   height: 18px;
+}
+/* Gradient chip shown in the rail thumb when an icon is empty or fails to
+   load — mirrors the preview tile placeholder. */
+.hp-icon-chip {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 700;
+  color: rgb(58 24 16 / 80%);
+  background: var(--ph-bg, var(--surface-3));
 }
 .hp-icon-pick input {
   flex: 1;
@@ -550,11 +589,71 @@
   display: none;
 }
 
+/* Loading overlay shown while the Live iframe (re)loads. */
+.hp-live-status {
+  position: absolute;
+  inset: 44px 0 0;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: rgb(255 255 255 / 85%);
+  pointer-events: none;
+}
+
+.hp-live-status[hidden] {
+  display: none;
+}
+
+/* Drifting sky puffs behind the sections so the canvas isn't flat blue. */
+.pv-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pv-sky span {
+  position: absolute;
+  left: 0;
+  width: 120px;
+  height: 34px;
+  background: rgb(255 255 255 / 22%);
+  border-radius: 999px;
+  filter: blur(6px);
+}
+
+.pv-sky span:nth-child(1) {
+  top: 12%;
+}
+
+.pv-sky span:nth-child(2) {
+  top: 42%;
+  width: 80px;
+  opacity: 0.7;
+}
+
+.pv-sky span:nth-child(3) {
+  top: 72%;
+  width: 150px;
+  opacity: 0.5;
+}
+
 /* ── Preview blocks ────────────────────────────────────────── */
 .pv-block {
   position: relative;
+  z-index: 1;
   cursor: pointer;
   transition: box-shadow 0.12s ease;
+}
+
+.pv-block:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -3px;
 }
 
 .pv-block::after {
@@ -617,8 +716,13 @@
   width: 84px;
   height: 84px;
   margin: 0 4px;
+  padding: 6px;
   overflow: hidden;
-  background: #fff;
+  /* Tinted like the site's pixel globe rather than a thin outline on white. */
+  color: #fff;
+  background:
+    radial-gradient(circle at 34% 28%, rgb(255 255 255 / 45%), transparent 42%),
+    radial-gradient(circle at 50% 50%, #4a9bf5, #1858d8 72%);
   border: 3px solid var(--ink);
   border-radius: 50%;
   box-shadow: 5px 5px 0 var(--ink);
@@ -701,21 +805,50 @@
 .pv-app {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   text-align: center;
 }
 
+/* The stage holds the halo (behind), the icon and the ground shadow
+   (below) and floats gently — faking the live page's 3D drift without its
+   heavy multi-layer extrusion (too costly to animate on a Pi). */
+.pv-app-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+}
+
+.pv-app-halo {
+  position: absolute;
+  inset: -10px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 216 58 / 50%),
+    rgb(255 157 42 / 25%) 42%,
+    transparent 72%
+  );
+  filter: blur(10px);
+}
+
 .pv-app-ico {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: 74px;
   height: 74px;
   overflow: hidden;
-  background: linear-gradient(135deg, #fff1c8, #ffd2a8 55%, #f08c5a);
+  background: #fff;
   border: 2px solid var(--ink);
   border-radius: 18px;
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow:
+    4px 4px 0 var(--ink),
+    inset 0 2px 0 rgb(255 255 255 / 60%);
 }
 
 .pv-app-ico img {
@@ -724,11 +857,42 @@
   object-fit: cover;
 }
 
+/* Icon-less / broken-icon tiles get a cycling colour gradient + initial
+   (mirrors site Apps.astro FALLBACKS) instead of reading blank. */
 .pv-app-ico .ph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
   font-family: var(--font-ui);
   font-size: 30px;
   font-style: italic;
-  color: rgb(58 24 16 / 70%);
+  font-weight: 700;
+  color: rgb(58 24 16 / 78%);
+  background: var(--ph-bg, linear-gradient(135deg, #fff1c8, #ffd2a8 55%, #f08c5a));
+}
+
+.pv-app-shadow {
+  position: absolute;
+  bottom: -9px;
+  z-index: 0;
+  width: 54px;
+  height: 11px;
+  pointer-events: none;
+  background: rgb(14 41 96 / 32%);
+  filter: blur(5px);
+  border-radius: 50%;
+}
+
+/* Apps / blocks with no items left. */
+.pv-empty {
+  padding: 18px;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-style: italic;
+  color: rgb(255 255 255 / 85%);
+  text-align: center;
+  text-shadow: 1px 1px 0 var(--ink);
 }
 
 .pv-app-cap {
@@ -773,6 +937,49 @@
   border: 3px solid var(--ink);
   border-radius: 5px;
   box-shadow: 6px 6px 0 var(--ink);
+}
+
+/* Cinematic sky behind the frame + drifting clouds (mirrors the live
+   Videos.astro film-bg/clouds) so the section isn't a dead black box. */
+.pv-film-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, #0a1f4d, #1858d8 45%, #2e7af2);
+}
+
+.pv-film-clouds {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pv-film-clouds span {
+  position: absolute;
+  left: 0;
+  width: 70px;
+  height: 20px;
+  background: rgb(255 255 255 / 55%);
+  border-radius: 999px;
+  filter: blur(2px);
+}
+
+.pv-film-clouds span:nth-child(1) {
+  top: 30%;
+}
+
+.pv-film-clouds span:nth-child(2) {
+  top: 58%;
+  width: 46px;
+  opacity: 0.8;
+}
+
+.pv-film-clouds span:nth-child(3) {
+  top: 18%;
+  width: 92px;
+  opacity: 0.6;
 }
 
 .pv-film::before,
@@ -1070,6 +1277,87 @@
   color: #fff;
   background: var(--accent-bg);
   box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ── Motion (one-shot intro + ambient drift/float) ──────────── */
+@keyframes pv-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pv-drift-x {
+  from {
+    transform: translateX(-120px);
+  }
+  to {
+    transform: translateX(560px);
+  }
+}
+
+@keyframes pv-drift-wide {
+  from {
+    transform: translateX(-160px);
+  }
+  to {
+    transform: translateX(960px);
+  }
+}
+
+/* Animation is opt-in: only runs when the user hasn't asked to reduce
+   motion, so there's nothing to switch off with !important. */
+@media (prefers-reduced-motion: no-preference) {
+  .pv-app-stage {
+    animation: pv-float 7s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * 0.55s);
+  }
+
+  .hp-canvas.intro .pv-block {
+    animation: pv-rise 0.5s ease both;
+  }
+
+  .pv-film-clouds span {
+    animation: pv-drift-x 17s linear infinite;
+  }
+
+  .pv-film-clouds span:nth-child(2) {
+    animation-duration: 23s;
+    animation-delay: -8s;
+  }
+
+  .pv-film-clouds span:nth-child(3) {
+    animation-duration: 29s;
+    animation-delay: -15s;
+  }
+
+  .pv-sky span {
+    animation: pv-drift-wide 60s linear infinite;
+  }
+
+  .pv-sky span:nth-child(2) {
+    animation-duration: 85s;
+    animation-delay: -30s;
+  }
+
+  .pv-sky span:nth-child(3) {
+    animation-duration: 100s;
+    animation-delay: -55s;
+  }
 }
 
 /* Below 860px the side-by-side split can't breathe — stack the rail
