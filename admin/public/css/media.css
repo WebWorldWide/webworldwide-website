@@ -35,14 +35,16 @@
 
 .te-dz:hover,
 .te-dz:focus-visible {
-  color: var(--fg, #fff);
-  background: rgb(255 255 255 / 3%);
-  border-color: rgb(255 255 255 / 30%);
+  /* Light theme: dark ink on a light tint — the old white-on-light (a
+     dark-theme remnant) was invisible. */
+  color: var(--ink);
+  background: var(--surface-2);
+  border-color: var(--accent);
   outline: none;
 }
 
 .te-dz.is-dragover {
-  color: var(--fg, #fff);
+  color: var(--accent);
   background: var(--accent-soft);
   border-color: var(--accent);
 }
@@ -526,7 +528,7 @@ body.te-has-body-dropzone.is-dragover::after {
   width: min(480px, 92vw);
   font-family: var(--mono, monospace);
   background: var(--bg-elev);
-  border-left: var(--border-soft);
+  border-left: 1px solid var(--line);
   box-shadow: -8px 0 24px rgb(14 41 96 / 12%);
   transform: translateX(100%);
   transition: transform 200ms;
@@ -543,7 +545,7 @@ body.te-has-body-dropzone.is-dragover::after {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-bottom: var(--border-soft);
+  border-bottom: 1px solid var(--line);
 }
 
 .te-media-drawer-body {
@@ -672,15 +674,18 @@ body.te-has-body-dropzone.is-dragover::after {
 }
 
 /* ── Upload progress tray ──────────────────────────────────── */
+/* Bottom-LEFT so it never overlaps the bottom-right toast stack (they're
+   independent fixed elements; sharing a corner meant the tray painted over
+   toasts). Width clamps so it doesn't clip on the narrowest phones. */
 .te-upload-tray {
   position: fixed;
-  right: 16px;
+  left: 16px;
   bottom: 16px;
   z-index: calc(var(--z-toast) + 1);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 320px;
+  width: min(320px, calc(100vw - 32px));
   font-family: var(--mono, monospace);
   pointer-events: none;
 }

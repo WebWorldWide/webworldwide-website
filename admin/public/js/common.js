@@ -757,6 +757,60 @@
       .forEach((img) => TE.imgFallback(/** @type {HTMLImageElement} */ (img), makePlaceholder));
   };
 
+  // ── Mobile nav drawer (hamburger < 800px) ──────────────────
+  // Shared by the SPA shell (router.js) and the editor page so BOTH get a
+  // working off-canvas nav on phones (the editor page previously had an
+  // off-canvas sidebar with no opener). Idempotent — safe to call once per
+  // page; needs #nav-toggle + #sidebar in the DOM.
+  let mobileNavWired = false;
+  TE.wireMobileNav = function wireMobileNav() {
+    if (mobileNavWired) return;
+    const toggle = document.getElementById('nav-toggle');
+    const sidebar = document.getElementById('sidebar');
+    if (!toggle || !sidebar) return;
+    mobileNavWired = true;
+
+    // The backdrop lives INSIDE .shell (a stacking context) so it can't
+    // paint above the sidebar.
+    const backdrop = document.createElement('div');
+    backdrop.className = 'nav-backdrop';
+    (document.querySelector('.shell') || document.body).appendChild(backdrop);
+
+    function setOpen(open) {
+      const wasOpen = document.body.classList.contains('nav-open');
+      document.body.classList.toggle('nav-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      if (open && !wasOpen) {
+        trapFocus(sidebar);
+        /** @type {HTMLElement | null} */ (sidebar.querySelector('a, button'))?.focus();
+      } else if (!open && wasOpen) {
+        releaseFocus(sidebar);
+      }
+    }
+    const close = () => setOpen(false);
+
+    // Crossing back to desktop must release the trap + nav-open state.
+    const mq = window.matchMedia('(max-width: 800px)');
+    const onBreakpoint = () => {
+      if (!mq.matches && document.body.classList.contains('nav-open')) close();
+    };
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onBreakpoint);
+
+    toggle.addEventListener('click', () => setOpen(!document.body.classList.contains('nav-open')));
+    backdrop.addEventListener('click', close);
+    sidebar.addEventListener('click', (e) => {
+      const t = /** @type {HTMLElement} */ (e.target);
+      if (t.closest('a')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('nav-open')) {
+        close();
+        toggle.focus();
+      }
+    });
+  };
+
   // ── Boot ───────────────────────────────────────────────────
   function boot() {
     initTheme();

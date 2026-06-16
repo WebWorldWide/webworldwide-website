@@ -221,7 +221,8 @@
 
 .te-cm-author .badge.webmention {
   border-color: var(--warn);
-  color: var(--warn);
+  /* Small badge text needs the darker AA-safe tier, not the fill tier. */
+  color: var(--warn-strong);
 }
 
 .te-cm-body {
@@ -330,7 +331,9 @@
   background: var(--bg-elev);
   border-left: 1px solid var(--line-www);
   box-shadow: -20px 0 60px -20px rgb(0, 0, 0, 0.6);
-  z-index: 60;
+  /* Right-sheet tier from the shared ladder — was 60, below the sticky
+     topbar (--z-sticky:100), so the drawer painted under it. */
+  z-index: var(--z-drawer);
   transform: translateX(100%);
   transition: transform 180ms ease;
   display: flex;
@@ -495,7 +498,8 @@
   font-family: var(--mono);
   font-size: 12px;
   box-shadow: 0 12px 30px -10px rgb(0, 0, 0, 0.45);
-  z-index: 70;
+  /* Float above the sticky topbar (--z-sticky:100) — was 70. */
+  z-index: var(--z-dropdown);
 }
 
 .te-cm-bulk-bar[hidden] {
