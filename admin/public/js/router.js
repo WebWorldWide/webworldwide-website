@@ -51,7 +51,30 @@
     return 'overview';
   }
 
-  function show(route) {
+  /**
+   * Announce the new view to screen readers via a polite live region.
+   * @param text
+   */
+  function announce(text) {
+    let live = document.getElementById('route-announcer');
+    if (!live) {
+      live = document.createElement('div');
+      live.id = 'route-announcer';
+      live.className = 'sr-only';
+      live.setAttribute('role', 'status');
+      live.setAttribute('aria-live', 'polite');
+      document.body.appendChild(live);
+    }
+    live.textContent = `${text} view`;
+  }
+
+  /**
+   * @param {string} route
+   * @param {{ focus?: boolean }} [opts] focus=true moves focus + announces
+   *   (used for user-driven hash navigation, not the initial paint).
+   */
+  function show(route, opts) {
+    opts = opts || {};
     const target = VIEW_MAP[route] || 'view-dashboard';
     for (const id of Object.values(VIEW_MAP)) {
       const el = document.getElementById(id);
@@ -86,6 +109,26 @@
         initFn();
       } catch (err) {
         console.warn(`[router] init ${route} failed:`, err);
+      }
+    }
+
+    // Every switch starts the new view at the top — the .stage scroll
+    // position otherwise carries over from the previous view.
+    const stage = document.getElementById('stage');
+    if (stage) stage.scrollTop = 0;
+
+    // On user-driven navigation, move focus to the main region and
+    // announce the view so screen-reader + keyboard users aren't stranded
+    // on a now-hidden control. Skipped on the initial paint.
+    if (opts.focus) {
+      announce(labelFor(route));
+      const main = document.getElementById('main');
+      if (main && typeof main.focus === 'function') {
+        try {
+          main.focus();
+        } catch (_) {
+          /* ignore */
+        }
       }
     }
   }
@@ -222,7 +265,7 @@
       }
       activeRoute = next;
       activeHash = window.location.hash || `#${next}`;
-      show(next);
+      show(next, { focus: true });
     });
     wireMobileNav();
     wireNewPost();
