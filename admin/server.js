@@ -149,7 +149,12 @@ app.set('trust proxy', 1);
 //     simplewebauthn UMD and KaTeX live under /vendor — no CDNs).
 //   - `style-src-attr 'unsafe-inline'` is required: several UI modules
 //     (media, comments, dashboard) set style="" attributes from JS
-//     template strings. Inline <style>/<script> BLOCKS stay forbidden.
+//     template strings.
+//   - `style-src 'unsafe-inline'` is required because TipTap injects its
+//     base CSS as a runtime <style> element (editor.bundle.js); the pages
+//     are statically served so a per-request nonce can't be threaded in.
+//     Script execution stays fully locked (script-src 'self',
+//     script-src-attr 'none', object-src 'none', base-uri 'self').
 //   - `img-src https:` is required for federated avatars — webmention
 //     author photos and Remark42 avatars come from arbitrary origins.
 //   - `frame-src` mirrors the embed providers the editor can render
@@ -164,7 +169,7 @@ app.use(
         'default-src': ["'self'"],
         'script-src': ["'self'"],
         'script-src-attr': ["'none'"],
-        'style-src': ["'self'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
         'style-src-attr': ["'unsafe-inline'"],
         'font-src': ["'self'"],
         'img-src': ["'self'", 'data:', 'blob:', 'https:'],
@@ -212,20 +217,34 @@ if (!SESSION_SECRET) {
 // is JSON/form data measured in kilobytes. The webmention endpoint
 // mounts its own 8kb parser below, so skip it here.
 const urlencodedParser = express.urlencoded({ extended: true, limit: '2mb' });
-app.use(express.json({ limit: '2mb' }));
+const jsonParser = express.json({ limit: '2mb' });
+// Skip BOTH global body parsers for /webmention: the receiver mounts its
+// own 8kb urlencoded parser at the route, and letting the 2mb JSON parser
+// run here would let a JSON-typed ping bypass that 8kb cap — memory/DoS
+// amplification on the one unauthenticated endpoint.
 app.use((req, res, next) => {
   if (req.path.startsWith('/webmention')) return next();
-  return urlencodedParser(req, res, next);
+  return jsonParser(req, res, (err) => (err ? next(err) : urlencodedParser(req, res, next)));
 });
 app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 
-// Rate limiting
+// Rate limiting.
+//
+// Key on Cloudflare's authoritative client IP. With trust proxy=1 but a
+// Cloudflare → cloudflared → Caddy → app chain (≥2 hops), req.ip resolves
+// to a fixed upstream proxy, so every client would share one bucket and
+// the limiter couldn't isolate a brute-forcer. CF-Connecting-IP is set by
+// Cloudflare and not client-spoofable through the tunnel.
+const clientIpKey = (/** @type {import('express').Request} */ req) =>
+  /** @type {string} */ (req.headers['cf-connecting-ip']) || req.ip;
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 attempts per window
   message: { error: 'Too many auth attempts. Try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: clientIpKey,
 });
 
 // Phase 8: Webmention receiver is public-facing; cap inbound POSTs
@@ -238,6 +257,7 @@ const webmentionLimiter = rateLimit({
   message: { error: 'Too many webmentions. Slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: clientIpKey,
 });
 
 // Static files (admin UI).

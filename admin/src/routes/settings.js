@@ -18,8 +18,9 @@
  */
 
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
+import { writeFileAtomic } from '../utils/atomicWrite.js';
 import { parse as parseToml, apply as applyToml, flatToChanges } from '../utils/toml-roundtrip.js';
 import { logActivity } from '../services/activity.js';
 import { getFileHistory, getFileAtCommit } from '../utils/git.js';
@@ -489,7 +490,7 @@ router.get('/homepage', (req, res) => {
     res.json(normalizeHomepage(parsed));
   } catch (err) {
     console.error('[settings] homepage read failed:', err);
-    res.status(500).json({ error: 'read_failed', message: err.message });
+    res.status(500).json({ error: 'read_failed' });
   }
 });
 
@@ -547,7 +548,7 @@ router.patch('/homepage', (req, res) => {
     // snapshot before overwrite). Best effort — recordSnapshot swallows its
     // own errors and never throws.
     recordSnapshot(HOMEPAGE_SNAPSHOT_KEY, { title: 'Homepage', data: current, content: src });
-    writeFileSync(SETTINGS_TOML, next);
+    writeFileAtomic(SETTINGS_TOML, next);
     logActivity({
       req,
       action: 'settings.homepage',
@@ -557,7 +558,7 @@ router.patch('/homepage', (req, res) => {
     res.json(normalizeHomepage(parseToml(next)));
   } catch (err) {
     console.error('[settings] homepage patch failed:', err);
-    res.status(500).json({ error: 'write_failed', message: err.message });
+    res.status(500).json({ error: 'write_failed' });
   }
 });
 
@@ -580,7 +581,7 @@ router.get('/homepage/history', async (req, res) => {
     res.json({ git, snapshots });
   } catch (err) {
     console.error('[settings] homepage history failed:', err);
-    res.status(500).json({ error: 'history_failed', message: err.message });
+    res.status(500).json({ error: 'history_failed' });
   }
 });
 
@@ -610,7 +611,7 @@ router.get('/homepage/version/:source/:ref', async (req, res) => {
     return res.status(400).json({ error: 'unknown_source' });
   } catch (err) {
     console.error('[settings] homepage version fetch failed:', err);
-    res.status(500).json({ error: 'version_failed', message: err.message });
+    res.status(500).json({ error: 'version_failed' });
   }
 });
 
@@ -622,7 +623,7 @@ router.get('/', (req, res) => {
     res.json({ hugo: parsed, author: readAuthor() });
   } catch (err) {
     console.error('[settings] read failed:', err);
-    res.status(500).json({ error: 'read_failed', message: err.message });
+    res.status(500).json({ error: 'read_failed' });
   }
 });
 
@@ -645,7 +646,7 @@ router.patch('/hugo', (req, res) => {
     } catch (parseErr) {
       return res.status(400).json({ error: 'invalid_toml_after_edit', message: parseErr.message });
     }
-    writeFileSync(SETTINGS_TOML, next);
+    writeFileAtomic(SETTINGS_TOML, next);
     logActivity({
       req,
       action: 'settings.hugo',
@@ -655,7 +656,7 @@ router.patch('/hugo', (req, res) => {
     res.json({ ok: true, changed: flat.length });
   } catch (err) {
     console.error('[settings] site.toml patch failed:', err);
-    res.status(500).json({ error: 'write_failed', message: err.message });
+    res.status(500).json({ error: 'write_failed' });
   }
 });
 
@@ -671,12 +672,12 @@ router.patch('/author', (req, res) => {
       social: { ...current.social, ...(body.social || {}) },
     };
     mkdirSync(dirname(AUTHOR_JSON), { recursive: true });
-    writeFileSync(AUTHOR_JSON, JSON.stringify(next, null, 2) + '\n');
+    writeFileAtomic(AUTHOR_JSON, JSON.stringify(next, null, 2) + '\n');
     logActivity({ req, action: 'settings.author', target: 'author.json' });
     res.json({ ok: true, author: next });
   } catch (err) {
     console.error('[settings] author patch failed:', err);
-    res.status(500).json({ error: 'write_failed', message: err.message });
+    res.status(500).json({ error: 'write_failed' });
   }
 });
 

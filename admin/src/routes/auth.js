@@ -67,6 +67,17 @@ function hasUsers() {
   return row.count > 0;
 }
 
+// Abandoned ceremonies (cancelled OS prompt, closed tab) leave challenge
+// rows forever. Sweep anything older than the 5-minute validity window on
+// each ceremony start so the table can't grow unbounded.
+function pruneChallenges() {
+  try {
+    db.prepare("DELETE FROM challenges WHERE created_at < datetime('now', '-10 minutes')").run();
+  } catch {
+    /* best-effort cleanup */
+  }
+}
+
 // Create session cookie
 function createSession(res, user) {
   const sessionData = {
@@ -166,9 +177,15 @@ router.post('/passkey/register/start', async (req, res) => {
   } catch {
     return res.status(401).json({ error: 'Invalid session' });
   }
+  // A signed-but-expired session must not initiate registration — mirror
+  // the expiry check the /api middleware enforces.
+  if (!userData || typeof userData.expires !== 'number' || userData.expires < Date.now()) {
+    return res.status(401).json({ error: 'Session expired' });
+  }
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userData.userId);
   if (!user) return res.status(401).json({ error: 'User not found' });
+  pruneChallenges();
 
   // Get existing passkeys
   const existingKeys = db
@@ -208,7 +225,9 @@ router.post('/passkey/register/finish', async (req, res) => {
   const { challengeId, credential } = req.body;
 
   const challengeRow = db
-    .prepare('SELECT * FROM challenges WHERE id = ? AND type = ?')
+    .prepare(
+      "SELECT * FROM challenges WHERE id = ? AND type = ? AND created_at > datetime('now', '-5 minutes')",
+    )
     .get(challengeId, 'registration');
   if (!challengeRow) return res.status(400).json({ error: 'Invalid challenge' });
 
@@ -248,13 +267,15 @@ router.post('/passkey/register/finish', async (req, res) => {
       res.status(400).json({ error: 'Verification failed' });
     }
   } catch (err) {
+    // Reachable pre-session — return a generic code, not library internals.
     console.error('Passkey registration error:', err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: 'verification_failed' });
   }
 });
 
 // ── Passkey Authentication (start) ──
 router.post('/passkey/login/start', async (req, res) => {
+  pruneChallenges();
   const allKeys = db.prepare('SELECT * FROM passkeys').all();
 
   const options = await generateAuthenticationOptions({
@@ -282,7 +303,9 @@ router.post('/passkey/login/finish', async (req, res) => {
   const { challengeId, credential } = req.body;
 
   const challengeRow = db
-    .prepare('SELECT * FROM challenges WHERE id = ? AND type = ?')
+    .prepare(
+      "SELECT * FROM challenges WHERE id = ? AND type = ? AND created_at > datetime('now', '-5 minutes')",
+    )
     .get(challengeId, 'authentication');
   if (!challengeRow) return res.status(400).json({ error: 'Invalid challenge' });
 
@@ -320,7 +343,7 @@ router.post('/passkey/login/finish', async (req, res) => {
     }
   } catch (err) {
     console.error('Passkey auth error:', err);
-    res.status(401).json({ error: err.message });
+    res.status(401).json({ error: 'verification_failed' });
   }
 });
 
