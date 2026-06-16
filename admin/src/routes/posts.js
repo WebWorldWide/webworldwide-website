@@ -451,6 +451,14 @@ router.put('/:filename', (req, res) => {
       }
     }
 
+    // Validate publish_at on update too (create already does). We reject a
+    // malformed timestamp but NOT a past one: an existing post's scheduled
+    // time may legitimately have already passed, and editing it shouldn't be
+    // blocked just because that moment is now behind us.
+    if (data.publish_at && Number.isNaN(new Date(data.publish_at).getTime())) {
+      return res.status(400).json({ error: 'publish_at must be a valid ISO timestamp' });
+    }
+
     // Single-source-of-truth schema check (shared with Astro build).
     // Drafts pass unconditionally; non-drafts must satisfy the Zod schema.
     const check = validateForPublish(data);

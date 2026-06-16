@@ -98,6 +98,12 @@
 
   let isDirty = false;
   let autosaveTimer = null;
+  // Set when the initial load failed: the editor stays bound to currentFile
+  // but with blank fields, so saving must be blocked until a reload.
+  let loadFailed = false;
+  // In-flight save lock so autosave can't overlap a manual save (false 409
+  // / double-create) — savePost early-returns while one is running.
+  let saving = false;
 
   // Warn the user before navigating away with unsaved edits.
   window.addEventListener('beforeunload', (e) => {
@@ -234,6 +240,12 @@
     }
     autoEl.dataset.state = stateName;
     if (autoTxt) autoTxt.textContent = msg || stateName;
+    // Announce terminal states via the dedicated aria-live region (the pip
+    // text changes too often — Saving…/dirty — to announce every flip).
+    const live = $('save-status');
+    if (live && (stateName === 'saved' || stateName === 'error')) {
+      live.textContent = msg || stateName;
+    }
     if (stateName === 'error') {
       autoEl.setAttribute('role', 'button');
       autoEl.setAttribute('tabindex', '0');
@@ -405,14 +417,18 @@
   // prompt. `onChoose(mediaItem)` fires when a tile is clicked.
   let imgPickOnChoose = null;
   let imgPickTimer = null;
+  // Sequence guard: a slow earlier search must not overwrite a newer one.
+  let imgPickSeq = 0;
 
   async function loadImgPickerGrid(q) {
     const grid = $('imgpick-grid');
     if (!grid) return;
+    const seq = ++imgPickSeq;
     try {
       const qs = new URLSearchParams({ type: 'image', limit: '60' });
       if (q) qs.set('q', q);
       const list = await TE.fetchJSON('/api/media?' + qs.toString());
+      if (seq !== imgPickSeq) return; // superseded by a newer query
       const items = list.items || [];
       if (!items.length) {
         grid.innerHTML = `<p class="te-history-hint">${q ? 'No images match.' : 'No images in the library yet.'}</p>`;
@@ -435,7 +451,8 @@
         grid.appendChild(btn);
       });
     } catch (_err) {
-      grid.innerHTML = '<p class="te-history-hint">Couldn’t load images.</p>';
+      if (seq === imgPickSeq)
+        grid.innerHTML = '<p class="te-history-hint">Couldn’t load images.</p>';
     }
   }
 
@@ -528,10 +545,18 @@
       populateFields(data, content, filename);
       setCurrentFile(filename);
       isDirty = false;
+      loadFailed = false;
       setSaved('Saved');
       setAutoState('saved', 'Saved');
     } catch (err) {
-      setAutoState('error', 'Failed to load');
+      // The load failed but the editor is still bound to `filename` with
+      // blank fields. Saving now would PUT empty content over the real post
+      // — and without a baseMtime token would bypass the conflict guard.
+      // Lock saving + autosave until a successful reload; the error pip
+      // re-loads (not saves).
+      loadFailed = true;
+      clearTimeout(autosaveTimer);
+      setAutoState('error', 'Couldn’t load — click to retry');
       TE.toast(err.message || 'Failed to load post.', 'error');
     }
   }
@@ -663,6 +688,9 @@
     if (!selectedVersion) return;
     populateFields(selectedVersion.data || {}, selectedVersion.content || '', currentFile);
     isDirty = true;
+    // Honor "review then Save" — cancel any pending autosave so the restored
+    // version isn't silently applied 10s later.
+    clearTimeout(autosaveTimer);
     setSaved('Unsaved');
     setAutoState('idle', 'Restored — Save to apply');
     TE.closeModal('history-modal');
@@ -732,6 +760,11 @@
 
   // ── Save ──────────────────────────────────────────────────
   async function savePost() {
+    if (loadFailed) {
+      TE.toast('This post failed to load — reload it before saving.', 'error');
+      return false;
+    }
+    if (saving) return false; // in-flight lock: no overlapping autosave + manual save
     if (!titleEl.value.trim()) {
       TE.toast('Title is required.', 'error');
       return false;
@@ -769,8 +802,17 @@
     // Optimistic concurrency: tell the server which version we loaded so
     // it can refuse to clobber a newer on-disk copy.
     const payload = { data, content };
-    if (method === 'PUT' && typeof loadedMtime === 'number') payload.baseMtime = loadedMtime;
+    if (method === 'PUT') {
+      if (typeof loadedMtime !== 'number') {
+        // No base version for an existing post (a failed/again load) — refuse
+        // rather than send a token-less PUT the server would accept blindly.
+        TE.toast('Reload this post before saving (no base version).', 'error');
+        return false;
+      }
+      payload.baseMtime = loadedMtime;
+    }
 
+    saving = true;
     setSaved('Saving…');
     setAutoState('saving', 'Saving…');
     if (editorRoot) {
@@ -783,6 +825,7 @@
       });
       if (typeof result.mtime === 'number') loadedMtime = result.mtime;
       isDirty = false;
+      clearTimeout(autosaveTimer);
       setSaved('Saved');
       setAutoState('saved', 'Saved');
       if (editorRoot) {
@@ -818,15 +861,19 @@
       const msg = (err && err.data && err.data.message) || (err && err.message) || 'Save failed.';
       TE.toast(msg, isConflict ? 'warn' : 'error');
       return false;
+    } finally {
+      saving = false;
     }
   }
 
   function scheduleAutosave() {
     clearTimeout(autosaveTimer);
+    if (loadFailed) return; // never autosave over a post that failed to load
     autosaveTimer = setTimeout(() => {
-      // Only autosave existing posts; never accidentally create new posts
-      // from a half-typed draft.
-      if (currentFile && titleEl.value.trim()) savePost();
+      // Only autosave existing posts that actually have unsaved edits and
+      // aren't mid-save — never create a post from a half-typed draft, and
+      // never fire a phantom save when nothing changed.
+      if (currentFile && isDirty && !saving && titleEl.value.trim()) savePost();
     }, 10000);
   }
 
@@ -862,6 +909,7 @@
         body: undefined,
       });
       TE.toast('Post deleted.');
+      isDirty = false; // the post is gone — don't fire the unsaved-changes prompt
       window.location.href = '/index.html';
     } catch (err) {
       TE.toast(err.message || 'Delete failed.', 'error');
@@ -1104,7 +1152,10 @@
     if (autoEl) {
       const retry = () => {
         if (autoEl.dataset.state !== 'error') return;
-        savePost();
+        // A load failure must RE-LOAD, not save (saving would clobber the
+        // post with the blank editor). A save error retries the save.
+        if (loadFailed && currentFile) loadPost(currentFile);
+        else savePost();
       };
       autoEl.addEventListener('click', retry);
       autoEl.addEventListener('keydown', (e) => {
