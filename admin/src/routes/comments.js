@@ -83,6 +83,7 @@ import * as remark42 from '../services/remark42.js';
 import * as bluesky from '../services/bluesky.js';
 import { register as sseRegister, broadcast as sseBroadcast } from '../services/sse.js';
 import { logActivity } from '../services/activity.js';
+import { sanitizeCommentHtml } from '../utils/sanitizeHtml.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -233,7 +234,9 @@ function normaliseRemarkComment(c) {
     postSlug: post.slug,
     postTitle: post.title,
     postUrl: c.postUrl,
-    content: c.content,
+    // Sanitized server-side: the admin drawer injects this as HTML, so it
+    // must not carry script/handlers even if remark42's output ever does.
+    content: sanitizeCommentHtml(c.content),
     excerpt: plain.length > 280 ? plain.slice(0, 277) + '…' : plain,
     ts: c.ts,
     status: c.status,
@@ -354,6 +357,36 @@ router.get('/', async (req, res) => {
     hasMore: end < total,
     warning: upstreamError,
   });
+});
+
+// Per-status counts for the tab badges. Computed from the data sources
+// directly (remark42 up to 500, webmentions via SQL COUNT) so the badges
+// don't undercount the way a capped list page did.
+router.get('/counts', async (req, res) => {
+  const counts = { all: 0, visible: 0, pinned: 0, spam: 0, deleted: 0, pending: 0, blocked: 0 };
+  try {
+    const list = await remark42.lastComments({ max: 500 });
+    for (const c of list.map(normaliseRemarkComment)) {
+      counts.all += 1;
+      if (c.status === 'visible') counts.visible += 1;
+      else if (c.status === 'pinned') counts.pinned += 1;
+      else if (c.status === 'spam') counts.spam += 1;
+      else if (c.status === 'deleted') counts.deleted += 1;
+    }
+  } catch {
+    /* remark42 unreachable — leave its counts at 0 rather than fail */
+  }
+  const wm = db().prepare(`SELECT status, COUNT(*) AS n FROM webmentions GROUP BY status`).all();
+  for (const r of wm) {
+    counts.all += Number(r.n) || 0;
+    if (r.status === 'pending') counts.pending += Number(r.n) || 0;
+  }
+  const siteFilter = process.env.REMARK42_SITE_ID || 'webworldwide';
+  const blockRow = db()
+    .prepare(`SELECT COUNT(*) AS n FROM blocks WHERE site_id = ?`)
+    .get(siteFilter);
+  counts.blocked = Number(blockRow && blockRow.n) || 0;
+  res.json({ counts });
 });
 
 router.get('/blocks', async (req, res) => {

@@ -204,25 +204,12 @@
   }
 
   async function fetchCounts() {
-    // Counts come from the same list endpoint — we run a tiny "all"
-    // query that returns totals, then break it down by status. Blocked
-    // users never appear in the comment list (they live in their own
-    // endpoint), so their badge is counted from /blocks separately.
-    const [data, blocks] = await Promise.all([
-      TE.fetchJSON(`/api/comments?status=all&page=1&limit=200`),
-      fetchBlocks().catch(() => null),
-    ]);
-    const counts = { all: 0, visible: 0, pinned: 0, spam: 0, deleted: 0, pending: 0, blocked: 0 };
-    for (const c of data.items || []) {
-      counts.all += 1;
-      if (c.source === 'webmention') {
-        if (c.status === 'pending') counts.pending += 1;
-      } else if (Object.prototype.hasOwnProperty.call(counts, c.status)) {
-        counts[c.status] += 1;
-      }
-    }
-    if (blocks) counts.blocked = Number(blocks.total) || (blocks.items || []).length;
-    return counts;
+    // Server-computed from the data sources directly (not a capped list
+    // page), so busy blogs don't undercount; this path also no longer
+    // triggers the blocked-users reconcile (that runs when the Blocked tab
+    // is actually opened).
+    const data = await TE.fetchJSON(`/api/comments/counts`);
+    return (data && data.counts) || {};
   }
 
   // ── Render ───────────────────────────────────────────────────
@@ -263,6 +250,9 @@
         'beforeend',
         `<div class="te-cm-empty" role="presentation">No comments match this filter.</div>`,
       );
+      // Reset the footer/pager too — otherwise it keeps the previous page's
+      // "1–30 of N" and an enabled Next from before the filter emptied out.
+      updateFooter();
       return;
     }
     list.setAttribute('role', 'list');
@@ -273,6 +263,14 @@
       const row = document.createElement('div');
       row.className = 'te-cm-row' + (unread ? ' unread' : '') + (isSelected ? ' selected' : '');
       row.setAttribute('role', 'listitem');
+      // Keyboard-operable: the row opens the moderation drawer, so it must
+      // be focusable + respond to Enter/Space (it's the only way in for
+      // keyboard + AT users).
+      row.tabIndex = 0;
+      row.setAttribute(
+        'aria-label',
+        `Open comment by ${c.author?.name || 'anonymous'} on ${c.postTitle || c.postSlug || 'post'}`,
+      );
       row.dataset.id = c.id;
       row.innerHTML = `
         <span class="te-cm-check">
@@ -289,11 +287,20 @@
         <span class="te-cm-status s-${escape(c.status)}">${escape(c.status)}</span>
         <span class="te-cm-ts" title="${escape(new Date(c.ts).toISOString())}">${escape(fmtTs(c.ts))}</span>
       `;
-      // Row click → drawer (but checkbox clicks shouldn't propagate)
+      // Row click / Enter / Space → drawer (but checkbox + its label don't
+      // propagate as a row-open).
       row.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         if (target.tagName === 'INPUT') return;
         openDrawer(c);
+      });
+      row.addEventListener('keydown', (e) => {
+        const target = /** @type {HTMLElement} */ (e.target);
+        if (target.tagName === 'INPUT') return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openDrawer(c);
+        }
       });
       const cb = /** @type {HTMLInputElement} */ (row.querySelector(`input[data-row-check]`));
       if (cb) {
@@ -306,13 +313,22 @@
       }
       list.appendChild(row);
     }
+    updateFooter();
+  }
+
+  /** Footer count + pager state — shared by the populated and empty paths. */
+  function updateFooter() {
     const total = state.total;
-    const start = (state.page - 1) * state.limit + 1;
+    const start = total ? (state.page - 1) * state.limit + 1 : 0;
     const end = Math.min(total, state.page * state.limit);
-    $('cm-foot-text').textContent = total ? `${start}–${end} of ${total}` : 'No comments.';
-    $('cm-total').textContent = total ? `${total} total` : '—';
-    $('cm-prev').disabled = state.page <= 1;
-    $('cm-next').disabled = !state.hasMore;
+    const footText = $('cm-foot-text');
+    if (footText) footText.textContent = total ? `${start}–${end} of ${total}` : 'No comments.';
+    const totalEl = $('cm-total');
+    if (totalEl) totalEl.textContent = total ? `${total} total` : '—';
+    const prev = $('cm-prev');
+    if (prev) prev.disabled = state.page <= 1;
+    const next = $('cm-next');
+    if (next) next.disabled = !state.hasMore;
     const sectionTitle = $('cm-section-title');
     const tab = STATUS_TABS.find((t) => t.id === state.activeTab);
     if (sectionTitle && tab) sectionTitle.textContent = tab.label;
@@ -443,7 +459,10 @@
     actions.innerHTML = renderDrawerActions(c);
     wireDrawerActions(c);
     const drawer = $('cm-drawer');
-    if (drawer) {
+    // Shared overlay open: moves focus into the drawer, traps Tab, inerts
+    // the background and restores focus to the row on close.
+    if (window.TE && TE.openDrawer) TE.openDrawer(drawer);
+    else if (drawer) {
       drawer.classList.add('open');
       drawer.removeAttribute('aria-hidden');
       drawer.inert = false;
@@ -487,10 +506,15 @@
     actions.querySelectorAll('button[data-act]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const act = btn.getAttribute('data-act');
+        // Disable all drawer actions while one runs — no double-submit.
+        const all = actions.querySelectorAll('button[data-act]');
+        all.forEach((b) => (b.disabled = true));
         try {
           await runAction(c, act);
         } catch (err) {
           TE.toast(err.message || 'Action failed.', 'error');
+        } finally {
+          all.forEach((b) => (b.disabled = false));
         }
       });
     });
@@ -565,6 +589,10 @@
     drawerActive = null;
     const drawer = $('cm-drawer');
     if (!drawer) return;
+    if (window.TE && TE.closeDrawer) {
+      TE.closeDrawer(drawer);
+      return;
+    }
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
     drawer.inert = true;
@@ -579,6 +607,8 @@
     if (act === 'approve' && !confirm(`Approve ${ids.length} webmention(s)?`)) return;
 
     const errors = [];
+    let applied = 0;
+    let skipped = 0;
     for (const id of ids) {
       const c = state.items.find((x) => x.id === id);
       if (!c) continue;
@@ -588,6 +618,7 @@
             `/api/comments/${encodeURIComponent(id)}?url=${encodeURIComponent(c.postUrl)}`,
             { method: 'DELETE', body: undefined },
           );
+          applied += 1;
         } else if (act === 'spam') {
           await TE.fetchJSON(`/api/comments/${encodeURIComponent(id)}/spam`, {
             method: 'POST',
@@ -597,11 +628,19 @@
               userName: c.author?.name,
             }),
           });
-        } else if (act === 'approve' && c.source === 'webmention') {
-          await TE.fetchJSON(`/api/webmentions/${encodeURIComponent(id)}/approve`, {
-            method: 'POST',
-            body: '{}',
-          });
+          applied += 1;
+        } else if (act === 'approve') {
+          // Only webmentions have an approve flow; remark42 rows can't be
+          // "approved" — count them as skipped instead of a silent success.
+          if (c.source === 'webmention') {
+            await TE.fetchJSON(`/api/webmentions/${encodeURIComponent(id)}/approve`, {
+              method: 'POST',
+              body: '{}',
+            });
+            applied += 1;
+          } else {
+            skipped += 1;
+          }
         }
       } catch (err) {
         errors.push(`${id}: ${err.message}`);
@@ -612,29 +651,52 @@
     if (errors.length) {
       TE.toast(`${errors.length} action(s) failed.`, 'error');
       console.warn('[comments] bulk errors:', errors);
+    } else if (skipped) {
+      TE.toast(
+        `${applied} approved · ${skipped} skipped (only webmentions can be approved).`,
+        'warn',
+      );
     } else {
-      TE.toast(`${ids.length} updated.`);
+      TE.toast(`${applied} updated.`);
     }
     await reloadActive();
   }
 
   // ── Live updates via EventSource ─────────────────────────────
+  let reconnectTimer = null;
   function openStream() {
     if (state.evt) return;
     try {
       const es = new EventSource('/api/comments/stream', { withCredentials: true });
       state.evt = es;
       es.addEventListener('open', () => renderLive('live', 'Live'));
-      es.addEventListener('error', () => renderLive('down', 'Offline'));
+      es.addEventListener('error', () => {
+        renderLive('down', 'Offline');
+        // When the browser gives up on the connection (CLOSED), it won't
+        // auto-reconnect — drop it and retry after a short backoff so the
+        // Live indicator recovers instead of going permanently stale.
+        if (es.readyState === EventSource.CLOSED) {
+          closeStream();
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(openStream, 4000);
+        }
+      });
       es.addEventListener('hello', () => renderLive('live', 'Live'));
       const bump = (ev) => {
         try {
           const data = JSON.parse(ev.data || 'null');
           if (!data) return;
           incrementUnread();
-          TE.toast(`New ${ev.type.replace('-new', '').replace('webmention', 'webmention')}.`);
-          // Reload the current view if it could now include this row.
-          if (state.activeTab === 'all' || state.activeTab === 'pending') {
+          TE.toast(`New ${ev.type.replace('-new', '')}.`);
+          // Reload the current view if the new row could appear in it: a
+          // remark42 comment lands on Live, a webmention on Pending — both
+          // on All.
+          const isComment = ev.type === 'comment-new';
+          if (
+            state.activeTab === 'all' ||
+            (isComment && state.activeTab === 'visible') ||
+            (!isComment && state.activeTab === 'pending')
+          ) {
             reloadActive();
           }
         } catch (_) {
@@ -653,6 +715,7 @@
   }
 
   function closeStream() {
+    clearTimeout(reconnectTimer);
     if (state.evt) {
       try {
         state.evt.close();
@@ -712,15 +775,21 @@
       });
     });
     $('cm-refresh')?.addEventListener('click', () => reloadActive());
+    // Selection is per-page: clear it when paging so a bulk action can't
+    // act on rows that scrolled off to another page (and vice-versa).
     $('cm-prev')?.addEventListener('click', () => {
       if (state.page > 1) {
         state.page -= 1;
+        state.selected.clear();
+        renderBulkBar();
         reloadActive();
       }
     });
     $('cm-next')?.addEventListener('click', () => {
       if (state.hasMore) {
         state.page += 1;
+        state.selected.clear();
+        renderBulkBar();
         reloadActive();
       }
     });
