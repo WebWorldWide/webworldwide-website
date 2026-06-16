@@ -107,6 +107,10 @@
     }
   }
 
+  // Fields the site can't function without — the Astro build needs a title
+  // and an absolute base URL, so refuse to save them blank.
+  const REQUIRED = new Set(['site.title', 'site.url']);
+
   function validate() {
     const root = document.getElementById('settings-form');
     if (!root) return { ok: true };
@@ -115,7 +119,13 @@
       const input = /** @type {HTMLInputElement} */ (el);
       const v = input.value.trim();
       setFieldError(input, '');
-      if (!v) return; // optional
+      if (!v) {
+        if (REQUIRED.has(input.getAttribute('name') || '')) {
+          setFieldError(input, 'This field is required.');
+          if (!firstBad) firstBad = input;
+        }
+        return; // other empty fields are optional
+      }
       if (input.type === 'url' && !validUrl(v)) {
         setFieldError(input, 'Enter a full URL (https://…).');
         if (!firstBad) firstBad = input;

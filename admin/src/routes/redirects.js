@@ -77,6 +77,12 @@ router.post('/', (req, res) => {
   const to = normPath(req.body?.to);
   const code = Number(req.body?.code || 301);
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  if (from === to) {
+    return res.status(400).json({
+      error: 'self_redirect',
+      message: 'from and to must differ (this would loop forever)',
+    });
+  }
   if (![301, 302, 307, 308].includes(code)) {
     return res.status(400).json({ error: 'code must be 301/302/307/308' });
   }
@@ -102,6 +108,12 @@ router.put('/:id', (req, res) => {
   const to = normPath(req.body?.to || rows[idx].to);
   const code = Number(req.body?.code || rows[idx].code || 301);
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  if (from === to) {
+    return res.status(400).json({
+      error: 'self_redirect',
+      message: 'from and to must differ (this would loop forever)',
+    });
+  }
   // eslint-disable-next-line security/detect-object-injection -- idx verified above
   rows[idx] = { id, from, to, code };
   write(rows);

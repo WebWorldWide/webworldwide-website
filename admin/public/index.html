@@ -761,7 +761,14 @@
               </div>
 
               <div class="panel-body" id="systab-terminal" role="tabpanel" hidden>
-                <pre class="terminal-output" id="terminal-output" aria-live="polite">
+                <pre
+                  class="terminal-output"
+                  id="terminal-output"
+                  tabindex="0"
+                  role="region"
+                  aria-label="Terminal output"
+                  aria-live="polite"
+                >
 Web World Wide — Pi shell. Full shell access (runs via /bin/sh, 60s timeout).
 Type a command and press Enter.
 </pre
@@ -774,6 +781,9 @@ Type a command and press Enter.
                     id="terminal-input"
                     placeholder="e.g. uptime"
                     autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
                   />
                   <button type="submit" class="btn primary">Run</button>
                 </form>

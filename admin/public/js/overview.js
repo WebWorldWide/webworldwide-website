@@ -106,9 +106,13 @@
 
   async function loadComments() {
     try {
-      const data = await TE.fetchJSON('/api/comments?limit=1');
+      // Live comments only (visible + pinned) — the old `total` counted
+      // spam/deleted/webmentions too and disagreed with every other widget.
+      const data = await TE.fetchJSON('/api/comments/counts');
+      const c = (data && data.counts) || {};
+      const live = (c.visible || 0) + (c.pinned || 0);
       const el = $('ov-stat-comments');
-      if (el) el.textContent = fmtNum(data && typeof data.total === 'number' ? data.total : null);
+      if (el) el.textContent = fmtNum(live);
     } catch (_) {
       const el = $('ov-stat-comments');
       if (el) el.textContent = '—';
@@ -224,6 +228,13 @@
         day: 'numeric',
       });
     }
+    refresh();
+  }
+
+  // Re-pull the data (not the one-time greeting/date chrome) — the router
+  // calls this each time Overview is revisited so the stats/cards aren't
+  // frozen at first paint.
+  function refresh() {
     // Independent loads — a failure in one never blocks the others
     // (allSettled never rejects; the void marks it deliberately unawaited).
     void Promise.allSettled([loadStats(), loadComments(), loadPostsCards()]);
@@ -232,4 +243,6 @@
   window.TE = window.TE || {};
   window.TE.routes = window.TE.routes || {};
   window.TE.routes.overview = init;
+  window.TE.viewRefresh = window.TE.viewRefresh || {};
+  window.TE.viewRefresh.overview = refresh;
 })();

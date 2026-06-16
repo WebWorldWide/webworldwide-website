@@ -12,6 +12,9 @@
 (function () {
   /** @type {'7d' | '30d' | '90d'} */
   let range = '30d';
+  // Guards against out-of-order range switches: a slow earlier range must
+  // not render over a newer selection.
+  let loadSeq = 0;
 
   function root() {
     return document.getElementById('analytics-root');
@@ -20,8 +23,9 @@
   /** @param {number | null | undefined} n */
   function fmtNum(n) {
     if (n === null || n === undefined || Number.isNaN(n)) return '—';
-    if (n >= 10000) return `${(n / 1000).toFixed(1)}k`;
-    return String(n);
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 10_000) return `${(n / 1000).toFixed(1)}k`;
+    return Number(n).toLocaleString();
   }
 
   /** @param {number | null | undefined} secs */
@@ -63,7 +67,7 @@
       ${inner}`;
   }
 
-  function renderMessage(mark, text, hint) {
+  function renderMessage(mark, text, hint, retry) {
     const el = root();
     if (!el) return;
     el.innerHTML = shell(`
@@ -71,7 +75,22 @@
         <div class="e-mark">${mark}</div>
         <div class="e-text">${text}</div>
         ${hint ? `<div class="sec-sub" style="margin-top:8px">${hint}</div>` : ''}
+        ${retry ? `<button type="button" class="btn sm" id="an-retry" style="margin-top:12px">Retry</button>` : ''}
       </div></div>`);
+    wireRange();
+    if (retry) {
+      const btn = document.getElementById('an-retry');
+      if (btn) btn.addEventListener('click', () => load());
+    }
+  }
+
+  /** Loading state that already reflects the (possibly just-clicked) range. */
+  function renderLoading() {
+    const el = root();
+    if (!el) return;
+    el.innerHTML = shell(
+      `<div class="panel"><div class="te-state te-state-loading" role="status"><span class="te-spinner" aria-hidden="true"></span> Loading analytics…</div></div>`,
+    );
     wireRange();
   }
 
@@ -83,6 +102,9 @@
         const r = btn.getAttribute('data-range');
         if (r === range) return;
         range = /** @type {any} */ (r);
+        // Reflect the new range + show progress immediately, before the
+        // fetch resolves (so the active button isn't stuck on the old range).
+        renderLoading();
         load();
       });
     });
@@ -91,17 +113,21 @@
   async function load() {
     const el = root();
     if (!el) return;
+    const seq = ++loadSeq;
     let summary;
     try {
       summary = await TE.fetchJSON(`/api/analytics/summary?range=${range}`);
     } catch (_err) {
+      if (seq !== loadSeq) return;
       renderMessage(
         '∅',
         'Analytics offline — the Umami container is unreachable.',
         'Check the <a href="/index.html#system">System view</a> for container status.',
+        true,
       );
       return;
     }
+    if (seq !== loadSeq) return; // a newer range superseded this fetch
     if (!summary || summary.configured === false) {
       renderMessage(
         '⚙',
@@ -147,14 +173,18 @@
           <div class="panel-head-r">${peak ? `peak ${fmtNum(peak.pageviews)}pv · ${peak.date}` : ''}</div>
         </div>
         <div class="chart-area">
-          <div class="chart-bars" role="img" aria-label="Daily pageviews bar chart${peak ? `, peaking at ${peak.pageviews} on ${peak.date}` : ''}">
+          ${
+            series.length
+              ? `<div class="chart-bars" role="img" aria-label="Daily pageviews bar chart${peak ? `, peaking at ${peak.pageviews} on ${peak.date}` : ''}">
             ${series
               .map((d) => {
                 const h = Math.max(3, Math.round((d.pageviews / max) * 220));
                 return `<i style="height:${h}px" title="${d.date}: ${d.pageviews}"></i>`;
               })
               .join('')}
-          </div>
+          </div>`
+              : `<div class="te-state te-state-empty"><div class="e-text">No pageview data in this range.</div></div>`
+          }
         </div>
       </div>
 
