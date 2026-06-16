@@ -295,7 +295,12 @@ function variantBaseKey(url) {
   const slash = url.lastIndexOf('/');
   const dir = url.slice(0, slash + 1);
   let name = url.slice(slash + 1).replace(/\.[a-z0-9]+$/i, '');
-  name = name.replace(/-(?:\d+w|thumb|\d+x\d+)$/i, '');
+  // Strip responsive/derived suffixes so a post that references a variant
+  // resolves to the base asset: image widths (-320w), thumbs, NxN crops,
+  // and the audio/video transcodes (-h264/-vp9/-poster) — without the last
+  // group, posts embedding a -h264.mp4 / -poster.jpg looked "unused" and
+  // could be deleted out from under a published post.
+  name = name.replace(/-(?:\d+w|thumb|\d+x\d+|h264|vp9|poster)$/i, '');
   return dir + name;
 }
 
@@ -617,8 +622,11 @@ router.get('/', (req, res) => {
     }
   }
   if (q) {
-    where.push('(original_name LIKE ? OR filename LIKE ?)');
-    args.push(`%${q}%`, `%${q}%`);
+    // Escape LIKE wildcards so a query containing % or _ matches literally
+    // rather than acting as a wildcard.
+    const likeQ = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+    where.push("(original_name LIKE ? ESCAPE '\\' OR filename LIKE ? ESCAPE '\\')");
+    args.push(likeQ, likeQ);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 

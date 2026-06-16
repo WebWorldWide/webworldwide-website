@@ -154,6 +154,9 @@
     function onDrop(e) {
       if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
       e.preventDefault();
+      // Stop the drop bubbling to an ancestor dropzone (e.g. the page-wide
+      // body dropzone) — otherwise a drop on an inline zone uploads twice.
+      e.stopPropagation();
       depth = 0;
       target.classList.remove('is-dragover');
       emit(e.dataTransfer.files);

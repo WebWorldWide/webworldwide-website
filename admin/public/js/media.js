@@ -333,6 +333,7 @@
   /** @type {{ items: any[], type: string, q: string, sort: string, selected: Set<string>, view: 'grid' | 'list' }} */
   const lib = {
     items: [],
+    total: 0, // server's total match count (items is capped at 200)
     type: 'all',
     q: '',
     sort: 'date',
@@ -340,6 +341,21 @@
     selected: new Set(),
     view: 'grid',
   };
+
+  /**
+   * The items shown after the client-side type + usage filters. Shared by
+   * the grid and select-all so they never disagree.
+   * @returns {any[]}
+   */
+  function visibleItems() {
+    return lib.items.filter((m) => {
+      const type = m.type || classifyOnClient(m.mime_type);
+      if (lib.type && lib.type !== 'all' && type !== lib.type) return false;
+      if (lib.used === 'in') return isUsed(m);
+      if (lib.used === 'unused') return !isUsed(m);
+      return true;
+    });
+  }
 
   /**
    * True when a media record is referenced by at least one post.
@@ -358,8 +374,13 @@
     const grid = $('media-grid');
     if (grid) grid.setAttribute('aria-busy', 'true');
     try {
-      const data = await media.list({ type: lib.type, q: lib.q, sort: lib.sort, limit: 200 });
+      // Fetch across ALL types (type filtering is applied client-side) so
+      // the type-chip counts are accurate and switching type is instant.
+      // The server still applies the text search; the 200 cap is surfaced
+      // via lib.total below.
+      const data = await media.list({ q: lib.q, sort: lib.sort, limit: 200 });
       lib.items = (data && data.items) || [];
+      lib.total = data && typeof data.total === 'number' ? data.total : lib.items.length;
       // Drop any stale selections that no longer exist.
       const known = new Set(lib.items.map((m) => m.id));
       for (const id of Array.from(lib.selected)) if (!known.has(id)) lib.selected.delete(id);
@@ -432,13 +453,9 @@
     const grid = $('media-grid');
     const empty = $('media-empty');
     if (!grid) return;
-    // Usage filter is applied client-side over the loaded page so the
-    // type-chip counts (which read lib.items) stay accurate.
-    const visible = lib.items.filter((m) => {
-      if (lib.used === 'in') return isUsed(m);
-      if (lib.used === 'unused') return !isUsed(m);
-      return true;
-    });
+    // Type + usage filters are applied client-side (see visibleItems) so
+    // the type-chip counts, which read the full lib.items, stay accurate.
+    const visible = visibleItems();
     if (!visible.length) {
       grid.innerHTML = '';
       if (empty) {
@@ -459,9 +476,12 @@
       .map((m) => {
         const type = m.type || classifyOnClient(m.mime_type);
         const sel = lib.selected.has(m.id);
+        // Prefer the generated -thumb.webp over the full-res original so the
+        // grid isn't downloading megapixel images to paint 120px tiles.
+        const thumbSrc = (type === 'image' && m.conversions && m.conversions.thumb) || m.url;
         const thumb =
           type === 'image'
-            ? `<img loading="lazy" src="${TE.escape(m.url)}" alt="${TE.escape(m.original_name || m.filename)}" />`
+            ? `<img class="te-media-img" loading="lazy" decoding="async" src="${TE.escape(thumbSrc)}" alt="${TE.escape(m.original_name || m.filename)}" />`
             : `<span class="te-media-glyph" aria-hidden="true">${typeIcon(type)}</span>`;
         const subtitle = `${TE.escape(type.toUpperCase())} · ${TE.escape(TE.fmtBytes(m.size))}`;
         // "Used in" chip: one post → its (truncated) title; many → "N posts".
@@ -508,6 +528,26 @@
         </div>`;
       })
       .join('');
+
+    // A broken/missing thumbnail degrades to the type glyph, not the
+    // browser's broken-image icon (CSP-safe; no inline onerror).
+    if (window.TE && TE.wireImgFallbacks) {
+      TE.wireImgFallbacks(grid, '.te-media-img', () => {
+        const span = document.createElement('span');
+        span.className = 'te-media-glyph';
+        span.setAttribute('aria-hidden', 'true');
+        span.innerHTML = typeIcon('image');
+        return span;
+      });
+    }
+
+    // Surface the 200-item cap so a large library doesn't silently truncate.
+    if (lib.total > lib.items.length) {
+      grid.insertAdjacentHTML(
+        'beforeend',
+        `<div class="te-media-more" role="note">Showing the first ${lib.items.length} of ${lib.total} — refine the search to narrow the list.</div>`,
+      );
+    }
 
     // Phase 5: retry button (failed state only). Click rebounds the asset
     // back to 'processing' and the next poll picks up the change.
@@ -669,9 +709,14 @@
   async function openDrawer(id) {
     const drawer = $('media-drawer');
     if (!drawer) return;
-    drawer.classList.add('open');
-    drawer.removeAttribute('aria-hidden');
-    drawer.inert = false;
+    // Shared overlay open: focus into the drawer, trap Tab, inert the
+    // background, restore focus to the opener on close.
+    if (window.TE && TE.openDrawer) TE.openDrawer(drawer);
+    else {
+      drawer.classList.add('open');
+      drawer.removeAttribute('aria-hidden');
+      drawer.inert = false;
+    }
     const body = $('media-drawer-body');
     if (body) body.innerHTML = '<p class="te-media-loading">Loading…</p>';
     try {
@@ -685,6 +730,10 @@
   function closeDrawer() {
     const drawer = $('media-drawer');
     if (!drawer) return;
+    if (window.TE && TE.closeDrawer) {
+      TE.closeDrawer(drawer);
+      return;
+    }
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
     drawer.inert = true;
@@ -866,7 +915,8 @@
     document.querySelectorAll('[data-media-chip]').forEach((chip) => {
       chip.addEventListener('click', () => {
         lib.type = chip.getAttribute('data-media-chip') || 'all';
-        reload();
+        // Type filtering is client-side now — re-render, don't refetch.
+        render();
       });
       chip.setAttribute('role', 'tab');
     });
@@ -916,7 +966,9 @@
       selectAll.addEventListener('change', (e) => {
         const checked = /** @type {HTMLInputElement} */ (e.currentTarget).checked;
         if (checked) {
-          for (const m of lib.items) lib.selected.add(m.id);
+          // Only the items actually visible under the current type/usage
+          // filters — never silently select rows the user can't see.
+          for (const m of visibleItems()) lib.selected.add(m.id);
         } else {
           lib.selected.clear();
         }
