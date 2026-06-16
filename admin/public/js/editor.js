@@ -1112,6 +1112,9 @@
   function boot() {
     mountEditor();
     wireEditorDrop();
+    // Off-canvas site nav on phones (shared with the SPA shell) — without
+    // this the editor page's sidebar was unreachable on mobile.
+    if (window.TE && typeof window.TE.wireMobileNav === 'function') window.TE.wireMobileNav();
 
     // Title → slug auto-fill (only when slug is empty or matches the
     // previous auto-derived slug).

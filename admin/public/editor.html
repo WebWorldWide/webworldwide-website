@@ -19,7 +19,7 @@
     <a class="skip-link" href="#main">Skip to content</a>
 
     <div class="shell">
-      <aside class="sidebar" aria-label="Main navigation">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation">
         <a class="side-brand" href="/index.html">
           <span class="tmark s32" aria-hidden="true"></span>
           <span class="name">
@@ -70,6 +70,24 @@
              from the editor JS when the post title changes. -->
         <h1 class="sr-only" id="editor-page-h1">Edit post</h1>
         <header class="topbar">
+          <button
+            type="button"
+            class="nav-toggle"
+            id="nav-toggle"
+            aria-label="Open navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </button>
           <div class="crumb">
             <a
               href="/index.html"
