@@ -220,35 +220,137 @@
   TE.trapFocus = trapFocus;
   TE.releaseFocus = releaseFocus;
 
-  // ── Modals ─────────────────────────────────────────────────
-  /** @param {string} id */
-  TE.openModal = function openModal(id) {
-    const m = /** @type {HTMLElement | null} */ (document.getElementById(id));
-    if (!m) return;
-    m.classList.add('open');
-    m.removeAttribute('aria-hidden');
-    const focusTarget = /** @type {HTMLElement | null} */ (
-      m.querySelector('[autofocus]') ||
-        m.querySelector('input, select, textarea') ||
-        m.querySelector('button:not([data-modal-close])')
+  // ── Focusing into overlays ─────────────────────────────────
+  /**
+   * A destructive control we must never auto-focus when an overlay opens.
+   * @param {Element} el
+   */
+  function isDestructive(el) {
+    return (
+      el.classList.contains('danger') ||
+      el.hasAttribute('data-destructive') ||
+      /\b(delete|remove|destroy)\b/i.test(el.getAttribute('data-act') || '')
     );
-    if (focusTarget) {
+  }
+
+  /**
+   * Move focus to the most sensible control inside a freshly-opened
+   * overlay: an explicit [data-autofocus], else the first non-destructive
+   * non-close control, else any non-destructive control, else the dialog
+   * itself. Never lands on a disabled (FOCUSABLE already excludes those)
+   * or destructive button.
+   * @param {HTMLElement} container
+   */
+  function focusFirst(container) {
+    // Visibility filter that doesn't depend on layout (offsetParent is
+    // always null under jsdom): skip `hidden`, hidden inputs, and anything
+    // inside a `[hidden]` subtree.
+    const all = /** @type {HTMLElement[]} */ (
+      Array.from(container.querySelectorAll(FOCUSABLE)).filter(
+        (n) =>
+          !(/** @type {HTMLElement} */ (n).hidden) &&
+          !(n.tagName === 'INPUT' && /** @type {HTMLInputElement} */ (n).type === 'hidden') &&
+          !n.closest('[hidden]'),
+      )
+    );
+    const target =
+      /** @type {HTMLElement | null} */ (container.querySelector('[data-autofocus]')) ||
+      all.find((n) => !n.hasAttribute('data-modal-close') && !isDestructive(n)) ||
+      all.find((n) => !isDestructive(n)) ||
+      null;
+    if (target) {
       try {
-        focusTarget.focus();
+        target.focus();
+        return;
       } catch (_) {
         /* ignore */
       }
     }
+    // Nothing safe to focus — focus the dialog so it's announced + Esc works.
+    if (!container.hasAttribute('tabindex')) container.setAttribute('tabindex', '-1');
+    try {
+      container.focus();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  TE.focusFirst = focusFirst;
+
+  // ── Background inerting (refcounted; tolerates stacked overlays) ──
+  // Modals/palette/drawers are siblings of `.shell`, so inerting `.shell`
+  // removes the app behind the overlay from both the tab order and the
+  // a11y tree without touching the overlay. No-op on pages without a shell
+  // (editor/login), where the focus trap alone suffices.
+  let overlayDepth = 0;
+  function lockBackground() {
+    overlayDepth += 1;
+    if (overlayDepth !== 1) return;
+    const shell = document.querySelector('.shell');
+    if (shell && !shell.hasAttribute('data-te-inert')) {
+      shell.setAttribute('inert', '');
+      shell.setAttribute('aria-hidden', 'true');
+      shell.setAttribute('data-te-inert', '');
+    }
+  }
+  function unlockBackground() {
+    overlayDepth = Math.max(0, overlayDepth - 1);
+    if (overlayDepth !== 0) return;
+    const shell = document.querySelector('[data-te-inert]');
+    if (shell) {
+      shell.removeAttribute('inert');
+      shell.removeAttribute('aria-hidden');
+      shell.removeAttribute('data-te-inert');
+    }
+  }
+  TE.lockBackground = lockBackground;
+  TE.unlockBackground = unlockBackground;
+
+  // ── Modals ─────────────────────────────────────────────────
+  /** @param {string} id */
+  TE.openModal = function openModal(id) {
+    const m = /** @type {HTMLElement | null} */ (document.getElementById(id));
+    if (!m || m.classList.contains('open')) return;
+    m.classList.add('open');
+    m.removeAttribute('aria-hidden');
+    lockBackground();
+    // trapFocus BEFORE focusFirst so the opener (still the active element)
+    // is the focus we restore on close.
     trapFocus(m);
+    focusFirst(m);
   };
 
   /** @param {string} id */
   TE.closeModal = function closeModal(id) {
     const m = /** @type {HTMLElement | null} */ (document.getElementById(id));
-    if (!m) return;
+    if (!m || !m.classList.contains('open')) return;
     m.classList.remove('open');
     m.setAttribute('aria-hidden', 'true');
     releaseFocus(m);
+    unlockBackground();
+  };
+
+  // ── Drawers (slide-over dialogs that aren't `.modal`) ──────
+  // Media + comments use these so they get the same focus-in / focus-trap /
+  // inert-background / focus-restore treatment as modals.
+  /** @param {HTMLElement | null} el */
+  TE.openDrawer = function openDrawer(el) {
+    if (!el || el.classList.contains('open')) return;
+    el.classList.add('open');
+    el.removeAttribute('aria-hidden');
+    el.removeAttribute('inert');
+    /** @type {any} */ (el).inert = false;
+    lockBackground();
+    trapFocus(el);
+    focusFirst(el);
+  };
+  /** @param {HTMLElement | null} el */
+  TE.closeDrawer = function closeDrawer(el) {
+    if (!el || !el.classList.contains('open')) return;
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden', 'true');
+    /** @type {any} */ (el).inert = true;
+    releaseFocus(el);
+    unlockBackground();
   };
 
   function initModals() {
@@ -263,13 +365,54 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      // Close the top-most open modal only.
+      // Close the top-most open modal first.
       const open = Array.from(document.querySelectorAll('.modal.open'));
       const top = open[open.length - 1];
       if (top && top.id) {
         e.stopPropagation();
         TE.closeModal(top.id);
+        return;
       }
+      // Otherwise dismiss an open slide-over drawer by clicking its close
+      // control (so the owning module's state resets), falling back to
+      // closeDrawer if it has none.
+      const drawer = /** @type {HTMLElement | null} */ (
+        document.querySelector('.te-media-drawer.open, .te-cm-drawer.open')
+      );
+      if (drawer) {
+        e.stopPropagation();
+        const closeBtn = /** @type {HTMLElement | null} */ (
+          drawer.querySelector('[id$="-close"], [data-drawer-close]')
+        );
+        if (closeBtn) closeBtn.click();
+        else TE.closeDrawer(drawer);
+      }
+    });
+  }
+
+  // ── Keyboard activation for role="button" elements ─────────
+  // A single global polyfill so any non-native control marked
+  // role="button" tabindex="0" responds to Enter/Space exactly like a
+  // <button>, reusing whatever click handler is already wired (often
+  // delegated). Lets list rows, cards and section heads be keyboard-
+  // operable without per-view keydown plumbing.
+  function initKeyboardActivation() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      const t = /** @type {HTMLElement | null} */ (e.target);
+      if (!t || t.getAttribute('role') !== 'button') return;
+      const tag = t.tagName;
+      if (
+        tag === 'BUTTON' ||
+        tag === 'A' ||
+        tag === 'INPUT' ||
+        tag === 'SELECT' ||
+        tag === 'TEXTAREA'
+      )
+        return; // native elements already activate
+      if (t.hasAttribute('disabled') || t.getAttribute('aria-disabled') === 'true') return;
+      e.preventDefault(); // Space must not scroll the page
+      t.click();
     });
   }
 
@@ -364,9 +507,10 @@
 
   function openPalette() {
     const wrap = /** @type {HTMLElement | null} */ (ensurePaletteDom());
-    if (!wrap) return;
+    if (!wrap || !wrap.hidden) return; // already open — don't double-lock
     wrap.hidden = false;
     wrap.classList.add('open');
+    lockBackground();
     const input = /** @type {HTMLInputElement | null} */ (document.getElementById('cmdk-input'));
     if (input) {
       input.value = '';
@@ -383,10 +527,11 @@
 
   function closePalette() {
     const wrap = /** @type {HTMLElement | null} */ (document.getElementById('cmdk'));
-    if (!wrap) return;
+    if (!wrap || wrap.hidden) return;
     wrap.hidden = true;
     wrap.classList.remove('open');
     releaseFocus(wrap);
+    unlockBackground();
   }
 
   function runActive() {
@@ -469,10 +614,154 @@
     });
   }
 
+  // ── Shared empty / loading / error states ──────────────────
+  // One canonical look for each, reusing the existing `.empty`/`.e-mark`/
+  // `.e-text` vocabulary so every view stops inventing its own. Builders
+  // return HTML strings; renderError also wires its Retry button.
+  /** @param {{icon?: string, title?: string, text?: string}} [o] */
+  TE.emptyState = function emptyState(o) {
+    o = o || {};
+    return (
+      '<div class="te-state te-state-empty">' +
+      `<div class="e-mark" aria-hidden="true">${TE.escape(o.icon || '∅')}</div>` +
+      (o.title ? `<div class="e-title">${TE.escape(o.title)}</div>` : '') +
+      `<div class="e-text">${TE.escape(o.text || 'Nothing here yet.')}</div>` +
+      '</div>'
+    );
+  };
+  /** @param {{text?: string}} [o] */
+  TE.loadingState = function loadingState(o) {
+    o = o || {};
+    return (
+      '<div class="te-state te-state-loading" role="status">' +
+      '<span class="te-spinner" aria-hidden="true"></span>' +
+      `<span class="e-text">${TE.escape(o.text || 'Loading…')}</span>` +
+      '</div>'
+    );
+  };
+  /** @param {{icon?: string, title?: string, text?: string, retryLabel?: string}} [o] */
+  TE.errorState = function errorState(o) {
+    o = o || {};
+    return (
+      '<div class="te-state te-state-error" role="alert">' +
+      `<div class="e-mark" aria-hidden="true">${TE.escape(o.icon || '!')}</div>` +
+      (o.title ? `<div class="e-title">${TE.escape(o.title)}</div>` : '') +
+      `<div class="e-text">${TE.escape(o.text || 'Something went wrong.')}</div>` +
+      `<button type="button" class="btn" data-te-retry>${TE.escape(o.retryLabel || 'Retry')}</button>` +
+      '</div>'
+    );
+  };
+  /**
+   * @param {HTMLElement | null} el
+   * @param {object} [o]
+   */
+  TE.renderEmpty = function renderEmpty(el, o) {
+    if (el) el.innerHTML = TE.emptyState(o);
+  };
+  /**
+   * @param {HTMLElement | null} el
+   * @param {object} [o]
+   */
+  TE.renderLoading = function renderLoading(el, o) {
+    if (el) el.innerHTML = TE.loadingState(o);
+  };
+  /**
+   * Render an error state into `el` and wire its Retry button.
+   * @param {HTMLElement | null} el
+   * @param {{icon?: string, title?: string, text?: string, retryLabel?: string, onRetry?: () => void}} [o]
+   */
+  TE.renderError = function renderError(el, o) {
+    if (!el) return;
+    o = o || {};
+    el.innerHTML = TE.errorState(o);
+    if (typeof o.onRetry === 'function') {
+      const btn = el.querySelector('[data-te-retry]');
+      if (btn) btn.addEventListener('click', o.onRetry);
+    }
+  };
+
+  // ── Focus retention across innerHTML rebuilds ───────────────
+  /**
+   * Build a re-find selector for an element: its id, else its data-*
+   * signature.
+   * @param {Element} el
+   * @returns {string | null}
+   */
+  function focusKey(el) {
+    const esc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : s);
+    if (el.id) return '#' + esc(el.id);
+    const tag = el.tagName.toLowerCase();
+    const ds = Array.from(el.attributes)
+      .filter((a) => a.name.indexOf('data-') === 0)
+      .map((a) => `[${a.name}="${esc(a.value)}"]`)
+      .join('');
+    return ds ? tag + ds : null;
+  }
+  /**
+   * Run `mutate` (which rebuilds part of `container` via innerHTML) while
+   * keeping keyboard focus: the focused control is re-found afterwards by
+   * id or its data-* signature so reorder/toggle/delete don't drop focus
+   * to <body>.
+   * @param {HTMLElement} container
+   * @param {() => void} mutate
+   */
+  TE.preserveFocus = function preserveFocus(container, mutate) {
+    const a = /** @type {Element | null} */ (document.activeElement);
+    const key = a && container.contains(a) ? focusKey(a) : null;
+    mutate();
+    if (!key) return;
+    let next;
+    try {
+      next = /** @type {HTMLElement | null} */ (container.querySelector(key));
+    } catch (_) {
+      return;
+    }
+    if (next && next.focus) {
+      try {
+        next.focus();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  };
+
+  // ── CSP-safe <img> error fallback ──────────────────────────
+  // Inline onerror="" is blocked by `script-src-attr 'none'`, so attach
+  // the handler in JS. A missing/broken image is replaced by a styled
+  // placeholder node instead of the browser's broken-image glyph.
+  /**
+   * @param {HTMLImageElement | null} img
+   * @param {(img: HTMLImageElement) => (Node | null)} makePlaceholder
+   */
+  TE.imgFallback = function imgFallback(img, makePlaceholder) {
+    if (!img) return;
+    const fail = function () {
+      const ph = makePlaceholder ? makePlaceholder(img) : null;
+      if (ph && img.parentNode) img.parentNode.replaceChild(ph, img);
+      else img.style.display = 'none';
+    };
+    img.addEventListener('error', fail, { once: true });
+    // Catch images that already failed (e.g. cached 404) before we attached.
+    if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) fail();
+  };
+  /**
+   * Attach imgFallback to every img matching `selector` inside `root`.
+   * @param {Element | Document | null} root
+   * @param {string} selector
+   * @param {(img: HTMLImageElement) => (Node | null)} makePlaceholder
+   */
+  TE.wireImgFallbacks = function wireImgFallbacks(root, selector, makePlaceholder) {
+    if (!root) return;
+    root
+      .querySelectorAll(selector)
+      .forEach((img) => TE.imgFallback(/** @type {HTMLImageElement} */ (img), makePlaceholder));
+  };
+
   // ── Boot ───────────────────────────────────────────────────
   function boot() {
     initTheme();
     initModals();
+    initKeyboardActivation();
     initPalette();
   }
   if (document.readyState === 'loading') {

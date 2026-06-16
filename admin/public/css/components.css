@@ -1837,6 +1837,74 @@ body[data-page="login"] {
   text-decoration: underline;
 }
 
+/* Shared state blocks (TE.emptyState / loadingState / errorState) — one
+   canonical look for empty, loading and error across every view, so the
+   admin stops shipping five different empty-states and silent failures. */
+.te-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-4);
+  color: var(--ink-mute);
+  text-align: center;
+}
+.te-state .e-mark {
+  font-family: var(--font-ui);
+  font-size: 24px;
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  color: var(--ink-faint);
+}
+.te-state .e-title {
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+}
+.te-state .e-text {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+}
+.te-state-loading {
+  flex-direction: row;
+  color: var(--ink-mute);
+}
+/* Error state reads as a problem (not a neutral "nothing here") and offers
+   a real retry affordance. */
+.te-state-error .e-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #fff;
+  background: var(--warn-strong, var(--warn));
+  border-radius: 50%;
+}
+.te-state-error [data-te-retry] {
+  margin-top: var(--space-2);
+}
+
+/* Media grid loading/error placeholders referenced by media.js. */
+.te-media-loading,
+.te-media-error {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: var(--ink-mute);
+  text-align: center;
+}
+.te-media-error {
+  flex-direction: column;
+  color: var(--warn-strong, var(--warn));
+}
+
 /* ============================================================
    19. A11y media preferences
    ============================================================ */
