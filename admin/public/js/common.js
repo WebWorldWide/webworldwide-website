@@ -811,12 +811,125 @@
     });
   };
 
+  // ── Keyboard shortcuts cheat-sheet ─────────────────────────
+  // A "?"-triggered overlay (also opened by any [data-shortcuts-help]
+  // control) listing the app + editor shortcuts. Built lazily and shared by
+  // the shell and the editor page — both load common.js + components.css.
+  const IS_MAC = /Mac|iPhone|iPad|iPod/.test(
+    (typeof navigator !== 'undefined' && (navigator.platform || navigator.userAgent)) || '',
+  );
+  const K_MOD = IS_MAC ? '⌘' : 'Ctrl';
+  const K_ALT = IS_MAC ? '⌥' : 'Alt';
+  const K_SHIFT = IS_MAC ? '⇧' : 'Shift';
+  const SHORTCUT_GROUPS = [
+    {
+      title: 'General',
+      items: [
+        [[K_MOD, 'K'], 'Command palette'],
+        [['?'], 'Keyboard shortcuts (this)'],
+        [['Esc'], 'Close dialog / palette'],
+      ],
+    },
+    {
+      title: 'Editor — formatting',
+      items: [
+        [[K_MOD, 'B'], 'Bold'],
+        [[K_MOD, 'I'], 'Italic'],
+        [[K_MOD, K_SHIFT, 'U'], 'Underline'],
+        [[K_MOD, K_SHIFT, 'X'], 'Strikethrough'],
+        [[K_MOD, 'E'], 'Inline code'],
+        [[K_MOD, 'K'], 'Link'],
+        [[K_MOD, K_ALT, '1 / 2 / 3'], 'Heading level'],
+      ],
+    },
+    {
+      title: 'Editor — actions',
+      items: [
+        [[K_MOD, 'S'], 'Save draft'],
+        [[K_MOD, '↵'], 'Save & publish'],
+        [[K_MOD, 'F'], 'Find'],
+        [['/'], 'Slash menu (insert block)'],
+        [[K_ALT, K_SHIFT, '↑ / ↓'], 'Move block up / down'],
+      ],
+    },
+  ];
+
+  function buildShortcutsModal() {
+    let m = document.getElementById('shortcuts-modal');
+    if (m) return m;
+    m = document.createElement('div');
+    m.id = 'shortcuts-modal';
+    m.className = 'modal';
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.setAttribute('aria-labelledby', 'shortcuts-modal-title');
+    m.setAttribute('aria-hidden', 'true');
+    const groups = SHORTCUT_GROUPS.map((g) => {
+      const rows = g.items
+        .map(
+          ([keys, label]) =>
+            `<div class="kbd-row"><span class="kbd-keys">${keys
+              .map((k) => `<span class="kbd">${TE.escape(k)}</span>`)
+              .join('')}</span><span class="kbd-label">${TE.escape(label)}</span></div>`,
+        )
+        .join('');
+      return `<div class="kbd-group"><h4>${TE.escape(g.title)}</h4>${rows}</div>`;
+    }).join('');
+    m.innerHTML =
+      '<div class="modal-card">' +
+      '<div class="modal-head"><h3 id="shortcuts-modal-title">Keyboard shortcuts</h3>' +
+      '<button type="button" class="btn ghost" data-modal-close="shortcuts-modal" aria-label="Close">' +
+      '<span class="ico" aria-hidden="true" data-icon="close"></span></button></div>' +
+      '<div class="modal-body"><div class="kbd-sheet">' +
+      groups +
+      '</div></div>';
+    document.body.appendChild(m);
+    if (typeof TE.fillIcons === 'function') {
+      try {
+        TE.fillIcons(m);
+      } catch (_) {
+        /* icon fill is cosmetic */
+      }
+    }
+    return m;
+  }
+
+  /** Open the keyboard-shortcuts overlay (lazily built). */
+  TE.showShortcuts = function showShortcuts() {
+    buildShortcutsModal();
+    TE.openModal('shortcuts-modal');
+  };
+
+  function isTypingTarget(el) {
+    if (!el) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+  }
+
+  function initShortcutsHelp() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '?' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isTypingTarget(e.target)) return; // don't hijack a literal "?" being typed
+      if (document.querySelector('.modal.open')) return; // a dialog already has focus
+      e.preventDefault();
+      TE.showShortcuts();
+    });
+    document.addEventListener('click', (e) => {
+      const t = /** @type {Element} */ (e.target);
+      if (t && t.closest && t.closest('[data-shortcuts-help]')) {
+        e.preventDefault();
+        TE.showShortcuts();
+      }
+    });
+  }
+
   // ── Boot ───────────────────────────────────────────────────
   function boot() {
     initTheme();
     initModals();
     initKeyboardActivation();
     initPalette();
+    initShortcutsHelp();
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
