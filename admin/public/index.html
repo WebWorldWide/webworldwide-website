@@ -522,10 +522,30 @@
                 <div class="sec-sub">Every CMS mutation, newest first.</div>
               </div>
               <div class="sec-actions">
+                <button type="button" class="btn" id="btn-activity-export">Export CSV</button>
                 <button type="button" class="btn" id="btn-activity-refresh">Refresh</button>
               </div>
             </div>
             <div class="panel">
+              <div class="te-act-filters" id="activity-filters" hidden>
+                <label class="sr-only" for="act-filter-action">Filter by action</label>
+                <select id="act-filter-action">
+                  <option value="">All actions</option>
+                </select>
+                <label class="sr-only" for="act-filter-range">Time range</label>
+                <select id="act-filter-range">
+                  <option value="0">All time</option>
+                  <option value="86400000">Last 24 hours</option>
+                  <option value="604800000">Last 7 days</option>
+                  <option value="2592000000">Last 30 days</option>
+                </select>
+                <input
+                  id="act-filter-q"
+                  type="search"
+                  placeholder="Filter target or user…"
+                  autocomplete="off"
+                />
+              </div>
               <div id="activity-table" class="te-activity-table">Loading…</div>
             </div>
           </div>

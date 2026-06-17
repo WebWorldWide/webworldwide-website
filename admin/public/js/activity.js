@@ -29,6 +29,79 @@
     }
   }
 
+  // The full-page view fetches a wide window once, then filters in the
+  // browser (action / time-range / free-text) so the controls feel instant.
+  /** @type {any[] | null} */ let pageItems = null;
+
+  function applyFilters(items) {
+    const action = (document.getElementById('act-filter-action') || {}).value || '';
+    const range = Number((document.getElementById('act-filter-range') || {}).value || 0);
+    const q = ((document.getElementById('act-filter-q') || {}).value || '').trim().toLowerCase();
+    const cutoff = range ? Date.now() - range : 0;
+    return items.filter((it) => {
+      if (action && it.action !== action) return false;
+      if (cutoff && Number(it.ts) < cutoff) return false;
+      if (q) {
+        const hay = `${it.target || ''} ${it.user || ''} ${it.action || ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function populateActionFilter(items) {
+    const sel = document.getElementById('act-filter-action');
+    if (!sel) return;
+    const current = sel.value;
+    const actions = [...new Set(items.map((it) => it.action).filter(Boolean))].sort();
+    sel.innerHTML =
+      '<option value="">All actions</option>' +
+      actions.map((a) => `<option value="${escape(a)}">${escape(a)}</option>`).join('');
+    sel.value = actions.includes(current) ? current : '';
+  }
+
+  function renderFiltered() {
+    const root = document.getElementById('activity-table');
+    if (!root) return;
+    root.innerHTML = renderRows(pageItems === null ? null : applyFilters(pageItems));
+  }
+
+  function toCsv(items) {
+    const esc = (v) => `"${String(v === undefined || v === null ? '' : v).replace(/"/g, '""')}"`;
+    const lines = ['timestamp_ms,iso,user,action,target'];
+    items.forEach((it) =>
+      lines.push(
+        [
+          it.ts,
+          new Date(it.ts).toISOString(),
+          it.user || 'system',
+          it.action || '',
+          it.target || '',
+        ]
+          .map(esc)
+          .join(','),
+      ),
+    );
+    return lines.join('\n');
+  }
+
+  function exportCsv() {
+    if (!pageItems || !pageItems.length) {
+      if (window.TE && window.TE.toast) window.TE.toast('No activity to export.', 'warn');
+      return;
+    }
+    const rows = applyFilters(pageItems);
+    const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `activity-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function renderRows(items) {
     if (items === null) return `<div class="posts-empty">Failed to load activity.</div>`;
     if (!items.length) return `<div class="posts-empty">No activity yet.</div>`;
@@ -53,8 +126,11 @@
     const root = document.getElementById('activity-table');
     if (!root) return;
     root.textContent = 'Loading…';
-    const items = await fetchItems(50);
-    root.innerHTML = renderRows(items);
+    pageItems = await fetchItems(500);
+    const filters = document.getElementById('activity-filters');
+    if (filters) filters.hidden = pageItems === null || pageItems.length === 0;
+    if (pageItems) populateActionFilter(pageItems);
+    renderFiltered();
   }
 
   async function loadWidget() {
@@ -68,6 +144,12 @@
     loadPage();
     const refresh = document.getElementById('btn-activity-refresh');
     if (refresh) refresh.addEventListener('click', loadPage);
+    const exportBtn = document.getElementById('btn-activity-export');
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
+    ['act-filter-action', 'act-filter-range', 'act-filter-q'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', renderFiltered);
+    });
   }
 
   window.TE = window.TE || {};
