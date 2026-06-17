@@ -104,7 +104,8 @@
 
   function renderRows(items) {
     if (items === null) return `<div class="posts-empty">Failed to load activity.</div>`;
-    if (!items.length) return `<div class="posts-empty">No activity yet.</div>`;
+    if (!items.length)
+      return `<div class="posts-empty">Nothing here yet — as you write, edit, and publish posts your actions will show up here.</div>`;
     return (
       `<div class="te-act-row te-act-head"><span>When</span><span>Who</span><span>Action</span><span>Target</span></div>` +
       items

@@ -144,7 +144,9 @@
 
     if (!visible.length) {
       rows.innerHTML = `<div class="posts-empty">${
-        search ? 'No posts match that filter.' : 'No posts yet. Create one!'
+        search
+          ? 'No posts match that filter.'
+          : 'No posts yet — click “+ New Post” (top right) to write your first article.'
       }</div>`;
       return;
     }
