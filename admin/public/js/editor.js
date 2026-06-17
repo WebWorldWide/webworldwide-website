@@ -104,6 +104,10 @@
   // In-flight save lock so autosave can't overlap a manual save (false 409
   // / double-create) — savePost early-returns while one is running.
   let saving = false;
+  // Whether the slug is still tracking the title (true) or the writer has
+  // manually overridden it (false). When auto, retitling an EXISTING post
+  // renames its file/URL too — the headline feature. Recomputed on load.
+  let slugIsAuto = true;
 
   // Warn the user before navigating away with unsaved edits.
   window.addEventListener('beforeunload', (e) => {
@@ -299,6 +303,10 @@
       const clash = posts.find((p) => p.slug === raw && p.filename !== currentFile);
       if (clash) {
         setSlugMsg(`Already used by “${clash.title || clash.slug}”. Pick another.`, 'err');
+      } else if (currentFile && raw !== currentFile.replace(/\.md$/, '')) {
+        // Live rename feedback: the writer SEES the new filename + that the
+        // old URL is handled, before they save.
+        setSlugMsg(`Renaming → ${raw}.md · old URL will redirect (no 404).`, 'warn');
       } else {
         setSlugMsg('Available', 'ok');
       }
@@ -516,6 +524,10 @@
   function populateFields(data, content, filename) {
     titleEl.value = data.title || '';
     slugEl.value = data.slug || (filename ? filename.replace(/\.md$/, '') : '');
+    // The slug "tracks" the title only if it still matches what the title
+    // would generate — i.e. it wasn't hand-customized. When it tracks,
+    // retitling renames the file/URL; a custom slug is left untouched.
+    slugIsAuto = slugEl.value === slugify(data.title || '');
     draftEl.value = data.draft ? 'true' : 'false';
     // The blog reads frontmatter `excerpt` for the hook line + SEO description.
     descEl.value = data.excerpt || '';
@@ -841,6 +853,16 @@
       } else if (!currentFile && result.filename) {
         setCurrentFile(result.filename);
       }
+      // Renamed on disk → tell the writer the old URL is safe + links fixed.
+      if (result.rename) {
+        const r = result.rename;
+        const parts = [];
+        if (Array.isArray(r.redirected) && r.redirected.length) parts.push('old URL redirected');
+        if (r.linksUpdated)
+          parts.push(`${r.linksUpdated} link${r.linksUpdated === 1 ? '' : 's'} updated`);
+        TE.toast(`Renamed to ${result.filename}${parts.length ? ' — ' + parts.join(', ') : ''}.`);
+        setSlugMsg('Available', 'ok');
+      }
       updateStatusPill();
       return true;
     } catch (err) {
@@ -872,8 +894,14 @@
     autosaveTimer = setTimeout(() => {
       // Only autosave existing posts that actually have unsaved edits and
       // aren't mid-save — never create a post from a half-typed draft, and
-      // never fire a phantom save when nothing changed.
-      if (currentFile && isDirty && !saving && titleEl.value.trim()) savePost();
+      // never fire a phantom save when nothing changed. A pending slug
+      // RENAME is deferred to an explicit save: autosaving mid-retitle
+      // would rename the file/URL to a half-typed slug and churn redirects.
+      const renamePending =
+        currentFile &&
+        slugEl.value.trim() &&
+        slugEl.value.trim() !== currentFile.replace(/\.md$/, '');
+      if (currentFile && isDirty && !saving && titleEl.value.trim() && !renamePending) savePost();
     }, 10000);
   }
 
@@ -1167,26 +1195,31 @@
     // this the editor page's sidebar was unreachable on mobile.
     if (window.TE && typeof window.TE.wireMobileNav === 'function') window.TE.wireMobileNav();
 
-    // Title → slug auto-fill (only when slug is empty or matches the
-    // previous auto-derived slug).
-    let lastAutoSlug = '';
+    // Title → slug. While the slug is auto (tracking the title), retitling
+    // updates the slug live — and for an existing post that means the file
+    // and public URL rename on the next save (with an auto-redirect). A
+    // manual slug edit breaks the link (slugIsAuto=false) so a custom URL
+    // is never clobbered.
     titleEl.addEventListener('input', () => {
-      const auto = slugify(titleEl.value);
-      if (!slugEl.value || slugEl.value === lastAutoSlug) {
-        slugEl.value = auto;
-        lastAutoSlug = auto;
+      if (slugIsAuto) {
+        slugEl.value = slugify(titleEl.value);
+        scheduleSlugCheck();
       }
       updateSocialPreview();
       updateSeoPreview();
-      scheduleSlugCheck();
       markDirty();
     });
 
     // Dirty-tracking + UI updates
     [slugEl, dateEl, draftEl].forEach((el) =>
       el.addEventListener('input', () => {
+        // A hand-edited slug stops tracking the title (and an emptied slug
+        // resumes tracking — save will re-derive it from the title).
+        if (el === slugEl) {
+          slugIsAuto = slugEl.value.trim() === '';
+          scheduleSlugCheck();
+        }
         updateSeoPreview();
-        if (el === slugEl) scheduleSlugCheck();
         markDirty();
       }),
     );

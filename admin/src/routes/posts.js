@@ -26,6 +26,7 @@ import {
   getSnapshot,
   renameSnapshots,
 } from '../services/snapshots.js';
+import { readRedirects, writeRedirects, upsertRedirect } from '../services/redirects-store.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 const router = Router();
@@ -346,6 +347,101 @@ router.get('/:filename', (req, res) => {
   }
 });
 
+/**
+ * Rewrite internal links `/blog/<oldSlug>` → `/blog/<newSlug>` in a blob of
+ * text. Only whole path-segment matches are rewritten (a delimiter must
+ * follow), so `/blog/foo` never clobbers `/blog/foobar`.
+ *
+ * @param {string} text
+ * @param {string} oldSlug
+ * @param {string} newSlug
+ * @returns {{ out: string, count: number }}
+ */
+function rewriteSlugLinks(text, oldSlug, newSlug) {
+  const esc = oldSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`/blog/${esc}(?=[/"')\\s#?]|$)`, 'g');
+  let count = 0;
+  const out = text.replace(re, () => {
+    count += 1;
+    return `/blog/${newSlug}`;
+  });
+  return { out, count };
+}
+
+/**
+ * Recursively rewrite every internal link pointing at the old slug across
+ * all posts + site.toml, so a rename never leaves a dangling cross-link.
+ *
+ * @param {string} oldSlug
+ * @param {string} newSlug
+ * @returns {number} total links rewritten
+ */
+function rewriteSlugLinksEverywhere(oldSlug, newSlug) {
+  let total = 0;
+  for (const file of readdirSync(postsDir).filter((f) => f.endsWith('.md'))) {
+    const p = join(postsDir, file);
+    let text;
+    try {
+      text = readFileSync(p, 'utf-8');
+    } catch {
+      continue;
+    }
+    const { out, count } = rewriteSlugLinks(text, oldSlug, newSlug);
+    if (count > 0) {
+      writeFileAtomic(p, out);
+      total += count;
+    }
+  }
+  try {
+    const tomlPath = join(SITE_DIR, 'site.toml');
+    const text = readFileSync(tomlPath, 'utf-8');
+    const { out, count } = rewriteSlugLinks(text, oldSlug, newSlug);
+    if (count > 0) {
+      writeFileAtomic(tomlPath, out);
+      total += count;
+    }
+  } catch {
+    /* no site.toml / unreadable — skip */
+  }
+  return total;
+}
+
+/**
+ * Side effects of a post slug rename: add redirects so the old public URL
+ * never 404s, and rewrite internal links to the new slug. Best-effort —
+ * a failure here is logged but never fails the save (the file rename has
+ * already succeeded on disk).
+ *
+ * @param {string} oldSlug
+ * @param {string} newSlug
+ * @returns {{ redirected: Array<{from:string,to:string}>, linksUpdated: number }}
+ */
+function applySlugRename(oldSlug, newSlug) {
+  const report = {
+    redirected: /** @type {Array<{from:string,to:string}>} */ ([]),
+    linksUpdated: 0,
+  };
+  try {
+    const rows = readRedirects();
+    // Canonical /blog/<slug>/ plus the legacy bare /<slug>/ form
+    // (astro.config.mjs only auto-redirects bare URLs for CURRENT posts,
+    // so the old one needs an explicit entry once the slug moves).
+    const a = upsertRedirect(rows, `/blog/${oldSlug}/`, `/blog/${newSlug}/`);
+    const b = upsertRedirect(rows, `/${oldSlug}/`, `/blog/${newSlug}/`);
+    writeRedirects(rows);
+    if (a) report.redirected.push(a);
+    if (b) report.redirected.push(b);
+  } catch (err) {
+    console.warn('[posts] rename redirect failed:', err instanceof Error ? err.message : err);
+  }
+  try {
+    report.linksUpdated = rewriteSlugLinksEverywhere(oldSlug, newSlug);
+  } catch (err) {
+    console.warn('[posts] rename link rewrite failed:', err instanceof Error ? err.message : err);
+  }
+  return report;
+}
+
 // CREATE post
 router.post('/', (req, res) => {
   try {
@@ -487,17 +583,37 @@ router.put('/:filename', (req, res) => {
     // Write new content atomically (temp + rename), then drop the old
     // file if the slug changed.
     writeFileAtomic(newPath, fileContent);
+    let rename = null;
     if (oldFilename !== newFilename) {
       unlinkSync(oldPath);
       // The post's identity moved to newFilename — carry its snapshot
       // history along so the renamed post keeps its revisions.
       renameSnapshots(oldFilename, newFilename);
+      // Auto-redirect the old URL + rewrite internal links so the public
+      // slug change never 404s. (Best-effort; never fails the save.)
+      rename = applySlugRename(oldFilename.replace(/\.md$/, ''), slug);
+      logActivity({
+        req,
+        action: 'post.rename',
+        target: newFilename,
+        meta: {
+          from: oldFilename,
+          redirected: rename.redirected.length,
+          links: rename.linksUpdated,
+        },
+      });
     }
     invalidatePostRefs();
     invalidatePostsCache();
     logActivity({ req, action: 'post.update', target: newFilename });
 
-    res.json({ success: true, filename: newFilename, slug, mtime: statSync(newPath).mtimeMs });
+    res.json({
+      success: true,
+      filename: newFilename,
+      slug,
+      mtime: statSync(newPath).mtimeMs,
+      rename,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update post' });

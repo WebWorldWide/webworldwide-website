@@ -196,6 +196,55 @@ test('a legitimate slug rename to a FREE slug moves the file', skipOpts(), async
   assert.match(readFileSync(join(postsDir, 'alpha-renamed.md'), 'utf-8'), /renamed cleanly/);
 });
 
+test(
+  'renaming a post adds redirects and rewrites internal links (no 404s)',
+  skipOpts(),
+  async () => {
+    writePost('gamma', { title: 'Gamma', date: '2024-03-01', draft: false }, 'gamma body');
+    writePost(
+      'linker',
+      { title: 'Linker', date: '2024-03-02', draft: false },
+      'See [Gamma](/blog/gamma/) and also [self](/blog/linker/).',
+    );
+
+    const get = await (await api('/api/posts/gamma.md')).json();
+    const res = await api('/api/posts/gamma.md', {
+      method: 'PUT',
+      body: JSON.stringify({
+        data: { title: 'Gamma Renamed', slug: 'gamma-renamed', date: '2024-03-01', draft: false },
+        content: 'gamma body',
+        baseMtime: get.mtime,
+      }),
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.filename, 'gamma-renamed.md');
+    assert.ok(body.rename, 'rename report present');
+    assert.ok(body.rename.redirected.length >= 1, 'at least one redirect created');
+    assert.equal(body.rename.linksUpdated, 1, 'one cross-link rewritten (the linker post)');
+
+    // redirects.json holds old → new (canonical /blog/<slug>), so the old URL
+    // never 404s after the slug moves.
+    const redirects = JSON.parse(
+      readFileSync(join(tempDir, 'site', 'data', 'redirects.json'), 'utf-8'),
+    );
+    const canon = redirects.find((r) => r.from === '/blog/gamma');
+    assert.ok(canon, 'canonical /blog/gamma redirect exists');
+    assert.equal(canon.to, '/blog/gamma-renamed');
+    assert.ok(
+      redirects.some((r) => r.from === '/gamma'),
+      'legacy bare /gamma redirect exists',
+    );
+
+    // The cross-link was rewritten to the new slug; the self-link and the
+    // post's own (now-renamed) identity are left consistent.
+    const linker = readFileSync(join(postsDir, 'linker.md'), 'utf-8');
+    assert.match(linker, /\/blog\/gamma-renamed\//, 'cross-link updated to new slug');
+    assert.doesNotMatch(linker, /\/blog\/gamma\//, 'no stale /blog/gamma/ link remains');
+    assert.match(linker, /\/blog\/linker\//, 'unrelated link left intact');
+  },
+);
+
 test('a save snapshots the previous content; history + version expose it', skipOpts(), async () => {
   // bravo.md currently holds "bravo updated no token" from an earlier test.
   const before = readFileSync(join(postsDir, 'bravo.md'), 'utf-8');
