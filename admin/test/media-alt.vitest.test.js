@@ -151,7 +151,7 @@ describe('drawer alt editor', () => {
     expect(input.value).toBe('A sunrise over the bay');
 
     input.value = 'A golden sunrise over the bay';
-    document.querySelector('[data-drawer-save-alt]').click();
+    document.querySelector('[data-drawer-save]').click();
     await flush();
 
     const patchCall = globalThis.fetch.mock.calls.find(([, o]) => o && o.method === 'PATCH');

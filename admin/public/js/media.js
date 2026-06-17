@@ -173,17 +173,31 @@
   };
 
   /**
-   * Edit asset metadata. Currently only `alt_text` is editable (string
-   * to set; null/'' clears). Returns the updated, API-shaped record.
+   * Edit asset metadata: `alt_text` (string to set; null/'' clears) and/or
+   * `original_name` (the friendly display label — the URL is unaffected).
+   * Returns the updated, API-shaped record.
    *
    * @param {string} id
-   * @param {{ alt_text?: string | null }} fields
+   * @param {{ alt_text?: string | null, original_name?: string }} fields
    * @returns {Promise<any>}
    */
   media.patch = function patchMedia(id, fields) {
     return TE.fetchJSON(`/api/media/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(fields),
+    });
+  };
+
+  /**
+   * Apply per-item edits to many assets in one call.
+   *
+   * @param {Array<{ id: string, alt_text?: string | null, original_name?: string }>} edits
+   * @returns {Promise<{ updated: number, errors: any[] }>}
+   */
+  media.bulkEdit = function bulkEdit(edits) {
+    return TE.fetchJSON('/api/media/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ edits }),
     });
   };
 
@@ -768,22 +782,32 @@
       : '<p class="te-drawer-usage empty">Not referenced by any post.</p>';
     const dims = m.width && m.height ? `${m.width} × ${m.height} px` : '—';
     const isImage = type === 'image';
-    const altSection = isImage
-      ? `
+    // Editable details: the friendly name (original_name — a label; the URL
+    // is unaffected) for every asset, plus alt text for images.
+    const editSection = `
       <div class="te-drawer-alt">
-        <label class="te-drawer-alt-label" for="drawer-alt-input">Alt text</label>
+        <label class="te-drawer-alt-label" for="drawer-name-input">Name</label>
+        <input id="drawer-name-input" class="te-drawer-name-input" type="text" maxlength="200"
+          value="${TE.escape(m.original_name || m.filename)}" />
+        ${
+          isImage
+            ? `<label class="te-drawer-alt-label" for="drawer-alt-input">Alt text</label>
         <textarea id="drawer-alt-input" class="te-drawer-alt-input" rows="3" maxlength="1000"
           placeholder="Describe this image for screen readers…">${TE.escape(m.alt_text || '')}</textarea>
         <div class="te-drawer-alt-row">
           <span class="te-drawer-alt-hint">${media.needsAlt(m) ? '⚠ Images without alt text are invisible to screen readers.' : ''}</span>
-          <button type="button" class="btn" data-drawer-save-alt="${TE.escape(m.id)}">Save alt text</button>
+        </div>`
+            : ''
+        }
+        <div class="te-drawer-alt-row">
+          <span></span>
+          <button type="button" class="btn" data-drawer-save="${TE.escape(m.id)}">Save details</button>
         </div>
-      </div>`
-      : '';
+      </div>`;
     body.innerHTML = `
       ${preview}
       <h3 class="te-drawer-title">${TE.escape(m.original_name || m.filename)}</h3>
-      ${altSection}
+      ${editSection}
       <dl class="te-drawer-meta">
         <dt>Type</dt><dd>${TE.escape(type)} (${TE.escape(m.mime_type)})</dd>
         <dt>Size</dt><dd>${TE.escape(TE.fmtBytes(m.size))}</dd>
@@ -798,22 +822,40 @@
         ${usedIn.length ? '' : '<span class="te-drawer-unused" role="note">Not used in any post</span>'}
       </div>
     `;
-    const saveAltBtn = body.querySelector('[data-drawer-save-alt]');
-    if (saveAltBtn) {
-      saveAltBtn.addEventListener('click', async () => {
-        const input = /** @type {HTMLTextAreaElement} */ (body.querySelector('#drawer-alt-input'));
-        saveAltBtn.setAttribute('disabled', 'true');
+    const saveBtn = body.querySelector('[data-drawer-save]');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const nameInput = /** @type {HTMLInputElement} */ (
+          body.querySelector('#drawer-name-input')
+        );
+        const altInput = /** @type {HTMLTextAreaElement | null} */ (
+          body.querySelector('#drawer-alt-input')
+        );
+        const fields = {};
+        const newName = (nameInput?.value || '').trim();
+        if (newName && newName !== (m.original_name || '')) fields.original_name = newName;
+        if (altInput) fields.alt_text = altInput.value;
+        if (!Object.keys(fields).length) {
+          TE.toast('Nothing changed.');
+          return;
+        }
+        saveBtn.setAttribute('disabled', 'true');
         try {
-          const updated = await media.patch(m.id, { alt_text: input.value });
-          TE.toast(updated.alt_text ? 'Alt text saved.' : 'Alt text cleared.');
-          // Update the local list copy so the grid badge refreshes.
+          const updated = await media.patch(m.id, fields);
+          TE.toast('Details saved.');
+          // Keep the local list copy in sync so the grid refreshes.
           const item = lib.items.find((i) => i.id === m.id);
-          if (item) item.alt_text = updated.alt_text;
+          if (item) {
+            item.alt_text = updated.alt_text;
+            item.original_name = updated.original_name;
+          }
           renderItems();
+          const titleEl = body.querySelector('.te-drawer-title');
+          if (titleEl) titleEl.textContent = updated.original_name || updated.filename;
         } catch (err) {
-          TE.toast(err.message || 'Could not save alt text.', 'error');
+          TE.toast(err.message || 'Could not save details.', 'error');
         } finally {
-          saveAltBtn.removeAttribute('disabled');
+          saveBtn.removeAttribute('disabled');
         }
       });
     }
@@ -878,6 +920,108 @@
     TE.toast(`Deleted ${okCount + forcedCount} file${okCount + forcedCount === 1 ? '' : 's'}.`);
     lib.selected.clear();
     reload();
+  }
+
+  // ── Bulk edit (name + alt for many at once) ────────────────
+  function buildBulkModal() {
+    let m = document.getElementById('media-bulk-modal');
+    if (m) return m;
+    m = document.createElement('div');
+    m.id = 'media-bulk-modal';
+    m.className = 'modal';
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.setAttribute('aria-labelledby', 'media-bulk-modal-title');
+    m.setAttribute('aria-hidden', 'true');
+    m.innerHTML =
+      '<div class="modal-card te-media-bulk-card">' +
+      '<div class="modal-head"><h3 id="media-bulk-modal-title">Edit details</h3>' +
+      '<button type="button" class="btn ghost" data-modal-close="media-bulk-modal" aria-label="Close">' +
+      '<span class="ico" aria-hidden="true" data-icon="close"></span></button></div>' +
+      '<div class="modal-body"><div id="media-bulk-rows" class="te-media-bulk-rows"></div></div>' +
+      '<div class="modal-foot"><button type="button" class="btn ghost" data-modal-close="media-bulk-modal">Cancel</button>' +
+      '<button type="button" class="btn solid" id="media-bulk-save">Save all</button></div>' +
+      '</div>';
+    document.body.appendChild(m);
+    m.querySelector('#media-bulk-save').addEventListener('click', saveBulkEdit);
+    return m;
+  }
+
+  function openBulkEdit() {
+    if (!lib.selected.size) return;
+    const items = lib.items.filter((i) => lib.selected.has(i.id));
+    const modal = buildBulkModal();
+    const rowsHost = modal.querySelector('#media-bulk-rows');
+    rowsHost.innerHTML = items
+      .map((m) => {
+        const type = m.type || classifyOnClient(m.mime_type);
+        const thumbSrc = (type === 'image' && m.conversions && m.conversions.thumb) || m.url;
+        const thumb =
+          type === 'image'
+            ? `<img class="te-media-bulk-thumb" src="${TE.escape(thumbSrc)}" alt="" loading="lazy" />`
+            : `<span class="te-media-bulk-thumb placeholder" aria-hidden="true">${typeIcon(type)}</span>`;
+        const altField =
+          type === 'image'
+            ? `<input class="te-media-bulk-alt" data-bulk-alt="${TE.escape(m.id)}" type="text" maxlength="1000"
+                 placeholder="Alt text…" value="${TE.escape(m.alt_text || '')}" />`
+            : '';
+        return `<div class="te-media-bulk-row">
+          ${thumb}
+          <div class="te-media-bulk-fields">
+            <input class="te-media-bulk-name" data-bulk-name="${TE.escape(m.id)}" type="text" maxlength="200"
+              placeholder="Name…" value="${TE.escape(m.original_name || m.filename)}" />
+            ${altField}
+          </div>
+        </div>`;
+      })
+      .join('');
+    if (typeof TE.wireImgFallbacks === 'function') {
+      try {
+        TE.wireImgFallbacks(rowsHost);
+      } catch (_) {
+        /* cosmetic */
+      }
+    }
+    TE.openModal('media-bulk-modal');
+  }
+
+  async function saveBulkEdit() {
+    const modal = document.getElementById('media-bulk-modal');
+    if (!modal) return;
+    const edits = [];
+    modal.querySelectorAll('[data-bulk-name]').forEach((el) => {
+      const id = el.getAttribute('data-bulk-name');
+      const item = lib.items.find((i) => i.id === id);
+      if (!item) return;
+      const fields = { id };
+      const newName = String(el.value || '').trim();
+      if (newName && newName !== (item.original_name || '')) fields.original_name = newName;
+      const altEl = modal.querySelector(`[data-bulk-alt="${CSS.escape(id)}"]`);
+      if (altEl && altEl.value !== (item.alt_text || '')) fields.alt_text = altEl.value;
+      if (Object.keys(fields).length > 1) edits.push(fields);
+    });
+    if (!edits.length) {
+      TE.toast('Nothing changed.');
+      TE.closeModal('media-bulk-modal');
+      return;
+    }
+    const saveBtn = document.getElementById('media-bulk-save');
+    if (saveBtn) saveBtn.setAttribute('disabled', 'true');
+    try {
+      const res = await media.bulkEdit(edits);
+      TE.toast(
+        `Updated ${res.updated} file${res.updated === 1 ? '' : 's'}` +
+          (res.errors && res.errors.length ? ` (${res.errors.length} failed)` : '') +
+          '.',
+      );
+      TE.closeModal('media-bulk-modal');
+      lib.selected.clear();
+      reload();
+    } catch (err) {
+      TE.toast(err.message || 'Bulk edit failed.', 'error');
+    } finally {
+      if (saveBtn) saveBtn.removeAttribute('disabled');
+    }
   }
 
   // ── View routing (hash-based) ──────────────────────────────
@@ -979,6 +1123,8 @@
     // Bulk delete
     const bulkDel = $('media-bulk-delete');
     if (bulkDel) bulkDel.addEventListener('click', bulkDelete);
+    const bulkEdit = $('media-bulk-edit');
+    if (bulkEdit) bulkEdit.addEventListener('click', openBulkEdit);
 
     // Drawer dismissal
     const closeBtn = $('media-drawer-close');

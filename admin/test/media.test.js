@@ -376,3 +376,45 @@ test(
     assert.equal((await tooLong.json()).error, 'alt_text_too_long');
   },
 );
+
+test('PATCH original_name renames the display label (empty rejected)', skipOpts(), async () => {
+  const file = (await (await upload('rn-1.txt', Buffer.from('rename one'), 'text/plain')).json())
+    .file;
+  const ok = await fetch(`${baseUrl}/api/media/${file.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ original_name: '  Friendly Name  ' }),
+  });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).original_name, 'Friendly Name'); // trimmed
+
+  const blank = await fetch(`${baseUrl}/api/media/${file.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ original_name: '   ' }),
+  });
+  assert.equal(blank.status, 400);
+  assert.equal((await blank.json()).error, 'invalid_name');
+});
+
+test('POST /api/media/bulk edits many, skips bad ids', skipOpts(), async () => {
+  const a = (await (await upload('bulk-1.txt', Buffer.from('bulk one'), 'text/plain')).json()).file;
+  const b = (await (await upload('bulk-2.txt', Buffer.from('bulk two'), 'text/plain')).json()).file;
+  const res = await fetch(`${baseUrl}/api/media/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      edits: [
+        { id: a.id, original_name: 'Bulk One' },
+        { id: b.id, original_name: 'Bulk Two' },
+        { id: 'not-a-real-id', original_name: 'X' },
+      ],
+    }),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.updated, 2);
+  assert.equal(body.errors.length, 1);
+  const detailA = await fetch(`${baseUrl}/api/media/${a.id}`).then((x) => x.json());
+  assert.equal(detailA.original_name, 'Bulk One');
+});
