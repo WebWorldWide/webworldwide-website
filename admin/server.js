@@ -21,6 +21,7 @@ import authRoutes from './src/routes/auth.js';
 import postsRoutes from './src/routes/posts.js';
 import mediaRoutes from './src/routes/media.js';
 import publishRoutes from './src/routes/publish.js';
+import proofreadRoutes from './src/routes/proofread.js';
 import healthRoutes from './src/routes/health.js';
 // Phase 5e CMS-completeness routes — site settings, redirects, and
 // the activity log dashboard widget.
@@ -260,6 +261,18 @@ const webmentionLimiter = rateLimit({
   keyGenerator: clientIpKey,
 });
 
+// Spell/grammar proofreading is auth-gated, but it's called as the writer
+// types (debounced client-side). Cap it generously per-IP so a stuck client
+// or a misbehaving tab can't hammer the LanguageTool container.
+const proofreadLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120,
+  message: { error: 'Too many proofread requests. Slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: clientIpKey,
+});
+
 // Static files (admin UI).
 //
 // Cache strategy:
@@ -396,6 +409,7 @@ app.use('/api', (req, res, next) => {
 app.use('/api/posts', postsRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/publish', publishRoutes);
+app.use('/api/proofread', proofreadLimiter, proofreadRoutes);
 app.use('/api/health', healthRoutes);
 // Phase 5e
 app.use('/api/settings', settingsRoutes);
