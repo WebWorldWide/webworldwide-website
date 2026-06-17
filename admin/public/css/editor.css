@@ -2182,6 +2182,20 @@ body[data-page="editor"] {
   min-height: 14px;
   color: var(--ink-mute);
 }
+/* Plain-language helper text under editor fields (first-timer guidance). */
+.ed-slug-help {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-mute);
+}
+.ed-field-help {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-mute);
+}
 .ed-slug-msg.ok {
   color: var(--ok, #2c7a4b);
 }
