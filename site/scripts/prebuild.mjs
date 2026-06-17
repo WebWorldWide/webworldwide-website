@@ -59,9 +59,19 @@ if (existsSync(vanityPath)) {
     if (Array.isArray(vanity)) {
       for (const r of vanity) {
         if (!r?.from || !r?.to) continue;
-        if (seen.has(r.from)) continue;
+        if (seen.has(r.from)) {
+          // A vanity redirect collides with a published post's auto-redirect
+          // (or an earlier rule). Silently dropping it would leave the writer
+          // wondering why their redirect "doesn't work" — warn loudly instead.
+          console.warn(
+            `[prebuild] vanity redirect ${r.from} → ${r.to} skipped: ` +
+              `${r.from} already redirects elsewhere (a published post or an earlier rule). ` +
+              `Change the source path to resolve the conflict.`,
+          );
+          continue;
+        }
         seen.add(r.from);
-        redirects.push({ from: r.from, to: r.to });
+        redirects.push({ from: r.from, to: r.to, ...(r.code ? { code: r.code } : {}) });
         vanityCount++;
       }
     }
