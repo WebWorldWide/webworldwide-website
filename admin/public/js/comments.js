@@ -94,7 +94,10 @@
       <div class="sec-head">
         <div>
           <h1 class="sec-title">Comments</h1>
-          <div class="sec-sub" id="cm-sub">Remark42 + webmentions, one moderation queue.</div>
+          <div class="sec-sub" id="cm-sub">
+            Reader comments from your blog (plus replies from around the web) — all in one place.
+            Approve, hide, mark spam, or block from here.
+          </div>
         </div>
         <div class="sec-actions">
           <span id="cm-live" class="te-cm-live" data-state="connecting" title="Live updates">

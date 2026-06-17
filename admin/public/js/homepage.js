@@ -584,7 +584,7 @@
       return `
       <div class="pv-sec">
         <div class="pv-eyebrow">${EYEBROW.apps}</div>
-        <div class="pv-empty">No apps yet — add one in the rail.</div>
+        <div class="pv-empty">No apps yet — add one with the editor panel on the left.</div>
       </div>`;
     }
     return `
