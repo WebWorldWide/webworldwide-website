@@ -1693,6 +1693,12 @@ body[data-page="login"] {
 }
 
 /* New-post template list (shared modal content). */
+.te-template-hint {
+  margin: 0 0 var(--space-3);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-mute);
+}
 .te-template-list {
   display: flex;
   flex-direction: column;
