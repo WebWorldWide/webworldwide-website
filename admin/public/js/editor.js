@@ -970,6 +970,20 @@
         const ok = d.conclusion === 'success';
         el.className = ok ? 'ed-deploy ok' : 'ed-deploy fail';
         el.textContent = ok ? 'Live ✓' : 'Build failed';
+        if (ok) {
+          // For a published post, point the badge at the live page (most
+          // useful "did it work?" check for a first-timer) and confirm it.
+          const slug = (slugEl?.value || '').trim();
+          const isPublished = draftEl?.value === 'false';
+          if (isPublished && slug) {
+            const liveUrl = `https://webworldwide.online/blog/${encodeURIComponent(slug)}/`;
+            el.href = liveUrl;
+            el.textContent = 'View it live ↗';
+            TE.toast(`Your post is live at webworldwide.online/blog/${slug}`);
+          } else {
+            TE.toast('Site updated. (This post is a draft, so it won’t appear publicly yet.)');
+          }
+        }
         return; // terminal — stop polling
       }
       el.textContent = d && d.status === 'in_progress' ? 'Building…' : 'Queued…';

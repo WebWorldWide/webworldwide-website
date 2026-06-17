@@ -196,13 +196,17 @@
                 />
                 <div class="ed-slug">
                   <span class="root">webworldwide.online/blog/</span>
-                  <label class="sr-only" for="post-slug">Slug</label>
+                  <label class="sr-only" for="post-slug">Slug (web address)</label>
                   <input
                     id="post-slug"
                     placeholder="post-slug"
                     autocomplete="off"
-                    aria-describedby="slug-msg"
+                    aria-describedby="slug-help slug-msg"
                   />
+                </div>
+                <div class="ed-slug-help" id="slug-help">
+                  Your post’s web address. It fills in from the title — edit it only if you want a
+                  different link.
                 </div>
                 <div class="ed-slug-msg" id="slug-msg" aria-live="polite"></div>
               </div>
@@ -344,30 +348,39 @@
             <aside class="ed-side" aria-label="Post settings">
               <details class="ed-panel" open>
                 <summary>
-                  <span>Frontmatter</span><span class="chev" aria-hidden="true">›</span>
+                  <span>Post settings</span><span class="chev" aria-hidden="true">›</span>
                 </summary>
                 <div class="body">
                   <div class="field">
                     <label for="post-date">Publish date</label>
                     <input type="datetime-local" id="post-date" />
+                    <small class="ed-field-help">The date shown on the post.</small>
                   </div>
                   <div class="field">
                     <label for="post-draft">Status</label>
                     <select id="post-draft">
-                      <option value="true">Draft</option>
-                      <option value="false">Published</option>
+                      <option value="true">Draft — only you can see it</option>
+                      <option value="false">Published — live for readers</option>
                     </select>
+                    <small class="ed-field-help"
+                      >Drafts stay private. Set to Published and hit “Save &amp; publish” to put it
+                      on your site.</small
+                    >
                   </div>
                   <div class="field">
                     <label for="post-series">Series</label>
                     <input
                       type="text"
                       id="post-series"
-                      placeholder="(none)"
+                      placeholder="e.g. Travel 2026"
                       autocomplete="off"
                       list="series-suggestions"
                     />
                     <datalist id="series-suggestions"></datalist>
+                    <small class="ed-field-help"
+                      >Optional. Groups related posts together. Leave blank if it stands
+                      alone.</small
+                    >
                   </div>
                 </div>
               </details>
