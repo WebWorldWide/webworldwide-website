@@ -610,7 +610,16 @@ router.put('/:filename', (req, res) => {
     writeFileAtomic(newPath, fileContent);
     let rename = null;
     if (oldFilename !== newFilename) {
-      unlinkSync(oldPath);
+      // The new content is already safely written; from here a failure must
+      // NOT 500 the save (the post is saved). Drop the old file tolerantly —
+      // ENOENT means it's already gone, which is the goal.
+      try {
+        unlinkSync(oldPath);
+      } catch (err) {
+        if (err && err.code !== 'ENOENT') {
+          console.warn('[posts] could not remove old file after rename:', err.message);
+        }
+      }
       // The post's identity moved to newFilename — carry its snapshot
       // history along so the renamed post keeps its revisions.
       renameSnapshots(oldFilename, newFilename);
