@@ -887,16 +887,67 @@
       );
       if (!ok) return;
     }
+    // A draft won't appear on the live site even once pushed (Astro filters
+    // drafts at build). This is a common "I published but nothing changed"
+    // trap — warn before spending a deploy on an invisible change.
+    if (draftEl?.value === 'true') {
+      const ok = window.confirm(
+        'This post is still a DRAFT, so it won’t appear on the live site until you ' +
+          'set Status to Published. Publish the site anyway?',
+      );
+      if (!ok) return;
+    }
     if (!(await savePost())) return;
     btnPub.disabled = btnPub2.disabled = true;
     try {
-      await TE.fetchJSON('/api/publish', { method: 'POST', body: '{}' });
-      TE.toast('Publish triggered.');
+      const result = await TE.fetchJSON('/api/publish', { method: 'POST', body: '{}' });
+      if (result && result.changed === false) {
+        TE.toast('Already up to date — nothing new to publish.');
+      } else {
+        TE.toast('Published — the site is building.');
+        if (result && result.commitHash) watchDeploy(result.commitHash);
+      }
     } catch (err) {
-      TE.toast(err.message || 'Publish failed.', 'error');
+      // The server now returns a safe, actionable message per failure mode.
+      const msg = (err.data && err.data.message) || err.message || 'Publish failed.';
+      TE.toast(msg, 'error');
     } finally {
       btnPub.disabled = btnPub2.disabled = false;
     }
+  }
+
+  // Poll the deploy-status proxy after a publish and reflect the GitHub
+  // Action's progress in the #deploy-status pill (Building… → Live ✓ / failed).
+  // Best-effort: any error just leaves the pill on "Building…".
+  let deployTimer = null;
+  function watchDeploy(sha) {
+    const el = document.getElementById('deploy-status');
+    if (!el) return;
+    clearTimeout(deployTimer);
+    el.hidden = false;
+    el.className = 'ed-deploy building';
+    el.textContent = 'Building…';
+    el.removeAttribute('href');
+    let tries = 0;
+    const tick = async () => {
+      tries += 1;
+      let d;
+      try {
+        d = await TE.fetchJSON(`/api/publish/deploy/${encodeURIComponent(sha)}`);
+      } catch (_) {
+        d = { status: 'unknown' };
+      }
+      if (d && d.url) el.href = d.url;
+      if (d && d.status === 'completed') {
+        const ok = d.conclusion === 'success';
+        el.className = ok ? 'ed-deploy ok' : 'ed-deploy fail';
+        el.textContent = ok ? 'Live ✓' : 'Build failed';
+        return; // terminal — stop polling
+      }
+      el.textContent = d && d.status === 'in_progress' ? 'Building…' : 'Queued…';
+      if (tries < 40) deployTimer = setTimeout(tick, 5000);
+    };
+    deployTimer = setTimeout(tick, 4000);
   }
 
   // ── Delete ────────────────────────────────────────────────

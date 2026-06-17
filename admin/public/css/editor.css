@@ -76,6 +76,59 @@ body[data-page="editor"] {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   background: var(--accent-soft);
 }
+/* Live deploy status pill, shown after a publish (Building… → Live ✓). */
+.ed-deploy {
+  font-family: var(--font-mono-www);
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-mute);
+  background: var(--surface-2, transparent);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ed-deploy.building {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+}
+.ed-deploy.building::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ed-deploy.building::before {
+    animation: ed-deploy-pulse 1.1s ease-in-out infinite;
+  }
+}
+@keyframes ed-deploy-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.ed-deploy.ok {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+}
+.ed-deploy.fail {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: var(--danger-soft);
+}
+.ed-deploy[href]:hover {
+  text-decoration: underline;
+}
 .ed-saved {
   font-family: var(--font-mono-www);
   font-size: 11px;
