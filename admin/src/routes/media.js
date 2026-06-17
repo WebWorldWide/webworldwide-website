@@ -788,6 +788,11 @@ router.patch('/:id', (req, res) => {
 router.post('/bulk', (req, res) => {
   const edits = Array.isArray(req.body?.edits) ? req.body.edits : null;
   if (!edits) return res.status(400).json({ error: 'edits[] required' });
+  if (edits.length > 200) {
+    return res
+      .status(400)
+      .json({ error: 'batch_too_large', message: 'Maximum 200 items per bulk operation.' });
+  }
   let updated = 0;
   const errors = [];
   for (const e of edits) {
@@ -825,11 +830,20 @@ router.delete('/:id', (req, res) => {
     });
   }
 
-  // Best-effort unlink — a missing file shouldn't block the row delete.
+  // A missing file (ENOENT) shouldn't block the row delete — but any OTHER
+  // unlink error (EACCES, EIO, EPERM…) means the file is still on disk, so
+  // deleting the row would orphan it. Fail loudly in that case instead.
   try {
     unlinkSync(diskPathFor(row));
   } catch (err) {
-    console.warn('[media] unlink failed (continuing):', err.message);
+    if (err && err.code !== 'ENOENT') {
+      console.error('[media] unlink failed; keeping DB row:', err.message);
+      return res.status(500).json({
+        error: 'unlink_failed',
+        message: 'Could not remove the file from disk; the record was kept to avoid an orphan.',
+      });
+    }
+    // ENOENT — file already gone; proceed to drop the row.
   }
   db.prepare('DELETE FROM media WHERE id = ?').run(req.params.id);
   invalidatePostRefs();

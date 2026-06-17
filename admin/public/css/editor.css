@@ -890,8 +890,9 @@ body[data-page="editor"] {
    Floating absolutely-positioned listbox. Sized so 6-7 rows fit
    comfortably; longer menus scroll. */
 .te-slash-menu {
+  /* token ladder: popovers sit at the dropdown level */
   position: absolute;
-  z-index: 300;
+  z-index: var(--z-dropdown);
   min-width: 240px;
   max-width: 320px;
   background: var(--surface);
@@ -974,7 +975,7 @@ body[data-page="editor"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 400;
+  z-index: var(--z-modal);
   padding: 20px;
 }
 .te-link-dialog[hidden] {
@@ -1754,7 +1755,7 @@ body[data-page="editor"] {
   position: absolute;
   top: 14px;
   right: 14px;
-  z-index: 200;
+  z-index: var(--z-dropdown);
   background: var(--surface);
   border: 1px solid var(--line-www);
   border-radius: var(--radius-sm);
@@ -2308,7 +2309,7 @@ body.distraction-free #btn-zen {
 /* Suggestion card shown on clicking a squiggle. */
 .te-pr-pop {
   position: absolute;
-  z-index: 220;
+  z-index: var(--z-dropdown);
   background: var(--surface);
   border: 1px solid var(--line-www);
   border-radius: var(--radius-sm);

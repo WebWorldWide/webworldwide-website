@@ -40,6 +40,11 @@ router.get('/', (_req, res) => {
 router.post('/import', (req, res) => {
   const incoming = Array.isArray(req.body?.rows) ? req.body.rows : null;
   if (!incoming) return res.status(400).json({ error: 'rows[] required' });
+  if (incoming.length > 2000) {
+    return res
+      .status(400)
+      .json({ error: 'batch_too_large', message: 'Maximum 2000 redirects per import.' });
+  }
   const rows = read();
   let imported = 0;
   let skipped = 0;

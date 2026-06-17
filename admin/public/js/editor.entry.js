@@ -2779,10 +2779,17 @@ function buildProofreadPlugin() {
 
 function buildProofreadDecorations(doc, matches) {
   if (!matches || !matches.length) return PMDecorationSet.empty;
-  const decos = matches.map((m) =>
-    PMDecoration.inline(m.from, m.to, { class: 'te-pr te-pr-' + (m.kind || 'grammar') }),
-  );
-  return PMDecorationSet.create(doc, decos);
+  const max = doc.content.size;
+  const decos = [];
+  for (const m of matches) {
+    // Clamp to valid doc bounds — an out-of-range decoration position throws
+    // and would take down the whole editor view. Skip anything degenerate.
+    const from = Math.max(0, Math.min(m.from, max));
+    const to = Math.max(0, Math.min(m.to, max));
+    if (to <= from) continue;
+    decos.push(PMDecoration.inline(from, to, { class: 'te-pr te-pr-' + (m.kind || 'grammar') }));
+  }
+  return decos.length ? PMDecorationSet.create(doc, decos) : PMDecorationSet.empty;
 }
 
 /**
@@ -2887,7 +2894,8 @@ function createProofreader(rootEl, editor, getMode, onCount) {
     } catch (_) {
       return;
     }
-    if (mySeq !== seq || !enabled) return; // superseded / turned off mid-flight
+    // superseded / turned off / switched to source mode mid-flight
+    if (mySeq !== seq || !enabled || (getMode && getMode() !== 'wysiwyg')) return;
     const matches = [];
     for (const m of (data && data.matches) || []) {
       const snippet = text
