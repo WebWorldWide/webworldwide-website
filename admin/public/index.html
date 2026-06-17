@@ -566,6 +566,49 @@
               <div class="ov-date" id="ov-date">Loading…</div>
             </div>
 
+            <!-- First-run guide: a plain-language explainer of the whole flow,
+                 dismissible (remembered in localStorage) and re-openable. -->
+            <section
+              class="ov-guide"
+              id="ov-getting-started"
+              hidden
+              aria-labelledby="ov-guide-title"
+            >
+              <button
+                type="button"
+                class="ov-guide-x"
+                id="ov-guide-dismiss"
+                aria-label="Dismiss the getting-started guide"
+              >
+                <span class="ico" aria-hidden="true" data-icon="close"></span>
+              </button>
+              <h2 id="ov-guide-title" class="ov-guide-title">
+                👋 New here? This is how your blog works
+              </h2>
+              <ol class="ov-guide-steps">
+                <li>
+                  <b>Write it.</b> Click <b>+ New Post</b>, give it a title, and type your story —
+                  it saves itself as you go.
+                </li>
+                <li>
+                  <b>Pick who sees it.</b> <b>Draft</b> = only you. <b>Published</b> = ready for the
+                  world. (You set this in the post’s sidebar.)
+                </li>
+                <li>
+                  <b>Make it live.</b> Hit <b>Save &amp; publish</b>. Your site rebuilds and the
+                  post appears at <code>webworldwide.online/blog/…</code> in a minute or two — the
+                  editor shows a “Building… → Live ✓” badge so you know it worked.
+                </li>
+              </ol>
+              <p class="ov-guide-foot">
+                Tip: press <span class="kbd">?</span> any time for keyboard shortcuts, or hover a
+                field to see what it does.
+              </p>
+            </section>
+            <button type="button" class="ov-guide-reopen" id="ov-guide-reopen" hidden>
+              New here? Read the 30-second guide →
+            </button>
+
             <div class="stat-row three" id="ov-stats" aria-label="Site stats">
               <div class="stat">
                 <div class="stat-label">Pageviews · 30d</div>
