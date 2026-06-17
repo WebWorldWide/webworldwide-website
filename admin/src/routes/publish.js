@@ -17,6 +17,62 @@ import { logActivity } from '../services/activity.js';
 
 const router = Router();
 
+/**
+ * Map a raw git/publish error to a SAFE, actionable client code + message.
+ * Never echoes the raw git output (it can carry absolute Pi paths / tokens);
+ * the full detail is console.error'd by the caller. Each branch covers a
+ * real failure mode we've actually hit on the Pi.
+ *
+ * @param {unknown} err
+ * @returns {{ code: string, message: string }}
+ */
+function classifyPublishError(err) {
+  const raw = `${(err && err.message) || ''} ${(err && err.cause && err.cause.message) || ''}`;
+  const m = raw.toLowerCase();
+  if (m.includes('dubious ownership') || m.includes('safe.directory')) {
+    return {
+      code: 'git_ownership',
+      message: 'Publish service can’t access the repo (git ownership). Server config issue.',
+    };
+  }
+  if (m.includes('certificate') || m.includes('ssl') || m.includes('cafile')) {
+    return {
+      code: 'tls_error',
+      message: 'Couldn’t make a secure connection to GitHub (TLS). The server is missing CA certs.',
+    };
+  }
+  if (
+    m.includes('authentication failed') ||
+    m.includes('could not read username') ||
+    m.includes('invalid username or password') ||
+    m.includes('403') ||
+    m.includes('permission denied')
+  ) {
+    return {
+      code: 'auth_failed',
+      message: 'GitHub rejected the push (authentication). Check the deploy token.',
+    };
+  }
+  if (m.includes('non-fast-forward') || m.includes('rejected') || m.includes('fetch first')) {
+    return {
+      code: 'push_rejected',
+      message: 'Push rejected — the branch moved on. Try publishing again.',
+    };
+  }
+  if (
+    m.includes('timeout') ||
+    m.includes('could not resolve host') ||
+    m.includes('connection') ||
+    m.includes('network')
+  ) {
+    return {
+      code: 'network_error',
+      message: 'Couldn’t reach GitHub (network). Try again shortly.',
+    };
+  }
+  return { code: 'internal_error', message: 'Publish failed. Please try again.' };
+}
+
 // Trigger publish (commit + push)
 router.post('/', async (req, res) => {
   try {
@@ -65,9 +121,45 @@ router.post('/', async (req, res) => {
     res.json({ ...result, bluesky: blueskyReport });
   } catch (err) {
     // Don't leak git/fs internals (absolute Pi paths, library detail) to
-    // the client — log the detail, return a generic code.
+    // the client — log the detail, return a SAFE, actionable code + message
+    // so the editor can tell the user what actually went wrong.
     console.error('[publish] publish failed:', err);
-    res.status(500).json({ error: 'internal_error' });
+    const { code, message } = classifyPublishError(err);
+    res.status(500).json({ error: code, message });
+  }
+});
+
+/**
+ * Live deploy status for a pushed commit — lets the editor show "Building…
+ * → Live ✓" after a publish so the user can see the GitHub Action actually
+ * fire. Read-only proxy to the Actions API (behind the /api auth gate).
+ * Node's fetch uses Node's own bundled CA, so this works even when the
+ * system trust store is missing (unlike git over HTTPS).
+ */
+router.get('/deploy/:sha', async (req, res) => {
+  const sha = String(req.params.sha || '');
+  if (!/^[0-9a-f]{7,40}$/i.test(sha)) return res.status(400).json({ error: 'bad_sha' });
+  const repo = process.env.GITHUB_REPO || 'WebWorldWide/webworldwide-website';
+  const url = `https://api.github.com/repos/${repo}/actions/runs?head_sha=${sha}&per_page=20`;
+  const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'wwwide-cms' };
+  if (process.env.GH_TOKEN) headers.Authorization = `Bearer ${process.env.GH_TOKEN}`;
+  try {
+    const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return res.json({ status: 'unknown' });
+    const data = await r.json();
+    const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
+    if (!runs.length) return res.json({ status: 'pending' });
+    // Prefer the Pages deploy workflow; fall back to the newest run.
+    const deploy = runs.find((x) => /deploy|pages/i.test(x.name || '')) || runs[0];
+    res.json({
+      status: deploy.status, // queued | in_progress | completed
+      conclusion: deploy.conclusion, // success | failure | null
+      url: deploy.html_url,
+      name: deploy.name,
+    });
+  } catch (err) {
+    console.warn('[publish] deploy-status failed:', err.message);
+    res.json({ status: 'unknown' });
   }
 });
 

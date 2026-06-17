@@ -20,7 +20,17 @@ const getGitInstance = () => {
   // `timeout.block` kills a git child that produces no output for 30s, so a
   // stalled push (flaky Cloudflare Tunnel) can never hang the publish
   // request — and the event loop — indefinitely.
-  const git = simpleGit(repoPath, { timeout: { block: 30_000 } });
+  //
+  // `config: ['safe.directory=<repoPath>']` makes every command run with
+  // `-c safe.directory=…`. In the cms container the image's WORKDIR (repo
+  // root) is root-owned while `.git`/`site` are uid 1000 and we run as uid
+  // 1000, so git otherwise aborts with "detected dubious ownership" and the
+  // publish never commits. The Dockerfile also sets this via `--system`;
+  // doing it here too keeps publish working regardless of the base image.
+  const git = simpleGit(repoPath, {
+    timeout: { block: 30_000 },
+    config: [`safe.directory=${repoPath}`],
+  });
   return git;
 };
 
