@@ -19,54 +19,15 @@
  */
 
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
 import { nanoid } from 'nanoid';
 import { logActivity } from '../services/activity.js';
-
-const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
-const REDIRECTS_JSON = join(SITE_DIR, 'data', 'redirects.json');
+import {
+  readRedirects as read,
+  writeRedirects as write,
+  normPath,
+} from '../services/redirects-store.js';
 
 const router = Router();
-
-function read() {
-  if (!existsSync(REDIRECTS_JSON)) return [];
-  try {
-    const parsed = JSON.parse(readFileSync(REDIRECTS_JSON, 'utf-8'));
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((r) => ({
-      id: String(r.id || ''),
-      from: String(r.from || ''),
-      to: String(r.to || ''),
-      code: Number(r.code || 301),
-    }));
-  } catch (err) {
-    console.warn('[redirects] parse failed; treating as empty:', err.message);
-    return [];
-  }
-}
-
-function write(rows) {
-  mkdirSync(dirname(REDIRECTS_JSON), { recursive: true });
-  writeFileSync(REDIRECTS_JSON, JSON.stringify(rows, null, 2) + '\n');
-}
-
-/**
- * Normalize a path: ensure it starts with `/`, drop trailing slashes
- * (except for the root). `from` lives on our own domain; `to` may be
- * an absolute URL.
- *
- * @param {string} p
- * @returns {string}
- */
-function normPath(p) {
-  let s = String(p || '').trim();
-  if (!s) return '';
-  if (/^https?:\/\//i.test(s)) return s.replace(/\/+$/, '');
-  if (!s.startsWith('/')) s = '/' + s;
-  if (s.length > 1) s = s.replace(/\/+$/, '');
-  return s;
-}
 
 router.get('/', (_req, res) => {
   res.json(read());
