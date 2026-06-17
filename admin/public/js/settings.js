@@ -11,6 +11,7 @@
   if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') return;
 
   /** @type {any} */ let cache = null;
+  /** @type {any} */ let dictCache = null;
 
   function escape(s) {
     return (window.TE && window.TE.escape ? window.TE.escape : (x) => String(x || ''))(s);
@@ -33,6 +34,13 @@
     } catch (err) {
       root.innerHTML = `<div class="posts-empty">Failed to load settings: ${escape(err.message)}</div>`;
       return;
+    }
+    // Spell-check config lives in its own store; degrade to defaults if the
+    // proofreader endpoint isn't reachable (e.g. LanguageTool not deployed).
+    try {
+      dictCache = await window.TE.fetchJSON('/api/proofread/dictionary');
+    } catch {
+      dictCache = { language: 'en-US', words: [], supported: ['en-US'] };
     }
     // `hugo` is the parsed site.toml (the API field name is legacy).
     const hugo = cache.hugo || {};
@@ -61,6 +69,20 @@
         <h3>Site social</h3>
         ${field('YouTube URL', 'social.youtube', siteSocial.youtube || '', 'url')}
         ${field('YouTube handle', 'social.youtube_handle', siteSocial.youtube_handle || '')}
+      </section>
+      <section class="te-form-group" data-group="spellcheck">
+        <h3>Spell check</h3>
+        <label class="te-field"><span>Language</span>
+          <select name="spell.language">
+            ${((dictCache && dictCache.supported) || ['en-US'])
+              .map(
+                (l) =>
+                  `<option value="${escape(l)}"${l === (dictCache && dictCache.language) ? ' selected' : ''}>${escape(l)}</option>`,
+              )
+              .join('')}
+          </select>
+        </label>
+        ${field('Custom dictionary (one word per line)', 'spell.words', ((dictCache && dictCache.words) || []).join('\n'), 'textarea')}
       </section>
       <section class="te-form-group" data-group="author">
         <h3>Author profile</h3>
@@ -142,10 +164,15 @@
     if (!root) return { hugo: {}, author: {} };
     /** @type {Record<string, any>} */ const hugoChanges = {};
     /** @type {Record<string, any>} */ const author = { social: {} };
-    root.querySelectorAll('input,textarea').forEach((el) => {
+    /** @type {{ language?: string, words?: string[] }} */ const spell = {};
+    root.querySelectorAll('input,textarea,select').forEach((el) => {
       const name = el.getAttribute('name') || '';
       const val = /** @type {HTMLInputElement} */ (el).value;
-      if (!name.startsWith('author.')) {
+      if (name === 'spell.language') {
+        spell.language = val;
+      } else if (name === 'spell.words') {
+        spell.words = val.split('\n');
+      } else if (!name.startsWith('author.')) {
         // Dotted site.toml path ("site.title", "analytics.site_id", …) —
         // the backend's flatToChanges maps it straight onto the file.
         hugoChanges[name] = val;
@@ -157,7 +184,7 @@
         author.social[name.slice('author.social.'.length)] = val;
       }
     });
-    return { hugoChanges, author };
+    return { hugoChanges, author, spell };
   }
 
   async function save() {
@@ -170,7 +197,7 @@
     const btn = document.getElementById('btn-save-settings');
     if (btn) /** @type {HTMLButtonElement} */ (btn).disabled = true;
     try {
-      const { hugoChanges, author } = collect();
+      const { hugoChanges, author, spell } = collect();
       if (Object.keys(hugoChanges).length) {
         await window.TE.fetchJSON('/api/settings/hugo', {
           method: 'PATCH',
@@ -181,6 +208,17 @@
         method: 'PATCH',
         body: JSON.stringify(author),
       });
+      // Persist spell-check config (best-effort: only when the endpoint
+      // loaded, so a missing proofreader doesn't fail the whole save).
+      if (dictCache && spell && (spell.language || spell.words)) {
+        await window.TE.fetchJSON('/api/proofread/dictionary', {
+          method: 'PUT',
+          body: JSON.stringify({
+            language: spell.language || dictCache.language,
+            words: spell.words || dictCache.words || [],
+          }),
+        });
+      }
       window.TE.toast('Settings saved.');
       cache = null;
       render();

@@ -2534,6 +2534,15 @@ function buildExtensions(slashExt) {
     // Phase 3d: find/replace decoration plugin. The actual UI lives in
     // createFindReplaceModal() — this extension just makes the plugin
     // available so transactions can carry our decorations metadata.
+    // Spell + grammar proofreading decorations (LanguageTool). The UI
+    // (popup + toolbar toggle) is wired by createProofreader() in mount();
+    // this extension just makes the decoration plugin available.
+    Extension.create({
+      name: 'teProofread',
+      addProseMirrorPlugins() {
+        return [buildProofreadPlugin()];
+      },
+    }),
     Extension.create({
       name: 'teFindReplace',
       addProseMirrorPlugins() {
@@ -2722,6 +2731,337 @@ function buildFindDecorations(doc, matches, activeIndex) {
     }),
   );
   return PMDecorationSet.create(doc, decos);
+}
+
+// ── Spell + grammar proofreading (LanguageTool) ────────────────────
+//
+// A decoration plugin modelled on the find/replace plugin above: a
+// debounced background check posts the doc's plain text to /api/proofread
+// and underlines spelling/grammar/style issues; clicking one opens a
+// suggestions popup (replace / ignore / add-to-dictionary). Always-on by
+// default, like Grammarly. Degrades silently if the checker is unreachable.
+
+const PROOFREAD_KEY = new PluginKey('teProofread');
+
+function buildProofreadPlugin() {
+  return new Plugin({
+    key: PROOFREAD_KEY,
+    state: {
+      init() {
+        return { matches: [], deco: PMDecorationSet.empty };
+      },
+      apply(tr, prev) {
+        const meta = tr.getMeta(PROOFREAD_KEY);
+        if (meta && meta.clear) {
+          return { matches: [], deco: PMDecorationSet.empty };
+        }
+        if (meta && Array.isArray(meta.matches)) {
+          return { matches: meta.matches, deco: buildProofreadDecorations(tr.doc, meta.matches) };
+        }
+        if (tr.docChanged && prev.matches.length) {
+          // Map underlines through the edit so they track the text until
+          // the next re-check refreshes them.
+          const matches = prev.matches
+            .map((m) => ({ ...m, from: tr.mapping.map(m.from), to: tr.mapping.map(m.to, -1) }))
+            .filter((m) => m.to > m.from);
+          return { matches, deco: prev.deco.map(tr.mapping, tr.doc) };
+        }
+        return prev;
+      },
+    },
+    props: {
+      decorations(state) {
+        return PROOFREAD_KEY.getState(state).deco;
+      },
+    },
+  });
+}
+
+function buildProofreadDecorations(doc, matches) {
+  if (!matches || !matches.length) return PMDecorationSet.empty;
+  const decos = matches.map((m) =>
+    PMDecoration.inline(m.from, m.to, { class: 'te-pr te-pr-' + (m.kind || 'grammar') }),
+  );
+  return PMDecorationSet.create(doc, decos);
+}
+
+/**
+ * Serialise the doc to plain text with a parallel array mapping each text
+ * character back to its ProseMirror position, so LanguageTool's character
+ * offsets can be turned back into doc ranges. Code blocks are skipped and
+ * inline code is blanked to spaces (offsets stay aligned) so the checker
+ * never flags code.
+ *
+ * @param {import('@tiptap/pm/model').Node} doc
+ * @returns {{ text: string, map: number[] }}
+ */
+function proofreadDocText(doc) {
+  let text = '';
+  const map = [];
+  doc.descendants((node, pos) => {
+    if (node.type.name === 'codeBlock') return false;
+    if (node.isText) {
+      const t = node.text || '';
+      const isCode = node.marks && node.marks.some((mk) => mk.type.name === 'code');
+      for (let i = 0; i < t.length; i += 1) {
+        text += isCode ? ' ' : t[i];
+        map.push(pos + i);
+      }
+      return true;
+    }
+    if (node.isBlock && text.length && text[text.length - 1] !== '\n') {
+      // Separate blocks so sentences don't run together across paragraphs.
+      text += '\n';
+      map.push(pos);
+    }
+    return true;
+  });
+  return { text, map };
+}
+
+/** Map a LanguageTool {offset,length} to a ProseMirror {from,to} via the map. */
+function proofreadRange(offset, length, map) {
+  if (typeof offset !== 'number' || typeof length !== 'number') return null;
+  if (offset < 0 || offset >= map.length) return null;
+  const from = map[offset];
+  const lastIdx = Math.min(offset + length, map.length) - 1;
+  if (lastIdx < offset) return null;
+  const to = map[lastIdx] + 1;
+  if (from === undefined || to === undefined || to <= from) return null;
+  return { from, to };
+}
+
+/**
+ * Controller that drives the proofread plugin: debounced background checks,
+ * the click-to-fix popup, and enable/disable. Best-effort throughout — a
+ * dead checker just means no underlines, never broken typing.
+ *
+ * @param {HTMLElement} rootEl  the editor root (popup is appended here)
+ * @param {import('@tiptap/core').Editor} editor
+ * @param {() => string} getMode  returns 'wysiwyg' | 'source'
+ * @param {(n: number) => void} onCount  issue-count callback (toolbar badge)
+ */
+function createProofreader(rootEl, editor, getMode, onCount) {
+  let enabled = true;
+  let timer = null;
+  let seq = 0;
+  const ignored = new Set(); // session-only `${rule}|${snippet}`
+
+  const pop = document.createElement('div');
+  pop.className = 'te-pr-pop';
+  pop.hidden = true;
+  rootEl.appendChild(pop);
+
+  const getMatches = () => (PROOFREAD_KEY.getState(editor.state) || {}).matches || [];
+  function setMatches(matches) {
+    editor.view.dispatch(editor.view.state.tr.setMeta(PROOFREAD_KEY, { matches }));
+    if (typeof onCount === 'function') onCount(matches.length);
+  }
+  function clearMatches() {
+    editor.view.dispatch(editor.view.state.tr.setMeta(PROOFREAD_KEY, { clear: true }));
+    if (typeof onCount === 'function') onCount(0);
+  }
+  function closePopup() {
+    pop.hidden = true;
+    pop.innerHTML = '';
+  }
+
+  async function run() {
+    if (!enabled || (getMode && getMode() !== 'wysiwyg')) return;
+    const { text, map } = proofreadDocText(editor.state.doc);
+    if (!text.trim()) {
+      setMatches([]);
+      return;
+    }
+    const mySeq = (seq += 1);
+    let data;
+    try {
+      const res = await fetch('/api/proofread', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) return; // degrade: keep prior underlines
+      data = await res.json();
+    } catch (_) {
+      return;
+    }
+    if (mySeq !== seq || !enabled) return; // superseded / turned off mid-flight
+    const matches = [];
+    for (const m of (data && data.matches) || []) {
+      const snippet = text
+        .slice(m.offset, m.offset + m.length)
+        .trim()
+        .toLowerCase();
+      const key = `${m.rule}|${snippet}`;
+      if (ignored.has(key)) continue;
+      const r = proofreadRange(m.offset, m.length, map);
+      if (!r) continue;
+      matches.push({
+        from: r.from,
+        to: r.to,
+        kind: m.kind,
+        message: m.message,
+        shortMessage: m.shortMessage,
+        replacements: m.replacements || [],
+        rule: m.rule,
+        snippet,
+        key,
+      });
+    }
+    setMatches(matches);
+  }
+
+  function schedule() {
+    if (!enabled) return;
+    clearTimeout(timer);
+    timer = setTimeout(run, 1200);
+  }
+
+  function applyReplacement(hit, rep) {
+    editor.view.dispatch(editor.view.state.tr.insertText(rep, hit.from, hit.to));
+    editor.view.focus();
+    closePopup();
+    schedule(); // the edit invalidates this match; re-check refreshes the rest
+  }
+  function ignoreMatch(hit) {
+    if (hit.key) ignored.add(hit.key);
+    setMatches(getMatches().filter((m) => m !== hit));
+    closePopup();
+  }
+  async function addToDictionary(hit) {
+    closePopup();
+    try {
+      await fetch('/api/proofread/dictionary', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: hit.snippet }),
+      });
+    } catch (_) {
+      /* ignore — local removal below still hides it this session */
+    }
+    setMatches(getMatches().filter((m) => m.snippet !== hit.snippet));
+    schedule();
+  }
+
+  function openPopupAt(clientX, clientY) {
+    const at = editor.view.posAtCoords({ left: clientX, top: clientY });
+    if (!at) return false;
+    const hit = getMatches().find((m) => at.pos >= m.from && at.pos <= m.to);
+    if (!hit) return false;
+    pop.innerHTML = '';
+    const head = document.createElement('div');
+    head.className = 'te-pr-kind te-pr-kind-' + (hit.kind || 'grammar');
+    head.textContent =
+      hit.kind === 'spelling' ? 'Spelling' : hit.kind === 'style' ? 'Style' : 'Grammar';
+    pop.appendChild(head);
+    const msg = document.createElement('div');
+    msg.className = 'te-pr-msg';
+    msg.textContent = hit.message || hit.shortMessage || 'Suggestion';
+    pop.appendChild(msg);
+    if (hit.replacements && hit.replacements.length) {
+      const reps = document.createElement('div');
+      reps.className = 'te-pr-reps';
+      hit.replacements.slice(0, 6).forEach((rep) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'te-pr-rep';
+        b.textContent = rep;
+        b.addEventListener('mousedown', (e) => e.preventDefault());
+        b.addEventListener('click', () => applyReplacement(hit, rep));
+        reps.appendChild(b);
+      });
+      pop.appendChild(reps);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'te-pr-actions';
+    if (hit.kind === 'spelling') {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'te-pr-action';
+      add.textContent = 'Add to dictionary';
+      add.addEventListener('mousedown', (e) => e.preventDefault());
+      add.addEventListener('click', () => addToDictionary(hit));
+      actions.appendChild(add);
+    }
+    const ign = document.createElement('button');
+    ign.type = 'button';
+    ign.className = 'te-pr-action';
+    ign.textContent = 'Ignore';
+    ign.addEventListener('mousedown', (e) => e.preventDefault());
+    ign.addEventListener('click', () => ignoreMatch(hit));
+    actions.appendChild(ign);
+    pop.appendChild(actions);
+
+    const coords = editor.view.coordsAtPos(hit.from);
+    const rootRect = rootEl.getBoundingClientRect();
+    pop.hidden = false;
+    // Clamp within the editor root so the card never overflows the pane.
+    const maxLeft = Math.max(8, rootRect.width - pop.offsetWidth - 8);
+    const left = Math.min(Math.max(8, coords.left - rootRect.left), maxLeft);
+    pop.style.left = left + 'px';
+    pop.style.top = coords.bottom - rootRect.top + 6 + 'px';
+    return true;
+  }
+
+  const onClick = (e) => {
+    if (!enabled) return;
+    const sq = e.target && e.target.closest && e.target.closest('.te-pr');
+    if (!sq) return;
+    if (openPopupAt(e.clientX, e.clientY)) e.preventDefault();
+  };
+  const onDocDown = (e) => {
+    if (pop.hidden) return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.te-pr')) return;
+    closePopup();
+  };
+  const onUpdate = () => schedule();
+
+  editor.view.dom.addEventListener('click', onClick);
+  document.addEventListener('mousedown', onDocDown);
+  editor.on('update', onUpdate);
+
+  // Default on: the contenteditable's native red squiggle would double our
+  // LanguageTool underline, so suppress it and make our layer authoritative.
+  editor.view.dom.setAttribute('spellcheck', 'false');
+  schedule();
+
+  return {
+    isEnabled: () => enabled,
+    recheck: () => schedule(),
+    toggle() {
+      enabled = !enabled;
+      editor.view.dom.setAttribute('spellcheck', enabled ? 'false' : 'true');
+      if (enabled) run();
+      else {
+        clearMatches();
+        closePopup();
+      }
+      return enabled;
+    },
+    destroy() {
+      clearTimeout(timer);
+      try {
+        editor.view.dom.removeEventListener('click', onClick);
+      } catch (_) {
+        /* ignore */
+      }
+      document.removeEventListener('mousedown', onDocDown);
+      try {
+        editor.off('update', onUpdate);
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        pop.remove();
+      } catch (_) {
+        /* ignore */
+      }
+    },
+  };
 }
 
 /**
@@ -3548,6 +3888,26 @@ export function mount(rootEl, initialMarkdown, options) {
     refreshToolbarState();
   });
 
+  // ── Spell + grammar proofreader ───────────────────────────
+  // Drives the teProofread plugin: debounced background checks + the
+  // click-to-fix popup. The toolbar toggle (below) flips it; the count
+  // callback updates the toggle's badge.
+  let proofBtn = null;
+  const proofreader = createProofreader(
+    rootEl,
+    editor,
+    () => mode,
+    (n) => {
+      if (!proofBtn) return;
+      proofBtn.dataset.count = n > 0 ? String(n) : '';
+      proofBtn.title = !proofreader.isEnabled()
+        ? 'Spelling & grammar (off)'
+        : n > 0
+          ? `Spelling & grammar — ${n} issue${n === 1 ? '' : 's'}`
+          : 'Spelling & grammar — no issues';
+    },
+  );
+
   // ── Mode switching ────────────────────────────────────────
   function setMode(next) {
     if (next === mode) return;
@@ -3701,6 +4061,7 @@ export function mount(rootEl, initialMarkdown, options) {
     code_block: TB_ICON(
       '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m9 10-2 2 2 2"/><path d="m15 10 2 2-2 2"/>',
     ),
+    spellcheck: TB_ICON('<path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 18 2 2 4-4"/>'),
   };
   function tbBtn(spec) {
     const btn = document.createElement('button');
@@ -4213,6 +4574,22 @@ export function mount(rootEl, initialMarkdown, options) {
   gImage.appendChild(imgAlignBtn('Reset image alignment', 'align_none', null));
   richToolbar.appendChild(gImage);
 
+  // ─── Proofreading toggle ───────────────────────────────────
+  richToolbar.appendChild(tbDivider());
+  const gProof = tbGroup('Proofreading');
+  proofBtn = tbBtn({
+    label: 'Spelling & grammar',
+    icon: 'spellcheck',
+    className: 'te-tb-proof',
+    active: () => proofreader.isEnabled(),
+    run: () => {
+      proofreader.toggle();
+      refreshToolbarState();
+    },
+  });
+  gProof.appendChild(proofBtn);
+  richToolbar.appendChild(gProof);
+
   function refreshToolbarState() {
     toolbarButtons.forEach((b) => {
       try {
@@ -4453,6 +4830,11 @@ export function mount(rootEl, initialMarkdown, options) {
     else editor.commands.focus();
   };
   instance.destroy = () => {
+    try {
+      proofreader.destroy();
+    } catch (_) {
+      /* ignore */
+    }
     try {
       editor.destroy();
     } catch (_) {

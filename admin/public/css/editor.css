@@ -2285,3 +2285,122 @@ body.distraction-free #btn-zen {
   background: var(--accent-soft);
   color: var(--accent);
 }
+
+/* ── Spell + grammar proofreading ──────────────────────────────────── */
+/* Squiggly underlines, coloured by issue kind (spelling/grammar/style). */
+.ProseMirror .te-pr {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ProseMirror .te-pr-spelling {
+  text-decoration-color: var(--danger);
+}
+.ProseMirror .te-pr-grammar {
+  text-decoration-color: var(--info, #2f6bff);
+}
+.ProseMirror .te-pr-style {
+  text-decoration-color: var(--warn-strong, var(--warn));
+}
+
+/* Suggestion card shown on clicking a squiggle. */
+.te-pr-pop {
+  position: absolute;
+  z-index: 220;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-pop);
+  padding: 10px;
+  width: 280px;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+  font-family: var(--font-mono-www);
+  font-size: 12px;
+  color: var(--ink);
+}
+.te-pr-pop[hidden] {
+  display: none;
+}
+.te-pr-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.te-pr-kind-spelling {
+  color: var(--danger);
+}
+.te-pr-kind-grammar {
+  color: var(--info, #2f6bff);
+}
+.te-pr-kind-style {
+  color: var(--warn-strong, var(--warn));
+}
+.te-pr-msg {
+  color: var(--ink);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.te-pr-reps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.te-pr-rep {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.te-pr-rep:hover {
+  background: var(--accent);
+  color: var(--surface);
+}
+.te-pr-actions {
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.te-pr-action {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-mute);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.te-pr-action:hover {
+  color: var(--ink);
+}
+
+/* Issue-count badge on the toolbar toggle. */
+.te-tb-proof {
+  position: relative;
+}
+.te-tb-proof[data-count]:not([data-count=""])::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 9px;
+  line-height: 14px;
+  text-align: center;
+  font-family: var(--font-mono-www);
+}

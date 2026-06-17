@@ -67,6 +67,11 @@ services:
       - UMAMI_ADMIN_USER=${UMAMI_ADMIN_USER:-}
       - UMAMI_ADMIN_PASSWORD=${UMAMI_ADMIN_PASSWORD:-}
       - UMAMI_SITE_ID=${UMAMI_SITE_ID:-}
+      # LanguageTool (editor spell + grammar). Same-origin /api/proofread
+      # proxies here; the browser never talks to it directly.
+      - LANGUAGETOOL_URL=${LANGUAGETOOL_URL:-http://languagetool:8010/v2}
+    depends_on:
+      - languagetool
     volumes:
       - ../site:/app/site          # So it can read/write site files
       - ../.git:/app/.git          # So it can commit/push
@@ -74,6 +79,22 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro # For health dashboard
       - /sys/class/thermal:/sys/class/thermal:ro     # For Pi temp
       - ./health:/app/health:ro                      # SD/system-health marker (scripts/system-health.sh)
+
+  # 3b. LanguageTool — spell + grammar engine for the post editor.
+  # Internal only (no published port, no tunnel/Caddy route); reachable as
+  # http://languagetool:8010 on the compose network. No n-gram model (that
+  # data is multi-GB) so the footprint stays ~0.5 GB heap — sized for the Pi.
+  # The /api/proofread route degrades gracefully while this is starting/down.
+  languagetool:
+    image: erikvl87/languagetool:latest
+    container_name: languagetool
+    restart: unless-stopped
+    expose:
+      - "8010"
+    environment:
+      - Java_Xms=256m
+      - Java_Xmx=512m
+      - langtool_cacheSize=1000
 
   # 4. Remark42 (Comments)
   remark42:
