@@ -720,9 +720,14 @@
   }
 
   // ── Detail drawer ──────────────────────────────────────────
+  // Monotonic token so that if the user clicks several items quickly, only
+  // the most recent fetch is allowed to render — earlier (slower) responses
+  // are discarded instead of clobbering the drawer with stale data.
+  let drawerSeq = 0;
   async function openDrawer(id) {
     const drawer = $('media-drawer');
     if (!drawer) return;
+    const seq = ++drawerSeq;
     // Shared overlay open: focus into the drawer, trap Tab, inert the
     // background, restore focus to the opener on close.
     if (window.TE && TE.openDrawer) TE.openDrawer(drawer);
@@ -735,8 +740,10 @@
     if (body) body.innerHTML = '<p class="te-media-loading">Loading…</p>';
     try {
       const m = await media.get(id);
+      if (seq !== drawerSeq) return; // a newer open superseded this one
       renderDrawer(m);
     } catch (err) {
+      if (seq !== drawerSeq) return;
       if (body) body.innerHTML = `<p class="te-media-error">${TE.escape(err.message)}</p>`;
     }
   }

@@ -122,6 +122,13 @@ router.post('/bulk', (req, res) => {
     if (!Array.isArray(filenames) || !filenames.length) {
       return res.status(400).json({ error: 'filenames must be a non-empty array' });
     }
+    // Cap the batch: each item does synchronous file I/O + parsing, so a huge
+    // array would block the event loop. 200 is far above any real bulk action.
+    if (filenames.length > 200) {
+      return res
+        .status(400)
+        .json({ error: 'batch_too_large', message: 'Maximum 200 items per bulk operation.' });
+    }
 
     /** @type {string[]} */ const ok = [];
     /** @type {Array<{ filename: string, error: string, details?: unknown }>} */ const errors = [];
@@ -528,7 +535,15 @@ router.put('/:filename', (req, res) => {
           });
         }
       } catch {
-        /* old file vanished — fall through; the write recreates it */
+        // The client loaded this post (it sent a baseMtime) but the file is
+        // gone now — deleted or renamed by another tab/device/the scheduler.
+        // Recreating it would silently resurrect a deleted post, so treat a
+        // missing-but-expected file as a conflict, not a fresh create.
+        return res.status(409).json({
+          error: 'conflict',
+          message:
+            'This post no longer exists (it was deleted or renamed elsewhere). Reload before saving.',
+        });
       }
     }
 

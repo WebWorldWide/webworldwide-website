@@ -278,6 +278,32 @@ test('a save snapshots the previous content; history + version expose it', skipO
   assert.equal(miss.status, 404);
 });
 
+test(
+  'PUT with baseMtime to a since-deleted post is a 409 (never silently recreated)',
+  skipOpts(),
+  async () => {
+    writePost(
+      'ephemeral',
+      { title: 'Ephemeral', date: '2024-05-01', draft: false },
+      'here then gone',
+    );
+    const get = await (await api('/api/posts/ephemeral.md')).json();
+    // Another writer/tab deletes it after we loaded it.
+    rmSync(join(postsDir, 'ephemeral.md'));
+    const res = await api('/api/posts/ephemeral.md', {
+      method: 'PUT',
+      body: JSON.stringify({
+        data: { title: 'Ephemeral', slug: 'ephemeral', date: '2024-05-01', draft: false },
+        content: 'must not resurrect',
+        baseMtime: get.mtime,
+      }),
+    });
+    assert.equal(res.status, 409);
+    assert.equal((await res.json()).error, 'conflict');
+    assert.equal(statSyncSafe(join(postsDir, 'ephemeral.md')), false, 'deleted post not recreated');
+  },
+);
+
 function statSyncSafe(p) {
   try {
     statSync(p);
