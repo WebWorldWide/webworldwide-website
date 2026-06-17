@@ -156,6 +156,19 @@
   min-height: 14px;
   margin-top: 8px;
 }
+.te-redir-test-result {
+  font-family: var(--mono);
+  font-size: 12px;
+  min-height: 16px;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.te-redir-test-result.ok {
+  color: var(--accent);
+}
+.te-redir-test-result.err {
+  color: var(--danger);
+}
 .te-redir-form-actions {
   display: flex;
   justify-content: flex-end;
