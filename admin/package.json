@@ -69,7 +69,7 @@
     "@fontsource/hanken-grotesk": "^5.2.8",
     "@fontsource/newsreader": "^5.2.10",
     "@simplewebauthn/browser": "^13.3.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "katex": "^0.16.11"
   }
 }
