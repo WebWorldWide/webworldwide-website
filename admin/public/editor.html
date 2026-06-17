@@ -230,7 +230,7 @@
                   <label class="sr-only" for="editor-fallback">Post body (Markdown)</label>
                   <textarea
                     id="editor-fallback"
-                    placeholder="Write your post in Markdown…"
+                    placeholder="Start writing your post here…"
                     spellcheck="true"
                     autocomplete="off"
                   ></textarea>
@@ -493,8 +493,14 @@
               </details>
 
               <details class="ed-panel">
-                <summary><span>SEO</span><span class="chev" aria-hidden="true">›</span></summary>
+                <summary>
+                  <span>SEO &amp; sharing</span><span class="chev" aria-hidden="true">›</span>
+                </summary>
                 <div class="body">
+                  <small class="ed-field-help" style="margin: 0 0 8px"
+                    >Controls how this post looks in Google results and when shared on social media.
+                    All optional.</small
+                  >
                   <div class="field">
                     <label for="post-desc">Excerpt / summary</label>
                     <textarea
@@ -558,6 +564,7 @@
                     class="btn ghost"
                     id="btn-history"
                     style="justify-content: center"
+                    title="See earlier versions of this post and restore one if you need to undo."
                   >
                     <span class="ico" aria-hidden="true" data-icon="activity"></span>
                     Revision history
