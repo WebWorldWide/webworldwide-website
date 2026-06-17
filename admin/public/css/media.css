@@ -642,7 +642,8 @@ body.te-has-body-dropzone.is-dragover::after {
   letter-spacing: 0.08em;
 }
 
-.te-drawer-alt-input {
+.te-drawer-alt-input,
+.te-drawer-name-input {
   width: 100%;
   padding: 8px 10px;
   font: inherit;
@@ -650,6 +651,55 @@ body.te-has-body-dropzone.is-dragover::after {
   line-height: 1.45;
   color: var(--fg);
   resize: vertical;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--line-strong, #b5bab1);
+  border-radius: 6px;
+}
+.te-drawer-name-input {
+  resize: none;
+}
+
+/* Bulk-edit modal (name + alt for many assets at once) */
+.te-media-bulk-card {
+  width: min(640px, 92vw);
+}
+.te-media-bulk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.te-media-bulk-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.te-media-bulk-thumb {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--surface-2, #f0f0f0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.te-media-bulk-fields {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.te-media-bulk-name,
+.te-media-bulk-alt {
+  width: 100%;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
   background: var(--bg-card, #fff);
   border: 1px solid var(--line-strong, #b5bab1);
   border-radius: 6px;

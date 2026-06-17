@@ -700,31 +700,107 @@ const MAX_ALT_TEXT_LENGTH = 1000;
  * The stored value is the library default the editor inserts with;
  * markdown stays authoritative inside already-published post bodies.
  */
+// Max length for the friendly display name (original_name). The on-disk
+// filename / URL is NOT touched by an edit — original_name is a label only,
+// so renaming is safe and never breaks references.
+const MAX_NAME_LENGTH = 200;
+
+/**
+ * Apply an alt_text and/or original_name edit to one media row. Shared by
+ * PATCH /:id and the bulk endpoint. Returns a {status, data|error} envelope
+ * rather than touching res, so the bulk path can aggregate outcomes.
+ *
+ * @param {string} id
+ * @param {{ alt_text?: unknown, original_name?: unknown }} body
+ */
+function applyMediaEdit(id, body) {
+  const row = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
+  if (!row) return { status: 404, error: { error: 'Not found' } };
+  const sets = [];
+  const args = [];
+  if ('alt_text' in body) {
+    const raw = body.alt_text;
+    if (raw !== null && typeof raw !== 'string') {
+      return {
+        status: 400,
+        error: { error: 'invalid_alt_text', message: 'alt_text must be a string or null.' },
+      };
+    }
+    const altText = raw === null ? null : raw.trim() || null;
+    if (altText && altText.length > MAX_ALT_TEXT_LENGTH) {
+      return {
+        status: 400,
+        error: {
+          error: 'alt_text_too_long',
+          message: `Alt text must be ${MAX_ALT_TEXT_LENGTH} characters or fewer.`,
+        },
+      };
+    }
+    sets.push('alt_text = ?');
+    args.push(altText);
+  }
+  if ('original_name' in body) {
+    const raw = body.original_name;
+    if (typeof raw !== 'string') {
+      return {
+        status: 400,
+        error: { error: 'invalid_name', message: 'original_name must be a string.' },
+      };
+    }
+    const name = raw.trim();
+    if (!name)
+      return { status: 400, error: { error: 'invalid_name', message: 'Name cannot be empty.' } };
+    if (name.length > MAX_NAME_LENGTH) {
+      return {
+        status: 400,
+        error: {
+          error: 'name_too_long',
+          message: `Name must be ${MAX_NAME_LENGTH} characters or fewer.`,
+        },
+      };
+    }
+    sets.push('original_name = ?');
+    args.push(name);
+  }
+  if (!sets.length) {
+    return {
+      status: 400,
+      error: { error: 'no_editable_fields', message: 'Provide alt_text and/or original_name.' },
+    };
+  }
+  // sets[] contains only fixed column fragments; user data is bound via args.
+  db.prepare(`UPDATE media SET ${sets.join(', ')} WHERE id = ?`).run(...args, id);
+  const updated = db.prepare('SELECT * FROM media WHERE id = ?').get(id);
+  return { status: 200, data: shapeMedia(updated) };
+}
+
 router.patch('/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Not found' });
+  const r = applyMediaEdit(req.params.id, req.body || {});
+  if (r.error) return res.status(r.status).json(r.error);
+  res.json(r.data);
+});
 
-  const body = req.body || {};
-  if (!('alt_text' in body)) {
-    return res.status(400).json({ error: 'no_editable_fields', message: 'Provide alt_text.' });
+/**
+ * POST /api/media/bulk — apply per-item edits in one call:
+ *   { edits: [{ id, alt_text?, original_name? }, …] }
+ * Returns { updated, errors[] }; one bad row never fails the batch.
+ */
+router.post('/bulk', (req, res) => {
+  const edits = Array.isArray(req.body?.edits) ? req.body.edits : null;
+  if (!edits) return res.status(400).json({ error: 'edits[] required' });
+  let updated = 0;
+  const errors = [];
+  for (const e of edits) {
+    if (!e || typeof e.id !== 'string') {
+      errors.push({ id: e?.id ?? null, error: 'bad_id' });
+      continue;
+    }
+    const { id, ...fields } = e;
+    const r = applyMediaEdit(id, fields);
+    if (r.error) errors.push({ id, error: r.error.error });
+    else updated += 1;
   }
-  const raw = body.alt_text;
-  if (raw !== null && typeof raw !== 'string') {
-    return res
-      .status(400)
-      .json({ error: 'invalid_alt_text', message: 'alt_text must be a string or null.' });
-  }
-  const altText = raw === null ? null : raw.trim() || null;
-  if (altText && altText.length > MAX_ALT_TEXT_LENGTH) {
-    return res.status(400).json({
-      error: 'alt_text_too_long',
-      message: `Alt text must be ${MAX_ALT_TEXT_LENGTH} characters or fewer.`,
-    });
-  }
-
-  db.prepare('UPDATE media SET alt_text = ? WHERE id = ?').run(altText, req.params.id);
-  const updated = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
-  res.json(shapeMedia(updated));
+  res.json({ updated, errors });
 });
 
 /**
