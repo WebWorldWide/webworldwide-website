@@ -409,6 +409,34 @@ body[data-page="login"] {
   border: 1px solid var(--line-strong-www);
   border-radius: var(--radius-xs);
 }
+/* Keyboard-shortcuts cheat-sheet (TE.showShortcuts) */
+.kbd-sheet {
+  display: grid;
+  gap: 18px;
+}
+.kbd-group h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+}
+.kbd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+.kbd-keys {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.kbd-label {
+  color: var(--ink);
+  font-size: 13px;
+}
 .topbar-search {
   display: flex;
   gap: var(--space-2);
