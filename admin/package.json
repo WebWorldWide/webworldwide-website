@@ -16,7 +16,7 @@
     "dedupe:media": "node scripts/dedupe-media.js"
   },
   "dependencies": {
-    "@atproto/api": "^0.19.18",
+    "@atproto/api": "^0.20.15",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/search": "^6.7.0",
