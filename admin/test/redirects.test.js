@@ -109,3 +109,26 @@ test('DELETE removes a redirect', skipOpts(), async () => {
   const after = await (await fetch(`${baseUrl}/api/redirects`)).json();
   assert.equal(after.length, 0);
 });
+
+test('POST /import bulk-upserts rows, skips invalid, collapses chains', skipOpts(), async () => {
+  const res = await fetch(`${baseUrl}/api/redirects/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      rows: [
+        { from: '/a', to: '/b', code: 301 },
+        { from: '/b', to: '/c', code: 301 }, // chains: /a should collapse to /c
+        { from: '/x', to: '/x' }, // invalid self-redirect → skipped
+        { from: '', to: '/y' }, // invalid → skipped
+      ],
+    }),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.imported, 2);
+  assert.equal(body.skipped, 2);
+  const list = await (await fetch(`${baseUrl}/api/redirects`)).json();
+  const a = list.find((r) => r.from === '/a');
+  assert.ok(a, '/a imported');
+  assert.equal(a.to, '/c', 'chain collapsed (/a → /c, not /a → /b)');
+});

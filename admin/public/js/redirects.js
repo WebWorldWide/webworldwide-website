@@ -135,10 +135,159 @@
     }
   }
 
+  // Normalize a path the same way the server does, so "Test URL" matches
+  // what the live redirect table will actually do.
+  function normPath(p) {
+    let s = String(p || '').trim();
+    if (!s) return '';
+    if (/^https?:\/\//i.test(s)) return s.replace(/\/+$/, '');
+    if (!s.startsWith('/')) s = '/' + s;
+    if (s.length > 1) s = s.replace(/\/+$/, '');
+    return s;
+  }
+
+  // ── Export / Import (CSV) ──────────────────────────────────
+  function csvField(v) {
+    return `"${String(v === undefined || v === null ? '' : v).replace(/"/g, '""')}"`;
+  }
+  function exportCsv() {
+    if (!rows.length) {
+      window.TE.toast('No redirects to export.', 'warn');
+      return;
+    }
+    const lines = ['from,to,code'];
+    rows.forEach((r) => lines.push([r.from, r.to, r.code].map(csvField).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `redirects-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Minimal CSV parse for our own from,to,code shape (handles quotes + an
+  // optional header row). Good enough to round-trip exported files.
+  function parseCsv(text) {
+    const out = [];
+    for (const raw of String(text || '').split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line) continue;
+      const cells = [];
+      const re = /(?:^|,)(?:"([^"]*(?:""[^"]*)*)"|([^,]*))/g;
+      let m;
+      while ((m = re.exec(line))) {
+        cells.push((m[1] !== undefined ? m[1].replace(/""/g, '"') : m[2] || '').trim());
+        if (re.lastIndex >= line.length) break;
+      }
+      if (cells[0]?.toLowerCase() === 'from') continue; // header
+      const [from, to, code] = cells;
+      if (from && to) out.push({ from, to, code: Number(code) || 301 });
+    }
+    return out;
+  }
+
+  async function importCsv(file) {
+    if (!file) return;
+    let text;
+    try {
+      text = await file.text();
+    } catch {
+      window.TE.toast('Could not read the file.', 'error');
+      return;
+    }
+    const parsed = parseCsv(text);
+    if (!parsed.length) {
+      window.TE.toast('No valid rows found (expected from,to,code).', 'warn');
+      return;
+    }
+    try {
+      const res = await window.TE.fetchJSON('/api/redirects/import', {
+        method: 'POST',
+        body: JSON.stringify({ rows: parsed }),
+      });
+      window.TE.toast(
+        `Imported ${res.imported} redirect${res.imported === 1 ? '' : 's'}` +
+          (res.skipped ? ` (${res.skipped} skipped)` : '') +
+          '.',
+      );
+      load();
+    } catch (err) {
+      window.TE.toast(err.message || 'Import failed.', 'error');
+    }
+  }
+
+  // ── Test URL (resolve a path through the table, following chains) ──
+  function resolvePath(input) {
+    const start = normPath(input);
+    if (!start) return { ok: false, msg: 'Enter a path to test.' };
+    const chain = [start];
+    let cur = start;
+    for (let i = 0; i < 10; i += 1) {
+      const hit = rows.find((r) => r.from === cur);
+      if (!hit) break;
+      if (chain.includes(hit.to)) {
+        return { ok: false, msg: `Loop detected: ${chain.join(' → ')} → ${hit.to}` };
+      }
+      chain.push(`${hit.to} (${hit.code})`);
+      cur = normPath(hit.to);
+    }
+    if (chain.length === 1) {
+      return { ok: true, msg: `No redirect — ${start} is served directly.` };
+    }
+    return { ok: true, msg: chain.join('  →  ') };
+  }
+
+  function openTestForm() {
+    const host = document.getElementById('redirect-form-host');
+    if (!host) return;
+    host.innerHTML = `
+      <form class="te-redir-form" novalidate>
+        <div class="te-redir-form-grid">
+          <label class="te-field"><span>Test a path</span>
+            <input name="path" placeholder="/old-url/" autocomplete="off" /></label>
+        </div>
+        <div class="te-redir-test-result" aria-live="polite"></div>
+        <div class="te-redir-form-actions">
+          <button type="button" class="btn ghost js-cancel">Close</button>
+          <button type="submit" class="btn solid">Resolve</button>
+        </div>
+      </form>`;
+    const form = host.querySelector('.te-redir-form');
+    const out = host.querySelector('.te-redir-test-result');
+    host.querySelector('[name="path"]')?.focus();
+    host.querySelector('.js-cancel')?.addEventListener('click', () => {
+      host.innerHTML = '';
+    });
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const r = resolvePath(form.path.value);
+      out.textContent = r.msg;
+      out.className = 'te-redir-test-result' + (r.ok ? ' ok' : ' err');
+    });
+  }
+
   function init() {
     load();
     const btn = document.getElementById('btn-redirect-new');
     if (btn) btn.addEventListener('click', openAddForm);
+    const test = document.getElementById('btn-redirect-test');
+    if (test) test.addEventListener('click', openTestForm);
+    const exportBtn = document.getElementById('btn-redirect-export');
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
+    const importBtn = document.getElementById('btn-redirect-import');
+    const importFile = /** @type {HTMLInputElement | null} */ (
+      document.getElementById('redirect-import-file')
+    );
+    if (importBtn && importFile) {
+      importBtn.addEventListener('click', () => importFile.click());
+      importFile.addEventListener('change', () => {
+        if (importFile.files && importFile.files[0]) importCsv(importFile.files[0]);
+        importFile.value = ''; // allow re-importing the same file
+      });
+    }
   }
 
   window.TE = window.TE || {};

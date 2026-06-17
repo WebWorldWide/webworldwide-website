@@ -24,6 +24,7 @@ import { logActivity } from '../services/activity.js';
 import {
   readRedirects as read,
   writeRedirects as write,
+  upsertRedirect,
   normPath,
 } from '../services/redirects-store.js';
 
@@ -31,6 +32,32 @@ const router = Router();
 
 router.get('/', (_req, res) => {
   res.json(read());
+});
+
+// Bulk import (CSV from the admin). Each row is upserted via the shared
+// store so duplicates update in place and chains stay collapsed; an invalid
+// row is skipped, not fatal. Returns a per-row tally.
+router.post('/import', (req, res) => {
+  const incoming = Array.isArray(req.body?.rows) ? req.body.rows : null;
+  if (!incoming) return res.status(400).json({ error: 'rows[] required' });
+  const rows = read();
+  let imported = 0;
+  let skipped = 0;
+  for (const r of incoming) {
+    const code = Number(r?.code || 301);
+    const safeCode = [301, 302, 307, 308].includes(code) ? code : 301;
+    const result = upsertRedirect(rows, r?.from, r?.to, safeCode);
+    if (result) imported += 1;
+    else skipped += 1;
+  }
+  write(rows);
+  logActivity({
+    req,
+    action: 'redirect.import',
+    target: `${imported} imported`,
+    meta: { skipped },
+  });
+  res.json({ imported, skipped, total: rows.length });
 });
 
 router.post('/', (req, res) => {
