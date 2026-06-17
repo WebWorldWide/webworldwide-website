@@ -104,6 +104,10 @@
   // In-flight save lock so autosave can't overlap a manual save (false 409
   // / double-create) — savePost early-returns while one is running.
   let saving = false;
+  // Set when the last save failed with a 409 (the on-disk copy changed, or a
+  // rename target is taken). Retrying the SAME save just 409s again forever,
+  // so the retry path reloads instead.
+  let saveConflict = false;
   // Whether the slug is still tracking the title (true) or the writer has
   // manually overridden it (false). When auto, retitling an EXISTING post
   // renames its file/URL too — the headline feature. Recomputed on load.
@@ -280,6 +284,7 @@
   // server still guards (409 slug_taken), but a quiet inline hint is far
   // friendlier than a failed save.
   let slugCheckTimer = null;
+  let slugCheckSeq = 0;
   function setSlugMsg(text, kind) {
     const el = $('slug-msg');
     if (!el) return;
@@ -297,8 +302,10 @@
       setSlugMsg('Use lowercase letters, numbers and hyphens only.', 'warn');
       return;
     }
+    const mySeq = (slugCheckSeq += 1);
     try {
       const posts = await TE.fetchJSON('/api/posts');
+      if (mySeq !== slugCheckSeq) return; // a newer check superseded this one
       // A clash is any OTHER post (not the one we're editing) using this slug.
       const clash = posts.find((p) => p.slug === raw && p.filename !== currentFile);
       if (clash) {
@@ -783,7 +790,9 @@
     }
     const data = {
       title: titleEl.value.trim(),
-      slug: slugEl.value.trim() || slugify(titleEl.value),
+      // Always normalize — a fast manual edit ("Hello World!") could otherwise
+      // be sent before the debounced slug-check runs. (Server slugifies too.)
+      slug: slugify(slugEl.value.trim()) || slugify(titleEl.value),
       draft: draftEl.value === 'true',
       date: dateEl.value ? new Date(dateEl.value).toISOString() : new Date().toISOString(),
       excerpt: descEl.value.trim(),
@@ -837,6 +846,7 @@
       });
       if (typeof result.mtime === 'number') loadedMtime = result.mtime;
       isDirty = false;
+      saveConflict = false;
       clearTimeout(autosaveTimer);
       setSaved('Saved');
       setAutoState('saved', 'Saved');
@@ -870,6 +880,7 @@
       // recoverable user states, not crashes — surface the server's
       // human-readable message and don't pretend a generic save failure.
       const isConflict = err && err.status === 409;
+      saveConflict = isConflict;
       setSaved(isConflict ? 'Not saved' : 'Save failed');
       setAutoState('error', isConflict ? 'Conflict' : 'Error saving');
       if (editorRoot) {
@@ -897,7 +908,16 @@
       // save when nothing changed. This INCLUDES a title/slug change: the save
       // renames the file + auto-redirects the old URL. The 10s debounce fires
       // only after typing stops, so it won't rename to a half-typed slug.
-      if (currentFile && isDirty && !saving && titleEl.value.trim()) savePost();
+      // Require a valid base-version token too: a PUT without it is refused
+      // by savePost anyway, so don't let autosave spam that error path.
+      if (
+        currentFile &&
+        isDirty &&
+        !saving &&
+        titleEl.value.trim() &&
+        typeof loadedMtime === 'number'
+      )
+        savePost();
     }, 10000);
   }
 
@@ -992,6 +1012,10 @@
   async function deletePost() {
     if (!currentFile) return;
     if (!confirm(`Delete "${titleEl.value || currentFile}" permanently?`)) return;
+    // Cancel any pending autosave — otherwise its 10s timer could fire during
+    // the delete request and re-create the post we just removed.
+    clearTimeout(autosaveTimer);
+    isDirty = false;
     try {
       await TE.fetchJSON(`/api/posts/${encodeURIComponent(currentFile)}`, {
         method: 'DELETE',
@@ -1250,9 +1274,27 @@
       const retry = () => {
         if (autoEl.dataset.state !== 'error') return;
         // A load failure must RE-LOAD, not save (saving would clobber the
-        // post with the blank editor). A save error retries the save.
-        if (loadFailed && currentFile) loadPost(currentFile);
-        else savePost();
+        // post with the blank editor).
+        if (loadFailed && currentFile) {
+          loadPost(currentFile);
+          return;
+        }
+        // A 409 conflict can't be fixed by re-saving the same base version —
+        // it just 409s again. Offer to reload the current on-disk copy
+        // (which discards local edits), so the user isn't stuck in a loop.
+        if (saveConflict && currentFile) {
+          if (
+            window.confirm(
+              'This post changed somewhere else since you opened it. Reload the latest version? ' +
+                'Your unsaved changes here will be lost.',
+            )
+          ) {
+            loadPost(currentFile);
+          }
+          return;
+        }
+        // A transient/save error retries the save.
+        savePost();
       };
       autoEl.addEventListener('click', retry);
       autoEl.addEventListener('keydown', (e) => {

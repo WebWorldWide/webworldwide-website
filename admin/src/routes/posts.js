@@ -45,6 +45,22 @@ function invalidatePostsCache() {
   postsListCache = null;
 }
 
+/**
+ * Canonical slug: lowercase, non-alphanumerics → hyphens, ends trimmed.
+ * Mirrors the client's slugify (editor.js) so the on-disk filename and the
+ * public URL are always safe even if a client posts a raw value like
+ * "Hello World!". `path.basename` still guards traversal at the call site.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+function slugify(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+}
+
 // Utility to get all posts (Phase 2 shape preserved + a few additive
 // fields the dashboard uses for the new "Scheduled" tab and badges).
 function getAllPosts() {
@@ -457,13 +473,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    const rawSlug =
-      data.slug ||
-      data.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '');
-    const slug = path.basename(rawSlug);
+    const slug = path.basename(slugify(data.slug || data.title));
     const filename = `${slug}.md`;
 
     // Check if exists
@@ -513,7 +523,7 @@ router.put('/:filename', (req, res) => {
     const { data, content, baseMtime } = req.body;
     const oldFilename = path.basename(req.params.filename);
     const rawSlug = data.slug || oldFilename.replace('.md', '');
-    const slug = path.basename(rawSlug);
+    const slug = path.basename(slugify(rawSlug));
     const newFilename = `${slug}.md`;
     const oldPath = join(postsDir, oldFilename);
     const newPath = join(postsDir, newFilename);

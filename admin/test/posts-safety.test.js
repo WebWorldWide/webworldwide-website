@@ -304,6 +304,29 @@ test(
   },
 );
 
+test(
+  'a messy slug is normalized to a safe filename (no spaces/punctuation)',
+  skipOpts(),
+  async () => {
+    const res = await api('/api/posts', {
+      method: 'POST',
+      body: JSON.stringify({
+        data: {
+          title: 'Whatever',
+          slug: 'Hello World! & Friends',
+          date: '2024-06-01',
+          draft: true,
+        },
+        content: 'body',
+      }),
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.filename, 'hello-world-friends.md');
+    assert.equal(body.slug, 'hello-world-friends');
+  },
+);
+
 function statSyncSafe(p) {
   try {
     statSync(p);
