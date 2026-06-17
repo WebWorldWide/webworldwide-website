@@ -101,6 +101,11 @@ export function upsertRedirect(rows, fromRaw, toRaw, code = 301) {
   for (const r of rows) {
     if (r.to === from) r.to = to;
   }
+  // Collapsing can produce a self-redirect (e.g. A→B then add B→A turns the
+  // A→B row into A→A). Drop any row that now points at itself.
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (rows[i].from === rows[i].to) rows.splice(i, 1);
+  }
   // Upsert the from→to row.
   const existing = rows.find((r) => r.from === from);
   if (existing) {
