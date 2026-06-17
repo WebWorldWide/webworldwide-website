@@ -217,7 +217,51 @@
       : `<div class="empty"><div class="e-mark">✓</div><div class="e-text">All clear.</div></div>`;
   }
 
+  // First-run getting-started guide: shown until the user dismisses it
+  // (remembered across sessions), then collapsed to a one-line re-opener.
+  const GUIDE_KEY = 'te_overview_guide_dismissed';
+  function wireGuide() {
+    const card = $('ov-getting-started');
+    const reopen = $('ov-guide-reopen');
+    const dismiss = $('ov-guide-dismiss');
+    if (!card || !reopen) return;
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem(GUIDE_KEY) === '1';
+    } catch (_) {
+      /* storage blocked — default to showing the guide */
+    }
+    const apply = () => {
+      card.hidden = dismissed;
+      reopen.hidden = !dismissed;
+    };
+    apply();
+    if (dismiss) {
+      dismiss.addEventListener('click', () => {
+        dismissed = true;
+        try {
+          localStorage.setItem(GUIDE_KEY, '1');
+        } catch (_) {
+          /* ignore */
+        }
+        apply();
+        reopen.focus();
+      });
+    }
+    reopen.addEventListener('click', () => {
+      dismissed = false;
+      try {
+        localStorage.removeItem(GUIDE_KEY);
+      } catch (_) {
+        /* ignore */
+      }
+      apply();
+      if (dismiss) dismiss.focus();
+    });
+  }
+
   function init() {
+    wireGuide();
     renderGreeting();
     const date = $('ov-date');
     if (date) {

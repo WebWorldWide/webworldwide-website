@@ -1249,6 +1249,77 @@ body[data-page="login"] {
 .ov-hero {
   margin-bottom: var(--space-4);
 }
+/* First-run getting-started guide on the Overview. */
+.ov-guide {
+  position: relative;
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-md, 12px);
+}
+.ov-guide-title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-lg, 18px);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+}
+.ov-guide-steps {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink);
+  line-height: 1.5;
+  font-size: 14px;
+}
+.ov-guide-steps code {
+  font-family: var(--font-mono-www, monospace);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.ov-guide-foot {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+.ov-guide-x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  color: var(--ink-mute);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+}
+.ov-guide-x:hover {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink);
+}
+.ov-guide-reopen {
+  margin-bottom: var(--space-4);
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ov-guide-reopen:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
 .ov-hi {
   margin: 0;
   font-family: var(--font-ui);
