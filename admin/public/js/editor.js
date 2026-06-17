@@ -892,16 +892,12 @@
     clearTimeout(autosaveTimer);
     if (loadFailed) return; // never autosave over a post that failed to load
     autosaveTimer = setTimeout(() => {
-      // Only autosave existing posts that actually have unsaved edits and
-      // aren't mid-save — never create a post from a half-typed draft, and
-      // never fire a phantom save when nothing changed. A pending slug
-      // RENAME is deferred to an explicit save: autosaving mid-retitle
-      // would rename the file/URL to a half-typed slug and churn redirects.
-      const renamePending =
-        currentFile &&
-        slugEl.value.trim() &&
-        slugEl.value.trim() !== currentFile.replace(/\.md$/, '');
-      if (currentFile && isDirty && !saving && titleEl.value.trim() && !renamePending) savePost();
+      // Autosave existing posts that have unsaved edits and aren't mid-save —
+      // never create a post from a half-typed draft, never fire a phantom
+      // save when nothing changed. This INCLUDES a title/slug change: the save
+      // renames the file + auto-redirects the old URL. The 10s debounce fires
+      // only after typing stops, so it won't rename to a half-typed slug.
+      if (currentFile && isDirty && !saving && titleEl.value.trim()) savePost();
     }, 10000);
   }
 
