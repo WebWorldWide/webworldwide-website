@@ -91,6 +91,10 @@ services:
     restart: unless-stopped
     expose:
       - "8010"
+    # Hard cap so the JVM (512m heap + ~256m overhead) can never balloon and
+    # OOM the 4GB Pi alongside cms/postgres/umami. If it exceeds this Docker
+    # kills it and restart:unless-stopped brings it back.
+    mem_limit: 768m
     environment:
       - Java_Xms=256m
       - Java_Xmx=512m

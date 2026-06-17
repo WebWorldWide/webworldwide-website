@@ -670,6 +670,14 @@ body.te-has-body-dropzone.is-dragover::after {
   max-height: 60vh;
   overflow-y: auto;
 }
+/* On phones the modal itself scrolls — drop the inner scroll so the list and
+   the dialog don't fight over two nested scroll regions. */
+@media (max-width: 560px) {
+  .te-media-bulk-rows {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
 .te-media-bulk-row {
   display: flex;
   gap: 12px;
