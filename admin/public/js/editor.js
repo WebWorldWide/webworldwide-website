@@ -1033,7 +1033,7 @@
           }
         };
         const instance = TEEditor.mount(editorRoot, initial, {
-          placeholder: 'Write your post in Markdown…',
+          placeholder: 'Start writing… (type “/” for headings, images, links and more)',
         });
         labelEditorSurface();
         // The façade is the new bodyEl. It exposes .value, .selectionStart,
