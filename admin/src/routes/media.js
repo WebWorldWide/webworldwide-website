@@ -711,7 +711,7 @@ const MAX_NAME_LENGTH = 200;
  * rather than touching res, so the bulk path can aggregate outcomes.
  *
  * @param {string} id
- * @param {{ alt_text?: unknown, original_name?: unknown }} body
+ * @param {any} body  raw request body (validated field-by-field below)
  */
 function applyMediaEdit(id, body) {
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(id);

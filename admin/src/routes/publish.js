@@ -27,7 +27,8 @@ const router = Router();
  * @returns {{ code: string, message: string }}
  */
 function classifyPublishError(err) {
-  const raw = `${(err && err.message) || ''} ${(err && err.cause && err.cause.message) || ''}`;
+  const e = /** @type {any} */ (err);
+  const raw = `${(e && e.message) || ''} ${(e && e.cause && e.cause.message) || ''}`;
   const m = raw.toLowerCase();
   if (m.includes('dubious ownership') || m.includes('safe.directory')) {
     return {
