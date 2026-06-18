@@ -1469,13 +1469,38 @@
         // it just 409s again. Offer to reload the current on-disk copy
         // (which discards local edits), so the user isn't stuck in a loop.
         if (saveConflict && currentFile) {
-          if (
-            window.confirm(
-              'This post changed somewhere else since you opened it. Reload the latest version? ' +
-                'Your unsaved changes here will be lost.',
-            )
-          ) {
+          const reload = window.confirm(
+            'This post changed somewhere else since you opened it. Reload the latest version?\n\n' +
+              'Click OK to reload (your changes here will be lost).\n' +
+              'Click Cancel to keep your text — you can copy it first.',
+          );
+          if (reload) {
             loadPost(currentFile);
+          } else {
+            // User chose to keep their text. Offer a quick copy-to-clipboard
+            // so they can paste into a note or the reloaded editor.
+            const body = bodyEl ? bodyEl.value : '';
+            if (body && navigator.clipboard) {
+              navigator.clipboard
+                .writeText(body)
+                .then(() =>
+                  TE.toast(
+                    'Your text was copied to clipboard — reload the page when ready, then paste it back.',
+                    'info',
+                  ),
+                )
+                .catch(() =>
+                  TE.toast(
+                    'Copy failed. Select all your text manually (Ctrl+A) and copy before reloading.',
+                    'warn',
+                  ),
+                );
+            } else {
+              TE.toast(
+                'Reload the page to get the latest version. Copy your text first so you do not lose it.',
+                'warn',
+              );
+            }
           }
           return;
         }

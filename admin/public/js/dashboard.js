@@ -444,14 +444,64 @@
       btn.addEventListener('click', async () => {
         const orig = btn.textContent;
         btn.disabled = true;
-        btn.textContent = 'Publishing…';
+        btn.textContent = 'Rebuilding…';
         try {
           const data = await TE.fetchJSON('/api/publish', { method: 'POST', body: '{}' });
           if (data && data.success === false) throw new Error(data.error || 'Publish failed');
-          TE.toast('Site publish triggered.');
+          if (data && data.changed === false) {
+            TE.toast('Nothing new to publish — your site is already up to date and live.');
+            return;
+          }
+          // Show a persistent status on the button while the build runs,
+          // then confirm when GitHub Actions completes (up to ~10 min).
+          btn.textContent = 'Building…';
+          btn.disabled = true;
+          const sha = data && data.commitHash;
+          if (sha) {
+            let tries = 0;
+            const poll = async () => {
+              tries += 1;
+              let d;
+              try {
+                d = await TE.fetchJSON(`/api/publish/deploy/${encodeURIComponent(sha)}`);
+              } catch (_) {
+                d = { status: 'unknown' };
+              }
+              if (d && d.status === 'completed') {
+                const ok = d.conclusion === 'success';
+                btn.textContent = ok ? 'Site is live ✓' : 'Build failed';
+                btn.disabled = false;
+                if (ok) {
+                  TE.toast('Site rebuilt — your published posts are now live.');
+                } else {
+                  TE.toast('Build failed. Check GitHub Actions for details.', 'error');
+                }
+                setTimeout(() => {
+                  btn.textContent = orig;
+                }, 6000);
+                return;
+              }
+              if (tries < 120) {
+                setTimeout(poll, 5000);
+              } else {
+                btn.textContent = orig;
+                btn.disabled = false;
+                TE.toast(
+                  'Site is rebuilding — it will finish on its own. Refresh in a few minutes.',
+                  'info',
+                );
+              }
+            };
+            setTimeout(poll, 4000);
+          } else {
+            TE.toast('Site publish triggered — refreshes in about 1–2 minutes.');
+            btn.textContent = orig;
+            btn.disabled = false;
+          }
         } catch (err) {
-          TE.toast(err.message || 'Publish failed.', 'error');
-        } finally {
+          const msg =
+            (err && err.data && err.data.message) || (err && err.message) || 'Publish failed.';
+          TE.toast(msg, 'error');
           btn.disabled = false;
           btn.textContent = orig;
         }

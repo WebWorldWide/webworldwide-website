@@ -575,11 +575,22 @@ router.put('/:filename', (req, res) => {
     if (newFilename !== oldFilename) {
       try {
         statSync(newPath);
+        // Include the conflicting post's title so the editor can show
+        // "Already used by '<title>' — pick another" instead of a generic slug.
+        let conflictTitle = slug;
+        try {
+          const { data: cd } = parsePost(readFileSync(newPath, 'utf8'));
+          if (cd && cd.title) conflictTitle = String(cd.title);
+        } catch {
+          /* best-effort */
+        }
         return res.status(409).json({
           error: 'slug_taken',
-          message: `A different post already uses the slug "${slug}". Choose another.`,
+          message: `The web address "${slug}" is already used by "${conflictTitle}". Choose another.`,
+          conflicting_title: conflictTitle,
         });
-      } catch {
+      } catch (e) {
+        if (/** @type {any} */ (e).code !== 'ENOENT') throw e;
         /* target free — good */
       }
     }
