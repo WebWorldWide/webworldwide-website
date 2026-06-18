@@ -101,6 +101,7 @@
   // Set when the initial load failed: the editor stays bound to currentFile
   // but with blank fields, so saving must be blocked until a reload.
   let loadFailed = false;
+  let loadFailCount = 0;
   // In-flight save lock so autosave can't overlap a manual save (false 409
   // / double-create) — savePost early-returns while one is running.
   let saving = false;
@@ -317,11 +318,11 @@
       // A clash is any OTHER post (not the one we're editing) using this slug.
       const clash = posts.find((p) => p.slug === raw && p.filename !== currentFile);
       if (clash) {
-        setSlugMsg(`Already used by “${clash.title || clash.slug}”. Pick another.`, 'err');
+        setSlugMsg(`Already used by "${clash.title || clash.slug}". Pick another.`, 'err');
       } else if (currentFile && raw !== currentFile.replace(/\.md$/, '')) {
         // Live rename feedback: the writer SEES the new filename + that the
         // old URL is handled, before they save.
-        setSlugMsg(`Renaming → ${raw}.md · old URL will redirect (no 404).`, 'warn');
+        setSlugMsg(`New address: /blog/${raw}/ · old link will redirect (no 404).`, 'warn');
       } else {
         setSlugMsg('Available', 'ok');
       }
@@ -464,6 +465,11 @@
       bar.remove();
     });
   }
+  // Strip ".md" from user-facing labels: the public URL never includes it
+  // (/blog/slug/ not /blog/slug.md/) so showing the extension confuses novices.
+  function prettyName(filename) {
+    return filename ? filename.replace(/\.md$/, '') : '';
+  }
   function setCurrentFile(filename) {
     currentFile = filename;
     if (filename) {
@@ -471,12 +477,12 @@
       u.searchParams.set('file', filename);
       window.history.replaceState({}, '', u);
       if (btnDel) btnDel.style.display = '';
-      if (fileFoot) fileFoot.textContent = filename;
+      if (fileFoot) fileFoot.textContent = prettyName(filename);
     } else {
       if (btnDel) btnDel.style.display = 'none';
       if (fileFoot) fileFoot.textContent = '';
     }
-    if (crumbEditor) crumbEditor.textContent = filename || 'New post';
+    if (crumbEditor) crumbEditor.textContent = prettyName(filename) || 'New post';
   }
 
   // ── Load series names into <datalist> for autocomplete ────
@@ -573,7 +579,7 @@
       });
     } catch (_err) {
       if (seq === imgPickSeq)
-        grid.innerHTML = '<p class="te-history-hint">Couldn’t load images.</p>';
+        grid.innerHTML = '<p class="te-history-hint">Couldn\'t load images.</p>';
     }
   }
 
@@ -672,17 +678,26 @@
       setCurrentFile(filename);
       isDirty = false;
       loadFailed = false;
-      setSaved('Saved');
-      setAutoState('saved', 'Saved');
+      loadFailCount = 0;
+      setSaved('Saved (not yet live)');
+      setAutoState('saved', 'Saved — click Save & publish to go live');
     } catch (err) {
       // The load failed but the editor is still bound to `filename` with
       // blank fields. Saving now would PUT empty content over the real post
       // — and without a baseMtime token would bypass the conflict guard.
       // Lock saving + autosave until a successful reload; the error pip
       // re-loads (not saves).
+      loadFailCount += 1;
       loadFailed = true;
       clearTimeout(autosaveTimer);
-      setAutoState('error', 'Couldn’t load — click to retry');
+      if (loadFailCount >= 3) {
+        setAutoState(
+          'error',
+          "Couldn't load after 3 tries. Check your connection and refresh the page.",
+        );
+      } else {
+        setAutoState('error', "Couldn't load — click to retry");
+      }
       TE.toast(err.message || 'Failed to load post.', 'error');
     }
   }
@@ -727,7 +742,7 @@
     try {
       hist = await TE.fetchJSON(`/api/posts/${encodeURIComponent(currentFile)}/history`);
     } catch (_err) {
-      if (listEl) listEl.innerHTML = '<li class="te-history-empty">Couldn’t load history.</li>';
+      if (listEl) listEl.innerHTML = '<li class="te-history-empty">Couldn\'t load history.</li>';
       return;
     }
     const rows = [];
@@ -806,7 +821,7 @@
       if (restoreBtn) restoreBtn.disabled = false;
     } catch (_err) {
       if (seq === versionReqSeq && previewEl)
-        previewEl.innerHTML = '<p class="te-history-hint">Couldn’t load this version.</p>';
+        previewEl.innerHTML = '<p class="te-history-hint">Couldn\'t load this version.</p>';
     }
   }
 
@@ -895,6 +910,16 @@
       TE.toast('Title is required.', 'error');
       return false;
     }
+    // Titles with only emoji/punctuation slugify to nothing, which the server
+    // rejects. Catch it here with a plain message.
+    if (!slugify(slugEl.value.trim()) && !slugify(titleEl.value)) {
+      TE.toast(
+        'The title needs at least one letter or number — it forms the web address.',
+        'error',
+      );
+      titleEl.focus();
+      return false;
+    }
     const data = {
       title: titleEl.value.trim(),
       // Always normalize — a fast manual edit ("Hello World!") could otherwise
@@ -956,8 +981,8 @@
       saveConflict = false;
       clearTimeout(autosaveTimer);
       clearNewDraftBackup();
-      setSaved('Saved');
-      setAutoState('saved', 'Saved');
+      setSaved('Saved (not yet live)');
+      setAutoState('saved', 'Saved — click Save & publish to go live');
       if (editorRoot) {
         editorRoot.dispatchEvent(
           new CustomEvent('autosave-success', {
@@ -978,7 +1003,9 @@
         if (Array.isArray(r.redirected) && r.redirected.length) parts.push('old URL redirected');
         if (r.linksUpdated)
           parts.push(`${r.linksUpdated} link${r.linksUpdated === 1 ? '' : 's'} updated`);
-        TE.toast(`Renamed to ${result.filename}${parts.length ? ' — ' + parts.join(', ') : ''}.`);
+        TE.toast(
+          `New address: /blog/${prettyName(result.filename)}/${parts.length ? ' — ' + parts.join(', ') : ''}.`,
+        );
         setSlugMsg('Available', 'ok');
       }
       updateStatusPill();
@@ -1022,6 +1049,7 @@
         currentFile &&
         isDirty &&
         !saving &&
+        !saveConflict &&
         titleEl.value.trim() &&
         typeof loadedMtime === 'number'
       )
@@ -1044,8 +1072,10 @@
     // trap — warn before spending a deploy on an invisible change.
     if (draftEl?.value === 'true') {
       const ok = window.confirm(
-        'This post is still a DRAFT, so it won’t appear on the live site until you ' +
-          'set Status to Published. Publish the site anyway?',
+        'Heads up: this post is a DRAFT. Drafts stay completely hidden on the live ' +
+          "site — publishing now will rebuild the site but readers still won't see " +
+          'this post.\n\nTo make it public: set Status to "Published" (in Post settings), ' +
+          'then Save & publish again.\n\nRebuild the site anyway?',
       );
       if (!ok) return;
     }
@@ -1054,7 +1084,7 @@
     try {
       const result = await TE.fetchJSON('/api/publish', { method: 'POST', body: '{}' });
       if (result && result.changed === false) {
-        TE.toast('Already up to date — nothing new to publish.');
+        TE.toast('Nothing new to publish — your site is already up to date and live.');
       } else {
         TE.toast('Published — the site is building.');
         if (result && result.commitHash) watchDeploy(result.commitHash);
@@ -1090,28 +1120,50 @@
         d = { status: 'unknown' };
       }
       if (d && d.url) el.href = d.url;
+      if (d && d.status === 'not_pushed') {
+        el.className = 'ed-deploy fail';
+        el.textContent = 'Publish failed';
+        TE.toast(
+          "The publish didn't reach GitHub — check your internet connection and try again.",
+          'error',
+        );
+        return;
+      }
       if (d && d.status === 'completed') {
         const ok = d.conclusion === 'success';
+        const slug = (slugEl?.value || '').trim();
+        const isPublished = draftEl?.value === 'false';
         el.className = ok ? 'ed-deploy ok' : 'ed-deploy fail';
-        el.textContent = ok ? 'Live ✓' : 'Build failed';
         if (ok) {
-          // For a published post, point the badge at the live page (most
-          // useful "did it work?" check for a first-timer) and confirm it.
-          const slug = (slugEl?.value || '').trim();
-          const isPublished = draftEl?.value === 'false';
+          // For a published post, point the badge at the live page.
+          // A draft built fine but stays hidden — say "Site updated", not "Live".
           if (isPublished && slug) {
-            const liveUrl = `https://webworldwide.online/blog/${encodeURIComponent(slug)}/`;
-            el.href = liveUrl;
+            el.href = `https://webworldwide.online/blog/${encodeURIComponent(slug)}/`;
             el.textContent = 'View it live ↗';
             TE.toast(`Your post is live at webworldwide.online/blog/${slug}`);
           } else {
-            TE.toast('Site updated. (This post is a draft, so it won’t appear publicly yet.)');
+            el.textContent = 'Site updated ✓';
+            TE.toast("Site updated. (This post is a draft, so it won't appear publicly yet.)");
           }
+        } else {
+          el.textContent = 'Build failed';
         }
         return; // terminal — stop polling
       }
       el.textContent = d && d.status === 'in_progress' ? 'Building…' : 'Queued…';
-      if (tries < 40) deployTimer = setTimeout(tick, 5000);
+      // Builds on a small server can queue for several minutes; poll up to ~10
+      // min, then tell the writer where to check rather than freeze the badge.
+      if (tries < 120) {
+        deployTimer = setTimeout(tick, 5000);
+      } else {
+        el.className = 'ed-deploy';
+        el.textContent = 'Still building — check back soon';
+        TE.toast(
+          'The site is taking longer than usual. It will finish on its own — ' +
+            'refresh the live site in a few minutes.',
+          'info',
+        );
+      }
     };
     deployTimer = setTimeout(tick, 4000);
   }
@@ -1161,7 +1213,7 @@
           }
         };
         const instance = TEEditor.mount(editorRoot, initial, {
-          placeholder: 'Start writing… (type “/” for headings, images, links and more)',
+          placeholder: 'Start writing… (type "/" for headings, images, links and more)',
         });
         labelEditorSurface();
         // The façade is the new bodyEl. It exposes .value, .selectionStart,
@@ -1391,7 +1443,15 @@
       updateMetrics();
       markDirty();
     });
-    draftEl.addEventListener('change', updateStatusPill);
+    draftEl.addEventListener('change', () => {
+      updateStatusPill();
+      const nowDraft = draftEl.value === 'true';
+      if (nowDraft) {
+        TE.toast("Status set to Draft — post won't appear publicly until you set it to Published.");
+      } else {
+        TE.toast('Status set to Published — click Save & publish to make it live.');
+      }
+    });
 
     // Phase 3d: autosave pip click → retry. The pip exposes role=button
     // + tabindex=0 only while in the error state.
@@ -1401,6 +1461,7 @@
         // A load failure must RE-LOAD, not save (saving would clobber the
         // post with the blank editor).
         if (loadFailed && currentFile) {
+          if (loadFailCount >= 3) return;
           loadPost(currentFile);
           return;
         }
