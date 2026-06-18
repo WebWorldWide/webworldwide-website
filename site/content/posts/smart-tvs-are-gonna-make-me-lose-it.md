@@ -1,8 +1,9 @@
 ---
-title: "Smart TVs Are Gonna Make Me Lose It"
-date: 2025-12-30T12:52:34.000Z
-slug: "smart-tvs-are-gonna-make-me-lose-it"
+title: Smart TVs Are Gonna Make Me Lose It
+slug: smart-tvs-are-gonna-make-me-lose-it
 draft: false
+date: '2025-12-30T12:52:00.000Z'
+excerpt: ''
 ---
 ![Panasonic TV input label screen on non-smart TV](/images/2025/12/smart-tvs-are-gonna-make-me-lose-it.webp)
 
