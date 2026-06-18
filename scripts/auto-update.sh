@@ -1,10 +1,14 @@
 #!/bin/bash
 
 # Repo hygiene: cron installs this as root, but everything below only
-# needs adam (repo owner; in the docker group). Re-exec so pulled/
-# committed files never end up root-owned again.
-if [ "$(id -u)" = 0 ] && command -v runuser >/dev/null 2>&1; then
-  exec runuser -u adam -- "$0" "$@"
+# needs adam (repo owner; in the docker group). While still root, fix
+# any .git objects left root-owned by previous runs, then re-exec as
+# adam so future pulled/committed files are never root-owned again.
+if [ "$(id -u)" = 0 ]; then
+  chown -R 1000:1000 /opt/web-world-wide/.git 2>/dev/null || true
+  if command -v runuser >/dev/null 2>&1; then
+    exec runuser -u adam -- "$0" "$@"
+  fi
 fi
 
 
