@@ -36,6 +36,13 @@ function classifyPublishError(err) {
       message: 'Publish service can’t access the repo (git ownership). Server config issue.',
     };
   }
+  if (m.includes('insufficient permission') || m.includes('failed to insert into database')) {
+    return {
+      code: 'git_permission',
+      message:
+        'Publish service can’t write to the repo (file permissions on .git). Server config issue.',
+    };
+  }
   if (m.includes('certificate') || m.includes('ssl') || m.includes('cafile')) {
     return {
       code: 'tls_error',

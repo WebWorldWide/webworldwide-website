@@ -326,6 +326,19 @@
     slugCheckTimer = setTimeout(checkSlug, 350);
   }
 
+  // Show a "Match title" button whenever the slug has drifted from the title
+  // (e.g. an old post whose title was changed but slug left behind, so the
+  // editor treats the slug as custom and won't auto-rename). One click
+  // re-syncs the URL to the title — the discoverable fix for "I changed the
+  // title but the address didn't change".
+  function updateSlugSync() {
+    const btn = $('slug-sync');
+    if (!btn) return;
+    const fromTitle = slugify(titleEl.value || '');
+    const cur = (slugEl.value || '').trim();
+    btn.hidden = !(fromTitle && fromTitle !== cur);
+  }
+
   // Count images in the markdown body that ship without alt text — empty
   // `![](url)` and `<img>` tags whose alt is missing/blank. Used to warn
   // before publishing (bad for screen readers AND SEO).
@@ -552,6 +565,7 @@
     updateSocialPreview();
     updateSeoPreview();
     updateStatusPill();
+    updateSlugSync();
   }
 
   // ── Load existing post ────────────────────────────────────
@@ -1241,6 +1255,7 @@
       }
       updateSocialPreview();
       updateSeoPreview();
+      updateSlugSync();
       markDirty();
     });
 
@@ -1252,11 +1267,26 @@
         if (el === slugEl) {
           slugIsAuto = slugEl.value.trim() === '';
           scheduleSlugCheck();
+          updateSlugSync();
         }
         updateSeoPreview();
         markDirty();
       }),
     );
+
+    // "Match title" → re-sync the URL to the current title and resume
+    // auto-tracking. The save then renames the file + redirects the old URL.
+    const slugSyncBtn = $('slug-sync');
+    if (slugSyncBtn) {
+      slugSyncBtn.addEventListener('click', () => {
+        slugEl.value = slugify(titleEl.value);
+        slugIsAuto = true;
+        scheduleSlugCheck();
+        updateSlugSync();
+        markDirty();
+        slugEl.focus();
+      });
+    }
     descEl.addEventListener('input', () => {
       updateSocialPreview();
       updateSeoPreview();

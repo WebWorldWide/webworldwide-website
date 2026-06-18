@@ -195,6 +195,21 @@ body[data-page="editor"] {
   min-width: 0;
   padding: 0;
 }
+.ed-slug-sync {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ed-slug-sync:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
 
 /* Phase 3a: TipTap WYSIWYG + CodeMirror source view mount here.
    The pre-rendered <textarea id="editor-fallback"> is replaced
