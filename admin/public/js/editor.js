@@ -279,6 +279,14 @@
       .replace(/(^-|-$)+/g, '');
   }
 
+  // Escape text destined for a Markdown link/image label so a stray `[`, `]`,
+  // or newline can't break the syntax (used by the textarea-fallback insert).
+  function mdText(s) {
+    return String(s || '')
+      .replace(/[[\]]/g, '\\$&')
+      .replace(/[\r\n]+/g, ' ');
+  }
+
   // ── Live slug validation ──────────────────────────────────
   // Catch a taken/invalid slug AS the writer types, not at save time — the
   // server still guards (409 slug_taken), but a quiet inline hint is far
@@ -1217,7 +1225,8 @@
       if (tt && tt.chain) {
         tt.chain().focus().setImage({ src: item.url, alt }).run();
       } else {
-        splice(`\n![${alt}](${item.url})\n`);
+        // Escape so a `]`/newline in the alt text can't break the markdown.
+        splice(`\n![${mdText(alt)}](${item.url})\n`);
       }
       markDirty();
       updateMetrics();
@@ -1225,7 +1234,7 @@
     }
 
     // audio / pdf / archive / other → a plain Markdown link.
-    const label = `[${item.original_name || item.filename || 'file'}](${item.url})`;
+    const label = `[${mdText(item.original_name || item.filename || 'file')}](${item.url})`;
     if (tt && tt.chain) {
       tt.chain().focus().insertContent(`\n\n${label}\n\n`).run();
     } else {
