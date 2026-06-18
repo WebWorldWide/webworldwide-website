@@ -784,6 +784,23 @@ function applyMediaEdit(id, body) {
       error: { error: 'no_editable_fields', message: 'Provide alt_text and/or original_name.' },
     };
   }
+  // If the item is still marked "processing" but all conversion jobs have
+  // actually finished, the worker's post-job status update may have raced
+  // past this row. Sync it now so the edit response and the media list
+  // don't show a stale "processing" badge.
+  if (/** @type {any} */ (row).status === 'processing') {
+    const pending = /** @type {any} */ (
+      db
+        .prepare(
+          "SELECT COUNT(*) as n FROM conversion_jobs WHERE media_id = ? AND status IN ('pending','running')",
+        )
+        .get(id)
+    );
+    if (pending && pending.n === 0) {
+      sets.push('status = ?');
+      args.push('ready');
+    }
+  }
   // sets[] contains only fixed column fragments; user data is bound via args.
   db.prepare(`UPDATE media SET ${sets.join(', ')} WHERE id = ?`).run(...args, id);
   const updated = db.prepare('SELECT * FROM media WHERE id = ?').get(id);

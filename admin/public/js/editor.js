@@ -287,6 +287,12 @@
       .replace(/[[\]]/g, '\\$&')
       .replace(/[\r\n]+/g, ' ');
   }
+  // CommonMark requires parentheses in link/image URLs to be escaped
+  // (or percent-encoded). Filenames rarely contain them, but handle it
+  // so the markdown doesn't silently truncate at the first unescaped ')'.
+  function mdUrl(u) {
+    return String(u || '').replace(/[()]/g, '\\$&');
+  }
 
   // ── Live slug validation ──────────────────────────────────
   // Catch a taken/invalid slug AS the writer types, not at save time — the
@@ -1348,23 +1354,31 @@
       const altIsUsable = alt && !(TE.media && TE.media.needsAlt && TE.media.needsAlt(item));
       if (!altIsUsable) {
         const answer = window.prompt(
-          'Describe this image for screen readers (alt text):',
+          'Describe this image for screen readers (alt text):\n\n' +
+            'This helps people who use screen readers or when the image fails to load. ' +
+            'Hit Cancel to skip inserting this image.',
           alt || '',
         );
-        alt = (answer || '').trim();
+        // `null` = user hit Cancel → don't insert at all (avoids publishing
+        // a permanently inaccessible image with no alt text).
+        if (answer === null) return;
+        alt = answer.trim();
         if (alt && item.id && TE.media && TE.media.patch) {
           // Fire-and-forget: teach the library this alt for next time.
           TE.media.patch(item.id, { alt_text: alt }).catch(() => {});
         }
         if (!alt && window.TE && TE.toast) {
-          TE.toast('Inserted without alt text — add one in the media library.', 'warn');
+          TE.toast(
+            'Inserted without alt text. Edit the media library entry to add a description.',
+            'warn',
+          );
         }
       }
       if (tt && tt.chain) {
         tt.chain().focus().setImage({ src: item.url, alt }).run();
       } else {
         // Escape so a `]`/newline in the alt text can't break the markdown.
-        splice(`\n![${mdText(alt)}](${item.url})\n`);
+        splice(`\n![${mdText(alt)}](${mdUrl(item.url)})\n`);
       }
       markDirty();
       updateMetrics();
@@ -1372,7 +1386,7 @@
     }
 
     // audio / pdf / archive / other → a plain Markdown link.
-    const label = `[${mdText(item.original_name || item.filename || 'file')}](${item.url})`;
+    const label = `[${mdText(item.original_name || item.filename || 'file')}](${mdUrl(item.url)})`;
     if (tt && tt.chain) {
       tt.chain().focus().insertContent(`\n\n${label}\n\n`).run();
     } else {
