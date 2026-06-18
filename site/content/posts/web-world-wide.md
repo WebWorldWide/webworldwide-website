@@ -1,6 +1,6 @@
 ---
 title: Web World Wide
-slug: the-terminal
+slug: web-world-wide
 draft: false
 date: '2025-12-08T00:45:00.000Z'
 excerpt: My new blog. Because having your own website is how the internet should be.
