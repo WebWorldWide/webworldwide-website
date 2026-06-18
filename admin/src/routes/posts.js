@@ -528,7 +528,7 @@ router.put('/:filename', (req, res) => {
   try {
     const { data, content, baseMtime } = req.body;
     const oldFilename = path.basename(req.params.filename);
-    const rawSlug = data.slug || oldFilename.replace('.md', '');
+    const rawSlug = data.slug || data.title || oldFilename.replace('.md', '');
     const slug = path.basename(slugify(rawSlug));
     if (!slug) {
       return res.status(400).json({

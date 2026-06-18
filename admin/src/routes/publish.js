@@ -33,20 +33,22 @@ function classifyPublishError(err) {
   if (m.includes('dubious ownership') || m.includes('safe.directory')) {
     return {
       code: 'git_ownership',
-      message: 'Publish service can’t access the repo (git ownership). Server config issue.',
+      message:
+        'The server lost access to the repository. This is a server setup issue — try again in a moment or contact your hosting provider.',
     };
   }
   if (m.includes('insufficient permission') || m.includes('failed to insert into database')) {
     return {
       code: 'git_permission',
       message:
-        'Publish service can’t write to the repo (file permissions on .git). Server config issue.',
+        "The server can't write to the repository. This is a server setup issue — contact your hosting provider.",
     };
   }
   if (m.includes('certificate') || m.includes('ssl') || m.includes('cafile')) {
     return {
       code: 'tls_error',
-      message: 'Couldn’t make a secure connection to GitHub (TLS). The server is missing CA certs.',
+      message:
+        "Couldn't establish a secure connection to GitHub. This is a server setup issue — contact your hosting provider.",
     };
   }
   if (
@@ -58,13 +60,14 @@ function classifyPublishError(err) {
   ) {
     return {
       code: 'auth_failed',
-      message: 'GitHub rejected the push (authentication). Check the deploy token.',
+      message:
+        "GitHub rejected the publish. The server's credentials may have expired — contact your hosting provider.",
     };
   }
   if (m.includes('non-fast-forward') || m.includes('rejected') || m.includes('fetch first')) {
     return {
       code: 'push_rejected',
-      message: 'Push rejected — the branch moved on. Try publishing again.',
+      message: 'Publish was blocked because the site was updated elsewhere. Try publishing again.',
     };
   }
   if (
@@ -75,10 +78,14 @@ function classifyPublishError(err) {
   ) {
     return {
       code: 'network_error',
-      message: 'Couldn’t reach GitHub (network). Try again shortly.',
+      message: "Couldn't reach GitHub — check your internet connection and try again.",
     };
   }
-  return { code: 'internal_error', message: 'Publish failed. Please try again.' };
+  return {
+    code: 'internal_error',
+    message:
+      'Publish failed. Try again in a moment; if it keeps happening, contact your hosting provider.',
+  };
 }
 
 // Trigger publish (commit + push)
@@ -156,7 +163,21 @@ router.get('/deploy/:sha', async (req, res) => {
     if (!r.ok) return res.json({ status: 'unknown' });
     const data = await r.json();
     const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
-    if (!runs.length) return res.json({ status: 'pending' });
+    if (!runs.length) {
+      // "No runs" could mean the workflow hasn't fired yet (commit just
+      // pushed, GitHub needs a moment) OR the commit never reached GitHub
+      // (silent push failure). Verify the commit exists before promising
+      // "pending" so the badge doesn't spin forever on a commit that's
+      // only local.
+      try {
+        const commitUrl = `https://api.github.com/repos/${repo}/commits/${sha}`;
+        const cr = await fetch(commitUrl, { headers, signal: AbortSignal.timeout(8000) });
+        if (!cr.ok) return res.json({ status: 'not_pushed' });
+      } catch (_) {
+        // Can't verify — assume it exists and keep polling.
+      }
+      return res.json({ status: 'pending' });
+    }
     // Prefer the Pages deploy workflow; fall back to the newest run.
     const deploy = runs.find((x) => /deploy|pages/i.test(x.name || '')) || runs[0];
     res.json({
