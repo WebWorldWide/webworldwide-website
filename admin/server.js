@@ -7,7 +7,7 @@
 
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -236,8 +236,12 @@ app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 // to a fixed upstream proxy, so every client would share one bucket and
 // the limiter couldn't isolate a brute-forcer. CF-Connecting-IP is set by
 // Cloudflare and not client-spoofable through the tunnel.
+// Prefer Cloudflare's real client IP, falling back to req.ip. Pass it through
+// express-rate-limit's ipKeyGenerator so IPv6 addresses are normalized to a
+// subnet (required since express-rate-limit v8 — without it IPv6 clients can
+// each look unique and bypass the limit, and it logs a ValidationError).
 const clientIpKey = (/** @type {import('express').Request} */ req) =>
-  /** @type {string} */ (req.headers['cf-connecting-ip']) || req.ip;
+  ipKeyGenerator(String(req.headers['cf-connecting-ip'] || req.ip || ''));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
