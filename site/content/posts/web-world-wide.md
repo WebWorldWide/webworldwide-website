@@ -7,6 +7,8 @@ excerpt: My new blog. Because having your own website is how the internet should
 ---
 *This is an edit (6/17/2026) to the original article named: The Terminal. I renamed my blog and the organization behind it (Terminal Eighty) to Web World Wide.*
 
+---
+
 This is a new blog by me, really just for me. I have a lot of ideas and opinions on technology and its implications on the world and on culture. I would love for people to read, but at the end of the day, this is all kind of therapeutic in a sense.
 
 So why do it if no one needs to read it? Well, I could say it's because I am not vain. That would be a lie, because then this blog wouldn't be public... The real reason is that you can't improve if you don't try. Everyone online now seems to have a product that is almost perfect from the get-go. Amateur on YouTube now means you have a $2,000 Sony Camera with two studio lights. Influence online means you have a large social media presence, and you blog or write for the extra revenue. This isn't meant to sound spiteful. In fact, don't hate the player, hate the game—and currently, there are a lot of good players in a game many people don't like. So why not just write and see where it takes me? I currently have a YouTube channel where I am trying to post more. But other than that, I don't have any other social media (for now). That alone is a topic on its own.
