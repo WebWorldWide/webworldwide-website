@@ -14,13 +14,25 @@
   {
     "id": "my-web-dup-to-terminal-blog",
     "from": "/blog/my-web/",
-    "to": "/blog/the-terminal/",
+    "to": "/blog/web-world-wide/",
     "code": 301
   },
   {
     "id": "my-web-dup-to-terminal-legacy",
     "from": "/my-web/",
-    "to": "/blog/the-terminal/",
+    "to": "/blog/web-world-wide/",
+    "code": 301
+  },
+  {
+    "id": "the-terminal-to-web-world-wide-blog",
+    "from": "/blog/the-terminal/",
+    "to": "/blog/web-world-wide/",
+    "code": 301
+  },
+  {
+    "id": "the-terminal-to-web-world-wide-legacy",
+    "from": "/the-terminal/",
+    "to": "/blog/web-world-wide/",
     "code": 301
   }
 ]
