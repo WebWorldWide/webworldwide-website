@@ -5,7 +5,7 @@ draft: false
 date: '2025-12-08T00:45:00.000Z'
 excerpt: My new blog. Because having your own website is how the internet should be.
 ---
-*This is an edit (6/16/2026) to the original article named: The Terminal. I renamed my blog and the organization behind it (Terminal Eighty) to Web World Wide.*
+*This is an edit (6/17/2026) to the original article named: The Terminal. I renamed my blog and the organization behind it (Terminal Eighty) to Web World Wide.*
 
 This is a new blog by me, really just for me. I have a lot of ideas and opinions on technology and its implications on the world and on culture. I would love for people to read, but at the end of the day, this is all kind of therapeutic in a sense.
 
