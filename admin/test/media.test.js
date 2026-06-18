@@ -243,6 +243,36 @@ test('delete in-use: 409, then ?force=true → 204', skipOpts(), async () => {
   assert.equal(forced.status, 204);
 });
 
+test(
+  'delete + usage are variant-aware: a post using the -thumb blocks deletion',
+  skipOpts(),
+  async () => {
+    const r = await upload(
+      'variant-test.png',
+      Buffer.concat([PNG_1x1, Buffer.from(String(Date.now()))]),
+      'image/png',
+    );
+    const file = (await r.json()).file;
+
+    // The post references the THUMBNAIL variant, not the base URL — the exact-
+    // match check used to miss this and allow a delete that breaks the post.
+    const thumbUrl = file.url.replace(/\.(png|jpe?g|webp)$/i, '-thumb.webp');
+    writeFileSync(
+      join(postsDir, 'variant-ref.md'),
+      `---\ntitle: Variant\n---\n![hi](${thumbUrl})\n`,
+    );
+
+    const usage = await fetch(`${baseUrl}/api/media/${file.id}/usage`).then((x) => x.json());
+    assert.ok(usage.posts.includes('variant-ref.md'), 'variant reference detected in usage');
+
+    const blocked = await fetch(`${baseUrl}/api/media/${file.id}`, { method: 'DELETE' });
+    assert.equal(blocked.status, 409, 'delete refused for a variant-referenced asset');
+
+    // cleanup so later usage scans aren't affected
+    await fetch(`${baseUrl}/api/media/${file.id}?force=true`, { method: 'DELETE' });
+  },
+);
+
 test('GET /api/media/:id includes usage list', skipOpts(), async () => {
   // Fresh upload + reference.
   const customPng = Buffer.concat([PNG_1x1, Buffer.from([0x00])]); // hash differs
