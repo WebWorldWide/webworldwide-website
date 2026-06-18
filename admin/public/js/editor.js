@@ -378,6 +378,91 @@
       editorRoot.dispatchEvent(new CustomEvent('autosave-dirty', { bubbles: true }));
     }
     scheduleAutosave();
+    backupNewDraft();
+  }
+
+  // ── New-post crash safety ─────────────────────────────────
+  // A brand-new post (no file yet) isn't autosaved to the server — we never
+  // want to create a post from a half-typed draft. To avoid losing work to a
+  // crash or accidental close, mirror it to localStorage while editing and
+  // offer to restore it the next time the editor opens blank.
+  const NEWDRAFT_KEY = 'te_newpost_backup_v1';
+  function backupNewDraft() {
+    if (currentFile) return; // only for brand-new posts
+    try {
+      const body = bodyEl ? bodyEl.value || '' : '';
+      const title = titleEl.value || '';
+      if (!title.trim() && !body.trim()) {
+        localStorage.removeItem(NEWDRAFT_KEY);
+        return;
+      }
+      localStorage.setItem(
+        NEWDRAFT_KEY,
+        JSON.stringify({
+          title,
+          slug: slugEl.value || '',
+          body,
+          draft: draftEl.value === 'true',
+          excerpt: descEl.value || '',
+          series: $('post-series')?.value || '',
+          ts: Date.now(),
+        }),
+      );
+    } catch (_) {
+      /* storage blocked/full — best effort */
+    }
+  }
+  function clearNewDraftBackup() {
+    try {
+      localStorage.removeItem(NEWDRAFT_KEY);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  // On a blank editor, surface any backed-up draft with a Restore/Discard bar.
+  function offerNewDraftRestore() {
+    if (currentFile) return;
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(NEWDRAFT_KEY) || 'null');
+    } catch (_) {
+      saved = null;
+    }
+    if (!saved || (!String(saved.title || '').trim() && !String(saved.body || '').trim())) return;
+    const stage = $('stage') || document.body;
+    const bar = document.createElement('div');
+    bar.className = 'ed-restore-banner';
+    const when = (() => {
+      try {
+        return new Date(saved.ts).toLocaleString();
+      } catch (_) {
+        return 'earlier';
+      }
+    })();
+    bar.innerHTML =
+      `<span>You have unsaved work from ${TE.escape(when)}. Restore it?</span>` +
+      `<span class="ed-restore-actions"><button type="button" class="btn solid" data-restore>Restore</button>` +
+      `<button type="button" class="btn ghost" data-discard>Discard</button></span>`;
+    stage.prepend(bar);
+    bar.querySelector('[data-restore]').addEventListener('click', () => {
+      populateFields(
+        {
+          title: saved.title,
+          slug: saved.slug,
+          draft: saved.draft,
+          excerpt: saved.excerpt,
+          series: saved.series,
+        },
+        saved.body || '',
+        null,
+      );
+      markDirty();
+      bar.remove();
+    });
+    bar.querySelector('[data-discard]').addEventListener('click', () => {
+      clearNewDraftBackup();
+      bar.remove();
+    });
   }
   function setCurrentFile(filename) {
     currentFile = filename;
@@ -870,6 +955,7 @@
       isDirty = false;
       saveConflict = false;
       clearTimeout(autosaveTimer);
+      clearNewDraftBackup();
       setSaved('Saved');
       setAutoState('saved', 'Saved');
       if (editorRoot) {
@@ -1498,6 +1584,7 @@
       updateStatusPill();
       setSaved('');
       setAutoState('idle', 'Ready');
+      offerNewDraftRestore();
     }
     loadSeriesSuggestions();
 

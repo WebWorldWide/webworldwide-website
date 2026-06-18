@@ -2434,3 +2434,25 @@ body.distraction-free #btn-zen {
   text-align: center;
   font-family: var(--font-mono-www);
 }
+
+/* New-post crash-recovery banner — shown on a blank editor when localStorage
+   holds an unsaved draft from a previous session. */
+.ed-restore-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent, #5b8def);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #5b8def) 12%, var(--surface, #fff));
+  color: var(--ink, #1a1a1a);
+  font-size: 14px;
+}
+.ed-restore-banner .ed-restore-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
