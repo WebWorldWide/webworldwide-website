@@ -474,6 +474,12 @@ router.post('/', (req, res) => {
     }
 
     const slug = path.basename(slugify(data.slug || data.title));
+    if (!slug) {
+      return res.status(400).json({
+        error: 'invalid_slug',
+        message: 'The title needs at least one letter or number (it forms the web address).',
+      });
+    }
     const filename = `${slug}.md`;
 
     // Check if exists
@@ -524,6 +530,12 @@ router.put('/:filename', (req, res) => {
     const oldFilename = path.basename(req.params.filename);
     const rawSlug = data.slug || oldFilename.replace('.md', '');
     const slug = path.basename(slugify(rawSlug));
+    if (!slug) {
+      return res.status(400).json({
+        error: 'invalid_slug',
+        message: 'The web address can’t be empty — add letters or numbers to the title or slug.',
+      });
+    }
     const newFilename = `${slug}.md`;
     const oldPath = join(postsDir, oldFilename);
     const newPath = join(postsDir, newFilename);

@@ -51,7 +51,7 @@ import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 
 import { classifyMime, isDeniedExtension, computeStoragePath } from '../utils/mediaTypes.js';
-import { invalidatePostRefs, postsReferencing } from '../utils/postRefs.js';
+import { invalidatePostRefs } from '../utils/postRefs.js';
 // Phase 5: conversion queue producer + retry plumbing. The worker
 // (started by server.js) drains rows from `conversion_jobs`; here we
 // only enqueue and trigger retries.
@@ -360,6 +360,21 @@ function buildUsageMap(postsDir) {
 function usedInFor(url, usageMap) {
   const arr = usageMap.get(variantBaseKey(url));
   return arr ? arr.slice() : [];
+}
+
+/**
+ * Variant-aware list of post filenames that reference this asset — including
+ * posts that reference a generated variant (e.g. the -thumb.webp). This is
+ * what the delete-guard and the usage endpoint MUST use: plain
+ * postsReferencing() only exact-matches the base URL, so an image used only
+ * via its thumbnail would look "unused" and could be deleted, breaking the
+ * post. Keyed through variantBaseKey, so base + every variant collapse to one.
+ *
+ * @param {string} url
+ * @returns {string[]} post filenames
+ */
+function postsUsingAsset(url) {
+  return usedInFor(url, buildUsageMap(POSTS_DIR)).map((u) => u.filename);
 }
 
 // Phase 5: pick a job type for the asset and enqueue it. SVGs flow
@@ -677,8 +692,9 @@ router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
   const shaped = shapeMedia(row);
-  const usage = postsReferencing(shaped.url);
   const used_in = usedInFor(shaped.url, buildUsageMap(POSTS_DIR));
+  // `usage` (filenames) kept for back-compat; variant-aware like used_in.
+  const usage = used_in.map((u) => u.filename);
   res.json({ ...shaped, usage, used_in });
 });
 
@@ -689,7 +705,7 @@ router.get('/:id/usage', (req, res) => {
   const row = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found' });
   const shaped = shapeMedia(row);
-  res.json({ posts: postsReferencing(shaped.url) });
+  res.json({ posts: postsUsingAsset(shaped.url) });
 });
 
 const MAX_ALT_TEXT_LENGTH = 1000;
@@ -820,7 +836,7 @@ router.delete('/:id', (req, res) => {
   // could surprise the user. `?force=true` skips the scan entirely.
   invalidatePostRefs();
   const force = String(req.query.force || '').toLowerCase() === 'true';
-  const usage = force ? [] : postsReferencing(shaped.url);
+  const usage = force ? [] : postsUsingAsset(shaped.url);
 
   if (usage.length && !force) {
     return res.status(409).json({
