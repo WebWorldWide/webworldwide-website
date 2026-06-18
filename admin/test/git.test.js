@@ -21,6 +21,7 @@ import { join } from 'node:path';
 let tempDir;
 let originDir; // bare "GitHub" remote
 let containerDir; // the /app-shaped worktree publishChanges runs against
+let seedDir; // a full clone used to push "other" changes to origin
 
 const git = (cwd, ...args) =>
   execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -31,7 +32,7 @@ const originTree = () => git(originDir, 'ls-tree', '-r', '--name-only', 'main').
 before(() => {
   tempDir = mkdtempSync(join(tmpdir(), 't80-git-test-'));
   originDir = join(tempDir, 'origin.git');
-  const seedDir = join(tempDir, 'seed');
+  seedDir = join(tempDir, 'seed');
   containerDir = join(tempDir, 'app');
 
   // 1. Seed a repo shaped like the real one and publish it to a bare
@@ -158,11 +159,46 @@ test('publishChanges recovers an orphaned commit a prior push failed to send', a
   const headLocal = git(containerDir, 'rev-parse', 'HEAD').trim();
   assert.notEqual(originBefore, headLocal, 'precondition: local is ahead of origin');
 
-  // Nothing NEW is staged, yet publishChanges must still push the orphan.
+  // Nothing NEW is staged, yet publishChanges must still get the orphan's
+  // CONTENT onto origin. (It re-bases onto the latest origin/main rather than
+  // pushing the orphan SHA verbatim, so the resulting commit may differ — what
+  // matters is the content ships and origin advances.)
   const result = await publishChanges();
   assert.equal(result.success, true);
-  assert.equal(git(originDir, 'rev-parse', 'main').trim(), headLocal, 'orphan reached origin');
+  const originAfter = git(originDir, 'rev-parse', 'main').trim();
+  assert.notEqual(originAfter, originBefore, 'origin advanced (orphan content shipped)');
   assert.ok(originTree().includes('site/content/posts/orphan.md'), 'orphan post shipped');
+});
+
+test('publishChanges reconciles when origin moved on (no "branch moved on")', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+
+  // A code deploy pushes a NON-conflicting change to origin/main after our
+  // last sync — origin is now ahead of the container's local main, exactly
+  // the "branch moved on" setup. (Sync the seed clone first — earlier tests
+  // already advanced origin.)
+  git(seedDir, 'fetch', 'origin', 'main');
+  git(seedDir, 'reset', '--hard', 'origin/main');
+  writeFileSync(join(seedDir, 'admin/server.js'), 'seed: admin/server.js\n// deploy change\n');
+  git(seedDir, 'add', 'admin/server.js');
+  git(seedDir, 'commit', '-m', 'code deploy to origin');
+  git(seedDir, 'push', 'origin', 'main');
+
+  // The writer edits a post in the container and publishes.
+  writeFileSync(join(containerDir, 'site/content/posts/reconcile.md'), 'reconciled\n');
+  const result = await publishChanges();
+  assert.equal(result.success, true, 'publish succeeded despite divergence');
+  assert.equal(result.changed, true);
+
+  // Origin ends up with BOTH the deploy's code change AND the new post — the
+  // publish rebased onto the moved origin instead of being rejected.
+  const tree = originTree();
+  assert.ok(tree.includes('site/content/posts/reconcile.md'), 'new post shipped');
+  assert.match(
+    git(originDir, 'show', 'main:admin/server.js'),
+    /deploy change/,
+    'origin kept the code deploy change (not clobbered)',
+  );
 });
 
 test('getPostHistory + getPostAtCommit surface a post’s git revisions', async () => {

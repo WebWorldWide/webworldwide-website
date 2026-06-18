@@ -101,6 +101,54 @@ async function countUnpushedCommits(git) {
 const SITE_PATHSPEC = 'site';
 
 /**
+ * Re-base the local `main` ref + git index onto the freshest `origin/main`
+ * WITHOUT touching the (permanently-dirty) container worktree, so the commit
+ * we're about to make is always a fast-forward of origin — the push can never
+ * be rejected as "non-fast-forward" just because a code deploy pushed to main
+ * between publishes. This is the durable fix for "push rejected: branch moved
+ * on".
+ *
+ * How it stays safe with a dirty worktree: `update-ref` moves the branch
+ * pointer and `read-tree` resets the index to origin/main's tree — neither
+ * checks out files, so the container's missing admin/ etc. are irrelevant.
+ * The caller then runs `git add -A site`, which re-applies the on-disk site/
+ * content (adds/edits/deletions) on top. Any site/ edits a prior failed
+ * publish left in orphaned local commits are still on disk, so they're
+ * recaptured — nothing is lost.
+ *
+ * Returns false (caller commits on current HEAD) when origin/main can't be
+ * seen (offline / first run) or HEAD isn't `main`.
+ *
+ * @param {import('simple-git').SimpleGit} git
+ * @returns {Promise<boolean>}
+ */
+async function alignToOriginMain(git) {
+  let originSha;
+  try {
+    await git.fetch('origin', 'main');
+    originSha = (await git.revparse(['origin/main'])).trim();
+  } catch (err) {
+    console.warn('[git] could not fetch origin/main — publishing on local state:', err.message);
+    return false;
+  }
+  if (!originSha) return false;
+  let branch;
+  try {
+    branch = (await git.revparse(['--abbrev-ref', 'HEAD'])).trim();
+  } catch {
+    return false;
+  }
+  if (branch !== 'main') {
+    console.warn(`[git] HEAD is "${branch}", not main — skipping origin realign.`);
+    return false;
+  }
+  // Move main → origin/main and reset the index to match; worktree untouched.
+  await git.raw(['update-ref', 'refs/heads/main', originSha]);
+  await git.raw(['read-tree', originSha]);
+  return true;
+}
+
+/**
  * Stage site/ changes, commit, and push.
  *
  * Returns:
@@ -120,7 +168,12 @@ export async function publishChanges() {
   const git = getGitInstance();
   try {
     console.log('Publishing changes...');
-    await git.add(SITE_PATHSPEC);
+    // Commit on top of the freshest origin/main so the push is always a
+    // fast-forward — prevents "branch moved on" when a code deploy landed on
+    // main since the last publish.
+    await alignToOriginMain(git);
+    // `-A` so deletions (a removed post) are staged too, not just edits/adds.
+    await git.raw(['add', '-A', SITE_PATHSPEC]);
 
     // Snapshot the staged set BEFORE we run git commit — afterwards the
     // cached diff would be empty and we'd lose the per-file list that
@@ -181,7 +234,8 @@ export async function publishChanges() {
 export async function commitAndPush(message) {
   const git = getGitInstance();
   try {
-    await git.add(SITE_PATHSPEC);
+    await alignToOriginMain(git);
+    await git.raw(['add', '-A', SITE_PATHSPEC]);
     const stagedDiff = await git.diff(['--cached', '--name-status']);
     if (!stagedDiff.trim()) {
       return { success: true, message: 'nothing to commit' };
