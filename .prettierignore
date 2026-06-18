@@ -4,6 +4,10 @@ site/dist/
 site/.astro/
 site/.legacy/
 site/scripts/legacy-redirects.json
+# CMS-generated runtime data (redirects.json, dictionary.json) — written by
+# the admin in its own JSON format and rewritten on every publish, so Prettier
+# must not police it (it would otherwise fail CI after each content change).
+site/data/
 admin/data/
 admin/public/fonts/
 Blog/
