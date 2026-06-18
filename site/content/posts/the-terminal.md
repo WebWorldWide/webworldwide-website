@@ -13,6 +13,6 @@ So why do it if no one needs to read it? Well, I could say it's because I am not
 
 So what is up with the name "Web World Wide"? One of the first pieces of media that really showed me the World Wide Web was *The Fairly OddParents* episode: "Information Stupor Highway." In it Timmy is able to fly around the web and experience all of these things. The episode came out in [January 2003](https://fairlyoddparents.fandom.com/wiki/Information_Stupor_Highway) and now shows a more bygone era of the web. I want this to site to be like my corner of the internet for my blog and projects. The way The Fairly OddParents showed me it could be.
 
-![Fairly OddParents — Information Stupor Highway](/images/2025/12/my-web.webp)Anyways, that's how I wanted to introduce myself. I really hope you enjoy my writing as much as I enjoy writing this stuff myself. Also, please reach out (method of contact still a little TBD)! I love being able to talk with like-minded people about various topics. If you disagree, let me know your thoughts (kindly) as it's always good to have various perspectives.
+![Fairly OddParents — Information Stupor Highway](/images/2025/12/my-web.webp)Anyway, that's how I wanted to introduce myself. I really hope you enjoy my writing as much as I enjoy writing this stuff myself. Also, please reach out (method of contact still a little TBD)! I love being able to talk with like-minded people about various topics. If you disagree, let me know your thoughts (kindly) as it's always good to have various perspectives.
 
 Catch you on the Web!
