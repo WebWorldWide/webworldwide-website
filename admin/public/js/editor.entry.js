@@ -793,8 +793,10 @@ const nodeSerializers = {
     const { align, width, caption } = node.attrs;
     // Non-empty caption, explicit width, or alignment all require a <figure> wrapper.
     // Plain image with none of these serialises as `![alt](url)` unchanged.
-    const captionText = (caption !== null && caption !== undefined && String(caption).trim() !== '')
-      ? String(caption).trim() : null;
+    const captionText =
+      caption !== null && caption !== undefined && String(caption).trim() !== ''
+        ? String(caption).trim()
+        : null;
     if (align || width || captionText !== null) {
       const src = htmlAttrEscape(node.attrs.src || '');
       const altAttr = node.attrs.alt ? ' alt="' + htmlAttrEscape(node.attrs.alt) + '"' : ' alt=""';
@@ -804,10 +806,20 @@ const nodeSerializers = {
       const classAttr = align ? ' class="img-align-' + align + '"' : '';
       // `loading`/`decoding` baked in — Astro emits markdown raw HTML verbatim
       // so the lazy-image rehype pass can't reach inside a raw block.
-      const figcaption = captionText !== null ? '<figcaption>' + htmlAttrEscape(captionText) + '</figcaption>' : '';
+      const figcaption =
+        captionText !== null ? '<figcaption>' + htmlAttrEscape(captionText) + '</figcaption>' : '';
       state.write(
-        '<figure' + classAttr + styleAttr + '><img src="' + src + '"' + altAttr + titleAttr +
-        ' loading="lazy" decoding="async">' + figcaption + '</figure>',
+        '<figure' +
+          classAttr +
+          styleAttr +
+          '><img src="' +
+          src +
+          '"' +
+          altAttr +
+          titleAttr +
+          ' loading="lazy" decoding="async">' +
+          figcaption +
+          '</figure>',
       );
       return;
     }
@@ -2137,14 +2149,17 @@ function imageNodeView({ node, getPos, editor }) {
       handle.removeEventListener('pointerup', onUp);
       const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
       if (typeof getPos === 'function') {
-        editor.chain().command(({ tr, state }) => {
-          const pos = getPos();
-          if (typeof pos !== 'number') return false;
-          const n = state.doc.nodeAt(pos);
-          if (!n || n.type.name !== 'image') return false;
-          tr.setNodeMarkup(pos, undefined, { ...n.attrs, width: w });
-          return true;
-        }).run();
+        editor
+          .chain()
+          .command(({ tr, state }) => {
+            const pos = getPos();
+            if (typeof pos !== 'number') return false;
+            const n = state.doc.nodeAt(pos);
+            if (!n || n.type.name !== 'image') return false;
+            tr.setNodeMarkup(pos, undefined, { ...n.attrs, width: w });
+            return true;
+          })
+          .run();
       }
     };
     handle.addEventListener('pointermove', onMove);
@@ -2165,8 +2180,10 @@ function imageNodeView({ node, getPos, editor }) {
     el.textContent = text || '';
     return el;
   }
-  const initCap = node.attrs.caption !== null && node.attrs.caption !== undefined
-    ? String(node.attrs.caption).trim() : '';
+  const initCap =
+    node.attrs.caption !== null && node.attrs.caption !== undefined
+      ? String(node.attrs.caption).trim()
+      : '';
   if (initCap !== '') {
     cap = createCaption(initCap);
     outer.appendChild(cap);
@@ -2183,8 +2200,10 @@ function imageNodeView({ node, getPos, editor }) {
       img.style.width = updatedNode.attrs.width ? updatedNode.attrs.width + 'px' : '';
       if (updatedNode.attrs.align) outer.setAttribute('data-align', updatedNode.attrs.align);
       else outer.removeAttribute('data-align');
-      const newCap = updatedNode.attrs.caption !== null && updatedNode.attrs.caption !== undefined
-        ? String(updatedNode.attrs.caption).trim() : '';
+      const newCap =
+        updatedNode.attrs.caption !== null && updatedNode.attrs.caption !== undefined
+          ? String(updatedNode.attrs.caption).trim()
+          : '';
       const hasCaption = newCap !== '';
       if (cap && !hasCaption) {
         cap.remove();
@@ -4290,7 +4309,9 @@ export function mount(rootEl, initialMarkdown, options) {
     volume_off: TB_ICON(
       '<line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/><path d="M11 5 6 9H2v6h4l5 4V5z"/>',
     ),
-    play_arrow: TB_ICON('<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>'),
+    play_arrow: TB_ICON(
+      '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>',
+    ),
     loop: TB_ICON(
       '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
     ),
@@ -4856,16 +4877,21 @@ export function mount(rootEl, initialMarkdown, options) {
       active: () => {
         if (!editor.isActive('image')) return false;
         const a = editor.getAttributes('image');
-        return a.caption !== null && a.caption !== undefined;
+        return a.caption !== null && a.caption !== undefined && String(a.caption).trim() !== '';
       },
       run: () => {
         const a = editor.getAttributes('image');
-        const current = (a.caption !== null && a.caption !== undefined) ? a.caption : '';
+        const current =
+          a.caption !== null && a.caption !== undefined ? String(a.caption).trim() : '';
         const next = window.prompt('Image caption (clear to remove):', current);
         if (next === null) return;
-        editor.chain().focus().updateAttributes('image', {
-          caption: next.trim() === '' ? null : next.trim(),
-        }).run();
+        editor
+          .chain()
+          .focus()
+          .updateAttributes('image', {
+            caption: next.trim() === '' ? null : next.trim(),
+          })
+          .run();
       },
     }),
   );
@@ -4880,7 +4906,10 @@ export function mount(rootEl, initialMarkdown, options) {
       active: () => false,
       run: () => {
         const current = editor.getAttributes('image').alt || '';
-        const next = window.prompt('Image alt text (describes the image for screen readers and search):', current);
+        const next = window.prompt(
+          'Image alt text (describes the image for screen readers and search):',
+          current,
+        );
         if (next !== null) editor.chain().focus().updateAttributes('image', { alt: next }).run();
       },
     }),
@@ -4902,7 +4931,11 @@ export function mount(rootEl, initialMarkdown, options) {
       active: () => Boolean(editor.isActive('video') && editor.getAttributes('video')[attr]),
       run: () => {
         const cur = editor.getAttributes('video')[attr];
-        editor.chain().focus().updateAttributes('video', { [attr]: !cur }).run();
+        editor
+          .chain()
+          .focus()
+          .updateAttributes('video', { [attr]: !cur })
+          .run();
       },
     });
   }

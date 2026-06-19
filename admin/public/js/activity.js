@@ -60,7 +60,13 @@
     const lines = ['timestamp_ms,iso,user,action,target'];
     items.forEach((it) =>
       lines.push(
-        [it.ts, new Date(it.ts).toISOString(), it.user || 'system', it.action || '', it.target || '']
+        [
+          it.ts,
+          new Date(it.ts).toISOString(),
+          it.user || 'system',
+          it.action || '',
+          it.target || '',
+        ]
           .map(TE.csvField)
           .join(','),
       ),
