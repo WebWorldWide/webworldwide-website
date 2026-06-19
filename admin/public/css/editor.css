@@ -1153,8 +1153,12 @@ body[data-page="editor"] {
   text-align: center; /* centers the inline-block inner */
   line-height: 0;
 }
-.ProseMirror .te-image-outer[data-align="left"] { text-align: left; }
-.ProseMirror .te-image-outer[data-align="right"] { text-align: right; }
+.ProseMirror .te-image-outer[data-align="left"] {
+  text-align: left;
+}
+.ProseMirror .te-image-outer[data-align="right"] {
+  text-align: right;
+}
 /* inner: inline-block sized to image — the resize handle anchors here */
 .ProseMirror .te-image-inner {
   display: inline-block;
@@ -1214,7 +1218,9 @@ body[data-page="editor"] {
   white-space: pre-wrap;
 }
 /* Contextual toolbar dividers hide with their group */
-.te-tb-divider.is-hidden { display: none; }
+.te-tb-divider.is-hidden {
+  display: none;
+}
 @media (max-width: 700px) {
   .ProseMirror .te-image-outer[data-align="left"],
   .ProseMirror .te-image-outer[data-align="right"] {
