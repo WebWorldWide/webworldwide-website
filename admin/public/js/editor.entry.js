@@ -97,7 +97,7 @@ import {
 // Phase 3d: ProseMirror plugin for the WYSIWYG side of find/replace —
 // imported as a peer dep through @tiptap/pm. TextSelection is also used
 // by the TOC sidebar's gotoHeading.
-import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
+import { Plugin, PluginKey, TextSelection, NodeSelection } from '@tiptap/pm/state';
 import { Decoration as PMDecoration, DecorationSet as PMDecorationSet } from '@tiptap/pm/view';
 // Phase 3d: drag handle (block reorder). The extension renders a single
 // floating handle anchored on hover over the nearest top-level block.
@@ -2135,36 +2135,62 @@ function imageNodeView({ node, getPos, editor }) {
   handle.className = 'te-resize-handle';
   handle.setAttribute('aria-hidden', 'true');
   handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return; // primary pointer only
     e.preventDefault();
     e.stopPropagation();
     const startX = e.clientX;
     const startW = img.getBoundingClientRect().width || img.naturalWidth || 200;
-    handle.setPointerCapture(e.pointerId);
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch (_) {
+      /* capture unsupported — drag still works via document-level fallback */
+    }
+    let done = false;
     const onMove = (ev) => {
       img.style.width = Math.max(60, Math.round(startW + (ev.clientX - startX))) + 'px';
     };
-    const onUp = (ev) => {
-      handle.releasePointerCapture(ev.pointerId);
+    const finish = (ev, commit) => {
+      if (done) return;
+      done = true;
       handle.removeEventListener('pointermove', onMove);
       handle.removeEventListener('pointerup', onUp);
-      const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
-      if (typeof getPos === 'function') {
-        editor
-          .chain()
-          .command(({ tr, state }) => {
-            const pos = getPos();
-            if (typeof pos !== 'number') return false;
-            const n = state.doc.nodeAt(pos);
-            if (!n || n.type.name !== 'image') return false;
-            tr.setNodeMarkup(pos, undefined, { ...n.attrs, width: w });
-            return true;
-          })
-          .run();
+      handle.removeEventListener('pointercancel', onCancel);
+      try {
+        handle.releasePointerCapture(ev.pointerId);
+      } catch (_) {
+        /* ignore */
       }
+      if (!commit || typeof getPos !== 'function') return;
+      const pos = getPos();
+      if (typeof pos !== 'number') return;
+      const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
+      // Commit the width, then re-select the image so the contextual toolbar
+      // stays put after the drag (a pointer drag never placed a selection).
+      editor
+        .chain()
+        .command(({ tr, state }) => {
+          const n = state.doc.nodeAt(pos);
+          if (!n || n.type.name !== 'image') return false;
+          tr.setNodeMarkup(pos, undefined, { ...n.attrs, width: w });
+          return true;
+        })
+        .setNodeSelection(pos)
+        .run();
     };
+    const onUp = (ev) => finish(ev, true);
+    const onCancel = (ev) => finish(ev, false);
     handle.addEventListener('pointermove', onMove);
     handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onCancel);
   });
+  // Swallow the compatibility mouse/drag events the resize drag would otherwise
+  // emit, so ProseMirror never reads a resize as a text-selection drag and the
+  // handle <span> is never itself dragged.
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  handle.addEventListener('dragstart', (e) => e.preventDefault());
 
   inner.appendChild(img);
   inner.appendChild(handle);
@@ -3959,6 +3985,25 @@ export function mount(rootEl, initialMarkdown, options) {
     editorProps: {
       handlePaste: (_view, event) => pasteIsPureMedia(event.clipboardData),
       handleDrop: (_view, event, _slice, moved) => isExternalFileDrop(event, moved),
+      // Clicking *anywhere* on an image NodeView — the picture, its centring
+      // margin, or the caption below it — must select the image node so the
+      // contextual image toolbar appears and stays. Without this, a click on
+      // the caption resolves to the text position *after* the image, dropping
+      // the NodeSelection and hiding the toolbar. Video is also selected so its
+      // contextual toolbar appears, but we return false there so the native
+      // <video controls> (play/scrub/volume) keep working on the same click.
+      handleClickOn: (view, _pos, node, nodePos) => {
+        if (!node || !node.type || typeof nodePos !== 'number') return false;
+        if (node.type.name === 'image') {
+          view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)));
+          return true;
+        }
+        if (node.type.name === 'video') {
+          view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)));
+          return false;
+        }
+        return false;
+      },
     },
   });
 
@@ -4849,6 +4894,14 @@ export function mount(rootEl, initialMarkdown, options) {
   richToolbar.appendChild(gImageDivider);
   const gImage = tbGroup('Image options');
   gImage.classList.add('te-tb-image-group');
+  // Position of the currently node-selected image, or null. Captured *before*
+  // a window.prompt() so we can re-assert the NodeSelection afterwards — some
+  // browsers drop the selection when a native modal steals focus, which would
+  // otherwise hide the contextual toolbar the instant a caption/alt is set.
+  function selectedImagePos() {
+    const sel = editor.state.selection;
+    return sel && sel.node && sel.node.type.name === 'image' ? sel.from : null;
+  }
   function imgAlignBtn(label, icon, align) {
     return tbBtn({
       label,
@@ -4880,14 +4933,15 @@ export function mount(rootEl, initialMarkdown, options) {
         return a.caption !== null && a.caption !== undefined && String(a.caption).trim() !== '';
       },
       run: () => {
+        const pos = selectedImagePos();
         const a = editor.getAttributes('image');
         const current =
           a.caption !== null && a.caption !== undefined ? String(a.caption).trim() : '';
         const next = window.prompt('Image caption (clear to remove):', current);
         if (next === null) return;
-        editor
-          .chain()
-          .focus()
+        const chain = editor.chain().focus();
+        if (pos !== null) chain.setNodeSelection(pos);
+        chain
           .updateAttributes('image', {
             caption: next.trim() === '' ? null : next.trim(),
           })
@@ -4905,12 +4959,16 @@ export function mount(rootEl, initialMarkdown, options) {
       canRun: () => editor.isActive('image'),
       active: () => false,
       run: () => {
+        const pos = selectedImagePos();
         const current = editor.getAttributes('image').alt || '';
         const next = window.prompt(
           'Image alt text (describes the image for screen readers and search):',
           current,
         );
-        if (next !== null) editor.chain().focus().updateAttributes('image', { alt: next }).run();
+        if (next === null) return;
+        const chain = editor.chain().focus();
+        if (pos !== null) chain.setNodeSelection(pos);
+        chain.updateAttributes('image', { alt: next }).run();
       },
     }),
   );
