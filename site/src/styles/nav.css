@@ -72,7 +72,7 @@
   background: var(--cherry-strong);
   color: var(--paper);
 }
-/* Ink + sun-deep here: sun (#68dba8) on ink (#0e2960) = 7.4:1, passes. */
+/* WCAG: sun (--sun #28b083) on ink (#0e2960) = 5.07:1, passes (18px regular). */
 .topbar-pill a.nav-link.is-current {
   background: var(--ink);
   color: var(--sun);

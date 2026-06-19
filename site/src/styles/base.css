@@ -155,7 +155,12 @@ img {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* Zero the delays too — scripts set inline animation/transition-delay for
+       staggered intros (section cascade, cloud puffs, app spinners) that
+       otherwise survive the duration reset as a visible sequenced settle. */
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
 }

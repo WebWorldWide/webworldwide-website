@@ -23,6 +23,12 @@ import '@styles/base.css';
 import '@styles/sky.css';
 import '@styles/nav.css';
 
+// Hashed URLs for the above-the-fold serif weights, preloaded below so the LCP
+// text (wordmark / post title in Cormorant 700; subtitle/body in 400) paints
+// from the real font with no fallback-swap flash.
+import cormorant400 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-normal.woff2';
+import cormorant700 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-normal.woff2';
+
 const siteToml = siteConfig;
 
 interface Props {
@@ -64,6 +70,11 @@ const currentPath = Astro.url.pathname;
 const siteURL = siteToml.site.url;
 const ogImageURL = new URL(ogImage, siteURL).toString();
 const authorName = siteToml.site.author;
+// The default share card (/og-image.png) needs alt text too. A real post cover
+// without explicit alt already falls back to the post title upstream, so only
+// fill the default here — never mislabel an actual cover with the site blurb.
+const resolvedOgImageAlt =
+  ogImageAlt ?? (ogImage === '/og-image.png' ? `${siteTitle} — ${siteToml.site.description}` : undefined);
 
 // JSON-LD structured data. A BlogPosting on article pages (rich results +
 // accurate share metadata), a WebSite elsewhere. publisher/author come from
@@ -79,6 +90,7 @@ const jsonLd =
     ? {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
+        inLanguage: 'en-US',
         headline: title ?? siteTitle,
         description: pageDesc,
         image: ogImageURL,
@@ -92,6 +104,7 @@ const jsonLd =
     : {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
+        inLanguage: 'en-US',
         name: siteTitle,
         url: siteURL,
         description: siteToml.site.description,
@@ -115,6 +128,10 @@ const dataAttrs = Object.fromEntries(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    {/* crossorigin is mandatory — font fetches are always CORS; omitting it
+        causes a wasted double-fetch. */}
+    <link rel="preload" href={cormorant700} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={cormorant400} as="font" type="font/woff2" crossorigin />
     <title>{documentTitle}</title>
     <meta name="description" content={pageDesc} />
     <meta name="theme-color" content="#1E68F0" />
@@ -148,7 +165,7 @@ const dataAttrs = Object.fromEntries(
         wrong hint. */}
     {ogImage === '/og-image.png' && <meta property="og:image:width" content="1200" />}
     {ogImage === '/og-image.png' && <meta property="og:image:height" content="630" />}
-    {ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
+    {resolvedOgImageAlt && <meta property="og:image:alt" content={resolvedOgImageAlt} />}
     {ogType === 'article' && publishedTime && (
       <meta property="article:published_time" content={publishedTime} />
     )}
@@ -160,7 +177,7 @@ const dataAttrs = Object.fromEntries(
     <meta name="twitter:title" content={shareTitle} />
     <meta name="twitter:description" content={pageDesc} />
     <meta name="twitter:image" content={ogImageURL} />
-    {ogImageAlt && <meta name="twitter:image:alt" content={ogImageAlt} />}
+    {resolvedOgImageAlt && <meta name="twitter:image:alt" content={resolvedOgImageAlt} />}
 
     <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
 

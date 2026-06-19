@@ -152,8 +152,16 @@ export default function CommandPalette({ posts }: { posts: PostSummary[] }): JSX
             autoComplete="off"
             spellCheck="false"
             aria-label="Search posts"
+            aria-describedby="cmdk-esc-hint"
           />
-          <span className="kbd">ESC</span>
+          {/* Visual hint is decorative; the real instruction is announced to
+              screen readers via aria-describedby on the input. */}
+          <span className="kbd" aria-hidden="true">
+            ESC
+          </span>
+          <span id="cmdk-esc-hint" className="sr-only">
+            Press Escape to close
+          </span>
         </div>
         <div className="cmdk-section" aria-live="polite" aria-atomic="true">
           {`// POSTS — ${results.length}`}
