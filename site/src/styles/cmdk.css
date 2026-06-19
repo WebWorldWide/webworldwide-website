@@ -110,12 +110,6 @@
   text-overflow: ellipsis;
   color: var(--ink);
 }
-.cmdk-row-meta {
-  color: var(--ink-soft);
-  font-size: 12px;
-  font-family: var(--font-mono);
-  flex-shrink: 0;
-}
 .cmdk-empty {
   padding: 24px;
   color: var(--ink-soft);

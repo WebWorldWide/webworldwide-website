@@ -23,40 +23,31 @@ import mediaRoutes from './src/routes/media.js';
 import publishRoutes from './src/routes/publish.js';
 import proofreadRoutes from './src/routes/proofread.js';
 import healthRoutes from './src/routes/health.js';
-// Phase 5e CMS-completeness routes — site settings, redirects, and
-// the activity log dashboard widget.
+// Site settings, redirects, and activity log.
 import settingsRoutes from './src/routes/settings.js';
 import redirectsRoutes from './src/routes/redirects.js';
 import activityRoutes from './src/routes/activity.js';
-// Phase 7: paste-to-embed lookup. Resolves YouTube/Vimeo/Bluesky/…
-// URLs through their oEmbed endpoints (or a generic OG scrape) and
-// caches the result for 24h in the `embed_cache` table.
+// Paste-to-embed lookup — resolves YouTube/Vimeo/Bluesky/… URLs via oEmbed
+// (or OG scrape) and caches results 24h in `embed_cache`.
 import embedRoutes from './src/routes/embed.js';
-// Phase 8: Webmention receiver — the inbound side of Fediverse
-// federation via Bridgy Fed. `publicRouter` mounts at /webmention
-// (no auth, rate-limited) for incoming pings; `adminRouter` mounts
-// at /api/webmentions for moderation behind the session cookie.
+// Webmention receiver: public /webmention endpoint (rate-limited, no auth) for
+// incoming pings; /api/webmentions for moderation behind the session cookie.
 import {
   publicRouter as webmentionPublicRoutes,
   adminRouter as webmentionAdminRoutes,
 } from './src/routes/webmentions.js';
-// Phase 8.5: unified comment moderation surface. Proxies Remark42's
-// admin API + folds in pending webmentions so the CMS user manages
-// every comment from one place.
+// Unified comment moderation — proxies Remark42 + webmentions into one surface.
 import commentsRoutes from './src/routes/comments.js';
 import * as remark42Poller from './src/services/remark42-poller.js';
 // Server-side Umami analytics proxy — the dashboard traffic widgets
 // read /api/analytics/* so the browser never talks to Umami directly
 // (credentials stay server-side; responses cached 5 min for the Pi).
 import analyticsRoutes from './src/routes/analytics.js';
-// Phase 4: tiny migration runner — applies any pending DDL in
-// `src/db/migrations/` (auth tables, media table, …) before we serve
-// the first request. Safe to call on every boot; already-applied
-// migrations are tracked in the `schema_migrations` table.
+// Migration runner — applies any pending DDL at boot; idempotent via
+// `schema_migrations` tracking table.
 import { runMigrations } from './src/db/migrate.js';
-// Phase 5: conversion job worker. Started after migrations so the
-// `conversion_jobs` table is guaranteed to exist before the worker
-// opens its read cursor. SIGTERM/SIGINT bind a graceful drain.
+// Conversion job worker — started after migrations so `conversion_jobs`
+// exists. SIGTERM/SIGINT bind a graceful drain.
 import { startWorker, bindShutdownSignals } from './src/services/conversion/index.js';
 // Retention sweeper — keeps the append-only tables (activity_log,
 // embed_cache) bounded for a blog used daily over years.
@@ -423,22 +414,13 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/publish', publishRoutes);
 app.use('/api/proofread', proofreadLimiter, proofreadRoutes);
 app.use('/api/health', healthRoutes);
-// Phase 5e
 app.use('/api/settings', settingsRoutes);
 app.use('/api/redirects', redirectsRoutes);
 app.use('/api/activity', activityRoutes);
-// Umami analytics proxy — degrades to { configured: false } when the
-// UMAMI_* env vars are absent, so dev sessions without docker up work.
+// Umami analytics proxy — degrades to { configured: false } when UMAMI_* vars are absent.
 app.use('/api/analytics', analyticsRoutes);
-// Phase 7
 app.use('/api/embed', embedRoutes);
-// Phase 8 — admin moderation surface for inbound webmentions. Sits
-// behind the same session auth as /api/posts etc.
 app.use('/api/webmentions', webmentionAdminRoutes);
-// Phase 8.5 — unified Remark42 + webmention moderation. Exposes a
-// single /api/comments surface so the admin UI doesn't need to know
-// which backend a row came from. Includes an SSE channel
-// (/api/comments/stream) for real-time updates.
 app.use('/api/comments', commentsRoutes);
 // Templates static mount — read-only access to admin/templates/*.md so
 // the "New Post" picker can fetch each scaffold.
@@ -465,7 +447,6 @@ app.use((err, req, res, _next) => {
   res.status(err?.status || err?.statusCode || 500).json({ error: 'internal_error' });
 });
 
-// Export SITE_DIR (+ the app, for the boot smoke test) for use elsewhere.
 export { SITE_DIR, app };
 
 // Don't bind a port under test. Importing this module still builds the whole

@@ -61,8 +61,6 @@ function slugify(s) {
     .replace(/(^-|-$)+/g, '');
 }
 
-// Utility to get all posts (Phase 2 shape preserved + a few additive
-// fields the dashboard uses for the new "Scheduled" tab and badges).
 function getAllPosts() {
   if (postsListCache && Date.now() - postsListCache.at < POSTS_LIST_TTL_MS) {
     return postsListCache.list;
@@ -80,11 +78,9 @@ function getAllPosts() {
         slug: data.slug || file.replace('.md', ''),
         date: data.date || stats.mtime.toISOString(),
         draft: data.draft === true,
-        // Phase 5e additions — null when unset.
         publish_at: data.publish_at || null,
         series: data.series || null,
         cover: data.cover || null,
-        // v2 Overview additions — drafts list shows real progress.
         word_count: String(body || '')
           .split(/\s+/)
           .filter(Boolean).length,
@@ -92,7 +88,6 @@ function getAllPosts() {
       };
     });
 
-    // Sort by date descending
     posts.sort(
       (a, b) =>
         new Date(/** @type {string} */ (b.date)).getTime() -
@@ -106,9 +101,6 @@ function getAllPosts() {
   }
 }
 
-// ── CRUD (Phase 2 contract; unchanged shapes) ──────────────────────
-
-// GET all posts
 router.get('/', (req, res) => {
   res.json(getAllPosts());
 });
@@ -166,7 +158,6 @@ router.post('/bulk', (req, res) => {
           continue;
         }
 
-        // All other actions edit front-matter in place.
         const src = readFileSync(filePath, 'utf-8');
         const { data, content } = parsePost(src);
 
@@ -480,7 +471,6 @@ function applySlugRename(oldSlug, newSlug) {
   return report;
 }
 
-// CREATE post
 router.post('/', (req, res) => {
   try {
     const { data, content } = req.body;
@@ -497,18 +487,16 @@ router.post('/', (req, res) => {
     }
     const filename = `${slug}.md`;
 
-    // Check if exists
     try {
       statSync(join(postsDir, filename));
       return res.status(400).json({ error: 'A post with this slug already exists' });
     } catch {
-      /* Doesn't exist, good */
+      /* doesn't exist — good */
     }
 
     data.slug = slug;
     if (!data.date) data.date = new Date().toISOString();
 
-    // Phase 5e: if publish_at is set, validate it's in the future.
     if (data.publish_at) {
       const ts = new Date(data.publish_at).getTime();
       if (Number.isNaN(ts) || ts <= Date.now()) {
@@ -538,7 +526,6 @@ router.post('/', (req, res) => {
   }
 });
 
-// UPDATE post
 router.put('/:filename', (req, res) => {
   try {
     const { data, content, baseMtime } = req.body;
@@ -692,7 +679,6 @@ router.put('/:filename', (req, res) => {
   }
 });
 
-// DELETE post
 router.delete('/:filename', (req, res) => {
   try {
     const safeFilename = path.basename(req.params.filename);

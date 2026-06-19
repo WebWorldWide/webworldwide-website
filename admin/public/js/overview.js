@@ -57,11 +57,6 @@
     return `${Math.round(hours / 24)}d ago`;
   }
 
-  function renderGreeting() {
-    // Heading is a plain, purposeful "Overview" (set in index.html). The
-    // date line below carries the friendly context — no cutesy copy.
-  }
-
   async function loadStats() {
     try {
       const sum = await TE.fetchJSON('/api/analytics/summary?range=30d');
@@ -144,8 +139,7 @@
             // ~800 words ≈ a "complete" post for the progress bar; honest
             // heuristic, clearly labeled with the real word count.
             const pct = Math.min(100, Math.round((words / 800) * 100));
-            // 250 wpm — keep in lockstep with the editor's computeMetrics().
-            const read = Math.max(1, Math.round(words / 250));
+            const read = Math.max(1, Math.round(words / TE.WPM));
             const edited = p.modified ? ` · edited ${timeAgo(p.modified)}` : '';
             return `
             <div class="draft-card" data-file="${TE.escape(p.filename)}">
@@ -218,7 +212,6 @@
   }
 
   function init() {
-    renderGreeting();
     const date = $('ov-date');
     if (date) {
       date.textContent = new Date().toLocaleDateString(undefined, {
@@ -231,13 +224,10 @@
     refresh();
   }
 
-  // Re-pull the data (not the one-time greeting/date chrome) — the router
-  // calls this each time Overview is revisited so the stats/cards aren't
-  // frozen at first paint.
+  // Re-pull the data — router calls this each time Overview is revisited.
   function refresh() {
-    // Independent loads — a failure in one never blocks the others
-    // (allSettled never rejects; the void marks it deliberately unawaited).
     void Promise.allSettled([loadStats(), loadComments(), loadPostsCards()]);
+    if (typeof TE.loadActivityWidget === 'function') TE.loadActivityWidget();
   }
 
   window.TE = window.TE || {};

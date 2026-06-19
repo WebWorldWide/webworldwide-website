@@ -147,16 +147,13 @@
   }
 
   // ── Export / Import (CSV) ──────────────────────────────────
-  function csvField(v) {
-    return `"${String(v === undefined || v === null ? '' : v).replace(/"/g, '""')}"`;
-  }
   function exportCsv() {
     if (!rows.length) {
       window.TE.toast('No redirects to export.', 'warn');
       return;
     }
     const lines = ['from,to,code'];
-    rows.forEach((r) => lines.push([r.from, r.to, r.code].map(csvField).join(',')));
+    rows.forEach((r) => lines.push([r.from, r.to, r.code].map(TE.csvField).join(',')));
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

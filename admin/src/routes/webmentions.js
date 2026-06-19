@@ -295,7 +295,11 @@ async function fetchSource(url) {
       const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
       if (!location) break;
       if (hop >= MAX_REDIRECTS) throw new Error('too many redirects');
-      current = new URL(location, current).href; // resolve relative Location
+      try {
+        current = new URL(location, current).href;
+      } catch {
+        throw new Error('invalid redirect location');
+      }
     }
     if (!res.ok) {
       throw new Error(`fetch returned ${res.status}`);

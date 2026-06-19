@@ -61,7 +61,6 @@ db.exec(`
     );
 `);
 
-// Check if any users exist (for setup mode)
 function hasUsers() {
   const row = db.prepare('SELECT COUNT(*) as count FROM users').get();
   return row.count > 0;
@@ -78,7 +77,6 @@ function pruneChallenges() {
   }
 }
 
-// Create session cookie
 function createSession(res, user) {
   const sessionData = {
     userId: user.id,
@@ -187,7 +185,6 @@ router.post('/passkey/register/start', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'User not found' });
   pruneChallenges();
 
-  // Get existing passkeys
   const existingKeys = db
     .prepare('SELECT credential_id FROM passkeys WHERE user_id = ?')
     .all(user.id);
@@ -208,7 +205,6 @@ router.post('/passkey/register/start', async (req, res) => {
     },
   });
 
-  // Store challenge
   const challengeId = randomBytes(16).toString('hex');
   db.prepare('INSERT INTO challenges (id, challenge, type, user_id) VALUES (?, ?, ?, ?)').run(
     challengeId,
@@ -231,7 +227,6 @@ router.post('/passkey/register/finish', async (req, res) => {
     .get(challengeId, 'registration');
   if (!challengeRow) return res.status(400).json({ error: 'Invalid challenge' });
 
-  // Clean up challenge
   db.prepare('DELETE FROM challenges WHERE id = ?').run(challengeId);
 
   try {
@@ -329,7 +324,6 @@ router.post('/passkey/login/finish', async (req, res) => {
     });
 
     if (verification.verified) {
-      // Update counter
       db.prepare('UPDATE passkeys SET counter = ? WHERE id = ?').run(
         verification.authenticationInfo.newCounter,
         passkey.id,
