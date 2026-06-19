@@ -23,6 +23,10 @@ site/content/media.json
 # Prebuild-generated webfinger (template is checked in; rendered output is not)
 site/public/.well-known/webfinger
 
+# Transient media upload staging (same-fs as site/public so the move is atomic);
+# files here are moved/unlinked within the request and must never be committed.
+site/.media-staging/
+
 # ----------------------------------------------------------------------------
 # Node / npm / package managers
 #

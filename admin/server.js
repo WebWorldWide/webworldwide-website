@@ -236,12 +236,20 @@ app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 // to a fixed upstream proxy, so every client would share one bucket and
 // the limiter couldn't isolate a brute-forcer. CF-Connecting-IP is set by
 // Cloudflare and not client-spoofable through the tunnel.
-// Prefer Cloudflare's real client IP, falling back to req.ip. Pass it through
-// express-rate-limit's ipKeyGenerator so IPv6 addresses are normalized to a
-// subnet (required since express-rate-limit v8 — without it IPv6 clients can
-// each look unique and bypass the limit, and it logs a ValidationError).
-const clientIpKey = (/** @type {import('express').Request} */ req) =>
-  ipKeyGenerator(String(req.headers['cf-connecting-ip'] || req.ip || ''));
+// CF-Connecting-IP is authoritative ONLY when the request actually transited
+// the local proxy chain. The app binds 0.0.0.0, so a host reaching port 3000
+// directly (LAN, or an exposed/forwarded port) can spoof CF-Connecting-IP — and
+// with trust proxy on, X-Forwarded-For (req.ip) too — to land each request in a
+// fresh bucket and defeat the limiter entirely. So only honour the header when
+// the immediate TCP peer is loopback (the co-located cloudflared/Caddy); for any
+// other peer, key on the unspoofable socket address. ipKeyGenerator normalizes
+// IPv6 to a subnet (required since express-rate-limit v8).
+const clientIpKey = (/** @type {import('express').Request} */ req) => {
+  const peer = req.socket?.remoteAddress || '';
+  const trustedPeer = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+  const key = trustedPeer ? req.headers['cf-connecting-ip'] || peer : peer;
+  return ipKeyGenerator(String(key || ''));
+};
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
