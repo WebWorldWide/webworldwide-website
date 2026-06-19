@@ -1171,6 +1171,7 @@ body[data-page="editor"] {
   display: block;
   max-width: 100%;
   height: auto;
+  margin: 0; /* override the base .ProseMirror img { margin: 18px auto } */
   border-radius: var(--radius-xs);
 }
 /* Selected / hovered ring on the inner (image-sized) wrapper */
@@ -1191,11 +1192,13 @@ body[data-page="editor"] {
   border-radius: 4px;
   z-index: 5;
   opacity: 0;
+  pointer-events: none; /* invisible — don't eat clicks near the image edge */
   transition: opacity 0.1s;
 }
 .ProseMirror .te-image-outer.ProseMirror-selectednode .te-resize-handle,
 .ProseMirror .te-image-inner:hover .te-resize-handle {
   opacity: 0.85;
+  pointer-events: auto;
 }
 /* Caption slot — read-only span shown when caption attr is non-null */
 .te-image-caption {
