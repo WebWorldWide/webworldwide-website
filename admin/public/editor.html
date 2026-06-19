@@ -201,7 +201,7 @@
                     id="post-slug"
                     placeholder="post-slug"
                     autocomplete="off"
-                    aria-describedby="slug-help slug-msg"
+                    aria-describedby="slug-msg"
                   />
                   <button
                     type="button"
@@ -212,10 +212,6 @@
                   >
                     Match title
                   </button>
-                </div>
-                <div class="ed-slug-help" id="slug-help">
-                  Your post’s web address. It fills in from the title — edit it only if you want a
-                  different link.
                 </div>
                 <div class="ed-slug-msg" id="slug-msg" aria-live="polite"></div>
               </div>
@@ -363,18 +359,13 @@
                   <div class="field">
                     <label for="post-date">Publish date</label>
                     <input type="datetime-local" id="post-date" />
-                    <small class="ed-field-help">The date shown on the post.</small>
                   </div>
                   <div class="field">
                     <label for="post-draft">Status</label>
                     <select id="post-draft">
-                      <option value="true">Draft — only you can see it</option>
-                      <option value="false">Published — live for readers</option>
+                      <option value="true">Draft</option>
+                      <option value="false">Published</option>
                     </select>
-                    <small class="ed-field-help"
-                      >Drafts stay private. Set to Published and hit “Save &amp; publish” to put it
-                      on your site.</small
-                    >
                   </div>
                   <div class="field">
                     <label for="post-series">Series</label>
@@ -386,10 +377,6 @@
                       list="series-suggestions"
                     />
                     <datalist id="series-suggestions"></datalist>
-                    <small class="ed-field-help"
-                      >Optional. Groups related posts together. Leave blank if it stands
-                      alone.</small
-                    >
                   </div>
                 </div>
               </details>
@@ -405,16 +392,6 @@
                     <input type="datetime-local" id="post-publish-at" />
                     <span id="publish-at-badge" class="ed-publish-badge" hidden></span>
                   </div>
-                  <p
-                    style="
-                      margin: 4px 0 0;
-                      color: var(--fg-mute);
-                      font-size: 10.5px;
-                      letter-spacing: 0.06em;
-                    "
-                  >
-                    Drafts with a future publish_at flip live automatically.
-                  </p>
                 </div>
               </details>
 
@@ -506,17 +483,9 @@
                   <span>SEO &amp; sharing</span><span class="chev" aria-hidden="true">›</span>
                 </summary>
                 <div class="body">
-                  <small class="ed-field-help" style="margin: 0 0 8px"
-                    >Controls how this post looks in Google results and when shared on social media.
-                    All optional.</small
-                  >
                   <div class="field">
                     <label for="post-desc">Excerpt / summary</label>
-                    <textarea
-                      id="post-desc"
-                      rows="3"
-                      placeholder="The hook line shown under the title on the blog (and used for search/social cards). Leave blank for none."
-                    ></textarea>
+                    <textarea id="post-desc" rows="3" placeholder="Excerpt / hook line"></textarea>
                   </div>
                   <div class="field">
                     <label>Social preview</label>
@@ -573,21 +542,11 @@
                     class="btn ghost"
                     id="btn-history"
                     style="justify-content: center"
-                    title="See earlier versions of this post and restore one if you need to undo."
+                    title="Revision history"
                   >
                     <span class="ico" aria-hidden="true" data-icon="activity"></span>
                     Revision history
                   </button>
-                  <p
-                    style="
-                      margin: 4px 0 0;
-                      color: var(--fg-mute);
-                      font-size: 10.5px;
-                      letter-spacing: 0.06em;
-                    "
-                  >
-                    ⌘S saves. Autosave every 10s after typing stops. ⌘F finds / replaces.
-                  </p>
                 </div>
               </details>
             </aside>

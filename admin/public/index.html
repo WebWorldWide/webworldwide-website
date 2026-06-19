@@ -168,12 +168,7 @@
               rel="noopener noreferrer"
               >View site →</a
             >
-            <button
-              type="button"
-              class="btn"
-              id="btn-publish"
-              title="Rebuild your website so your latest published posts and changes go live."
-            >
+            <button type="button" class="btn" id="btn-publish" title="Rebuild and deploy the site">
               Publish site
             </button>
             <button type="button" class="btn solid" id="btn-new-post">+ New Post</button>
@@ -211,7 +206,7 @@
                   type="button"
                   class="btn primary"
                   id="btn-publish-2"
-                  title="Rebuild your website so your latest published posts and changes go live."
+                  title="Rebuild and deploy the site"
                 >
                   Publish site
                 </button>
@@ -587,52 +582,6 @@
               <div class="ov-date" id="ov-date">Loading…</div>
             </div>
 
-            <!-- First-run guide: a plain-language explainer of the whole flow,
-                 dismissible (remembered in localStorage) and re-openable. -->
-            <section
-              class="ov-guide"
-              id="ov-getting-started"
-              hidden
-              aria-labelledby="ov-guide-title"
-            >
-              <button
-                type="button"
-                class="ov-guide-x"
-                id="ov-guide-dismiss"
-                aria-label="Dismiss the getting-started guide"
-              >
-                <span class="ico" aria-hidden="true" data-icon="close"></span>
-              </button>
-              <h2 id="ov-guide-title" class="ov-guide-title">
-                👋 New here? This is how your blog works
-              </h2>
-              <ol class="”ov-guide-steps”">
-                <li>
-                  <b>Write it.</b> Click <b>+ New Post</b>, give it a title, and type your story —
-                  it saves itself as you go.
-                </li>
-                <li>
-                  <b>Pick who sees it.</b> Open <b>Post settings</b> in the right sidebar and set
-                  Status to <b>Published</b> when you’re ready for the world. (<b>Draft</b> keeps it
-                  hidden — even after publishing the site, drafts never appear publicly.)
-                </li>
-                <li>
-                  <b>Make it live.</b> Hit <b>Save &amp; publish</b> in the editor. That’s it — the
-                  button saves your post <em>and</em> rebuilds the whole site in one step. The
-                  editor shows a “Building… → View it live ↗” badge so you know it worked. Your post
-                  appears at <code>webworldwide.online/blog/…</code> in about 1–2 minutes.
-                </li>
-              </ol>
-              <p class="”ov-guide-foot”">
-                Tip: the <b>Publish site</b> button on this page rebuilds without opening a post —
-                handy after changing settings. Press <span class="”kbd”">?</span> any time for
-                keyboard shortcuts.
-              </p>
-            </section>
-            <button type="button" class="ov-guide-reopen" id="ov-guide-reopen" hidden>
-              New here? Read the 30-second guide →
-            </button>
-
             <div class="stat-row three" id="ov-stats" aria-label="Site stats">
               <div class="stat">
                 <div class="stat-label">Pageviews · 30d</div>
@@ -931,10 +880,6 @@ Type a command and press Enter.
           </button>
         </div>
         <div class="modal-body">
-          <p class="te-template-hint">
-            Pick a starting point — they just pre-fill some text you can change or delete. New here?
-            Choose <b>Blank</b>.
-          </p>
           <ul class="te-template-list">
             <li>
               <a href="/editor.html"><b>Blank</b><span>Start from scratch.</span></a>
