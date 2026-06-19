@@ -170,6 +170,10 @@ const CODE_LANGUAGES = [
 //   - `markdown-it-footnote` for `[^id]` references + `[^id]:` definitions
 const tokenizer = MarkdownIt('commonmark', { html: true })
   .enable('table')
+  // CommonMark disables strikethrough; re-enable it so the serializer's
+  // `~~…~~` output round-trips back to the strike mark (the `s` token is
+  // already mapped below) instead of decaying into escaped literal tildes.
+  .enable('strikethrough')
   .use(mdContainer, 'info')
   .use(mdContainer, 'tip')
   .use(mdContainer, 'warn')
@@ -342,6 +346,7 @@ function buildParser(schema) {
   const hasTable = Boolean(schema.nodes.table);
   const hasCallout = Boolean(schema.nodes.callout);
   const hasFootnote = Boolean(schema.nodes.footnoteRef);
+  const hasTaskList = Boolean(schema.nodes.taskList && schema.nodes.taskItem);
   const spec = { ...tokenSpec };
   if (hasUnderline) {
     spec.u = { mark: 'underline' };
@@ -365,6 +370,15 @@ function buildParser(schema) {
     delete spec.footnote_ref;
     delete spec.footnote_block;
     delete spec.footnote;
+  }
+  if (hasTaskList) {
+    // Synthetic tokens produced by detectTaskLists (below). `_open`/`_close`
+    // are handled by prosemirror-markdown; getAttrs sees the `_open` token.
+    spec.task_list = { block: 'taskList' };
+    spec.task_item = {
+      block: 'taskItem',
+      getAttrs: (tok) => ({ checked: Boolean(tok.meta && tok.meta.checked) }),
+    };
   }
   if (hasMath) {
     spec.math_inline = {
@@ -563,6 +577,71 @@ function buildParser(schema) {
     }
     return out;
   }
+  // Re-hydrate GFM task lists. The serializer emits a task list as a plain
+  // bullet list whose every item is prefixed `- [ ] ` / `- [x] `; markdown-it
+  // (CommonMark) has no task-list rule, so without this pass those checkboxes
+  // re-parse as literal "[ ]" text and a single mode toggle silently loses the
+  // task list (and its checked state). We convert a bullet list whose DIRECT
+  // items ALL start with a checkbox into task_list / task_item tokens, strip
+  // the marker, and carry `checked` through token.meta. A non-uniform list is
+  // left as an ordinary bullet list (matches GitHub; the editor only ever
+  // emits uniform task lists, so this is a true round-trip).
+  const TASK_PREFIX = /^\[([ xX])\]\s+/;
+  function detectTaskLists(toks) {
+    for (let i = 0; i < toks.length; i++) {
+      if (toks[i].type !== 'bullet_list_open') continue;
+      const level = toks[i].level;
+      let closeIdx = -1;
+      for (let k = i + 1; k < toks.length; k++) {
+        if (toks[k].type === 'bullet_list_close' && toks[k].level === level) {
+          closeIdx = k;
+          break;
+        }
+      }
+      if (closeIdx < 0) continue;
+      // Each DIRECT list item (level + 1) and the first inline token inside it.
+      const items = [];
+      for (let k = i + 1; k < closeIdx; k++) {
+        if (toks[k].type !== 'list_item_open' || toks[k].level !== level + 1) continue;
+        let inlineIdx = -1;
+        for (let m = k + 1; m < closeIdx; m++) {
+          if (toks[m].type === 'list_item_open' && toks[m].level === level + 1) break;
+          if (toks[m].type === 'inline') {
+            inlineIdx = m;
+            break;
+          }
+        }
+        const match = inlineIdx >= 0 ? TASK_PREFIX.exec(toks[inlineIdx].content || '') : null;
+        items.push({ openIdx: k, inlineIdx, match });
+      }
+      if (!items.length || !items.every((it) => it.match)) continue;
+      toks[i].type = 'task_list_open';
+      toks[closeIdx].type = 'task_list_close';
+      for (const it of items) {
+        toks[it.openIdx].type = 'task_item_open';
+        toks[it.openIdx].meta = Object.assign({}, toks[it.openIdx].meta, {
+          checked: /x/i.test(it.match[1]),
+        });
+        for (let k = it.openIdx + 1; k < closeIdx; k++) {
+          if (toks[k].type === 'list_item_close' && toks[k].level === level + 1) {
+            toks[k].type = 'task_item_close';
+            break;
+          }
+        }
+        const inl = toks[it.inlineIdx];
+        inl.content = (inl.content || '').replace(TASK_PREFIX, '');
+        if (inl.children) {
+          for (const c of inl.children) {
+            if (c.type === 'text') {
+              c.content = c.content.replace(TASK_PREFIX, '');
+              break;
+            }
+          }
+        }
+      }
+    }
+    return toks;
+  }
   const tokenize = (text, env) => {
     let tokens = tokenizer.parse(text || '', env || {});
     let TokCtor = null;
@@ -606,6 +685,9 @@ function buildParser(schema) {
     }
     if (hasTable) {
       tokens = preprocessTokens(tokens);
+    }
+    if (hasTaskList) {
+      tokens = detectTaskLists(tokens);
     }
     const TC = TokCtor || (tokens[0] && tokens[0].constructor);
     if (TC) tokens = splitBlockHtml(tokens, TC);
@@ -733,10 +815,11 @@ const nodeSerializers = {
   hardBreak(state, node, parent, index) {
     for (let i = index + 1; i < parent.childCount; i++) {
       if (parent.child(i).type !== node.type) {
-        // Spec: hardBreak serialises as bare `\n` (not "\\\n" or "<br>")
-        // so the round-trip stays stable through CommonMark's
-        // softbreak-as-text re-parse.
-        state.write('\n');
+        // A bare `\n` is a CommonMark SOFT break (renders as a space), so it
+        // silently dropped real hard breaks on every round-trip. The backslash
+        // form is the robust CommonMark hard break — it survives trailing-space
+        // stripping by editors/prettier and re-parses to a hardBreak node.
+        state.write('\\\n');
         return;
       }
     }
@@ -3676,12 +3759,37 @@ export function mount(rootEl, initialMarkdown, options) {
   // ── TipTap WYSIWYG ────────────────────────────────────────
   const extensions = buildExtensions(slashExt);
   extensions.push(keymapExt);
+  // A "pure media paste" is an image/video file on the clipboard with no
+  // accompanying text (e.g. a screenshot, or an image copied from Finder).
+  // Those must be uploaded to the media library — never inlined as a base64
+  // data: URI — so we block ProseMirror's default handling here (the only hook
+  // that reliably beats it) and let the host (editor.js) upload + insert via
+  // its existing pipeline. A paste that also carries text (a paragraph with an
+  // inline image, or a plain URL) is left to the normal path so nothing is
+  // lost. Drops of external files are likewise routed to upload.
+  const pasteIsPureMedia = (clip) => {
+    if (!clip) return false;
+    const hasMedia = Array.from(clip.files || []).some((f) =>
+      /^(image|video)\//.test(f.type || ''),
+    );
+    if (!hasMedia) return false;
+    const text = (clip.getData && clip.getData('text/plain')) || '';
+    return text.trim() === '';
+  };
+  const isExternalFileDrop = (event, moved) =>
+    !moved &&
+    Boolean(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length);
+
   const editor = new Editor({
     element: wysiwygMount,
     extensions,
     content: '',
     autofocus: false,
     editable: true,
+    editorProps: {
+      handlePaste: (_view, event) => pasteIsPureMedia(event.clipboardData),
+      handleDrop: (_view, event, _slice, moved) => isExternalFileDrop(event, moved),
+    },
   });
 
   const parser = buildParser(editor.schema);

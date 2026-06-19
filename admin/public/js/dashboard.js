@@ -450,6 +450,11 @@
           if (data && data.success === false) throw new Error(data.error || 'Publish failed');
           if (data && data.changed === false) {
             TE.toast('Nothing new to publish — your site is already up to date and live.');
+            // This early return skips the success/poll path that restores the
+            // button, so without re-enabling here it would stay stuck on
+            // "Rebuilding…" forever — and this is the common case.
+            btn.disabled = false;
+            btn.textContent = orig;
             return;
           }
           // Show a persistent status on the button while the build runs,
