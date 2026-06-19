@@ -229,93 +229,6 @@
 }
 
 /* ============================================================
-   FEATURED CARD
-   ============================================================ */
-.featured {
-  display: block;
-  margin-bottom: 26px;
-  color: var(--ink);
-  transition:
-    transform 0.14s ease,
-    box-shadow 0.14s ease;
-}
-.featured:hover,
-.featured:focus-visible {
-  transform: translate(-2px, -2px);
-  box-shadow: 10px 10px 0 var(--ink);
-}
-.featured .body {
-  padding: 26px 32px 30px;
-}
-.feat-flag {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--cherry-strong);
-  margin-bottom: 16px;
-}
-.feat-flag .stamp {
-  background: var(--cherry-strong);
-  color: #fff;
-  padding: 2px 8px;
-  box-shadow: 2px 2px 0 var(--ink);
-  letter-spacing: 0.2em;
-}
-.feat-title {
-  font-size: clamp(28px, 4.4vw, 50px);
-  margin: 0 0 16px;
-}
-.feat-excerpt {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 600;
-  font-size: 22px;
-  line-height: 1.45;
-  color: var(--ink-soft);
-  margin: 0 0 20px;
-  max-width: 64ch;
-  text-wrap: pretty;
-}
-.feat-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding-top: 16px;
-  border-top: 2px dashed var(--line-strong);
-}
-.feat-meta {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  color: var(--ink-soft);
-  font-variant-numeric: tabular-nums;
-}
-.feat-cta {
-  font-family: var(--font-pixel);
-  font-size: 20px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--cherry-strong);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.feat-cta .arrow {
-  transition: transform 0.18s ease;
-}
-.featured:hover .feat-cta .arrow,
-.featured:focus-visible .feat-cta .arrow {
-  transform: translateX(6px);
-}
-
-/* ============================================================
    POST CARDS — each post is its own terminal card
    ============================================================ */
 .post-grid {
@@ -847,9 +760,6 @@ a.pager-btn:focus-visible {
   }
   .masthead .body {
     padding: 24px 22px 26px;
-  }
-  .featured .body {
-    padding: 22px 20px 24px;
   }
   .post-card .body {
     padding: 16px 18px 18px;

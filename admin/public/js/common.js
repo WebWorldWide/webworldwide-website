@@ -10,6 +10,9 @@
  *   escape(str)                     // HTML-escape user-supplied text
  *   fmtBytes(n)                     // human-friendly bytes
  *   fmtUptime(seconds)              // "4h 11m" / "2d 3h"
+ *   fmtTs(ms)                       // epoch-ms → "just now" / "3h ago" / "YYYY-MM-DD"
+ *   csvField(v)                     // CSV-safe quoted field
+ *   WPM                             // words-per-minute constant (250) for reading time
  *   fetchJSON(url, opts)            // JSON fetch w/ session redirect on 401
  *   openModal(id) / closeModal(id)  // also installs Esc + focus-trap
  *
@@ -613,6 +616,33 @@
       });
     });
   }
+
+  // ── Shared utilities ───────────────────────────────────────
+  TE.WPM = 250;
+
+  /**
+   * Format an epoch-ms timestamp as a human-friendly relative string.
+   * @param {number | null | undefined} ms
+   * @returns {string}
+   */
+  TE.fmtTs = function fmtTs(ms) {
+    if (!ms) return '—';
+    const delta = Date.now() - ms;
+    if (delta < 0) return new Date(ms).toISOString().slice(0, 10);
+    if (delta < 60 * 1000) return 'just now';
+    if (delta < 3600 * 1000) return `${Math.floor(delta / 60000)}m ago`;
+    if (delta < 24 * 3600 * 1000) return `${Math.floor(delta / 3600000)}h ago`;
+    return new Date(ms).toISOString().slice(0, 10);
+  };
+
+  /**
+   * Escape a value for inclusion in a CSV field (double-quote wrapping).
+   * @param {unknown} v
+   * @returns {string}
+   */
+  TE.csvField = function csvField(v) {
+    return `"${String(v).replace(/"/g, '""')}"`;
+  };
 
   // ── Shared empty / loading / error states ──────────────────
   // One canonical look for each, reusing the existing `.empty`/`.e-mark`/

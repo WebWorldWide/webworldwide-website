@@ -29,7 +29,6 @@
 
   const onLogin =
     window.location.pathname === '/login.html' || window.location.pathname === '/login';
-  const onEditor = window.location.pathname.startsWith('/editor');
 
   function showAuthError(message) {
     const el = document.getElementById('auth-error');
@@ -265,9 +264,6 @@
       wirePasskeyLogin();
       checkStatus();
     } else {
-      // Skip status check on editor page only if you want — but editor
-      // currently doesn't have its own. We always gate.
-      void onEditor;
       wireLogout();
       wirePasskeyRegister();
       checkStatus();

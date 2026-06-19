@@ -59,17 +59,6 @@
     opened: false,
   };
 
-  // ── Time formatting (shared with activity.js style) ──────────
-  function fmtTs(ms) {
-    if (!ms) return '—';
-    const delta = Date.now() - ms;
-    if (delta < 0) return new Date(ms).toISOString().slice(0, 10);
-    if (delta < 60 * 1000) return 'just now';
-    if (delta < 3600 * 1000) return `${Math.floor(delta / 60000)}m ago`;
-    if (delta < 24 * 3600 * 1000) return `${Math.floor(delta / 3600000)}h ago`;
-    return new Date(ms).toISOString().slice(0, 10);
-  }
-
   function readLastVisit() {
     try {
       return Number(localStorage.getItem(LAST_VISIT_KEY)) || 0;
@@ -288,7 +277,7 @@
           <span class="excerpt">${escape(c.excerpt || '(no body)')}</span>
         </span>
         <span class="te-cm-status s-${escape(c.status)}">${escape(c.status)}</span>
-        <span class="te-cm-ts" title="${escape(new Date(c.ts).toISOString())}">${escape(fmtTs(c.ts))}</span>
+        <span class="te-cm-ts" title="${escape(new Date(c.ts).toISOString())}">${escape(TE.fmtTs(c.ts))}</span>
       `;
       // Row click / Enter / Space → drawer (but checkbox + its label don't
       // propagate as a row-open).
@@ -363,7 +352,7 @@
           <span class="excerpt">${escape(b.reason || 'no reason recorded')}</span>
         </span>
         <span class="te-cm-status s-spam">blocked</span>
-        <span class="te-cm-ts">${escape(fmtTs(b.created_at))}</span>
+        <span class="te-cm-ts">${escape(TE.fmtTs(b.created_at))}</span>
       `;
       const btn = document.createElement('button');
       btn.type = 'button';

@@ -39,9 +39,8 @@
   const draftEl = $('post-draft');
   const descEl = $('post-desc');
   const editorRoot = $('editor-root');
-  // Phase 3a: `bodyEl` is the façade returned by the bundle's mount().
-  // It quacks like the old <textarea> so the rest of this file (and
-  // media.bindUploader) keeps working unchanged.
+  // `bodyEl` is the façade returned by the bundle's mount() — quacks like
+  // the old <textarea> so the rest of this file keeps working unchanged.
   let bodyEl = $('editor-fallback');
   const btnSave = $('btn-save');
   const btnSave2 = $('btn-save-2');
@@ -62,14 +61,9 @@
   const spTitle = $('sp-title');
   const spDesc = $('sp-desc');
   const fileFoot = $('foot-file');
-  // Phase 3d: autosave status pip in the editor status bar + the
-  // existing "Saved/Unsaved/Saving…/Error saving" text used in the
-  // top bar and editor head.
   const autoEl = $('autosave-indicator');
   const autoTxt = $('autosave-text');
-  // Phase 3d: SEO preview panel (right-side aux column). All four
-  // elements are present in editor.html; refs may be null in test envs
-  // that mount editor.js outside the production HTML shell.
+  // SEO preview panel (right-side aux column). Refs may be null in test envs.
   const serpDomain = $('serp-domain');
   const serpSlug = $('serp-slug');
   const serpTitle = $('serp-title');
@@ -78,7 +72,6 @@
   const seoDescLen = $('seo-desc-len');
   const seoTitleBar = $('seo-title-bar');
   const seoDescBar = $('seo-desc-bar');
-  // Phase 3d: panel toggles (TOC + SEO).
   const btnTocToggle = $('btn-toc-toggle');
   const btnSeoToggle = $('btn-seo-toggle');
   const tocPanel = $('ed-toc-panel');
@@ -134,15 +127,9 @@
     if (sideStatus) sideStatus.textContent = isDraft ? 'Draft' : 'Published';
   }
 
-  // Phase 3d: reading-time formula bumped from 200 → 250 wpm (industry
-  // standard for prose-style content). Status bar also surfaces a
-  // character count alongside the existing word count.
   function computeMetrics() {
-    // Prefer the live TipTap textContent if available — strips
-    // Markdown punctuation we don't want to count as words.
-    // In Source (Markdown) mode the bundle deliberately doesn't round-trip
-    // CodeMirror edits into the TipTap doc until a mode switch, so the doc is
-    // stale while typing there — read the live façade value instead.
+    // In Source mode the bundle doesn't round-trip CodeMirror edits into the
+    // TipTap doc until a mode switch, so prefer the live façade value there.
     const inWysiwyg = !bodyEl?.getMode || bodyEl.getMode() === 'wysiwyg';
     const tipText =
       inWysiwyg && bodyEl && bodyEl._tiptap && bodyEl._tiptap.state
@@ -152,12 +139,11 @@
     const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
     const chars = text ? text.length : 0;
     const charsNoSpace = text ? text.replace(/\s+/g, '').length : 0;
-    const mins = words ? Math.max(1, Math.round(words / 250)) : 0;
+    const mins = words ? Math.max(1, Math.round(words / TE.WPM)) : 0;
     return { words, chars, charsNoSpace, mins };
   }
 
-  // Phase 3d: throttle metric updates via rAF — large pastes can fire
-  // dozens of input events per frame.
+  // Throttle metric updates via rAF — large pastes fire dozens of input events per frame.
   let metricsFrame = null;
   function updateMetrics() {
     if (metricsFrame) return;

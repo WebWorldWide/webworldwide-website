@@ -401,8 +401,7 @@
       }
       if (sys) sys.textContent = anyBad ? 'DEGRADED' : anyWarn ? 'WARN' : 'OK';
 
-      // Backup line — Phase 5e: color-code based on age. stale (>36h)
-      // shows in --danger, warn (>24h) in --warn, ok in --fg-dim.
+      // Color-code backup age: stale (>36h) → danger, warn (>24h) → warn.
       const backup = $('backup-status');
       if (backup) {
         const status = data?.backup?.status;
@@ -514,7 +513,7 @@
     });
   }
 
-  // ── Inbox widget (Phase 8.5) ──────────────────────────────
+  // ── Inbox widget ──────────────────────────────────────────
   async function loadInbox() {
     const host = $('inbox-grid');
     if (!host) return;
