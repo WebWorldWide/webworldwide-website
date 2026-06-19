@@ -260,7 +260,7 @@ const tokenSpec = {
         (tok.children && tok.children[0] && tok.children[0].content) || tok.attrGet('alt') || null,
       align: tok.attrGet('align') || null,
       width: tok.attrGet('width') ? Number(tok.attrGet('width')) : null,
-      caption: tok.attrGet('caption') != null ? tok.attrGet('caption') : null,
+      caption: tok.attrGet('caption') !== null ? tok.attrGet('caption') : null,
     }),
   },
   attachment: { node: 'attachment', getAttrs: (tok) => ({ id: tok.content || '' }) },
@@ -275,9 +275,9 @@ const tokenSpec = {
       webm: (tok.meta && tok.meta.webm) || '',
       poster: (tok.meta && tok.meta.poster) || '',
       src: (tok.meta && tok.meta.src) || '',
-      autoplay: !!(tok.meta && tok.meta.autoplay),
-      muted: !!(tok.meta && tok.meta.muted),
-      loop: !!(tok.meta && tok.meta.loop),
+      autoplay: Boolean(tok.meta && tok.meta.autoplay),
+      muted: Boolean(tok.meta && tok.meta.muted),
+      loop: Boolean(tok.meta && tok.meta.loop),
     }),
   },
   embed: {
@@ -790,10 +790,11 @@ const nodeSerializers = {
   },
   image(state, node) {
     const { align, width, caption } = node.attrs;
-    const hasCaption = caption !== null && caption !== undefined;
-    // Any extra attribute (align, width, caption) requires a <figure> wrapper.
-    // A plain image with none of these serialises as `![alt](url)` — unchanged.
-    if (align || width || hasCaption) {
+    // Non-empty caption, explicit width, or alignment all require a <figure> wrapper.
+    // Plain image with none of these serialises as `![alt](url)` unchanged.
+    const captionText = (caption !== null && caption !== undefined && String(caption).trim() !== '')
+      ? String(caption).trim() : null;
+    if (align || width || captionText !== null) {
       const src = htmlAttrEscape(node.attrs.src || '');
       const altAttr = node.attrs.alt ? ' alt="' + htmlAttrEscape(node.attrs.alt) + '"' : ' alt=""';
       const titleAttr = node.attrs.title ? ' title="' + htmlAttrEscape(node.attrs.title) + '"' : '';
@@ -802,7 +803,7 @@ const nodeSerializers = {
       const classAttr = align ? ' class="img-align-' + align + '"' : '';
       // `loading`/`decoding` baked in — Astro emits markdown raw HTML verbatim
       // so the lazy-image rehype pass can't reach inside a raw block.
-      const figcaption = hasCaption ? '<figcaption>' + htmlAttrEscape(caption || '') + '</figcaption>' : '';
+      const figcaption = captionText !== null ? '<figcaption>' + htmlAttrEscape(captionText) + '</figcaption>' : '';
       state.write(
         '<figure' + classAttr + styleAttr + '><img src="' + src + '"' + altAttr + titleAttr +
         ' loading="lazy" decoding="async">' + figcaption + '</figure>',
@@ -2098,12 +2099,16 @@ const Attachment = Node.create({
  * and an optional <span.te-image-caption> when caption attr is non-null.
  */
 function imageNodeView({ node, getPos, editor }) {
-  let currentAttrs = { ...node.attrs };
-
   const outer = document.createElement('span');
   outer.className = 'te-image-outer';
   outer.setAttribute('contenteditable', 'false');
   if (node.attrs.align) outer.setAttribute('data-align', node.attrs.align);
+
+  // inner: inline-block wrapper sized exactly to the image so the drag
+  // handle can use position:absolute relative to the image edge, not the
+  // full-width outer block.
+  const inner = document.createElement('span');
+  inner.className = 'te-image-inner';
 
   const img = document.createElement('img');
   img.className = 'te-image-img';
@@ -2113,7 +2118,6 @@ function imageNodeView({ node, getPos, editor }) {
   if (node.attrs.width) img.style.width = node.attrs.width + 'px';
   img.setAttribute('draggable', 'false');
 
-  // Drag-resize handle on the right edge
   const handle = document.createElement('span');
   handle.className = 'te-resize-handle';
   handle.setAttribute('aria-hidden', 'true');
@@ -2121,7 +2125,7 @@ function imageNodeView({ node, getPos, editor }) {
     e.preventDefault();
     e.stopPropagation();
     const startX = e.clientX;
-    const startW = img.getBoundingClientRect().width;
+    const startW = img.getBoundingClientRect().width || img.naturalWidth || 200;
     handle.setPointerCapture(e.pointerId);
     const onMove = (ev) => {
       img.style.width = Math.max(60, Math.round(startW + (ev.clientX - startX))) + 'px';
@@ -2132,8 +2136,12 @@ function imageNodeView({ node, getPos, editor }) {
       handle.removeEventListener('pointerup', onUp);
       const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
       if (typeof getPos === 'function') {
-        editor.chain().command(({ tr }) => {
-          tr.setNodeMarkup(getPos(), undefined, { ...currentAttrs, width: w });
+        editor.chain().command(({ tr, state }) => {
+          const pos = getPos();
+          if (typeof pos !== 'number') return false;
+          const n = state.doc.nodeAt(pos);
+          if (!n || n.type.name !== 'image') return false;
+          tr.setNodeMarkup(pos, undefined, { ...n.attrs, width: w });
           return true;
         }).run();
       }
@@ -2142,31 +2150,18 @@ function imageNodeView({ node, getPos, editor }) {
     handle.addEventListener('pointerup', onUp);
   });
 
-  outer.appendChild(img);
-  outer.appendChild(handle);
+  inner.appendChild(img);
+  inner.appendChild(handle);
+  outer.appendChild(inner);
 
-  // Caption: non-null means the caption slot exists (may be empty string)
+  // Caption: read-only span; edited via the toolbar "Caption" prompt button.
+  // Never set contentEditable here — it would cause ProseMirror to lose the
+  // NodeSelection and hide the toolbar the moment the caption appears.
   let cap = null;
   function createCaption(text) {
     const el = document.createElement('span');
     el.className = 'te-image-caption';
-    el.contentEditable = 'true';
-    el.setAttribute('role', 'textbox');
-    el.setAttribute('aria-label', 'Image caption');
-    el.setAttribute('data-placeholder', 'Add a caption…');
-    el.textContent = text;
-    el.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); }
-      ev.stopPropagation(); // don't let keystrokes hit ProseMirror
-    });
-    el.addEventListener('blur', () => {
-      if (typeof getPos === 'function') {
-        editor.chain().command(({ tr }) => {
-          tr.setNodeMarkup(getPos(), undefined, { ...currentAttrs, caption: el.textContent || '' });
-          return true;
-        }).run();
-      }
-    });
+    el.textContent = text || '';
     return el;
   }
   if (node.attrs.caption !== null && node.attrs.caption !== undefined) {
@@ -2185,7 +2180,6 @@ function imageNodeView({ node, getPos, editor }) {
       img.style.width = updatedNode.attrs.width ? updatedNode.attrs.width + 'px' : '';
       if (updatedNode.attrs.align) outer.setAttribute('data-align', updatedNode.attrs.align);
       else outer.removeAttribute('data-align');
-      // Handle caption slot appearing or disappearing
       const hasCaption = updatedNode.attrs.caption !== null && updatedNode.attrs.caption !== undefined;
       if (cap && !hasCaption) {
         cap.remove();
@@ -2193,10 +2187,9 @@ function imageNodeView({ node, getPos, editor }) {
       } else if (!cap && hasCaption) {
         cap = createCaption(updatedNode.attrs.caption || '');
         outer.appendChild(cap);
-      } else if (cap && document.activeElement !== cap) {
+      } else if (cap) {
         cap.textContent = updatedNode.attrs.caption || '';
       }
-      currentAttrs = { ...updatedNode.attrs };
       return true;
     },
   };
@@ -4813,7 +4806,8 @@ export function mount(rootEl, initialMarkdown, options) {
   richToolbar.appendChild(gTable);
 
   // ─── Image contextual group ────────────────────────────────
-  richToolbar.appendChild(tbDivider());
+  const gImageDivider = tbDivider();
+  richToolbar.appendChild(gImageDivider);
   const gImage = tbGroup('Image options');
   gImage.classList.add('te-tb-image-group');
   function imgAlignBtn(label, icon, align) {
@@ -4833,22 +4827,27 @@ export function mount(rootEl, initialMarkdown, options) {
   gImage.appendChild(imgAlignBtn('Align image right', 'align_right', 'right'));
   gImage.appendChild(imgAlignBtn('Full-width image', 'align_full', 'full'));
   gImage.appendChild(imgAlignBtn('Reset image alignment', 'align_none', null));
-  // Caption toggle
+  // Caption — prompt-based so no contenteditable in the NodeView fights ProseMirror
   gImage.appendChild(
     tbBtn({
-      label: 'Toggle caption',
+      label: 'Caption',
       shortcut: '',
       icon: 'caption',
       className: 'te-tb-img-caption',
       canRun: () => editor.isActive('image'),
       active: () => {
+        if (!editor.isActive('image')) return false;
         const a = editor.getAttributes('image');
         return a.caption !== null && a.caption !== undefined;
       },
       run: () => {
         const a = editor.getAttributes('image');
-        const hasCaption = a.caption !== null && a.caption !== undefined;
-        editor.chain().focus().updateAttributes('image', { caption: hasCaption ? null : '' }).run();
+        const current = (a.caption !== null && a.caption !== undefined) ? a.caption : '';
+        const next = window.prompt('Image caption (clear to remove):', current);
+        if (next === null) return;
+        editor.chain().focus().updateAttributes('image', {
+          caption: next.trim() === '' ? null : next.trim(),
+        }).run();
       },
     }),
   );
@@ -4871,7 +4870,8 @@ export function mount(rootEl, initialMarkdown, options) {
   richToolbar.appendChild(gImage);
 
   // ─── Video contextual group ────────────────────────────────
-  richToolbar.appendChild(tbDivider());
+  const gVideoDivider = tbDivider();
+  richToolbar.appendChild(gVideoDivider);
   const gVideo = tbGroup('Video options');
   gVideo.classList.add('te-tb-video-group');
   function videoAttrBtn(label, icon, attr) {
@@ -4881,7 +4881,7 @@ export function mount(rootEl, initialMarkdown, options) {
       icon,
       className: 'te-tb-video-attr',
       canRun: () => editor.isActive('video'),
-      active: () => !!(editor.isActive('video') && editor.getAttributes('video')[attr]),
+      active: () => Boolean(editor.isActive('video') && editor.getAttributes('video')[attr]),
       run: () => {
         const cur = editor.getAttributes('video')[attr];
         editor.chain().focus().updateAttributes('video', { [attr]: !cur }).run();
@@ -4931,8 +4931,10 @@ export function mount(rootEl, initialMarkdown, options) {
     gCode.classList.toggle('is-hidden', !inCode);
     gImage.classList.toggle('is-visible', onImage);
     gImage.classList.toggle('is-hidden', !onImage);
+    gImageDivider.classList.toggle('is-hidden', !onImage);
     gVideo.classList.toggle('is-visible', onVideo);
     gVideo.classList.toggle('is-hidden', !onVideo);
+    gVideoDivider.classList.toggle('is-hidden', !onVideo);
     if (inCode) {
       const attrs = editor.getAttributes('codeBlock');
       const lang = attrs && attrs.language ? String(attrs.language) : '';

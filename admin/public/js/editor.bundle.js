@@ -69038,7 +69038,7 @@ ${prefix}
         alt: tok.children && tok.children[0] && tok.children[0].content || tok.attrGet("alt") || null,
         align: tok.attrGet("align") || null,
         width: tok.attrGet("width") ? Number(tok.attrGet("width")) : null,
-        caption: tok.attrGet("caption") != null ? tok.attrGet("caption") : null
+        caption: tok.attrGet("caption") !== null ? tok.attrGet("caption") : null
       })
     },
     attachment: { node: "attachment", getAttrs: (tok) => ({ id: tok.content || "" }) },
@@ -69053,9 +69053,9 @@ ${prefix}
         webm: tok.meta && tok.meta.webm || "",
         poster: tok.meta && tok.meta.poster || "",
         src: tok.meta && tok.meta.src || "",
-        autoplay: !!(tok.meta && tok.meta.autoplay),
-        muted: !!(tok.meta && tok.meta.muted),
-        loop: !!(tok.meta && tok.meta.loop)
+        autoplay: Boolean(tok.meta && tok.meta.autoplay),
+        muted: Boolean(tok.meta && tok.meta.muted),
+        loop: Boolean(tok.meta && tok.meta.loop)
       })
     },
     embed: {
@@ -69477,14 +69477,14 @@ ${prefix}
     },
     image(state, node) {
       const { align, width, caption } = node.attrs;
-      const hasCaption = caption !== null && caption !== void 0;
-      if (align || width || hasCaption) {
+      const captionText = caption !== null && caption !== void 0 && String(caption).trim() !== "" ? String(caption).trim() : null;
+      if (align || width || captionText !== null) {
         const src = htmlAttrEscape(node.attrs.src || "");
         const altAttr = node.attrs.alt ? ' alt="' + htmlAttrEscape(node.attrs.alt) + '"' : ' alt=""';
         const titleAttr = node.attrs.title ? ' title="' + htmlAttrEscape(node.attrs.title) + '"' : "";
         const styleAttr = width ? ' style="max-width:' + width + 'px"' : "";
         const classAttr = align ? ' class="img-align-' + align + '"' : "";
-        const figcaption = hasCaption ? "<figcaption>" + htmlAttrEscape(caption || "") + "</figcaption>" : "";
+        const figcaption = captionText !== null ? "<figcaption>" + htmlAttrEscape(captionText) + "</figcaption>" : "";
         state.write(
           "<figure" + classAttr + styleAttr + '><img src="' + src + '"' + altAttr + titleAttr + ' loading="lazy" decoding="async">' + figcaption + "</figure>"
         );
@@ -70459,11 +70459,12 @@ $$`
     }
   });
   function imageNodeView({ node, getPos, editor }) {
-    let currentAttrs = { ...node.attrs };
     const outer = document.createElement("span");
     outer.className = "te-image-outer";
     outer.setAttribute("contenteditable", "false");
     if (node.attrs.align) outer.setAttribute("data-align", node.attrs.align);
+    const inner = document.createElement("span");
+    inner.className = "te-image-inner";
     const img = document.createElement("img");
     img.className = "te-image-img";
     img.src = node.attrs.src || "";
@@ -70478,7 +70479,7 @@ $$`
       e.preventDefault();
       e.stopPropagation();
       const startX = e.clientX;
-      const startW = img.getBoundingClientRect().width;
+      const startW = img.getBoundingClientRect().width || img.naturalWidth || 200;
       handle.setPointerCapture(e.pointerId);
       const onMove = (ev) => {
         img.style.width = Math.max(60, Math.round(startW + (ev.clientX - startX))) + "px";
@@ -70489,8 +70490,12 @@ $$`
         handle.removeEventListener("pointerup", onUp);
         const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
         if (typeof getPos === "function") {
-          editor.chain().command(({ tr: tr2 }) => {
-            tr2.setNodeMarkup(getPos(), void 0, { ...currentAttrs, width: w });
+          editor.chain().command(({ tr: tr2, state }) => {
+            const pos = getPos();
+            if (typeof pos !== "number") return false;
+            const n = state.doc.nodeAt(pos);
+            if (!n || n.type.name !== "image") return false;
+            tr2.setNodeMarkup(pos, void 0, { ...n.attrs, width: w });
             return true;
           }).run();
         }
@@ -70498,32 +70503,14 @@ $$`
       handle.addEventListener("pointermove", onMove);
       handle.addEventListener("pointerup", onUp);
     });
-    outer.appendChild(img);
-    outer.appendChild(handle);
+    inner.appendChild(img);
+    inner.appendChild(handle);
+    outer.appendChild(inner);
     let cap = null;
     function createCaption(text2) {
       const el = document.createElement("span");
       el.className = "te-image-caption";
-      el.contentEditable = "true";
-      el.setAttribute("role", "textbox");
-      el.setAttribute("aria-label", "Image caption");
-      el.setAttribute("data-placeholder", "Add a caption\u2026");
-      el.textContent = text2;
-      el.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") {
-          ev.preventDefault();
-          el.blur();
-        }
-        ev.stopPropagation();
-      });
-      el.addEventListener("blur", () => {
-        if (typeof getPos === "function") {
-          editor.chain().command(({ tr: tr2 }) => {
-            tr2.setNodeMarkup(getPos(), void 0, { ...currentAttrs, caption: el.textContent || "" });
-            return true;
-          }).run();
-        }
-      });
+      el.textContent = text2 || "";
       return el;
     }
     if (node.attrs.caption !== null && node.attrs.caption !== void 0) {
@@ -70548,10 +70535,9 @@ $$`
         } else if (!cap && hasCaption) {
           cap = createCaption(updatedNode.attrs.caption || "");
           outer.appendChild(cap);
-        } else if (cap && document.activeElement !== cap) {
+        } else if (cap) {
           cap.textContent = updatedNode.attrs.caption || "";
         }
-        currentAttrs = { ...updatedNode.attrs };
         return true;
       }
     };
@@ -72692,7 +72678,8 @@ $$`;
       tableBtn("Delete table", "\u232B", () => editor.chain().focus().deleteTable().run())
     );
     richToolbar.appendChild(gTable);
-    richToolbar.appendChild(tbDivider());
+    const gImageDivider = tbDivider();
+    richToolbar.appendChild(gImageDivider);
     const gImage = tbGroup("Image options");
     gImage.classList.add("te-tb-image-group");
     function imgAlignBtn(label, icon, align) {
@@ -72713,19 +72700,24 @@ $$`;
     gImage.appendChild(imgAlignBtn("Reset image alignment", "align_none", null));
     gImage.appendChild(
       tbBtn({
-        label: "Toggle caption",
+        label: "Caption",
         shortcut: "",
         icon: "caption",
         className: "te-tb-img-caption",
         canRun: () => editor.isActive("image"),
         active: () => {
+          if (!editor.isActive("image")) return false;
           const a = editor.getAttributes("image");
           return a.caption !== null && a.caption !== void 0;
         },
         run: () => {
           const a = editor.getAttributes("image");
-          const hasCaption = a.caption !== null && a.caption !== void 0;
-          editor.chain().focus().updateAttributes("image", { caption: hasCaption ? null : "" }).run();
+          const current = a.caption !== null && a.caption !== void 0 ? a.caption : "";
+          const next = window.prompt("Image caption (clear to remove):", current);
+          if (next === null) return;
+          editor.chain().focus().updateAttributes("image", {
+            caption: next.trim() === "" ? null : next.trim()
+          }).run();
         }
       })
     );
@@ -72745,7 +72737,8 @@ $$`;
       })
     );
     richToolbar.appendChild(gImage);
-    richToolbar.appendChild(tbDivider());
+    const gVideoDivider = tbDivider();
+    richToolbar.appendChild(gVideoDivider);
     const gVideo = tbGroup("Video options");
     gVideo.classList.add("te-tb-video-group");
     function videoAttrBtn(label, icon, attr) {
@@ -72755,7 +72748,7 @@ $$`;
         icon,
         className: "te-tb-video-attr",
         canRun: () => editor.isActive("video"),
-        active: () => !!(editor.isActive("video") && editor.getAttributes("video")[attr]),
+        active: () => Boolean(editor.isActive("video") && editor.getAttributes("video")[attr]),
         run: () => {
           const cur = editor.getAttributes("video")[attr];
           editor.chain().focus().updateAttributes("video", { [attr]: !cur }).run();
@@ -72797,8 +72790,10 @@ $$`;
       gCode.classList.toggle("is-hidden", !inCode);
       gImage.classList.toggle("is-visible", onImage);
       gImage.classList.toggle("is-hidden", !onImage);
+      gImageDivider.classList.toggle("is-hidden", !onImage);
       gVideo.classList.toggle("is-visible", onVideo);
       gVideo.classList.toggle("is-hidden", !onVideo);
+      gVideoDivider.classList.toggle("is-hidden", !onVideo);
       if (inCode) {
         const attrs2 = editor.getAttributes("codeBlock");
         const lang = attrs2 && attrs2.language ? String(attrs2.language) : "";
