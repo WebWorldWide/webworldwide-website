@@ -1,12 +1,17 @@
 /* ============================================================
    Self-hosted fonts via @fontsource
    ============================================================ */
-@import "@fontsource/cormorant-garamond/400.css";
-@import "@fontsource/cormorant-garamond/500.css";
-@import "@fontsource/cormorant-garamond/600.css";
-@import "@fontsource/cormorant-garamond/700.css";
-@import "@fontsource/cormorant-garamond/400-italic.css";
-@import "@fontsource/cormorant-garamond/500-italic.css";
-@import "@fontsource/space-mono/400.css";
-@import "@fontsource/space-mono/700.css";
-@import "@fontsource/vt323/400.css";
+/* Latin-only subsets: the site renders English text exclusively, so the
+   latin-ext / cyrillic / vietnamese @font-face rules in the full imports were
+   ~30 of 39 rules of dead weight in the shared, render-blocking BaseLayout
+   stylesheet. The few non-Latin-1 symbols in content (→ ★) aren't in any
+   @fontsource subset anyway and already fall back to a system glyph. */
+@import "@fontsource/cormorant-garamond/latin-400.css";
+@import "@fontsource/cormorant-garamond/latin-500.css";
+@import "@fontsource/cormorant-garamond/latin-600.css";
+@import "@fontsource/cormorant-garamond/latin-700.css";
+@import "@fontsource/cormorant-garamond/latin-400-italic.css";
+@import "@fontsource/cormorant-garamond/latin-500-italic.css";
+@import "@fontsource/space-mono/latin-400.css";
+@import "@fontsource/space-mono/latin-700.css";
+@import "@fontsource/vt323/latin-400.css";

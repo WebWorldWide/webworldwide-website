@@ -10,9 +10,9 @@
  * any sw.js change to force clients to refresh.
  */
 // Bump on any sw.js change OR when the immutable asset hash strategy
-// changes. v2: tree-shaken Three.js + preconnect hints + admin a11y
-// shim; old entries are evicted on activate.
-const WWW_CACHE_VERSION = 'v2';
+// changes. v3: latin-only font subsets + font preload (CSS/font hashes
+// changed); old entries are evicted on activate.
+const WWW_CACHE_VERSION = 'v3';
 const STATIC_CACHE = `www-static-${WWW_CACHE_VERSION}`;
 const HTML_CACHE = `www-html-${WWW_CACHE_VERSION}`;
 const ALL_CACHES = [STATIC_CACHE, HTML_CACHE];
