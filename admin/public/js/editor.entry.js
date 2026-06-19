@@ -562,6 +562,7 @@ function buildParser(schema) {
             /\bmax-width\s*:\s*(\d+)px/i.exec(imgTag) ||
             /\bmax-width\s*:\s*(\d+)px/i.exec(figAttrs);
           const captionM = /<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i.exec(figBody);
+          const captionText = captionM ? htmlAttrUnescape(captionM[1]).trim() : '';
           const pOpen = new TokCtor('paragraph_open', 'p', 1);
           pOpen.block = true;
           const imgTok = new TokCtor('image', 'img', 0);
@@ -570,7 +571,7 @@ function buildParser(schema) {
           if (titleM) imgTok.attrSet('title', htmlAttrUnescape(titleM[1]));
           if (alignM) imgTok.attrSet('align', alignM[1]);
           if (widthM) imgTok.attrSet('width', widthM[1]);
-          if (captionM) imgTok.attrSet('caption', captionM[1].trim());
+          if (captionText !== '') imgTok.attrSet('caption', captionText);
           imgTok.children = [];
           const pClose = new TokCtor('paragraph_close', 'p', -1);
           pClose.block = true;
@@ -2164,8 +2165,10 @@ function imageNodeView({ node, getPos, editor }) {
     el.textContent = text || '';
     return el;
   }
-  if (node.attrs.caption !== null && node.attrs.caption !== undefined) {
-    cap = createCaption(node.attrs.caption || '');
+  const initCap = node.attrs.caption !== null && node.attrs.caption !== undefined
+    ? String(node.attrs.caption).trim() : '';
+  if (initCap !== '') {
+    cap = createCaption(initCap);
     outer.appendChild(cap);
   }
 
@@ -2180,15 +2183,17 @@ function imageNodeView({ node, getPos, editor }) {
       img.style.width = updatedNode.attrs.width ? updatedNode.attrs.width + 'px' : '';
       if (updatedNode.attrs.align) outer.setAttribute('data-align', updatedNode.attrs.align);
       else outer.removeAttribute('data-align');
-      const hasCaption = updatedNode.attrs.caption !== null && updatedNode.attrs.caption !== undefined;
+      const newCap = updatedNode.attrs.caption !== null && updatedNode.attrs.caption !== undefined
+        ? String(updatedNode.attrs.caption).trim() : '';
+      const hasCaption = newCap !== '';
       if (cap && !hasCaption) {
         cap.remove();
         cap = null;
       } else if (!cap && hasCaption) {
-        cap = createCaption(updatedNode.attrs.caption || '');
+        cap = createCaption(newCap);
         outer.appendChild(cap);
       } else if (cap) {
-        cap.textContent = updatedNode.attrs.caption || '';
+        cap.textContent = newCap;
       }
       return true;
     },
@@ -2223,7 +2228,20 @@ function videoNodeView(node) {
   } else if (node.attrs.src) {
     dom.setAttribute('src', node.attrs.src);
   }
-  return { dom };
+  return {
+    dom,
+    update(updatedNode) {
+      if (updatedNode.type.name !== 'video') return false;
+      // Only boolean playback attrs change in the editor; sources are fixed at insert.
+      if (updatedNode.attrs.autoplay) dom.setAttribute('autoplay', '');
+      else dom.removeAttribute('autoplay');
+      if (updatedNode.attrs.muted) dom.setAttribute('muted', '');
+      else dom.removeAttribute('muted');
+      if (updatedNode.attrs.loop) dom.setAttribute('loop', '');
+      else dom.removeAttribute('loop');
+      return true;
+    },
+  };
 }
 
 /**
