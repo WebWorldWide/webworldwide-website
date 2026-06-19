@@ -12,6 +12,16 @@
   box-sizing: border-box;
 }
 
+/* Honor the `hidden` attribute even when a component sets its own `display`.
+   An author `display` rule otherwise defeats the UA `[hidden]` rule (and ties
+   it on specificity but wins on source order), which left empty bordered pills
+   (.ed-deploy, .ed-publish-badge) rendering before they had content. Every
+   show-path in the codebase clears the attribute via `el.hidden = false`, so
+   this is a safe global net. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   height: 100%;

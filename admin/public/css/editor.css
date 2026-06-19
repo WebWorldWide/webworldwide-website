@@ -90,6 +90,9 @@ body[data-page="editor"] {
   align-items: center;
   gap: 6px;
 }
+.ed-deploy[hidden] {
+  display: none;
+}
 .ed-deploy.building {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
@@ -1991,6 +1994,9 @@ body[data-page="editor"] {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+.ed-publish-badge[hidden] {
+  display: none;
+}
 
 #preview-link-out {
   margin-top: 8px;
@@ -2195,20 +2201,6 @@ body[data-page="editor"] {
   letter-spacing: 0.02em;
   margin-top: 4px;
   min-height: 14px;
-  color: var(--ink-mute);
-}
-/* Plain-language helper text under editor fields (first-timer guidance). */
-.ed-slug-help {
-  margin-top: 4px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--ink-mute);
-}
-.ed-field-help {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  line-height: 1.4;
   color: var(--ink-mute);
 }
 .ed-slug-msg.ok {
