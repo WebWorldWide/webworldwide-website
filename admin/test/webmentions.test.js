@@ -376,8 +376,11 @@ test('admin approve + feed surfaces the mention', skipOpts(), async () => {
   // "approved after validate" test above (id known via list).
   const list = await (await fetch(`${adminUrl}/api/webmentions`)).json();
   assert.ok(list.length > 0);
+  // Targets are now stored normalised (no trailing slash / fragment) so storage
+  // and the feed lookup share one canonical key.
   const reply = list.find(
-    (r) => r.target === 'https://webworldwide.online/hello-world/' && r.type === 'reply',
+    (r) =>
+      r.target === normaliseUrl('https://webworldwide.online/hello-world/') && r.type === 'reply',
   );
   assert.ok(reply, 'expected reply row from earlier test');
 

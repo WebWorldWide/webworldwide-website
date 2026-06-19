@@ -223,7 +223,15 @@ router.post('/:filename/duplicate', (req, res) => {
     const raw = readFileSync(srcPath, 'utf-8');
     const { data, content } = parsePost(raw);
 
-    const baseSlug = String(data.slug || src.replace(/\.md$/, ''));
+    // Sanitize like CREATE/UPDATE — the source frontmatter `slug` can carry
+    // path separators/traversal (e.g. from a git pull or external edit), and it
+    // flows straight into the write path. Never let a clone escape postsDir.
+    const baseSlug = path.basename(slugify(String(data.slug || src.replace(/\.md$/, ''))));
+    if (!baseSlug) {
+      return res
+        .status(400)
+        .json({ error: 'invalid_slug', message: 'Source post has no usable slug to duplicate.' });
+    }
     const suffix = 'copy';
     let candidate = `${baseSlug}-${suffix}`;
     let i = 1;
@@ -437,12 +445,17 @@ function rewriteSlugLinksEverywhere(oldSlug, newSlug) {
  *
  * @param {string} oldSlug
  * @param {string} newSlug
- * @returns {{ redirected: Array<{from:string,to:string}>, linksUpdated: number }}
+ * @returns {{ redirected: Array<{from:string,to:string}>, linksUpdated: number, warnings: string[] }}
  */
 function applySlugRename(oldSlug, newSlug) {
   const report = {
     redirected: /** @type {Array<{from:string,to:string}>} */ ([]),
     linksUpdated: 0,
+    // Side effects are best-effort and never fail the save, but a swallowed
+    // failure is otherwise indistinguishable from "nothing to do" — so we
+    // record it here and the editor surfaces a non-blocking warning, since a
+    // missing redirect means the old public URL will 404.
+    warnings: /** @type {string[]} */ ([]),
   };
   try {
     const rows = readRedirects();
@@ -456,11 +469,13 @@ function applySlugRename(oldSlug, newSlug) {
     if (b) report.redirected.push(b);
   } catch (err) {
     console.warn('[posts] rename redirect failed:', err instanceof Error ? err.message : err);
+    report.warnings.push('redirect');
   }
   try {
     report.linksUpdated = rewriteSlugLinksEverywhere(oldSlug, newSlug);
   } catch (err) {
     console.warn('[posts] rename link rewrite failed:', err instanceof Error ? err.message : err);
+    report.warnings.push('links');
   }
   return report;
 }

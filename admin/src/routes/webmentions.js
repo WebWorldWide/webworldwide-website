@@ -416,19 +416,42 @@ publicRouter.post('/', async (req, res) => {
   if (v.ok !== true) {
     return res.status(v.status).json({ error: v.error });
   }
-  const id = nanoid();
+  // Normalise the target so storage and the feed lookup share one canonical key.
+  // The feed normalises the QUERY but matched it against the raw stored value,
+  // so a stored fragment/trailing-slash variant (Bridgy Fed appends fragments)
+  // never matched → an approved mention silently never displayed.
+  const normTarget = normaliseUrl(v.target);
   // Phase 9: detect bsky.app source URLs and capture the AT URI so the
   // admin can mirror replies back to the Bluesky thread later. NULL is
   // the common case (Bridgy Fed forwards Mastodon webmentions).
   const blueskyUri = webUrlToAtUri(v.source);
+  // Dedup on (source, target): senders legitimately re-deliver (Bridgy Fed
+  // re-sends on edits and periodically), so re-validate the existing row in
+  // place rather than inserting a duplicate that inflates like/reply counts.
+  let id;
   try {
-    db()
-      .prepare(
-        `INSERT INTO webmentions
-            (id, source, target, type, received_at, status, bluesky_uri)
-         VALUES (?, ?, ?, 'mention', ?, 'pending', ?)`,
-      )
-      .run(id, v.source, v.target, Date.now(), blueskyUri);
+    const existing = db()
+      .prepare('SELECT id FROM webmentions WHERE source = ? AND target = ?')
+      .get(v.source, normTarget);
+    if (existing) {
+      id = existing.id;
+      db()
+        .prepare(
+          `UPDATE webmentions
+              SET status = 'pending', received_at = ?, validated_at = NULL
+            WHERE id = ?`,
+        )
+        .run(Date.now(), id);
+    } else {
+      id = nanoid();
+      db()
+        .prepare(
+          `INSERT INTO webmentions
+              (id, source, target, type, received_at, status, bluesky_uri)
+           VALUES (?, ?, ?, 'mention', ?, 'pending', ?)`,
+        )
+        .run(id, v.source, normTarget, Date.now(), blueskyUri);
+    }
   } catch (err) {
     console.warn('[webmention] insert failed:', err && err.message);
     return res.status(500).json({ error: 'storage failed' });

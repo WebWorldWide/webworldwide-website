@@ -48,7 +48,6 @@ import {
 import { createHash } from 'crypto';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { tmpdir } from 'os';
 
 import { classifyMime, isDeniedExtension, computeStoragePath } from '../utils/mediaTypes.js';
 import { invalidatePostRefs } from '../utils/postRefs.js';
@@ -74,9 +73,11 @@ const MEDIA_ROOT = process.env.SITE_PUBLIC_DIR || join(SITE_DIR, 'public');
 const POSTS_DIR = join(SITE_DIR, 'content', 'posts');
 const MAX_UPLOAD_SIZE = Number(process.env.MEDIA_MAX_UPLOAD_SIZE || 100 * 1024 * 1024);
 
-// Ensure the year/month sub-directories exist on demand (Multer's tmp
-// staging area lives in the OS tmpdir, not the site root, so we never
-// half-write into static/ unless dedup+move succeeds).
+// Ensure the year/month sub-directories exist on demand. Staging lives in
+// SITE_DIR/.media-staging (gitignored, outside the published public/ tree) so
+// the move into MEDIA_ROOT is a same-filesystem renameSync — never an EXDEV
+// cross-fs copy — which keeps the dedup SELECT→INSERT window free of an awaited
+// yield (see finalizeUploads).
 mkdirSync(join(MEDIA_ROOT, 'images'), { recursive: true });
 mkdirSync(join(MEDIA_ROOT, 'files'), { recursive: true });
 
@@ -135,12 +136,15 @@ db.exec(`
 `);
 
 // ── Multer ────────────────────────────────────────────────────────
-// We stage uploads in the OS tmpdir; the upload handler then moves the
-// file to its final hash-prefixed location (or unlinks if the hash
-// dedups against an existing row).
+// Stage uploads on the SAME filesystem as MEDIA_ROOT (under SITE_DIR, but
+// outside the published public/ tree) so the move to the final hash-prefixed
+// path is always a synchronous renameSync. The OS tmpdir is tmpfs on the Pi, so
+// staging there forced an `await copyAcrossFs` (EXDEV) that yielded the event
+// loop between the dedup SELECT and INSERT — letting two concurrent identical
+// uploads both miss and create duplicate rows sharing one file.
 const tmpStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const dir = join(tmpdir(), 't80-media-stage');
+    const dir = join(SITE_DIR, '.media-staging');
     mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -878,6 +882,29 @@ router.delete('/:id', (req, res) => {
     }
     // ENOENT — file already gone; proceed to drop the row.
   }
+  // Remove generated variant files (responsive sizes, posters, HEIC→JPEG, …)
+  // recorded in conversions_json — the original unlink above misses them, so
+  // every deleted image otherwise leaves 9+ orphans the build keeps shipping.
+  // Best-effort: a missing/unremovable variant never blocks the row delete (the
+  // original, the gating file, is already handled above).
+  try {
+    const conversions = JSON.parse(row.conversions_json || '{}');
+    for (const v of Object.values(conversions)) {
+      if (typeof v !== 'string' || !v.startsWith('/')) continue;
+      try {
+        unlinkSync(join(MEDIA_ROOT, v.replace(/^\/+/, '')));
+      } catch (err) {
+        if (err && err.code !== 'ENOENT') {
+          console.error('[media] variant unlink failed:', err.message);
+        }
+      }
+    }
+  } catch {
+    /* malformed conversions_json — nothing to clean */
+  }
+  // The declared FK ON DELETE CASCADE never fires (the foreign_keys pragma is
+  // left OFF), so clear conversion_jobs rows explicitly or they leak forever.
+  db.prepare('DELETE FROM conversion_jobs WHERE media_id = ?').run(req.params.id);
   db.prepare('DELETE FROM media WHERE id = ?').run(req.params.id);
   invalidatePostRefs();
   res.status(204).end();

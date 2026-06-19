@@ -21,10 +21,11 @@
  *   1  fatal error (couldn't read content dir, e.g. site missing)
  */
 
-import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
+import { readdirSync, readFileSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { parsePost, serializePost } from '../utils/frontmatter.js';
+import { writeFileAtomic } from '../utils/atomicWrite.js';
 import { logActivity } from './activity.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -70,7 +71,10 @@ export async function promoteScheduledPosts(opts = {}) {
         // differs, so we never churn the file (or leave a spurious diff in
         // the deploy's git tree) when nothing logically changed.
         if (serialized !== raw) {
-          writeFileSync(filePath, serialized);
+          // Atomic temp+fsync+rename — a power-loss mid-promotion on the Pi
+          // must never leave a half-written post (the whole reason the rest
+          // of the CMS writes through this helper).
+          writeFileAtomic(filePath, serialized);
         }
       }
       promoted.push(file);
@@ -108,23 +112,21 @@ export async function promoteScheduledPosts(opts = {}) {
  */
 export async function defaultCommit(filenames) {
   if (!filenames.length) return;
-  const { default: simpleGit } = await import('simple-git');
-  const siteDir = process.env.SITE_DIR || join(__dirname, '..', '..', '..', 'site');
-  const repoRoot = join(siteDir, '..');
-  const git = simpleGit(repoRoot);
-  await git.add(filenames.map((f) => `site/content/posts/${f}`));
-  await git.commit(
-    `Auto-publish ${filenames.length} scheduled post${filenames.length === 1 ? '' : 's'}`,
-  );
-  // Push failures don't throw (the local commit stands), but they DO leave
-  // the deploy ahead of origin until the next successful push, so surface
-  // them loudly (stderr) rather than as a quiet warning — a silent push
-  // failure is how the deploy's git tree drifts out of sync.
-  try {
-    await git.push('origin', 'main');
-  } catch (err) {
-    console.error('[scheduler] ERROR: git push failed — deploy is ahead of origin:', err.message);
-  }
+  // Reuse the hardened publish path instead of a bare add/commit/push. A bare
+  // push is rejected as non-fast-forward whenever a code deploy or a normal
+  // publish lands on origin/main between 5-min cron ticks — and because the
+  // promoted post is now draft:false on disk, the next idempotent run commits
+  // nothing, so the stranded commit was never retried and the scheduled post
+  // silently never reached the live site. publishChanges() realigns onto the
+  // freshest origin/main (so the push is always a fast-forward), pushes with
+  // retry, and recaptures the on-disk promotion via `git add -A site` — so a
+  // transiently-failed push self-heals on the next promotion. getGitInstance()
+  // resolves the same repo (SITE_DIR/..) the scheduler targets.
+  // publishChanges() resolves on success and throws on a failed push (after
+  // retries) — that throw propagates to promoteScheduledPosts' commit try/catch,
+  // which records it as a (git) error for the run.
+  const { publishChanges } = await import('../utils/git.js');
+  await publishChanges();
 }
 
 // CLI shim: `node admin/src/services/scheduler.js [--dry-run] [--no-commit]`

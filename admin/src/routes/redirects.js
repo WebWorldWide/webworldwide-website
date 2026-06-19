@@ -85,6 +85,15 @@ router.post('/', (req, res) => {
       .status(409)
       .json({ error: 'duplicate', message: `Redirect from ${from} already exists` });
   }
+  // Reject reciprocal loops (A→B then B→A) and chains (a row whose target is
+  // itself a source, or whose source is some row's target): the build emits
+  // meta-refresh pages, so a loop bounces a visitor forever and a chain double-hops.
+  if (rows.some((r) => r.from === to || r.to === from)) {
+    return res.status(409).json({
+      error: 'chain_or_loop',
+      message: 'This redirect would create a chain or loop with an existing redirect.',
+    });
+  }
   const id = nanoid();
   rows.push({ id, from, to, code });
   write(rows);
@@ -105,6 +114,18 @@ router.put('/:id', (req, res) => {
     return res.status(400).json({
       error: 'self_redirect',
       message: 'from and to must differ (this would loop forever)',
+    });
+  }
+  // Mirror POST's duplicate-`from` guard (PUT lacked it) and the chain/loop guard.
+  if (rows.some((r) => r.id !== id && r.from === from)) {
+    return res
+      .status(409)
+      .json({ error: 'duplicate', message: `Redirect from ${from} already exists` });
+  }
+  if (rows.some((r) => r.id !== id && (r.from === to || r.to === from))) {
+    return res.status(409).json({
+      error: 'chain_or_loop',
+      message: 'This redirect would create a chain or loop with an existing redirect.',
     });
   }
   // eslint-disable-next-line security/detect-object-injection -- idx verified above

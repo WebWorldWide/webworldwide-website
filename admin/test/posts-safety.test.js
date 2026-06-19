@@ -222,6 +222,10 @@ test(
     assert.ok(body.rename, 'rename report present');
     assert.ok(body.rename.redirected.length >= 1, 'at least one redirect created');
     assert.equal(body.rename.linksUpdated, 1, 'one cross-link rewritten (the linker post)');
+    // A clean rename reports no side-effect warnings. (When a redirect/link
+    // rewrite fails, this array is non-empty and the editor surfaces it instead
+    // of silently implying the old URL is safe.)
+    assert.deepEqual(body.rename.warnings, [], 'no side-effect warnings on a clean rename');
 
     // redirects.json holds old → new (canonical /blog/<slug>), so the old URL
     // never 404s after the slug moves.

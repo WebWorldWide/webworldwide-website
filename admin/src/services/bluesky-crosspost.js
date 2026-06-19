@@ -36,7 +36,12 @@ const SITE_DIR_DEFAULT = '..';
 
 // Defaults — actual values are resolved per-call from env so test
 // overrides take effect without re-importing the module.
-const DEFAULT_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
+// 30 days. The already-cross-posted dedup (bluesky_uri) runs FIRST and fully
+// handles "don't re-spam on a content refresh", so this age guard only ever
+// gates FIRST-TIME cross-posts — a 1-hour window silently dropped any post a
+// writer drafted/reviewed over more than an hour. 30 days still blocks genuine
+// back-catalog (e.g. 2020-dated) posts from being sprayed on first publish.
+const DEFAULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const DEFAULT_MAX_PER_RUN = 5;
 
 function getMaxAgeMs() {
