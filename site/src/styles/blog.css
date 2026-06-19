@@ -563,6 +563,19 @@ a.pager-btn:focus-visible {
   margin: 0;
   width: 100%;
 }
+/* User-set max-width lives as inline style on the <figure>; the img fills it. */
+.post-body figure[style] img {
+  width: 100%;
+}
+.post-body figure figcaption {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+  text-align: center;
+  padding: 6px 8px 0;
+  line-height: 1.45;
+}
 .post-body figure.img-align-center {
   margin-inline: auto;
   max-width: min(100%, 640px);

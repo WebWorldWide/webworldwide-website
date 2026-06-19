@@ -258,11 +258,9 @@ const tokenSpec = {
       title: tok.attrGet('title') || null,
       alt:
         (tok.children && tok.children[0] && tok.children[0].content) || tok.attrGet('alt') || null,
-      // Alignment round-trips through a `<figure class="img-align-…">`
-      // wrapper (see splitBlockHtml + the `image` serializer). A plain
-      // `![alt](url)` has no align attr, so this stays null for every
-      // existing post — zero diff.
       align: tok.attrGet('align') || null,
+      width: tok.attrGet('width') ? Number(tok.attrGet('width')) : null,
+      caption: tok.attrGet('caption') != null ? tok.attrGet('caption') : null,
     }),
   },
   attachment: { node: 'attachment', getAttrs: (tok) => ({ id: tok.content || '' }) },
@@ -277,6 +275,9 @@ const tokenSpec = {
       webm: (tok.meta && tok.meta.webm) || '',
       poster: (tok.meta && tok.meta.poster) || '',
       src: (tok.meta && tok.meta.src) || '',
+      autoplay: !!(tok.meta && tok.meta.autoplay),
+      muted: !!(tok.meta && tok.meta.muted),
+      loop: !!(tok.meta && tok.meta.loop),
     }),
   },
   embed: {
@@ -523,10 +524,11 @@ function buildParser(schema) {
       const videoM = /<video\b[\s\S]*?<\/video>/i.exec(tk.content);
       if (videoM) {
         const seg = videoM[0];
+        const vtag = (/<video\b[^>]*>/i.exec(seg) || [''])[0];
         const mp4Tag = (/<source\b[^>]*type\s*=\s*"video\/mp4"[^>]*>/i.exec(seg) || [])[0];
         const webmTag = (/<source\b[^>]*type\s*=\s*"video\/webm"[^>]*>/i.exec(seg) || [])[0];
-        const posterM = /\bposter\s*=\s*"([^"]*)"/i.exec(seg);
-        const bareSrc = /<video\b[^>]*\bsrc\s*=\s*"([^"]*)"/i.exec(seg);
+        const posterM = /\bposter\s*=\s*"([^"]*)"/i.exec(vtag);
+        const bareSrc = /\bsrc\s*=\s*"([^"]*)"/i.exec(vtag);
         const t = new TokCtor('video', '', 0);
         t.block = true;
         t.meta = {
@@ -534,38 +536,47 @@ function buildParser(schema) {
           webm: srcOf(webmTag),
           poster: posterM ? posterM[1] : '',
           src: mp4Tag || webmTag ? '' : bareSrc ? bareSrc[1] : '',
+          autoplay: /\bautoplay\b/i.test(vtag),
+          muted: /\bmuted\b/i.test(vtag),
+          loop: /\bloop\b/i.test(vtag),
         };
         out.push(t);
         continue;
       }
-      // Aligned image → a `<figure class="img-align-…">` wrapping a single
-      // `<img>` (emitted by the image serializer when the node has an align
-      // attr). Pull it back into a paragraph-wrapped `image` node so the
-      // editor shows it aligned and the next round-trip is stable. We wrap in
-      // paragraph_open/close because the `image` node is inline (group:
-      // inline) and can't sit directly under the doc.
-      const figM =
-        /<figure\b[^>]*\bclass\s*=\s*"[^"]*\bimg-align-(left|right|center|full)\b[^"]*"[\s\S]*?<\/figure>/i.exec(
-          tk.content,
-        );
+      // Figures: aligned images, width-only images, captioned images — all
+      // serialized as `<figure …><img …><figcaption>…</figcaption></figure>`.
+      // Pull back into a paragraph-wrapped `image` node so the editor shows
+      // them correctly and the next round-trip is stable.
+      const figM = /<figure\b([^>]*)>([\s\S]*?)<\/figure>/i.exec(tk.content);
       if (figM) {
-        const align = figM[1];
-        const imgTag = (/<img\b[^>]*>/i.exec(figM[0]) || [''])[0];
-        const src = (/\bsrc\s*=\s*"([^"]*)"/i.exec(imgTag) || ['', ''])[1];
-        const altM = /\balt\s*=\s*"([^"]*)"/i.exec(imgTag);
-        const titleM = /\btitle\s*=\s*"([^"]*)"/i.exec(imgTag);
-        const pOpen = new TokCtor('paragraph_open', 'p', 1);
-        pOpen.block = true;
-        const imgTok = new TokCtor('image', 'img', 0);
-        imgTok.attrSet('src', htmlAttrUnescape(src));
-        if (altM) imgTok.attrSet('alt', htmlAttrUnescape(altM[1]));
-        if (titleM) imgTok.attrSet('title', htmlAttrUnescape(titleM[1]));
-        imgTok.attrSet('align', align);
-        imgTok.children = [];
-        const pClose = new TokCtor('paragraph_close', 'p', -1);
-        pClose.block = true;
-        out.push(pOpen, imgTok, pClose);
-        continue;
+        const figAttrs = figM[1] || '';
+        const figBody = figM[2] || '';
+        const imgTag = (/<img\b[^>]*>/i.exec(figBody) || [''])[0];
+        if (imgTag) {
+          const alignM = /\bimg-align-(left|right|center|full)\b/i.exec(figAttrs);
+          const src = (/\bsrc\s*=\s*"([^"]*)"/i.exec(imgTag) || ['', ''])[1];
+          const altM = /\balt\s*=\s*"([^"]*)"/i.exec(imgTag);
+          const titleM = /\btitle\s*=\s*"([^"]*)"/i.exec(imgTag);
+          // max-width may be on <img> (legacy) or <figure>
+          const widthM =
+            /\bmax-width\s*:\s*(\d+)px/i.exec(imgTag) ||
+            /\bmax-width\s*:\s*(\d+)px/i.exec(figAttrs);
+          const captionM = /<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i.exec(figBody);
+          const pOpen = new TokCtor('paragraph_open', 'p', 1);
+          pOpen.block = true;
+          const imgTok = new TokCtor('image', 'img', 0);
+          imgTok.attrSet('src', htmlAttrUnescape(src));
+          if (altM) imgTok.attrSet('alt', htmlAttrUnescape(altM[1]));
+          if (titleM) imgTok.attrSet('title', htmlAttrUnescape(titleM[1]));
+          if (alignM) imgTok.attrSet('align', alignM[1]);
+          if (widthM) imgTok.attrSet('width', widthM[1]);
+          if (captionM) imgTok.attrSet('caption', captionM[1].trim());
+          imgTok.children = [];
+          const pClose = new TokCtor('paragraph_close', 'p', -1);
+          pClose.block = true;
+          out.push(pOpen, imgTok, pClose);
+          continue;
+        }
       }
       // Any other block HTML (iframe embeds + any raw HTML) → an `embed`
       // passthrough node, so prosemirror-markdown never sees an unmapped
@@ -778,28 +789,23 @@ const nodeSerializers = {
     state.closeBlock(node);
   },
   image(state, node) {
-    const align = node.attrs.align;
-    // Aligned images serialise as a single-line `<figure>` so the live
-    // Astro site (which renders raw HTML in markdown) gets the alignment
-    // class. A plain image with no align attr serialises exactly as before
-    // — `![alt](url)` — so every existing post is byte-identical.
-    if (align) {
+    const { align, width, caption } = node.attrs;
+    const hasCaption = caption !== null && caption !== undefined;
+    // Any extra attribute (align, width, caption) requires a <figure> wrapper.
+    // A plain image with none of these serialises as `![alt](url)` — unchanged.
+    if (align || width || hasCaption) {
       const src = htmlAttrEscape(node.attrs.src || '');
       const altAttr = node.attrs.alt ? ' alt="' + htmlAttrEscape(node.attrs.alt) + '"' : ' alt=""';
       const titleAttr = node.attrs.title ? ' title="' + htmlAttrEscape(node.attrs.title) + '"' : '';
-      // `loading`/`decoding` are baked in because Astro emits markdown's
-      // raw HTML verbatim (its lazy-image rehype pass can't see inside a
-      // raw block), so a wrapped image would otherwise miss lazy-loading
-      // that plain `![](…)` images get.
+      // max-width on the figure so the inner `img { width:100% }` fills it correctly.
+      const styleAttr = width ? ' style="max-width:' + width + 'px"' : '';
+      const classAttr = align ? ' class="img-align-' + align + '"' : '';
+      // `loading`/`decoding` baked in — Astro emits markdown raw HTML verbatim
+      // so the lazy-image rehype pass can't reach inside a raw block.
+      const figcaption = hasCaption ? '<figcaption>' + htmlAttrEscape(caption || '') + '</figcaption>' : '';
       state.write(
-        '<figure class="img-align-' +
-          align +
-          '"><img src="' +
-          src +
-          '"' +
-          altAttr +
-          titleAttr +
-          ' loading="lazy" decoding="async"></figure>',
+        '<figure' + classAttr + styleAttr + '><img src="' + src + '"' + altAttr + titleAttr +
+        ' loading="lazy" decoding="async">' + figcaption + '</figure>',
       );
       return;
     }
@@ -889,20 +895,23 @@ const nodeSerializers = {
   // natively (no shortcode/plugin). Single line so it round-trips as one
   // html_block token. References the compressed renditions, not the original.
   video(state, node) {
-    const { mp4, webm, poster, src } = node.attrs;
+    const { mp4, webm, poster, src, autoplay, muted, loop } = node.attrs;
     const posterAttr = poster ? ` poster="${poster}"` : '';
-    // Multi-line so the FIRST line is a bare `<video …>` tag — CommonMark then
-    // treats the whole thing as one html_block (condition 7), which
-    // splitBlockHtml turns back into this node. `<video>` isn't a condition-6
-    // block tag, so a single-line `<video>…</video>` would parse as *inline*
-    // HTML and never round-trip.
+    const autoAttr = autoplay ? ' autoplay' : '';
+    const mutedAttr = muted ? ' muted' : '';
+    const loopAttr = loop ? ' loop' : '';
+    const extra = posterAttr + autoAttr + mutedAttr + loopAttr;
+    // Multi-line so the FIRST line is a bare `<video …>` tag — CommonMark
+    // treats it as one html_block (condition 7), which splitBlockHtml maps
+    // back to this node. A single-line `<video>…</video>` would parse as
+    // inline HTML and never round-trip.
     const lines = [];
     if (mp4 || webm) {
-      lines.push(`<video controls${posterAttr}>`);
+      lines.push(`<video controls${extra}>`);
       if (mp4) lines.push(`<source src="${mp4}" type="video/mp4">`);
       if (webm) lines.push(`<source src="${webm}" type="video/webm">`);
     } else {
-      lines.push(`<video controls${posterAttr} src="${src || ''}">`);
+      lines.push(`<video controls${extra} src="${src || ''}">`);
     }
     lines.push('</video>');
     state.write(lines.join('\n'));
@@ -2084,6 +2093,116 @@ const Attachment = Node.create({
 });
 
 /**
+ * NodeView for the `image` node: adds drag-to-resize and optional caption.
+ * The outer <span> hosts the resize handle (absolutely positioned right edge)
+ * and an optional <span.te-image-caption> when caption attr is non-null.
+ */
+function imageNodeView({ node, getPos, editor }) {
+  let currentAttrs = { ...node.attrs };
+
+  const outer = document.createElement('span');
+  outer.className = 'te-image-outer';
+  outer.setAttribute('contenteditable', 'false');
+  if (node.attrs.align) outer.setAttribute('data-align', node.attrs.align);
+
+  const img = document.createElement('img');
+  img.className = 'te-image-img';
+  img.src = node.attrs.src || '';
+  img.alt = node.attrs.alt || '';
+  if (node.attrs.title) img.title = node.attrs.title;
+  if (node.attrs.width) img.style.width = node.attrs.width + 'px';
+  img.setAttribute('draggable', 'false');
+
+  // Drag-resize handle on the right edge
+  const handle = document.createElement('span');
+  handle.className = 'te-resize-handle';
+  handle.setAttribute('aria-hidden', 'true');
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startW = img.getBoundingClientRect().width;
+    handle.setPointerCapture(e.pointerId);
+    const onMove = (ev) => {
+      img.style.width = Math.max(60, Math.round(startW + (ev.clientX - startX))) + 'px';
+    };
+    const onUp = (ev) => {
+      handle.releasePointerCapture(ev.pointerId);
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
+      if (typeof getPos === 'function') {
+        editor.chain().command(({ tr }) => {
+          tr.setNodeMarkup(getPos(), undefined, { ...currentAttrs, width: w });
+          return true;
+        }).run();
+      }
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+  });
+
+  outer.appendChild(img);
+  outer.appendChild(handle);
+
+  // Caption: non-null means the caption slot exists (may be empty string)
+  let cap = null;
+  function createCaption(text) {
+    const el = document.createElement('span');
+    el.className = 'te-image-caption';
+    el.contentEditable = 'true';
+    el.setAttribute('role', 'textbox');
+    el.setAttribute('aria-label', 'Image caption');
+    el.setAttribute('data-placeholder', 'Add a caption…');
+    el.textContent = text;
+    el.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); }
+      ev.stopPropagation(); // don't let keystrokes hit ProseMirror
+    });
+    el.addEventListener('blur', () => {
+      if (typeof getPos === 'function') {
+        editor.chain().command(({ tr }) => {
+          tr.setNodeMarkup(getPos(), undefined, { ...currentAttrs, caption: el.textContent || '' });
+          return true;
+        }).run();
+      }
+    });
+    return el;
+  }
+  if (node.attrs.caption !== null && node.attrs.caption !== undefined) {
+    cap = createCaption(node.attrs.caption || '');
+    outer.appendChild(cap);
+  }
+
+  return {
+    dom: outer,
+    update(updatedNode) {
+      if (updatedNode.type.name !== 'image') return false;
+      img.src = updatedNode.attrs.src || '';
+      img.alt = updatedNode.attrs.alt || '';
+      if (updatedNode.attrs.title) img.title = updatedNode.attrs.title;
+      else img.removeAttribute('title');
+      img.style.width = updatedNode.attrs.width ? updatedNode.attrs.width + 'px' : '';
+      if (updatedNode.attrs.align) outer.setAttribute('data-align', updatedNode.attrs.align);
+      else outer.removeAttribute('data-align');
+      // Handle caption slot appearing or disappearing
+      const hasCaption = updatedNode.attrs.caption !== null && updatedNode.attrs.caption !== undefined;
+      if (cap && !hasCaption) {
+        cap.remove();
+        cap = null;
+      } else if (!cap && hasCaption) {
+        cap = createCaption(updatedNode.attrs.caption || '');
+        outer.appendChild(cap);
+      } else if (cap && document.activeElement !== cap) {
+        cap.textContent = updatedNode.attrs.caption || '';
+      }
+      currentAttrs = { ...updatedNode.attrs };
+      return true;
+    },
+  };
+}
+
+/**
  * NodeView for the `video` node: a real, inline <video> the writer can play,
  *  select, and delete. Sources come straight from the node attrs (resolved at
  *  insert time), so no /api/media round-trip is needed.
@@ -2095,6 +2214,9 @@ function videoNodeView(node) {
   dom.setAttribute('preload', 'metadata');
   dom.setAttribute('contenteditable', 'false');
   if (node.attrs.poster) dom.setAttribute('poster', node.attrs.poster);
+  if (node.attrs.autoplay) dom.setAttribute('autoplay', '');
+  if (node.attrs.muted) dom.setAttribute('muted', '');
+  if (node.attrs.loop) dom.setAttribute('loop', '');
   const addSource = (src, type) => {
     if (!src) return;
     const s = document.createElement('source');
@@ -2143,6 +2265,9 @@ const Video = Node.create({
       webm: { default: '' },
       poster: { default: '' },
       src: { default: '' },
+      autoplay: { default: false },
+      muted: { default: false },
+      loop: { default: false },
     };
   },
   parseHTML() {
@@ -2160,6 +2285,9 @@ const Video = Node.create({
             webm: pick('webm'),
             poster: el.getAttribute('poster') || '',
             src: el.getAttribute('src') || '',
+            autoplay: el.hasAttribute('autoplay'),
+            muted: el.hasAttribute('muted'),
+            loop: el.hasAttribute('loop'),
           };
         },
       },
@@ -2558,10 +2686,9 @@ function buildExtensions(slashExt) {
       protocols: ['http', 'https', 'mailto'],
       HTMLAttributes: { rel: 'noopener noreferrer' },
     }),
-    // Extend the stock Image with an `align` attribute (left / center /
-    // right / full). It surfaces on the rendered `<img>` as `data-align`
-    // so the .ProseMirror surface can style it to match the published
-    // page; it serialises to a `<figure class="img-align-…">` wrapper.
+    // Extend the stock Image with align, width, and caption attributes.
+    // A custom NodeView handles rendering with drag-to-resize and an
+    // optional caption slot.
     Image.extend({
       addAttributes() {
         return {
@@ -2571,7 +2698,20 @@ function buildExtensions(slashExt) {
             parseHTML: (el) => el.getAttribute('data-align') || null,
             renderHTML: (attrs) => (attrs.align ? { 'data-align': attrs.align } : {}),
           },
+          width: {
+            default: null,
+            parseHTML: () => null, // set via splitBlockHtml
+            renderHTML: () => ({}),
+          },
+          caption: {
+            default: null,
+            parseHTML: () => null, // set via splitBlockHtml
+            renderHTML: () => ({}),
+          },
         };
+      },
+      addNodeView() {
+        return (props) => imageNodeView(props);
       },
     }).configure({ inline: true, allowBase64: false }),
     Attachment,
@@ -4133,6 +4273,16 @@ export function mount(rootEl, initialMarkdown, options) {
     ),
     align_full: TB_ICON('<rect x="3" y="5" width="18" height="10" rx="1"/><path d="M3 19h18"/>'),
     align_none: TB_ICON('<path d="M3 6h13M3 12h18M3 18h10"/>'),
+    caption: TB_ICON(
+      '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 14h4M7 10h10"/>',
+    ),
+    volume_off: TB_ICON(
+      '<line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/><path d="M11 5 6 9H2v6h4l5 4V5z"/>',
+    ),
+    play_arrow: TB_ICON('<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>'),
+    loop: TB_ICON(
+      '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+    ),
     // Inline marks + blocks — one consistent line-icon family (Lucide-style)
     // so the toolbar reads as a single set, not a mix of letters and glyphs.
     bold: TB_ICON(
@@ -4663,13 +4813,8 @@ export function mount(rootEl, initialMarkdown, options) {
   richToolbar.appendChild(gTable);
 
   // ─── Image contextual group ────────────────────────────────
-  //
-  // Only meaningful when an image node is selected. Sets the `align`
-  // attribute that the serializer turns into a `<figure class="img-align-…">`
-  // wrapper so the published page matches the editor. "Reset" clears the
-  // attribute, returning the image to a plain `![alt](url)`.
   richToolbar.appendChild(tbDivider());
-  const gImage = tbGroup('Image alignment');
+  const gImage = tbGroup('Image options');
   gImage.classList.add('te-tb-image-group');
   function imgAlignBtn(label, icon, align) {
     return tbBtn({
@@ -4688,7 +4833,65 @@ export function mount(rootEl, initialMarkdown, options) {
   gImage.appendChild(imgAlignBtn('Align image right', 'align_right', 'right'));
   gImage.appendChild(imgAlignBtn('Full-width image', 'align_full', 'full'));
   gImage.appendChild(imgAlignBtn('Reset image alignment', 'align_none', null));
+  // Caption toggle
+  gImage.appendChild(
+    tbBtn({
+      label: 'Toggle caption',
+      shortcut: '',
+      icon: 'caption',
+      className: 'te-tb-img-caption',
+      canRun: () => editor.isActive('image'),
+      active: () => {
+        const a = editor.getAttributes('image');
+        return a.caption !== null && a.caption !== undefined;
+      },
+      run: () => {
+        const a = editor.getAttributes('image');
+        const hasCaption = a.caption !== null && a.caption !== undefined;
+        editor.chain().focus().updateAttributes('image', { caption: hasCaption ? null : '' }).run();
+      },
+    }),
+  );
+  // Alt text edit (prompt-based, consistent with existing editor patterns)
+  gImage.appendChild(
+    tbBtn({
+      label: 'Edit alt text',
+      shortcut: '',
+      icon: 'image',
+      className: 'te-tb-img-alt',
+      canRun: () => editor.isActive('image'),
+      active: () => false,
+      run: () => {
+        const current = editor.getAttributes('image').alt || '';
+        const next = window.prompt('Image alt text (describes the image for screen readers and search):', current);
+        if (next !== null) editor.chain().focus().updateAttributes('image', { alt: next }).run();
+      },
+    }),
+  );
   richToolbar.appendChild(gImage);
+
+  // ─── Video contextual group ────────────────────────────────
+  richToolbar.appendChild(tbDivider());
+  const gVideo = tbGroup('Video options');
+  gVideo.classList.add('te-tb-video-group');
+  function videoAttrBtn(label, icon, attr) {
+    return tbBtn({
+      label,
+      shortcut: '',
+      icon,
+      className: 'te-tb-video-attr',
+      canRun: () => editor.isActive('video'),
+      active: () => !!(editor.isActive('video') && editor.getAttributes('video')[attr]),
+      run: () => {
+        const cur = editor.getAttributes('video')[attr];
+        editor.chain().focus().updateAttributes('video', { [attr]: !cur }).run();
+      },
+    });
+  }
+  gVideo.appendChild(videoAttrBtn('Autoplay', 'play_arrow', 'autoplay'));
+  gVideo.appendChild(videoAttrBtn('Muted', 'volume_off', 'muted'));
+  gVideo.appendChild(videoAttrBtn('Loop', 'loop', 'loop'));
+  richToolbar.appendChild(gVideo);
 
   // ─── Proofreading toggle ───────────────────────────────────
   richToolbar.appendChild(tbDivider());
@@ -4721,12 +4924,15 @@ export function mount(rootEl, initialMarkdown, options) {
     const inTable = editor.isActive('table');
     const inCode = editor.isActive('codeBlock');
     const onImage = editor.isActive('image');
+    const onVideo = editor.isActive('video');
     gTable.classList.toggle('is-visible', inTable);
     gTable.classList.toggle('is-hidden', !inTable);
     gCode.classList.toggle('is-visible', inCode);
     gCode.classList.toggle('is-hidden', !inCode);
     gImage.classList.toggle('is-visible', onImage);
     gImage.classList.toggle('is-hidden', !onImage);
+    gVideo.classList.toggle('is-visible', onVideo);
+    gVideo.classList.toggle('is-hidden', !onVideo);
     if (inCode) {
       const attrs = editor.getAttributes('codeBlock');
       const lang = attrs && attrs.language ? String(attrs.language) : '';
