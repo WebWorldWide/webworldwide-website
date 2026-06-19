@@ -267,6 +267,63 @@ describe('TEEditor.mount() façade', () => {
     instance.value = once;
     expect(instance.value).toBe(once);
   });
+
+  // ── Round-trip fidelity regressions (a mode toggle must not lose data) ──
+  // Each of these was silently destroyed by a single Source↔Rich toggle until
+  // the serializer/parser were brought back into agreement.
+
+  it('round-trips strikethrough (was dropped → escaped tildes)', () => {
+    instance = mount(rootEl, 'A ~~struck~~ word.');
+    let hasStrike = false;
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.marks && n.marks.some((m) => m.type.name === 'strike')) hasStrike = true;
+    });
+    expect(hasStrike).toBe(true);
+    // setMode('source') serialises the live doc — exactly what a toggle emits.
+    instance.setMode('source');
+    const out = instance.value;
+    expect(out).toContain('~~struck~~');
+    expect(out).not.toMatch(/\\~/);
+  });
+
+  it('round-trips a hard break as a CommonMark backslash break (was collapsed to a space)', () => {
+    instance = mount(rootEl, 'line A\\\nline B');
+    let breaks = 0;
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.type.name === 'hardBreak') breaks += 1;
+    });
+    expect(breaks).toBe(1);
+    instance.setMode('source');
+    expect(instance.value).toContain('A\\\nline B');
+  });
+
+  it('round-trips a task list with checked state (was reverting to escaped bullets)', () => {
+    instance = mount(rootEl, '- [ ] first\n- [x] second\n');
+    const items = [];
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.type.name === 'taskItem') items.push(n);
+    });
+    expect(items.length).toBe(2);
+    expect(items[0].attrs.checked).toBe(false);
+    expect(items[1].attrs.checked).toBe(true);
+    instance.setMode('source');
+    const out = instance.value;
+    expect(out).toContain('- [ ] first');
+    expect(out).toContain('- [x] second');
+    expect(out).not.toMatch(/\\\[/);
+  });
+
+  it('leaves an ordinary bullet list (no checkboxes) as a plain list', () => {
+    instance = mount(rootEl, '- one\n- two\n');
+    let taskItems = 0;
+    let listItems = 0;
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.type.name === 'taskItem') taskItems += 1;
+      if (n.type.name === 'listItem') listItems += 1;
+    });
+    expect(taskItems).toBe(0);
+    expect(listItems).toBe(2);
+  });
 });
 
 // ─── Phase 3b: toolbar, slash menu, link dialog, shortcuts ──────

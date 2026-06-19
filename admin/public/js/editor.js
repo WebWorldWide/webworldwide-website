@@ -140,8 +140,12 @@
   function computeMetrics() {
     // Prefer the live TipTap textContent if available — strips
     // Markdown punctuation we don't want to count as words.
+    // In Source (Markdown) mode the bundle deliberately doesn't round-trip
+    // CodeMirror edits into the TipTap doc until a mode switch, so the doc is
+    // stale while typing there — read the live façade value instead.
+    const inWysiwyg = !bodyEl?.getMode || bodyEl.getMode() === 'wysiwyg';
     const tipText =
-      bodyEl && bodyEl._tiptap && bodyEl._tiptap.state
+      inWysiwyg && bodyEl && bodyEl._tiptap && bodyEl._tiptap.state
         ? bodyEl._tiptap.state.doc.textContent
         : null;
     const text = (tipText !== null ? tipText : bodyEl?.value || '').trim();
@@ -193,8 +197,9 @@
     const slug = (slugEl?.value || '').trim() || 'post-slug';
     let desc = (descEl?.value || '').trim();
     if (!desc) {
+      const inWysiwyg = !bodyEl?.getMode || bodyEl.getMode() === 'wysiwyg';
       const tipText =
-        bodyEl && bodyEl._tiptap && bodyEl._tiptap.state
+        inWysiwyg && bodyEl && bodyEl._tiptap && bodyEl._tiptap.state
           ? bodyEl._tiptap.state.doc.textContent
           : bodyEl?.value || '';
       desc = String(tipText || '')
@@ -983,12 +988,23 @@
         body: JSON.stringify(payload),
       });
       if (typeof result.mtime === 'number') loadedMtime = result.mtime;
-      isDirty = false;
       saveConflict = false;
-      clearTimeout(autosaveTimer);
-      clearNewDraftBackup();
-      setSaved('Saved (not yet live)');
-      setAutoState('saved', 'Saved — click Save & publish to go live');
+      // Only declare the editor clean if its body hasn't changed since we
+      // snapshotted the payload above. If the writer typed during the in-flight
+      // request, keep tracking those edits and re-arm autosave — otherwise the
+      // keystrokes are silently dropped (no pending autosave, no beforeunload
+      // warning, UI says "Saved").
+      if ((bodyEl.value || '') === content) {
+        isDirty = false;
+        clearTimeout(autosaveTimer);
+        clearNewDraftBackup();
+        setSaved('Saved (not yet live)');
+        setAutoState('saved', 'Saved — click Save & publish to go live');
+      } else {
+        scheduleAutosave();
+        setSaved('Unsaved changes');
+        setAutoState('dirty', 'Unsaved changes');
+      }
       if (editorRoot) {
         editorRoot.dispatchEvent(
           new CustomEvent('autosave-success', {
@@ -1013,6 +1029,17 @@
           `New address: /blog/${prettyName(result.filename)}/${parts.length ? ' — ' + parts.join(', ') : ''}.`,
         );
         setSlugMsg('Available', 'ok');
+        // A best-effort side effect failed on the server. The post saved fine,
+        // but the old link may now 404 (or cross-links weren't rewritten), so
+        // surface it instead of silently implying everything is wired up.
+        if (Array.isArray(r.warnings) && r.warnings.length) {
+          TE.toast(
+            r.warnings.includes('redirect')
+              ? "Renamed, but couldn't add a redirect — the old link may 404. Add one in the Redirects tab."
+              : "Renamed, but couldn't update some internal links to the new address.",
+            'error',
+          );
+        }
       }
       updateStatusPill();
       return true;
@@ -1263,17 +1290,39 @@
       depth = Math.max(0, depth - 1);
       if (depth === 0) editorRoot.classList.remove('is-dragover');
     });
-    editorRoot.addEventListener('drop', async (e) => {
+    editorRoot.addEventListener('drop', (e) => {
       if (!isFileDrag(e)) return;
       e.preventDefault();
       depth = 0;
       editorRoot.classList.remove('is-dragover');
-      const files = Array.from(e.dataTransfer.files || []);
-      if (!files.length || !window.TE || !TE.media) return;
-      const { ok, failed } = await TE.media.upload(files);
-      for (const item of ok) insertMediaIntoEditor(item);
-      if (failed.length) TE.toast(failed.map((f) => f.error).join(' / '), 'error');
+      uploadAndInsertFiles(e.dataTransfer.files);
     });
+    // Paste of image/video FILES with no accompanying text (e.g. a screenshot
+    // on the clipboard). ProseMirror (editor.entry.js handlePaste) blocks its
+    // own data: URI insertion for these, so the file reaches the media library
+    // here instead. Pastes that carry text, or plain URL pastes, are untouched.
+    editorRoot.addEventListener('paste', (e) => {
+      const clip = e.clipboardData;
+      if (!clip) return;
+      const files = Array.from(clip.files || []).filter((f) =>
+        /^(image|video)\//.test(f.type || ''),
+      );
+      const text = (clip.getData && clip.getData('text/plain')) || '';
+      if (!files.length || text.trim() !== '') return;
+      e.preventDefault();
+      uploadAndInsertFiles(files);
+    });
+  }
+
+  // Shared upload→insert path for dropped/pasted media. Reuses the media
+  // library upload (with its progress tray) and the per-kind insert markup,
+  // so paste, drop, the sidebar uploader, and the slash menu all behave alike.
+  async function uploadAndInsertFiles(files) {
+    const arr = Array.from(files || []);
+    if (!arr.length || !window.TE || !TE.media) return;
+    const { ok, failed } = await TE.media.upload(arr);
+    for (const item of ok) insertMediaIntoEditor(item);
+    if (failed.length) TE.toast(failed.map((f) => f.error).join(' / '), 'error');
   }
 
   function insertMediaIntoEditor(item) {

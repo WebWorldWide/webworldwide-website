@@ -34,6 +34,11 @@
       cb.className = 'js-post-pick';
       cb.setAttribute('data-filename', fn);
       cb.setAttribute('aria-label', `Select ${fn}`);
+      // The posts table re-renders (innerHTML) on every search keystroke, sort,
+      // and tab switch while the selection Set persists; restore the checked
+      // state so a still-selected row never renders unchecked (which would let
+      // a bulk delete/unpublish silently hit a post the user thought was off).
+      cb.checked = selected.has(fn);
       // Place it as the first child of the .r-actions cell to avoid
       // disturbing the click-target anchor in .r-link.
       const actions = row.querySelector('.r-actions');
@@ -45,6 +50,15 @@
         renderSelectionUI();
       });
     });
+    // Keep the master select-all in sync with the persisted selection after a
+    // re-render: checked only when every visible row is selected.
+    const all = document.getElementById('posts-select-all');
+    if (all) {
+      const visible = document.querySelectorAll('#posts-rows .row-grid[data-filename]');
+      all.checked =
+        visible.length > 0 &&
+        Array.from(visible).every((r) => selected.has(r.getAttribute('data-filename') || ''));
+    }
   }
 
   async function runBulk(action, payload) {
