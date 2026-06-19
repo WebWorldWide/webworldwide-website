@@ -1132,17 +1132,105 @@ body[data-page="editor"] {
 .ProseMirror table .selectedCell {
   background: var(--accent-soft) !important;
 }
-/* The table/code/image toolbar groups only render in their context
-   (cursor in a table, in a code block, or an image node selected). */
+/* The table/code/image/video toolbar groups only render in their context. */
 .te-tb-table-group.is-hidden,
 .te-tb-code-group.is-hidden,
-.te-tb-image-group.is-hidden {
+.te-tb-image-group.is-hidden,
+.te-tb-video-group.is-hidden {
   display: none;
 }
 .te-tb-table-group.is-visible,
 .te-tb-code-group.is-visible,
-.te-tb-image-group.is-visible {
+.te-tb-image-group.is-visible,
+.te-tb-video-group.is-visible {
   display: inline-flex;
+}
+
+/* ─── Image NodeView: resize handle + caption ─────────────────── */
+.ProseMirror .te-image-outer {
+  display: block;
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 14px auto;
+  line-height: 0; /* kill descender gap below img */
+}
+.ProseMirror .te-image-outer[data-align="left"] {
+  float: left;
+  max-width: min(48%, 360px);
+  margin: 6px 20px 10px 0;
+}
+.ProseMirror .te-image-outer[data-align="right"] {
+  float: right;
+  max-width: min(48%, 360px);
+  margin: 6px 0 10px 20px;
+}
+.ProseMirror .te-image-outer[data-align="center"] {
+  max-width: min(100%, 640px);
+  margin-inline: auto;
+}
+.ProseMirror .te-image-outer[data-align="full"] {
+  width: 100%;
+  max-width: 100%;
+}
+.ProseMirror .te-image-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-xs);
+}
+/* Selected / hovered outline — mirrors .ProseMirror-selectednode for the outer wrapper */
+.ProseMirror .te-image-outer.ProseMirror-selectednode,
+.ProseMirror .te-image-outer:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Resize handle — right edge drag bar */
+.te-resize-handle {
+  display: none;
+  position: absolute;
+  right: -5px;
+  top: 15%;
+  bottom: 15%;
+  width: 9px;
+  background: var(--accent);
+  cursor: col-resize;
+  border-radius: 4px;
+  z-index: 5;
+  opacity: 0.85;
+}
+.te-image-outer.ProseMirror-selectednode .te-resize-handle,
+.te-image-outer:hover .te-resize-handle {
+  display: block;
+}
+/* Caption slot — shown when caption attr is non-null */
+.te-image-caption {
+  display: block;
+  width: 100%;
+  padding: 5px 8px 3px;
+  font-family: var(--font-read);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+  text-align: center;
+  outline: none;
+  border-top: 1px dashed var(--line-www);
+  margin-top: 4px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+.te-image-caption:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .ProseMirror .te-image-outer[data-align="left"],
+  .ProseMirror .te-image-outer[data-align="right"] {
+    float: none;
+    max-width: 100%;
+    margin-inline: auto;
+  }
 }
 
 /* ─── Code blocks (lowlight syntax-highlight) ──────────────── */
