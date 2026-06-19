@@ -4824,6 +4824,8 @@ export function mount(rootEl, initialMarkdown, options) {
   // hidden unless the cursor is inside a codeBlock. We keep the markup
   // present at all times so the toolbar layout doesn't shift when the
   // user enters/leaves a code block.
+  const gCodeDivider = tbDivider();
+  richToolbar.appendChild(gCodeDivider);
   const gCode = tbGroup('Code language');
   gCode.classList.add('te-tb-code-group');
   const langLabel = document.createElement('label');
@@ -4852,7 +4854,8 @@ export function mount(rootEl, initialMarkdown, options) {
   // Buttons here are no-ops unless the cursor is in a table. The whole
   // group hides (display:none) when out-of-table to keep the toolbar
   // compact.
-  richToolbar.appendChild(tbDivider());
+  const gTableDivider = tbDivider();
+  richToolbar.appendChild(gTableDivider);
   const gTable = tbGroup('Table');
   gTable.classList.add('te-tb-table-group');
   function tableBtn(label, glyph, runFn) {
@@ -5036,8 +5039,10 @@ export function mount(rootEl, initialMarkdown, options) {
     const onVideo = editor.isActive('video');
     gTable.classList.toggle('is-visible', inTable);
     gTable.classList.toggle('is-hidden', !inTable);
+    gTableDivider.classList.toggle('is-hidden', !inTable);
     gCode.classList.toggle('is-visible', inCode);
     gCode.classList.toggle('is-hidden', !inCode);
+    gCodeDivider.classList.toggle('is-hidden', !inCode);
     gImage.classList.toggle('is-visible', onImage);
     gImage.classList.toggle('is-hidden', !onImage);
     gImageDivider.classList.toggle('is-hidden', !onImage);
