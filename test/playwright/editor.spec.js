@@ -124,4 +124,49 @@ test.describe('editor polish', () => {
       await expect(divider).toHaveClass(/is-hidden/);
     }
   });
+
+  test('keeps the image toolbar up through selection and the caption prompt', async ({ page }) => {
+    await page.goto(editorUrl);
+    await expect(page.locator('#editor-root .ProseMirror')).toBeVisible();
+    await page.waitForFunction(() => Boolean(window.__teEditor && window.__teEditor._tiptap));
+
+    const group = page.locator('.te-tb-image-group');
+    // Nothing selected yet — the contextual group is hidden.
+    await expect(group).toHaveClass(/is-hidden/);
+
+    // Insert an image and select the node — the same NodeSelection that
+    // clicking an image produces via editorProps.handleClickOn.
+    const imgPos = await page.evaluate(() => {
+      const ed = window.__teEditor._tiptap;
+      ed.chain().focus().setImage({ src: 'https://example.com/cat.png', alt: 'cat' }).run();
+      let pos = null;
+      ed.state.doc.descendants((node, p) => {
+        if (node.type.name === 'image') {
+          pos = p;
+          return false;
+        }
+        return true;
+      });
+      if (pos !== null) ed.commands.setNodeSelection(pos);
+      return pos;
+    });
+    expect(imgPos).not.toBeNull();
+
+    // Toolbar appears for the selected image.
+    await expect(group).toBeVisible();
+    await expect(group).toHaveClass(/is-visible/);
+
+    // The native caption prompt steals focus; some browsers drop the selection
+    // when it closes. The fix re-asserts the NodeSelection, so the toolbar must
+    // NOT vanish after the dialog resolves — and the caption must apply.
+    page.once('dialog', (dialog) => dialog.accept('A curious cat'));
+    await group.locator('button.te-tb-img-caption').click();
+
+    await expect(group).toBeVisible();
+    await expect(group.locator('button.te-tb-img-caption')).toHaveClass(/is-active/);
+    const caption = await page.evaluate(
+      () => window.__teEditor._tiptap.getAttributes('image').caption,
+    );
+    expect(caption).toBe('A curious cat');
+  });
 });

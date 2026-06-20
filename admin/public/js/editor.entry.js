@@ -4905,6 +4905,26 @@ export function mount(rootEl, initialMarkdown, options) {
     const sel = editor.state.selection;
     return sel && sel.node && sel.node.type.name === 'image' ? sel.from : null;
   }
+  // Patch attributes on the node-selected image while KEEPING it node-selected.
+  // We deliberately do NOT use chain().focus() here: a window.prompt() blurs the
+  // editor, and TipTap's focus command then schedules an async view.focus()
+  // (requestAnimationFrame) that re-syncs the selection from the now-collapsed
+  // DOM a frame later — destroying the NodeSelection and hiding this toolbar.
+  // setNodeMarkup + setNodeSelection (the same pattern the resize handle uses)
+  // updates the node and re-asserts the selection without ever touching focus.
+  function patchSelectedImage(pos, attrs) {
+    if (typeof pos !== 'number') return;
+    editor
+      .chain()
+      .command(({ tr, state }) => {
+        const n = state.doc.nodeAt(pos);
+        if (!n || n.type.name !== 'image') return false;
+        tr.setNodeMarkup(pos, undefined, { ...n.attrs, ...attrs });
+        return true;
+      })
+      .setNodeSelection(pos)
+      .run();
+  }
   function imgAlignBtn(label, icon, align) {
     return tbBtn({
       label,
@@ -4942,13 +4962,7 @@ export function mount(rootEl, initialMarkdown, options) {
           a.caption !== null && a.caption !== undefined ? String(a.caption).trim() : '';
         const next = window.prompt('Image caption (clear to remove):', current);
         if (next === null) return;
-        const chain = editor.chain().focus();
-        if (pos !== null) chain.setNodeSelection(pos);
-        chain
-          .updateAttributes('image', {
-            caption: next.trim() === '' ? null : next.trim(),
-          })
-          .run();
+        patchSelectedImage(pos, { caption: next.trim() === '' ? null : next.trim() });
       },
     }),
   );
@@ -4969,9 +4983,7 @@ export function mount(rootEl, initialMarkdown, options) {
           current,
         );
         if (next === null) return;
-        const chain = editor.chain().focus();
-        if (pos !== null) chain.setNodeSelection(pos);
-        chain.updateAttributes('image', { alt: next }).run();
+        patchSelectedImage(pos, { alt: next });
       },
     }),
   );
