@@ -140,6 +140,10 @@ const dataAttrs = Object.fromEntries(
     <link rel="apple-touch-icon" href="/favicon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title={`${siteTitle} RSS`} href="/rss.xml" />
+    {/* Webmention autodiscovery — Bridgy Fed delivers fediverse (Mastodon/Threads)
+       replies + likes here. The receiver is the Pi cms (a different origin from
+       this static site; cross-origin discovery is allowed). */}
+    <link rel="webmention" href="https://admin.webworldwide.online/webmention" />
 
     {/* Resource hints — warm DNS + TLS for third-party origins so the
         first comment-iframe or analytics ping doesn't pay the full

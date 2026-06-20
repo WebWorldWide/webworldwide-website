@@ -51,10 +51,13 @@ site_id = "680f36bd-688c-4816-b764-685860911396"
 url = "/rss.xml"
 
 [fediverse]
-# Bridgy Fed bridges this site to Mastodon/etc. The webfinger handle for
-# the blog is `blog@<site.url host>`.
+# Bridgy Fed bridges this site to Mastodon / Threads / the fediverse. Using the
+# DOMAIN as the username matches Bridgy Fed's "web" convention, so the handle
+# followers use is `webworldwide.online@<site.url host>` (i.e.
+# @webworldwide.online@webworldwide.online). A mismatched subject makes Mastodon
+# reject the webfinger.
 enabled = true
-handle_user = "blog"
+handle_user = "webworldwide.online"
 
 [apps]
 # Linked products on the home page Apps section.

@@ -49,6 +49,15 @@ const dek = post.data.excerpt ?? '';
 const metaDescription = dek || deriveExcerpt(post.body ?? '') || undefined;
 const cover = coverImage(post, post.body ?? '');
 
+// Microformats2 for Bridgy Fed: a published post is bridged to Mastodon / Threads
+// as an ActivityPub Note built from this markup. authorName uses the site title
+// so the Note author matches the bridged actor identity.
+const isoPublished = post.data.date instanceof Date ? post.data.date.toISOString() : '';
+const authorName = siteConfig.site.title;
+const homeUrl = new URL('/', siteConfig.site.url).toString();
+const avatarUrl = new URL('/favicon.png', siteConfig.site.url).toString();
+const postPermalink = Astro.url.toString();
+
 // Real comments via Remark42. Use the local container in dev, prod host otherwise.
 const remarkUrl =
   import.meta.env.DEV && siteConfig.comments.url_dev
@@ -66,13 +75,13 @@ const remarkUrl =
   canonical={post.data.canonical_url ?? Astro.url.toString()}
 >
   <div class="frame">
-    <article class="card post">
+    <article class="card post h-entry">
       <TermBar path={`posts/${slug}.md`} />
       <div class="body">
         <a class="back-btn" href="/blog/">← back to posts</a>
 
         <h1
-          class="post-title t-title"
+          class="post-title t-title p-name"
           data-typewriter
           data-tw-delay="250"
           data-tw-speed="28"
@@ -83,12 +92,22 @@ const remarkUrl =
         {dek && <p class="post-dek">{dek}</p>}
 
         <div class="post-meta">
-          <span>{fmtDate(post.data.date)}</span>
+          <time class="dt-published" datetime={isoPublished}>{fmtDate(post.data.date)}</time>
         </div>
 
-        <div class="post-body">
+        <div class="post-body e-content">
           <Content />
         </div>
+
+        {/* Microformats for Bridgy Fed (hidden; supplements the visible
+            h-entry / p-name / dt-published / e-content above with an explicit
+            permalink, post-author h-card, and the fed.brid.gy opt-in link). */}
+        <a class="u-url" href={postPermalink} hidden>permalink</a>
+        <span class="p-author h-card" hidden>
+          <a class="u-url p-name" href={homeUrl} rel="author">{authorName}</a>
+          <img class="u-photo" src={avatarUrl} alt="" />
+        </span>
+        <a class="u-bridgy-fed" href="https://fed.brid.gy/" hidden>fediverse</a>
 
         <div class="post-end">
           <div class="end-actions">
