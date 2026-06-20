@@ -27,6 +27,7 @@ import { getFileHistory, getFileAtCommit } from '../utils/git.js';
 import { recordSnapshot, listSnapshots, getSnapshot } from '../services/snapshots.js';
 import { getSecret, setSecret, hasSecret } from '../services/app-secrets.js';
 import * as bluesky from '../services/bluesky.js';
+import * as mastodon from '../services/mastodon.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 // Astro replaced Hugo in Phase 3: user-editable params live in site.toml.
@@ -742,6 +743,73 @@ router.post('/bluesky/test', async (_req, res) => {
     if (m.includes('rate')) error = 'Bluesky rate-limited the test — try again in a moment.';
     else if (m.includes('network') || m.includes('fetch') || m.includes('timeout'))
       error = "Couldn't reach Bluesky — check the server's connection.";
+    res.status(400).json({ ok: false, error });
+  }
+});
+
+// ── Syndication: Mastodon (direct API) credentials ───────────────────────
+// Stored ENCRYPTED in app_secrets (never site.toml). The access token is
+// WRITE-ONLY — never returned to the client. MASTODON_* env is the fallback.
+
+router.get('/mastodon', (_req, res) => {
+  const uiTok = hasSecret('mastodon_access_token');
+  res.json({
+    configured: mastodon.isConfigured(),
+    instance: getSecret('mastodon_instance') || process.env.MASTODON_INSTANCE || '',
+    tokenSet: uiTok || Boolean(process.env.MASTODON_ACCESS_TOKEN),
+    source: uiTok ? 'ui' : process.env.MASTODON_ACCESS_TOKEN ? 'env' : null,
+  });
+});
+
+// Save. The instance is (re)written when present; the token is updated only
+// when a new non-empty value is supplied (empty field = keep), or cleared when
+// clearToken:true.
+router.post('/mastodon', (req, res) => {
+  const body = req.body || {};
+  if (typeof body.instance === 'string') {
+    setSecret('mastodon_instance', body.instance.trim().replace(/\/+$/, '')); // empty deletes
+  }
+  if (body.clearToken === true) {
+    setSecret('mastodon_access_token', '');
+  } else if (typeof body.accessToken === 'string' && body.accessToken.trim()) {
+    setSecret('mastodon_access_token', body.accessToken.trim());
+  }
+  logActivity({
+    req,
+    action: 'settings.mastodon',
+    target: getSecret('mastodon_instance') || '(none)',
+  });
+  res.json({
+    ok: true,
+    configured: mastodon.isConfigured(),
+    tokenSet: hasSecret('mastodon_access_token') || Boolean(process.env.MASTODON_ACCESS_TOKEN),
+  });
+});
+
+// Test connection — verify_credentials against the instance. Never echoes the
+// token; returns the resolved account handle so the user sees it worked.
+router.post('/mastodon/test', async (_req, res) => {
+  if (!mastodon.isConfigured()) {
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Add your instance URL and an access token first.' });
+  }
+  try {
+    const acct = await mastodon.verifyCredentials();
+    res.json({ ok: true, acct: acct.acct, url: acct.url });
+  } catch (err) {
+    const m = String((err && err.message) || '').toLowerCase();
+    let error = 'Connection failed — double-check the instance URL and access token.';
+    if (m.includes('verify_failed 401') || m.includes('verify_failed 403'))
+      error = 'The access token was rejected — make sure it has the write:statuses scope.';
+    else if (
+      m.includes('fetch') ||
+      m.includes('network') ||
+      m.includes('timeout') ||
+      m.includes('enotfound') ||
+      m.includes('econn')
+    )
+      error = "Couldn't reach that instance — check the URL.";
     res.status(400).json({ ok: false, error });
   }
 });

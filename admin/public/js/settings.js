@@ -332,9 +332,114 @@
     });
   }
 
+  // ── Syndication (Mastodon) — direct API; mirrors the Bluesky block above.
+  // The access token is write-only: only sent when the operator types one.
+  async function renderMastodon() {
+    const statusEl = document.getElementById('masto-status');
+    const instEl = document.getElementById('masto-instance');
+    const tokEl = document.getElementById('masto-token');
+    if (!instEl) return;
+    try {
+      const s = await window.TE.fetchJSON('/api/settings/mastodon');
+      instEl.value = s.instance || '';
+      if (tokEl) tokEl.placeholder = s.tokenSet ? 'configured — blank to keep' : 'access token';
+      if (statusEl) {
+        statusEl.textContent = s.configured
+          ? s.source === 'env'
+            ? 'Active (from .env)'
+            : 'Active'
+          : 'Not configured';
+      }
+    } catch {
+      if (statusEl) statusEl.textContent = 'unavailable';
+    }
+  }
+
+  async function saveMastodon(extra) {
+    const instEl = document.getElementById('masto-instance');
+    const tokEl = document.getElementById('masto-token');
+    const body = Object.assign(
+      {
+        instance: (instEl && instEl.value.trim()) || '',
+        accessToken: (tokEl && tokEl.value) || '',
+      },
+      extra || {},
+    );
+    const r = await window.TE.fetchJSON('/api/settings/mastodon', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (tokEl) tokEl.value = '';
+    return r;
+  }
+
+  function wireMastodon() {
+    const saveBtn = document.getElementById('masto-save');
+    const testBtn = document.getElementById('masto-test');
+    const clearBtn = document.getElementById('masto-clear');
+    if (!saveBtn) return;
+    renderMastodon();
+    saveBtn.addEventListener('click', async () => {
+      saveBtn.disabled = true;
+      try {
+        await saveMastodon();
+        window.TE.toast('Mastodon settings saved.');
+        renderMastodon();
+      } catch (err) {
+        window.TE.toast((err.data && err.data.message) || err.message || 'Save failed.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+    testBtn.addEventListener('click', async () => {
+      testBtn.disabled = true;
+      const prev = testBtn.textContent;
+      testBtn.textContent = 'Testing…';
+      try {
+        await saveMastodon(); // persist what's typed so the test uses it
+        const r = await window.TE.fetchJSON('/api/settings/mastodon/test', {
+          method: 'POST',
+          body: '{}',
+        });
+        window.TE.toast(r && r.acct ? `Connected as @${r.acct} ✓` : 'Connected to Mastodon ✓');
+        renderMastodon();
+      } catch (err) {
+        window.TE.toast((err.data && err.data.error) || err.message || 'Test failed.', 'error');
+        renderMastodon();
+      } finally {
+        testBtn.textContent = prev;
+        testBtn.disabled = false;
+      }
+    });
+    clearBtn.addEventListener('click', async () => {
+      if (!window.confirm('Remove the saved Mastodon credentials from this server?')) return;
+      clearBtn.disabled = true;
+      try {
+        const r = await saveMastodon({ instance: '', clearToken: true });
+        const i = document.getElementById('masto-instance');
+        if (i) i.value = '';
+        // r.configured stays true only when docker/.env still provides creds.
+        if (r && r.configured) {
+          window.TE.toast(
+            'Saved credentials removed — but MASTODON_* in docker/.env is still active, so posting continues.',
+            'warn',
+          );
+        } else {
+          window.TE.toast('Mastodon disconnected — auto-posting is off.');
+        }
+        renderMastodon();
+      } catch (err) {
+        window.TE.toast(err.message || 'Failed.', 'error');
+      } finally {
+        clearBtn.disabled = false;
+      }
+    });
+  }
+
   function init() {
     render();
     wireBluesky();
+    wireMastodon();
     const btn = document.getElementById('btn-save-settings');
     if (btn) btn.addEventListener('click', save);
   }
