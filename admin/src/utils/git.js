@@ -55,6 +55,28 @@ function clearStaleLock(repoPath) {
   }
 }
 
+// Serialize index-mutating git ops WITHIN this process so the scheduler's content
+// auto-commit can't race a manual "Publish site" (both reach publishChanges /
+// commitAndPush → a concurrent `git add`/commit on one index, which the loser
+// hits as "index.lock exists"). The cross-process race with the host cron scripts
+// is handled by clearStaleLock + the small index (build artifacts are untracked).
+// A simple promise chain runs the wrapped fns one at a time.
+let gitChain = Promise.resolve();
+/**
+ * @template T
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+function withGitLock(fn) {
+  const run = gitChain.then(fn, fn);
+  // Keep the chain alive even if fn rejects — never poison later ops.
+  gitChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 /**
  * Push HEAD to origin/main, retrying a few times to ride out a transient
  * tunnel/network blip (the realistic failure on the Pi). We deliberately
@@ -186,6 +208,11 @@ async function alignToOriginMain(git) {
  * @returns {Promise<{ success: true, message: string, changed: boolean, changedPosts?: string[], commitHash?: string }>}
  */
 export async function publishChanges() {
+  return withGitLock(publishChangesImpl);
+}
+
+/** @returns {Promise<{ success: true, message: string, changed: boolean, changedPosts?: string[], commitHash?: string }>} */
+async function publishChangesImpl() {
   const git = getGitInstance();
   try {
     console.log('Publishing changes...');
@@ -253,6 +280,10 @@ export async function publishChanges() {
  * @returns {Promise<{ success: boolean, message: string, commitHash?: string }>}
  */
 export async function commitAndPush(message) {
+  return withGitLock(() => commitAndPushImpl(message));
+}
+
+async function commitAndPushImpl(message) {
   const git = getGitInstance();
   try {
     await alignToOriginMain(git);

@@ -356,6 +356,34 @@
     unlockBackground();
   };
 
+  // Close every open modal/drawer and fully release the inert background. The
+  // router calls this on a view change: an overlay left open (e.g. via browser
+  // Back/Forward while a drawer is up) would otherwise strand the next view
+  // behind a still-`inert` .shell with a floating, stale overlay.
+  TE.dismissOverlays = function dismissOverlays() {
+    document.querySelectorAll('.modal.open').forEach((m) => {
+      if (m.id) TE.closeModal(m.id);
+    });
+    // Click the drawer's close control so the owning module resets its state
+    // (e.g. comments.js clears drawerActive); fall back to the shared closer.
+    document.querySelectorAll('.te-cm-drawer.open, .te-media-drawer.open').forEach((d) => {
+      const btn = /** @type {HTMLElement | null} */ (d.querySelector('[id$="-close"]'));
+      if (btn) btn.click();
+      else TE.closeDrawer(/** @type {HTMLElement} */ (d));
+    });
+    // Safety net: if overlay bookkeeping ever drifts, force-release the inert
+    // background once nothing is open.
+    if (!document.querySelector('.modal.open, .te-cm-drawer.open, .te-media-drawer.open')) {
+      overlayDepth = 0;
+      const shell = document.querySelector('[data-te-inert]');
+      if (shell) {
+        shell.removeAttribute('inert');
+        shell.removeAttribute('aria-hidden');
+        shell.removeAttribute('data-te-inert');
+      }
+    }
+  };
+
   function initModals() {
     document.addEventListener('click', (e) => {
       const target = /** @type {Element} */ (e.target);

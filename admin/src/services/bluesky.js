@@ -45,6 +45,7 @@
  */
 
 import { getSecret } from './app-secrets.js';
+import { screenedFetch } from '../utils/ssrf.js';
 
 const DEFAULT_SERVICE = 'https://bsky.social';
 
@@ -356,11 +357,17 @@ async function buildLinkCard(agent, { url, title, description, coverImageUrl }) 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    // Fetch the cover as bytes. Skip if the URL is relative or the platform
-    // fetch refuses it. Hard 5s timeout so a slow/hung cover host can't stall
-    // the cross-post leg indefinitely.
-    const res = await globalThis.fetch(coverImageUrl, { signal: controller.signal });
+    // Route through screenedFetch (SSRF guard: scheme + private-host screening,
+    // manual-redirect re-screening). The cover URL is author-supplied front-matter
+    // / first-body-image, so it must not be able to reach a LAN or cloud-metadata
+    // host. Hard 5s timeout so a slow/hung cover host can't stall the cross-post.
+    const res = await screenedFetch(coverImageUrl, {
+      init: { signal: controller.signal },
+      maxRedirects: 2,
+    });
     if (!res.ok) return card;
+    // Bail before buffering if the server declares an over-cap body.
+    if (Number(res.headers.get('content-length') || 0) > 1_000_000) return card;
     const buf = Buffer.from(await res.arrayBuffer());
     if (buf.length > 1_000_000) return card; // Bluesky caps blobs ~1 MB
     const mime = res.headers.get('content-type') || 'image/jpeg';

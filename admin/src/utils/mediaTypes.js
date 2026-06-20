@@ -31,6 +31,20 @@ export const DENYLIST_EXTENSIONS = new Set([
   '.vbs',
   '.msi',
   '.dll',
+  // Script-capable web types: an uploaded .svg/.html/etc. is committed and then
+  // served by GitHub Pages (no CSP), so it would execute in a visitor's browser
+  // on the site origin (stored XSS). None are needed as blog media — raster
+  // covers go through the AVIF/WebP convert pipeline. (Re-enable .svg only with
+  // server-side sanitization.)
+  '.svg',
+  '.svgz',
+  '.html',
+  '.htm',
+  '.xhtml',
+  '.xml',
+  '.js',
+  '.mjs',
+  '.wasm',
 ]);
 
 const DOCUMENT_MIMES = new Set([
