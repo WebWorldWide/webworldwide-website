@@ -84,13 +84,14 @@ blog_cta = true
 words = ["Web", "World", "Wide"]
 tagline = "W · W · W"
 
+subtitle = ""
 [homepage.apps]
 # `items` is an inline-table array on ONE line on purpose: the admin's
 # toml-roundtrip writer rewrites whole `key = value` lines, so keeping
 # the array single-line lets edits round-trip without losing comments.
 # status: "live" (★ live), "soon" (coming soon), "lab" (in the lab).
 # Empty icon = placeholder card; empty link = tile is a no-op.
-items = [ { name = "FileID", status = "live", link = "https://claude.ai/design/p/51500a82-3faf-4144-9a89-94e738dbb888?file=index.html", icon = "/assets/fileid.png" }, { name = "Document Finder", status = "soon", link = "", icon = "/assets/doc-finder.png" }, { name = "Untitled", status = "lab", link = "", icon = "" }, { name = "Untitled", status = "lab", link = "", icon = "" } ]
+items = [{ name = "FileID", status = "live", link = "https://claude.ai/design/p/51500a82-3faf-4144-9a89-94e738dbb888?file=index.html", icon = "/assets/fileid.png" }, { name = "Document Finder", status = "live", link = "https://documentfinder.webworldwide.online/", icon = "/assets/doc-finder.png" }, { name = "Untitled", status = "lab", link = "", icon = "" }, { name = "Untitled", status = "lab", link = "", icon = "" }]
 
 [homepage.videos]
 episode = "EP. 001"
@@ -105,3 +106,5 @@ kicker = "Latest"
 title = "The Web World Wide"
 title_accent = "Blog"
 url = "/blog/"
+
+description = ""
