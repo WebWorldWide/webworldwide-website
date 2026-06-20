@@ -176,6 +176,16 @@
         <button type="button" class="btn ghost" id="cm-bulk-clear">Clear</button>
       </div>
     `;
+    // The drawer must live OUTSIDE .shell. TE.openDrawer() calls lockBackground(),
+    // which sets `inert` on .shell while the drawer is open — and `inert` cascades
+    // to every descendant. A drawer built inside #view-comments (which is inside
+    // .shell) would therefore have ALL its buttons (reply / approve / reject /
+    // delete / close) become unclickable. Portal it to <body>, mirroring the
+    // media drawer (which is already a direct child of <body> and works).
+    const portaledDrawer = root.querySelector('#cm-drawer');
+    if (portaledDrawer && portaledDrawer.parentElement !== document.body) {
+      document.body.appendChild(portaledDrawer);
+    }
     wire();
     return root;
   }
