@@ -126,7 +126,38 @@ export async function defaultCommit(filenames) {
   // retries) — that throw propagates to promoteScheduledPosts' commit try/catch,
   // which records it as a (git) error for the run.
   const { publishChanges } = await import('../utils/git.js');
-  await publishChanges();
+  const result = await publishChanges();
+
+  // Bluesky cross-post — best-effort; mirrors the manual /publish route. Without
+  // it a SCHEDULED post goes live but is never syndicated to Bluesky (the manual
+  // route does crossPostChangedPosts; the scheduler historically did not, and as
+  // a host cron it lacked the BLUESKY_* env anyway). Now that promote-scheduled.sh
+  // runs this INSIDE the cms container, isConfigured() can be true here. Wrapped
+  // so a syndication hiccup NEVER fails the promotion.
+  try {
+    const bluesky = await import('./bluesky.js');
+    if (
+      result?.changed &&
+      Array.isArray(result.changedPosts) &&
+      result.changedPosts.length > 0 &&
+      bluesky.isConfigured()
+    ) {
+      const { crossPostChangedPosts } = await import('./bluesky-crosspost.js');
+      const report = await crossPostChangedPosts(result.changedPosts);
+      if (report.posted.length > 0) {
+        // Persist the bluesky_uri values written back into front-matter.
+        const { commitAndPush } = await import('../utils/git.js');
+        await commitAndPush(
+          `Update Bluesky URIs (${report.posted.length} post${report.posted.length === 1 ? '' : 's'})`,
+        );
+      }
+    }
+  } catch (err) {
+    console.warn(
+      '[scheduler] Bluesky cross-post skipped:',
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 // CLI shim: `node admin/src/services/scheduler.js [--dry-run] [--no-commit]`

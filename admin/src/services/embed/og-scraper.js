@@ -20,7 +20,8 @@
  * additionally short-circuit if asked for anything else.
  */
 
-import { readCappedText, setFetchImpl as _set } from './oembed.js';
+import { readCappedText, setFetchImpl as _set, shouldScreenDns } from './oembed.js';
+import { screenedFetch } from '../../utils/ssrf.js';
 
 // Re-export so tests don't have to import from oembed.js too.
 export { setFetchImpl } from './oembed.js';
@@ -57,14 +58,17 @@ export async function scrapeOpenGraph(href, opts) {
   const timer = setTimeout(() => controller.abort(), opts?.timeoutMs || DEFAULT_TIMEOUT_MS);
   let res;
   try {
-    res = await fetchFn(url.href, {
-      method: 'GET',
-      headers: {
-        Accept: 'text/html,application/xhtml+xml',
-        'User-Agent': USER_AGENT,
+    res = await screenedFetch(url.href, {
+      fetchImpl: fetchFn,
+      screenDns: shouldScreenDns(),
+      init: {
+        method: 'GET',
+        headers: {
+          Accept: 'text/html,application/xhtml+xml',
+          'User-Agent': USER_AGENT,
+        },
+        signal: controller.signal,
       },
-      signal: controller.signal,
-      redirect: 'follow',
     });
   } catch {
     clearTimeout(timer);
