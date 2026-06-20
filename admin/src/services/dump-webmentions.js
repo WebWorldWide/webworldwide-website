@@ -48,9 +48,11 @@ const DEFAULT_DB_PATH = process.env.AUTH_DB_PATH || join(__dirname, '..', '..', 
 const DEFAULT_SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', '..', '..', 'site');
 
 /**
- * Pull `<slug>` from a target URL: the first non-empty path segment.
- * Posts use the permalink `posts = "/:slug/"` rule in hugo.toml so
- * `https://webworldwide.online/<slug>/` is the canonical shape.
+ * Pull `<slug>` from a target URL. Posts use the permalink `/blog/:slug/`
+ * (site.toml), so the canonical shape is
+ * `https://webworldwide.online/blog/<slug>/` and the leading literal `blog`
+ * segment is skipped to recover the real slug. Kept in sync with postFor() in
+ * routes/comments.js.
  *
  * Returns null for URLs we can't bucket (homepage, taxonomies — we
  * don't write per-slug files for those; their mentions live in the
@@ -68,8 +70,12 @@ export function slugFromTarget(url) {
   }
   const parts = u.pathname.split('/').filter(Boolean);
   if (parts.length === 0) return '__home__';
+  // Posts live at /blog/<slug>/ — skip the literal "blog" prefix so mentions
+  // bucket by the real post slug (else every post's mentions collide under a
+  // single "blog" bucket). Kept in sync with postFor() in routes/comments.js.
+  const candidate = parts[0] === 'blog' ? parts[1] : parts[0];
+  if (!candidate) return '__home__';
   // Sanitise — accept slug-shaped tokens only (Hugo's slug rules).
-  const candidate = parts[0];
   if (!/^[a-z0-9][a-z0-9-]*$/i.test(candidate)) return null;
   return candidate.toLowerCase();
 }

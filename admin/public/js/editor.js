@@ -1086,19 +1086,43 @@
       );
       if (!ok) return;
     }
-    // A draft won't appear on the live site even once pushed (Astro filters
-    // drafts at build). This is a common "I published but nothing changed"
-    // trap — warn before spending a deploy on an invisible change.
+    // "Save & publish" should make the post you're editing PUBLIC — not merely
+    // rebuild the site while the post stays a hidden draft. (The old flow left
+    // the draft flag untouched, so publishing a draft rebuilt the site but the
+    // post never appeared — the user had to find a separate "Status → Published"
+    // dropdown first.) If the post is still a draft (or scheduled), offer to
+    // publish it for real, then clear the draft flag AND any future schedule.
+    let revertPublish = null;
     if (draftEl?.value === 'true') {
       const ok = window.confirm(
-        'Heads up: this post is a DRAFT. Drafts stay completely hidden on the live ' +
-          "site — publishing now will rebuild the site but readers still won't see " +
-          'this post.\n\nTo make it public: set Status to "Published" (in Post settings), ' +
-          'then Save & publish again.\n\nRebuild the site anyway?',
+        'Publish this post now and make it public?\n\n' +
+          "It's currently a draft, so readers can't see it yet. Click OK to set its " +
+          'status to Published and push it live.\n\n' +
+          '(Click Cancel to keep it a draft — use the "Save draft" button for that.)',
       );
       if (!ok) return;
+      // Make it public for real. A future publish_at would ALSO keep a
+      // draft:false post hidden (see isPublished() in the site build), so clear
+      // it — an explicit "publish now" overrides any pending schedule. Snapshot
+      // the prior state first so a REJECTED save (409 conflict / validation /
+      // network) can roll the UI back instead of leaving it claiming
+      // "Published" while the file on disk is still a draft.
+      const pubAtEl = $('post-publish-at');
+      revertPublish = { draft: draftEl.value, pubAt: pubAtEl ? pubAtEl.value : null, pubAtEl };
+      draftEl.value = 'false';
+      if (pubAtEl) pubAtEl.value = '';
+      updateStatusPill();
+      updatePublishAtBadge();
     }
-    if (!(await savePost())) return;
+    if (!(await savePost())) {
+      if (revertPublish) {
+        draftEl.value = revertPublish.draft;
+        if (revertPublish.pubAtEl) revertPublish.pubAtEl.value = revertPublish.pubAt;
+        updateStatusPill();
+        updatePublishAtBadge();
+      }
+      return;
+    }
     btnPub.disabled = btnPub2.disabled = true;
     try {
       const result = await TE.fetchJSON('/api/publish', { method: 'POST', body: '{}' });

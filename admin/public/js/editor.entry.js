@@ -1556,6 +1556,10 @@ function createEmbedPasteUI() {
   }
 
   function show(opts) {
+    // Idempotent reset first: if a card is already open (e.g. a second URL is
+    // pasted before the first is dismissed), this removes the prior capturing
+    // keydown listener so document handlers can't stack and leak.
+    hide();
     handlers = opts || {};
     setBusy(false);
     root.style.display = 'block';
@@ -4013,6 +4017,10 @@ export function mount(rootEl, initialMarkdown, options) {
           return true;
         },
         'Mod-Shift-u': () => this.editor.chain().focus().toggleUnderline().run(),
+        // Bind the shortcuts the toolbar tooltips advertise so they actually
+        // work (Strikethrough and Horizontal rule were advertised but unbound).
+        'Mod-Shift-x': () => this.editor.chain().focus().toggleStrike().run(),
+        'Mod-Shift-h': () => this.editor.chain().focus().setHorizontalRule().run(),
         // Phase 3d: Cmd+F opens the in-editor find modal. The handler is
         // hooked to the rootEl find-modal instance further down; we
         // dispatch the same custom event so source-mode and WYSIWYG share
@@ -5007,7 +5015,10 @@ export function mount(rootEl, initialMarkdown, options) {
       canRun: () => editor.isActive('image'),
       active: () =>
         editor.isActive('image') && (editor.getAttributes('image').align || null) === align,
-      run: () => editor.chain().focus().updateAttributes('image', { align }).run(),
+      // Focus-free patch (see patchSelectedImage): chain().focus() on a blurred
+      // view schedules an async refocus that drops the NodeSelection and hides
+      // this contextual toolbar. Re-assert the selection instead.
+      run: () => patchSelectedImage(selectedImagePos(), { align }),
     });
   }
   gImage.appendChild(imgAlignBtn('Align image left', 'align_left', 'left'));
@@ -5067,6 +5078,28 @@ export function mount(rootEl, initialMarkdown, options) {
   richToolbar.appendChild(gVideoDivider);
   const gVideo = tbGroup('Video options');
   gVideo.classList.add('te-tb-video-group');
+  // Focus-free video node patch — the video equivalents of selectedImagePos /
+  // patchSelectedImage. Toggling a video flag must NOT call chain().focus():
+  // if the view is blurred (e.g. the user clicked outside the editor while the
+  // video stays node-selected), focus() schedules an async refocus that drops
+  // the NodeSelection and hides the contextual video toolbar mid-click.
+  function selectedVideoPos() {
+    const sel = editor.state.selection;
+    return sel && sel.node && sel.node.type.name === 'video' ? sel.from : null;
+  }
+  function patchSelectedVideo(pos, attrs) {
+    if (typeof pos !== 'number') return;
+    editor
+      .chain()
+      .command(({ tr, state }) => {
+        const n = state.doc.nodeAt(pos);
+        if (!n || n.type.name !== 'video') return false;
+        tr.setNodeMarkup(pos, undefined, { ...n.attrs, ...attrs });
+        return true;
+      })
+      .setNodeSelection(pos)
+      .run();
+  }
   function videoAttrBtn(label, icon, attr) {
     return tbBtn({
       label,
@@ -5084,7 +5117,7 @@ export function mount(rootEl, initialMarkdown, options) {
         // would silently do nothing on the published page.
         if (attr === 'autoplay' && next) patch.muted = true;
         if (attr === 'muted' && !next) patch.autoplay = false;
-        editor.chain().focus().updateAttributes('video', patch).run();
+        patchSelectedVideo(selectedVideoPos(), patch);
       },
     });
   }
@@ -5387,6 +5420,20 @@ export function mount(rootEl, initialMarkdown, options) {
     } catch (_) {
       /* ignore */
     }
+    // rootEl survives innerHTML='' (it's the host's mount point), so its
+    // bound listeners + the TOC timer would otherwise outlive the editor and
+    // stack/fire into a destroyed instance on a re-mount over the same root.
+    try {
+      rootEl.removeEventListener('keydown', onRootFindKey);
+      rootEl.removeEventListener('editor-find', onRootEditorFind);
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      if (toc) toc.destroy();
+    } catch (_) {
+      /* ignore */
+    }
     rootEl.innerHTML = '';
     rootEl.classList.remove('te-editor');
   };
@@ -5430,18 +5477,20 @@ export function mount(rootEl, initialMarkdown, options) {
   function isModF(e) {
     return (e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F');
   }
-  rootEl.addEventListener('keydown', (e) => {
+  const onRootFindKey = (e) => {
     if (!isModF(e)) return;
     e.preventDefault();
     e.stopPropagation();
     findModal.toggle();
-  });
+  };
+  rootEl.addEventListener('keydown', onRootFindKey);
   // CodeMirror's keymap dispatches a custom editor-find event when
   // source-mode users hit Cmd+F — pick it up and open the same modal.
-  rootEl.addEventListener('editor-find', (e) => {
+  const onRootEditorFind = (e) => {
     e.preventDefault?.();
     findModal.open();
-  });
+  };
+  rootEl.addEventListener('editor-find', onRootEditorFind);
 
   // ── Phase 3d: TOC sidebar ─────────────────────────────────
   //
