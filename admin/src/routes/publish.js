@@ -12,7 +12,9 @@
 import { Router } from 'express';
 import { publishChanges, getGitStatus, commitAndPush } from '../utils/git.js';
 import { crossPostChangedPosts } from '../services/bluesky-crosspost.js';
+import { crossPostChangedPosts as mastodonCrossPost } from '../services/mastodon-crosspost.js';
 import * as bluesky from '../services/bluesky.js';
+import * as mastodon from '../services/mastodon.js';
 import { logActivity } from '../services/activity.js';
 
 const router = Router();
@@ -133,7 +135,40 @@ router.post('/', async (req, res) => {
       }
     }
 
-    res.json({ ...result, bluesky: blueskyReport });
+    // Mastodon cross-post hook — same best-effort contract as Bluesky above,
+    // posting directly to the configured account. Independent of Bridgy Fed.
+    let mastodonReport = null;
+    if (result.changed && Array.isArray(result.changedPosts) && result.changedPosts.length > 0) {
+      if (!mastodon.isConfigured()) {
+        console.log('[publish] Mastodon cross-post skipped — MASTODON_* not set');
+      } else {
+        try {
+          mastodonReport = await mastodonCrossPost(result.changedPosts);
+          console.log(
+            `[publish] Mastodon: posted=${mastodonReport.posted.length}` +
+              ` skipped=${mastodonReport.skipped.length}` +
+              ` errors=${mastodonReport.errors.length}`,
+          );
+          if (mastodonReport.posted.length > 0) {
+            const followup = await commitAndPush(
+              `Update Mastodon URIs (${mastodonReport.posted.length} post${mastodonReport.posted.length === 1 ? '' : 's'})`,
+            );
+            if (!followup.success) {
+              console.warn('[publish] Mastodon followup commit failed:', followup.message);
+            }
+          }
+        } catch (err) {
+          console.warn('[publish] Mastodon cross-post crashed (continuing):', err.message);
+          logActivity({
+            user: 'system',
+            action: 'mastodon.crosspost_crashed',
+            meta: { error: err.message },
+          });
+        }
+      }
+    }
+
+    res.json({ ...result, bluesky: blueskyReport, mastodon: mastodonReport });
   } catch (err) {
     // Don't leak git/fs internals (absolute Pi paths, library detail) to
     // the client — log the detail, return a SAFE, actionable code + message

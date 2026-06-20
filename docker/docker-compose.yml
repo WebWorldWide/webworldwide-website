@@ -77,6 +77,11 @@ services:
       - BLUESKY_HANDLE=${BLUESKY_HANDLE:-}
       - BLUESKY_APP_PASSWORD=${BLUESKY_APP_PASSWORD:-}
       - BLUESKY_SERVICE=${BLUESKY_SERVICE:-https://bsky.social}
+      # Mastodon direct cross-post. Configure in the admin UI (Settings →
+      # Syndication) OR here. MASTODON_ACCESS_TOKEN needs the write:statuses
+      # scope. Empty = off (isConfigured() requires both instance + token).
+      - MASTODON_INSTANCE=${MASTODON_INSTANCE:-}
+      - MASTODON_ACCESS_TOKEN=${MASTODON_ACCESS_TOKEN:-}
     depends_on:
       - languagetool
     volumes:

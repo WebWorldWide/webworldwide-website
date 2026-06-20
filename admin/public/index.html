@@ -484,42 +484,136 @@
                 <div class="panel-head">
                   <span class="panel-title"
                     ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span
-                    >Syndication — Bluesky</span
+                    >Syndication — auto-post to social</span
                   >
-                  <span id="bsky-status" class="panel-head-r" aria-live="polite"></span>
                 </div>
                 <div class="panel-body">
-                  <p style="margin: 0 0 12px; color: var(--fg-dim)">
-                    Auto-post each published post to Bluesky. Use an
-                    <a
-                      href="https://bsky.app/settings/app-passwords"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      >app password</a
-                    >
-                    — not your account password. It's stored encrypted on this server, never in your
-                    public repo.
+                  <p style="margin: 0 0 18px; color: var(--fg-dim)">
+                    Auto-post each newly published post to your social accounts. Credentials are
+                    stored encrypted on this server — never in your public repo.
                   </p>
-                  <label class="te-field"
-                    ><span>Handle</span>
-                    <input
-                      type="text"
-                      id="bsky-handle"
-                      placeholder="you.bsky.social"
-                      autocomplete="off"
-                  /></label>
-                  <label class="te-field"
-                    ><span>App password</span>
-                    <input
-                      type="password"
-                      id="bsky-password"
-                      placeholder="app password"
-                      autocomplete="new-password"
-                  /></label>
-                  <div class="sec-actions" style="margin-top: 12px; gap: 8px">
-                    <button type="button" class="btn primary" id="bsky-save">Save</button>
-                    <button type="button" class="btn" id="bsky-test">Test connection</button>
-                    <button type="button" class="btn ghost" id="bsky-clear">Disconnect</button>
+
+                  <!-- Bluesky -->
+                  <div class="synd-block">
+                    <div
+                      class="synd-block-head"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                      "
+                    >
+                      <h3 style="margin: 0; font-size: 15px">Bluesky</h3>
+                      <span id="bsky-status" class="panel-head-r" aria-live="polite"></span>
+                    </div>
+                    <p style="margin: 6px 0 12px; color: var(--fg-dim); font-size: 13px">
+                      Posts directly to Bluesky. Use an
+                      <a
+                        href="https://bsky.app/settings/app-passwords"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >app password</a
+                      >
+                      — not your account password.
+                    </p>
+                    <label class="te-field"
+                      ><span>Handle</span>
+                      <input
+                        type="text"
+                        id="bsky-handle"
+                        placeholder="you.bsky.social"
+                        autocomplete="off"
+                    /></label>
+                    <label class="te-field"
+                      ><span>App password</span>
+                      <input
+                        type="password"
+                        id="bsky-password"
+                        placeholder="app password"
+                        autocomplete="new-password"
+                    /></label>
+                    <div class="sec-actions" style="margin-top: 12px; gap: 8px">
+                      <button type="button" class="btn primary" id="bsky-save">Save</button>
+                      <button type="button" class="btn" id="bsky-test">Test connection</button>
+                      <button type="button" class="btn ghost" id="bsky-clear">Disconnect</button>
+                    </div>
+                  </div>
+
+                  <!-- Mastodon -->
+                  <div
+                    class="synd-block"
+                    style="
+                      margin-top: 22px;
+                      border-top: 1px solid var(--line, rgba(128, 128, 128, 0.2));
+                      padding-top: 20px;
+                    "
+                  >
+                    <div
+                      class="synd-block-head"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                      "
+                    >
+                      <h3 style="margin: 0; font-size: 15px">Mastodon</h3>
+                      <span id="masto-status" class="panel-head-r" aria-live="polite"></span>
+                    </div>
+                    <p style="margin: 6px 0 12px; color: var(--fg-dim); font-size: 13px">
+                      Posts directly to your Mastodon account. Create an access token with the
+                      <code>write:statuses</code> scope under your instance's
+                      <em>Settings → Development → New application</em>.
+                    </p>
+                    <label class="te-field"
+                      ><span>Instance URL</span>
+                      <input
+                        type="text"
+                        id="masto-instance"
+                        placeholder="https://mastodon.social"
+                        autocomplete="off"
+                    /></label>
+                    <label class="te-field"
+                      ><span>Access token</span>
+                      <input
+                        type="password"
+                        id="masto-token"
+                        placeholder="access token"
+                        autocomplete="new-password"
+                    /></label>
+                    <div class="sec-actions" style="margin-top: 12px; gap: 8px">
+                      <button type="button" class="btn primary" id="masto-save">Save</button>
+                      <button type="button" class="btn" id="masto-test">Test connection</button>
+                      <button type="button" class="btn ghost" id="masto-clear">Disconnect</button>
+                    </div>
+                  </div>
+
+                  <!-- Threads / fediverse via Bridgy Fed -->
+                  <div
+                    class="synd-block"
+                    style="
+                      margin-top: 22px;
+                      border-top: 1px solid var(--line, rgba(128, 128, 128, 0.2));
+                      padding-top: 20px;
+                    "
+                  >
+                    <h3 style="margin: 0 0 6px; font-size: 15px">
+                      Threads &amp; the wider fediverse
+                    </h3>
+                    <p style="margin: 0; color: var(--fg-dim); font-size: 13px">
+                      Threads has no simple token API, so it's reached via
+                      <a
+                        href="https://fed.brid.gy/web-site"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >Bridgy Fed</a
+                      >
+                      — a one-time signup for <strong>webworldwide.online</strong> (nothing to enter
+                      here). Followers then use
+                      <code>@webworldwide.online@webworldwide.online</code> from Threads or any
+                      Mastodon server.
+                    </p>
                   </div>
                 </div>
               </div>

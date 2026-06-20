@@ -158,6 +158,31 @@ export async function defaultCommit(filenames) {
       err instanceof Error ? err.message : err,
     );
   }
+
+  // Mastodon cross-post — same best-effort contract as Bluesky above.
+  try {
+    const mastodon = await import('./mastodon.js');
+    if (
+      result?.changed &&
+      Array.isArray(result.changedPosts) &&
+      result.changedPosts.length > 0 &&
+      mastodon.isConfigured()
+    ) {
+      const { crossPostChangedPosts } = await import('./mastodon-crosspost.js');
+      const report = await crossPostChangedPosts(result.changedPosts);
+      if (report.posted.length > 0) {
+        const { commitAndPush } = await import('../utils/git.js');
+        await commitAndPush(
+          `Update Mastodon URIs (${report.posted.length} post${report.posted.length === 1 ? '' : 's'})`,
+        );
+      }
+    }
+  } catch (err) {
+    console.warn(
+      '[scheduler] Mastodon cross-post skipped:',
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 // CLI shim: `node admin/src/services/scheduler.js [--dry-run] [--no-commit]`
