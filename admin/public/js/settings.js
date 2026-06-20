@@ -229,8 +229,112 @@
     }
   }
 
+  // ── Syndication (Bluesky) — its own panel OUTSIDE #settings-form so its
+  // credentials never flow into collect()/site.toml (the public repo). The
+  // password is write-only: only sent when the operator types a new one.
+  async function renderBluesky() {
+    const statusEl = document.getElementById('bsky-status');
+    const handleEl = document.getElementById('bsky-handle');
+    const pwEl = document.getElementById('bsky-password');
+    if (!handleEl) return;
+    try {
+      const s = await window.TE.fetchJSON('/api/settings/bluesky');
+      handleEl.value = s.handle || '';
+      if (pwEl) pwEl.placeholder = s.passwordSet ? 'configured — blank to keep' : 'app password';
+      if (statusEl) {
+        statusEl.textContent = s.configured
+          ? s.source === 'env'
+            ? 'Active (from .env)'
+            : 'Active'
+          : 'Not configured';
+      }
+    } catch {
+      if (statusEl) statusEl.textContent = 'unavailable';
+    }
+  }
+
+  async function saveBluesky(extra) {
+    const handleEl = document.getElementById('bsky-handle');
+    const pwEl = document.getElementById('bsky-password');
+    const body = Object.assign(
+      {
+        handle: (handleEl && handleEl.value.trim()) || '',
+        appPassword: (pwEl && pwEl.value) || '',
+      },
+      extra || {},
+    );
+    const r = await window.TE.fetchJSON('/api/settings/bluesky', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (pwEl) pwEl.value = '';
+    return r;
+  }
+
+  function wireBluesky() {
+    const saveBtn = document.getElementById('bsky-save');
+    const testBtn = document.getElementById('bsky-test');
+    const clearBtn = document.getElementById('bsky-clear');
+    if (!saveBtn) return;
+    renderBluesky();
+    saveBtn.addEventListener('click', async () => {
+      saveBtn.disabled = true;
+      try {
+        await saveBluesky();
+        window.TE.toast('Bluesky settings saved.');
+        renderBluesky();
+      } catch (err) {
+        window.TE.toast((err.data && err.data.message) || err.message || 'Save failed.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+    testBtn.addEventListener('click', async () => {
+      testBtn.disabled = true;
+      const prev = testBtn.textContent;
+      testBtn.textContent = 'Testing…';
+      try {
+        await saveBluesky(); // persist what's typed so the test uses it
+        await window.TE.fetchJSON('/api/settings/bluesky/test', { method: 'POST', body: '{}' });
+        window.TE.toast('Connected to Bluesky ✓');
+        renderBluesky();
+      } catch (err) {
+        window.TE.toast((err.data && err.data.error) || err.message || 'Test failed.', 'error');
+        renderBluesky();
+      } finally {
+        testBtn.textContent = prev;
+        testBtn.disabled = false;
+      }
+    });
+    clearBtn.addEventListener('click', async () => {
+      if (!window.confirm('Remove the saved Bluesky credentials from this server?')) return;
+      clearBtn.disabled = true;
+      try {
+        const r = await saveBluesky({ handle: '', clearPassword: true });
+        const h = document.getElementById('bsky-handle');
+        if (h) h.value = '';
+        // r.configured stays true only when docker/.env still provides creds —
+        // which the UI can't remove. Be honest rather than claim posting stopped.
+        if (r && r.configured) {
+          window.TE.toast(
+            'Saved credentials removed — but BLUESKY_* in docker/.env is still active, so posting continues.',
+            'warn',
+          );
+        } else {
+          window.TE.toast('Bluesky disconnected — auto-posting is off.');
+        }
+        renderBluesky();
+      } catch (err) {
+        window.TE.toast(err.message || 'Failed.', 'error');
+      } finally {
+        clearBtn.disabled = false;
+      }
+    });
+  }
+
   function init() {
     render();
+    wireBluesky();
     const btn = document.getElementById('btn-save-settings');
     if (btn) btn.addEventListener('click', save);
   }

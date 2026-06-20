@@ -44,7 +44,25 @@
  *   a failed cross-post as a soft warning and keeps going.
  */
 
+import { getSecret } from './app-secrets.js';
+
 const DEFAULT_SERVICE = 'https://bsky.social';
+
+/**
+ * Resolve Bluesky config. UI-entered values (encrypted in the `app_secrets` DB
+ * table via the admin Settings → Syndication panel) take precedence; the
+ * docker/.env `BLUESKY_*` vars are the fallback. So the operator can configure
+ * it either way and the UI is the source of truth when both are set.
+ *
+ * @returns {{ handle: string, appPassword: string, service: string }}
+ */
+export function getBlueskyConfig() {
+  return {
+    handle: getSecret('bluesky_handle') || process.env.BLUESKY_HANDLE || '',
+    appPassword: getSecret('bluesky_app_password') || process.env.BLUESKY_APP_PASSWORD || '',
+    service: getSecret('bluesky_service') || process.env.BLUESKY_SERVICE || DEFAULT_SERVICE,
+  };
+}
 
 // Bluesky's hard limit is 300 graphemes (per richtext); we leave a few
 // chars of headroom for the link suffix to dodge grapheme miscounts.
@@ -70,7 +88,7 @@ let agentFactory = async () => {
   if (!Ctor) {
     throw new Error('@atproto/api: no BskyAgent / AtpAgent export found');
   }
-  return new Ctor({ service: process.env.BLUESKY_SERVICE || DEFAULT_SERVICE });
+  return new Ctor({ service: getBlueskyConfig().service });
 };
 
 /**
@@ -86,7 +104,7 @@ export function setAgentFactory(fn) {
       const mod = /** @type {any} */ (await import('@atproto/api'));
       const Ctor = mod.BskyAgent || mod.AtpAgent || mod.default?.BskyAgent;
       if (!Ctor) throw new Error('@atproto/api: no BskyAgent / AtpAgent export found');
-      return new Ctor({ service: process.env.BLUESKY_SERVICE || DEFAULT_SERVICE });
+      return new Ctor({ service: getBlueskyConfig().service });
     });
 }
 
@@ -97,7 +115,8 @@ export function setAgentFactory(fn) {
  * @returns {boolean}
  */
 export function isConfigured() {
-  return Boolean(process.env.BLUESKY_HANDLE && process.env.BLUESKY_APP_PASSWORD);
+  const { handle, appPassword } = getBlueskyConfig();
+  return Boolean(handle && appPassword);
 }
 
 /**
@@ -111,10 +130,11 @@ export async function signIn() {
   if (!isConfigured()) {
     throw new Error('BLUESKY_HANDLE / BLUESKY_APP_PASSWORD not set');
   }
+  const { handle, appPassword } = getBlueskyConfig();
   const agent = await agentFactory();
   await agent.login({
-    identifier: process.env.BLUESKY_HANDLE,
-    password: process.env.BLUESKY_APP_PASSWORD,
+    identifier: handle,
+    password: appPassword,
   });
   return agent;
 }

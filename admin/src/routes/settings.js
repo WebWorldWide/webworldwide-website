@@ -25,6 +25,8 @@ import { parse as parseToml, apply as applyToml, flatToChanges } from '../utils/
 import { logActivity } from '../services/activity.js';
 import { getFileHistory, getFileAtCommit } from '../utils/git.js';
 import { recordSnapshot, listSnapshots, getSnapshot } from '../services/snapshots.js';
+import { getSecret, setSecret, hasSecret } from '../services/app-secrets.js';
+import * as bluesky from '../services/bluesky.js';
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 // Astro replaced Hugo in Phase 3: user-editable params live in site.toml.
@@ -678,6 +680,69 @@ router.patch('/author', (req, res) => {
   } catch (err) {
     console.error('[settings] author patch failed:', err);
     res.status(500).json({ error: 'write_failed' });
+  }
+});
+
+// ── Syndication: Bluesky integration credentials ─────────────────────────
+// Stored ENCRYPTED in the auth DB (app_secrets), never site.toml (which is
+// published to the public repo). The app password is WRITE-ONLY — never
+// returned to the client. docker/.env BLUESKY_* still works as a fallback.
+
+// Status (safe to read): configured?, the handle (not secret), whether a
+// password is set, and where the active config comes from.
+router.get('/bluesky', (_req, res) => {
+  const uiPw = hasSecret('bluesky_app_password');
+  res.json({
+    configured: bluesky.isConfigured(),
+    handle: getSecret('bluesky_handle') || process.env.BLUESKY_HANDLE || '',
+    service: getSecret('bluesky_service') || process.env.BLUESKY_SERVICE || 'https://bsky.social',
+    passwordSet: uiPw || Boolean(process.env.BLUESKY_APP_PASSWORD),
+    source: uiPw ? 'ui' : process.env.BLUESKY_APP_PASSWORD ? 'env' : null,
+  });
+});
+
+// Save. The handle is always (re)written; the password is updated only when a
+// new non-empty value is supplied (empty field = keep existing), or cleared
+// when clearPassword:true.
+router.post('/bluesky', (req, res) => {
+  const body = req.body || {};
+  // Only (re)write the handle when the field is actually present — a partial
+  // POST (rotate/clear the password only) must not wipe the saved handle.
+  if (typeof body.handle === 'string') {
+    setSecret('bluesky_handle', body.handle.trim().replace(/^@/, '')); // empty deletes
+  }
+  if (typeof body.service === 'string') {
+    const svc = body.service.trim();
+    setSecret('bluesky_service', svc && svc !== 'https://bsky.social' ? svc : '');
+  }
+  if (body.clearPassword === true) {
+    setSecret('bluesky_app_password', '');
+  } else if (typeof body.appPassword === 'string' && body.appPassword.trim()) {
+    setSecret('bluesky_app_password', body.appPassword.trim());
+  }
+  logActivity({ req, action: 'settings.bluesky', target: getSecret('bluesky_handle') || '(none)' });
+  res.json({
+    ok: true,
+    configured: bluesky.isConfigured(),
+    passwordSet: hasSecret('bluesky_app_password') || Boolean(process.env.BLUESKY_APP_PASSWORD),
+  });
+});
+
+// Test connection — a real sign-in against the PDS. Never echoes credentials.
+router.post('/bluesky/test', async (_req, res) => {
+  if (!bluesky.isConfigured()) {
+    return res.status(400).json({ ok: false, error: 'Add a handle and app password first.' });
+  }
+  try {
+    await bluesky.signIn();
+    res.json({ ok: true });
+  } catch (err) {
+    const m = String((err && err.message) || '').toLowerCase();
+    let error = 'Sign-in failed — double-check the handle and the app password.';
+    if (m.includes('rate')) error = 'Bluesky rate-limited the test — try again in a moment.';
+    else if (m.includes('network') || m.includes('fetch') || m.includes('timeout'))
+      error = "Couldn't reach Bluesky — check the server's connection.";
+    res.status(400).json({ ok: false, error });
   }
 });
 
