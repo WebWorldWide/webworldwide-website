@@ -72,6 +72,10 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./site/dist
+          # The artifact tar excludes every dot-path (--exclude=.[^/]*) unless this
+          # is set, which silently dropped dist/.well-known — so /.well-known/webfinger
+          # 404'd and Mastodon/Threads couldn't resolve the @domain@domain handle.
+          include-hidden-files: true
 
   deploy:
     name: Deploy
