@@ -66,6 +66,20 @@ test('isConfigured true when env instance + token set', () => {
   assert.equal(mastodon.isConfigured(), true);
 });
 
+test('getMastodonConfig normalizes a pasted handle / bare host to an https origin', () => {
+  if (skip) return;
+  const prev = process.env.MASTODON_INSTANCE;
+  process.env.MASTODON_INSTANCE = '@webworldwide@mastodon.example';
+  assert.equal(mastodon.getMastodonConfig().instance, 'https://mastodon.example');
+  process.env.MASTODON_INSTANCE = 'webworldwide@mastodon.example';
+  assert.equal(mastodon.getMastodonConfig().instance, 'https://mastodon.example');
+  process.env.MASTODON_INSTANCE = 'mastodon.example/';
+  assert.equal(mastodon.getMastodonConfig().instance, 'https://mastodon.example');
+  process.env.MASTODON_INSTANCE = 'https://mastodon.example';
+  assert.equal(mastodon.getMastodonConfig().instance, 'https://mastodon.example');
+  process.env.MASTODON_INSTANCE = prev;
+});
+
 test('postStatus sends the right payload + returns the permalink', async () => {
   if (skip) return;
   let captured = null;

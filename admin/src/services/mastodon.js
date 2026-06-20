@@ -46,11 +46,17 @@ export function setFetchImpl(fn) {
  * @returns {{ instance: string, accessToken: string }}
  */
 export function getMastodonConfig() {
-  let instance = (getSecret('mastodon_instance') || process.env.MASTODON_INSTANCE || '').trim();
-  instance = instance.replace(/\/+$/, '');
-  if (instance && !/^https?:\/\//i.test(instance)) instance = 'https://' + instance;
+  let raw = (getSecret('mastodon_instance') || process.env.MASTODON_INSTANCE || '').trim();
+  raw = raw.replace(/\/+$/, '');
+  // Tolerate a pasted fediverse handle in the instance field (@user@host or
+  // user@host) — extract just the server host so it still resolves. (Common
+  // slip: typing "@you@mastodon.social" into Instance URL instead of the URL.)
+  const handle = raw.match(/^@?[^@/\s]+@([^@/\s]+)$/);
+  if (handle) raw = handle[1];
+  // Reduce to a bare host (drop any protocol + path) then re-add https://.
+  raw = raw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
   return {
-    instance,
+    instance: raw ? 'https://' + raw : '',
     accessToken: getSecret('mastodon_access_token') || process.env.MASTODON_ACCESS_TOKEN || '',
   };
 }
