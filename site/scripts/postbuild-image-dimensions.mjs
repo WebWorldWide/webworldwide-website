@@ -18,7 +18,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cpSync, existsSync } from 'node:fs';
+import { cpSync, existsSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +32,10 @@ const PUBLIC = resolve(HERE, '..', 'public');
 if (existsSync(join(PUBLIC, '.well-known'))) {
   cpSync(join(PUBLIC, '.well-known'), join(DIST, '.well-known'), { recursive: true });
 }
+// GitHub Pages applies Jekyll, which OMITS dot-directories (like .well-known)
+// from what it serves — so the copied webfinger 404s without this marker.
+// `.nojekyll` disables that processing so the whole dist/ is served verbatim.
+writeFileSync(join(DIST, '.nojekyll'), '');
 
 /** @param {string} dir @returns {AsyncGenerator<string>} */
 async function* walk(dir) {
