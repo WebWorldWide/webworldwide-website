@@ -268,6 +268,86 @@ describe('TEEditor.mount() façade', () => {
     expect(instance.value).toBe(once);
   });
 
+  it('does not enable video flags from "loop"/"muted" substrings in the poster or src URL', () => {
+    // Regression: the parser tested the WHOLE <video> tag with \bloop\b etc.,
+    // so a poster like hero-loop.jpg or a src like bg-muted.mp4 spuriously
+    // switched on loop/muted/autoplay. Quoted attribute values are now stripped
+    // before the boolean-flag presence check.
+    const md =
+      '<video controls poster="/files/2026/01/hero-loop-autoplay.jpg">\n' +
+      '<source src="/files/2026/01/bg-muted.mp4" type="video/mp4">\n' +
+      '</video>';
+    instance = mount(rootEl, md);
+    let vid = null;
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.type.name === 'video') vid = n;
+    });
+    expect(vid).not.toBeNull();
+    expect(vid.attrs.poster).toBe('/files/2026/01/hero-loop-autoplay.jpg');
+    expect(vid.attrs.mp4).toBe('/files/2026/01/bg-muted.mp4');
+    // The substrings inside the URLs must NOT have tripped the boolean flags.
+    expect(vid.attrs.autoplay).toBe(false);
+    expect(vid.attrs.muted).toBe(false);
+    expect(vid.attrs.loop).toBe(false);
+  });
+
+  it('still reads genuine autoplay/muted/loop flags on the <video> tag', () => {
+    const md =
+      '<video controls autoplay muted loop poster="/files/p.jpg">\n' +
+      '<source src="/files/v.mp4" type="video/mp4">\n' +
+      '</video>';
+    instance = mount(rootEl, md);
+    let vid = null;
+    instance._tiptap.state.doc.descendants((n) => {
+      if (n.type.name === 'video') vid = n;
+    });
+    expect(vid).not.toBeNull();
+    expect(vid.attrs.autoplay).toBe(true);
+    expect(vid.attrs.muted).toBe(true);
+    expect(vid.attrs.loop).toBe(true);
+    // They survive serialize → re-parse as bare presence flags (never
+    // autoplay="false", which HTML reads as TRUE). The serializer emits them
+    // after the poster, so assert presence rather than exact position.
+    const once = instance.value;
+    expect(once).toContain(' autoplay muted loop>');
+    expect(once).not.toMatch(/autoplay\s*=/);
+    instance.value = once;
+    expect(instance.value).toBe(once);
+  });
+
+  it('couples autoplay ⇒ muted in the video toolbar (browsers block unmuted autoplay)', () => {
+    const md = '<video controls>\n<source src="/files/v.mp4" type="video/mp4">\n</video>';
+    instance = mount(rootEl, md);
+    const ed = instance._tiptap;
+    // Select the video node — the same NodeSelection clicking the node produces.
+    let pos = null;
+    ed.state.doc.descendants((n, p) => {
+      if (n.type.name === 'video') {
+        pos = p;
+        return false;
+      }
+      return true;
+    });
+    expect(pos).not.toBeNull();
+    ed.commands.setNodeSelection(pos);
+
+    const attrBtns = rootEl.querySelectorAll('.te-tb-video-attr');
+    // Order matches the appendChild order: [0] Autoplay, [1] Muted, [2] Loop.
+    expect(attrBtns.length).toBe(3);
+
+    // Enabling autoplay force-mutes — otherwise the published page silently
+    // ignores autoplay (unmuted autoplay is blocked by every browser).
+    attrBtns[0].click();
+    expect(ed.getAttributes('video').autoplay).toBe(true);
+    expect(ed.getAttributes('video').muted).toBe(true);
+
+    // Un-muting cancels autoplay — the invariant holds in both directions.
+    ed.commands.setNodeSelection(pos);
+    attrBtns[1].click();
+    expect(ed.getAttributes('video').muted).toBe(false);
+    expect(ed.getAttributes('video').autoplay).toBe(false);
+  });
+
   // ── Round-trip fidelity regressions (a mode toggle must not lose data) ──
   // Each of these was silently destroyed by a single Source↔Rich toggle until
   // the serializer/parser were brought back into agreement.
@@ -1310,10 +1390,51 @@ describe('Editor polish: image alignment', () => {
     expect(instance.value.trim()).toBe(md);
   });
 
-  it('renders data-align on the editor img so the surface can style it', () => {
+  it('round-trips an inline figure sharing a paragraph with text (was lost as underlined HTML)', () => {
+    // The exact production corruption: an aligned + width image mid-paragraph
+    // serialises as inline <figure> HTML. markdown-it tokenises that as
+    // html_inline, which the schema otherwise maps to the underline mark —
+    // turning the tags into literal underlined text and dropping the image.
+    const md =
+      'Before the image. <figure class="img-align-center" style="max-width:319px"><img src="/img/d.webp" alt="A duck" loading="lazy" decoding="async"></figure>';
+    instance = mount(rootEl, md);
+    const ed = instance._tiptap;
+    let found = null;
+    let underlines = 0;
+    ed.state.doc.descendants((node) => {
+      if (node.type.name === 'image') found = node;
+      if (node.marks && node.marks.some((m) => m.type.name === 'underline')) underlines += 1;
+    });
+    // The image survived as a real node with every attribute intact…
+    expect(found).not.toBeNull();
+    expect(found.attrs.align).toBe('center');
+    expect(found.attrs.width).toBe(319); // a Number, not the string "319px"
+    expect(found.attrs.src).toBe('/img/d.webp');
+    expect(found.attrs.alt).toBe('A duck');
+    // …and the <figure>/<img> tags were NOT misread as underlined literal text.
+    expect(underlines).toBe(0);
+
+    const out = instance.value;
+    expect(out).toContain('Before the image.');
+    expect(out).toContain('class="img-align-center"');
+    expect(out).toContain('style="max-width:319px"');
+    expect(out).toContain('src="/img/d.webp"');
+    expect(out).toContain('alt="A duck"');
+    expect(out).not.toContain('<u>');
+    // Stable across a re-feed (the round-trip fixed point).
+    instance.value = out;
+    expect(instance.value).toBe(out);
+  });
+
+  it('renders data-align on the editor image wrapper so the surface can style it', () => {
     const md = '<figure class="img-align-right"><img src="/img/b.webp" alt=""></figure>';
     instance = mount(rootEl, md);
-    const img = rootEl.querySelector('.ProseMirror img[data-align="right"]');
+    // The NodeView puts data-align on the .te-image-outer wrapper — the element
+    // the live editor CSS (.ProseMirror .te-image-outer[data-align]) targets to
+    // float/center the figure — not on the inner <img>.
+    const outer = rootEl.querySelector('.ProseMirror .te-image-outer[data-align="right"]');
+    expect(outer).not.toBeNull();
+    const img = outer.querySelector('img');
     expect(img).not.toBeNull();
     expect(img.getAttribute('src')).toBe('/img/b.webp');
   });
@@ -1339,8 +1460,11 @@ describe('Editor polish: image alignment', () => {
     const group = tb.querySelector('.te-tb-image-group');
     expect(group).not.toBeNull();
     const btns = group.querySelectorAll('button.te-tb-btn');
-    // left / center / right / full / reset
-    expect(btns.length).toBe(5);
+    // left / center / right / full / reset + caption + alt-text = 7
+    expect(btns.length).toBe(7);
+    expect(group.querySelectorAll('button.te-tb-img-align').length).toBe(5);
+    expect(group.querySelectorAll('button.te-tb-img-caption').length).toBe(1);
+    expect(group.querySelectorAll('button.te-tb-img-alt').length).toBe(1);
     // Each renders a real inline-SVG icon (no cryptic glyph).
     btns.forEach((b) => {
       expect(b.querySelector('svg')).not.toBeNull();
