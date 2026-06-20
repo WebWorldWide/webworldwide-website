@@ -898,6 +898,13 @@
     if (hash === 'comments') {
       applyInitialFilterFromHash();
       reloadActive();
+      // Re-arm the live stream on return. Leaving the view closes the SSE
+      // (below) and the router only calls init() once, so without this live
+      // updates stay dead on every revisit. openStream() no-ops if already
+      // connected; mirror init()'s visit/unread reset for the badge.
+      openStream();
+      writeLastVisit(Date.now());
+      clearUnread();
     } else if (state.opened) {
       // leaving the comments view — close the SSE so we don't burn a
       // connection on every other tab.

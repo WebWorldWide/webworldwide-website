@@ -473,3 +473,12 @@ test('slugFromTarget extracts first path segment', skipOpts(), () => {
   // Garbage path bucket → null (skipped by dumper).
   assert.equal(slugFromTarget('https://webworldwide.online/!bad/'), null);
 });
+
+test('slugFromTarget strips the /blog/ permalink prefix', skipOpts(), () => {
+  // Real post permalink is /blog/:slug/ — the literal "blog" segment must be
+  // skipped so mentions bucket by the real slug instead of all colliding under
+  // a single "blog" bucket.
+  assert.equal(slugFromTarget('https://webworldwide.online/blog/hello-world/'), 'hello-world');
+  assert.equal(slugFromTarget('https://webworldwide.online/blog/hello-world'), 'hello-world');
+  assert.equal(slugFromTarget('https://webworldwide.online/blog/'), '__home__');
+});

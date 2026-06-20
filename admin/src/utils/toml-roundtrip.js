@@ -120,6 +120,55 @@ const HEADER_RE = /^(\s*)\[([A-Za-z0-9_\-.]+)\]\s*(#.*)?$/;
 const KEY_RE = /^(\s*)([A-Za-z0-9_-]+)\s*=\s*(.*?)(\s*#.*)?$/;
 
 /**
+ * The real inline-comment tail of a TOML line: the first `#` that sits OUTSIDE
+ * any quoted string, together with its leading whitespace. Returns '' when the
+ * line has no genuine comment.
+ *
+ * KEY_RE's own trailing-comment group is unreliable for this: its non-greedy
+ * value group treats a `#` INSIDE a quoted value (e.g. a URL fragment
+ * `link = "https://x.com/#pricing"`) as the start of a comment, and apply()
+ * would then re-append that captured `#pricing"` as junk on every save —
+ * compounding into progressive corruption of site.toml. Scanning for an
+ * unquoted `#` avoids that.
+ *
+ * @param {string} line
+ * @returns {string}
+ */
+function commentTail(line) {
+  let inBasic = false; // inside "double-quoted"
+  let inLiteral = false; // inside 'single-quoted'
+  for (let i = 0; i < line.length; i += 1) {
+    // eslint-disable-next-line security/detect-object-injection -- numeric loop index into a string, not object property access
+    const ch = line[i];
+    if (inBasic) {
+      if (ch === '"') {
+        // An EVEN run of preceding backslashes means this quote is a real
+        // closing delimiter; an odd run means it's escaped (\") and the string
+        // continues. (Counting parity, not just one backslash, also handles a
+        // value that ends in an escaped backslash: "C:\\" closes correctly.)
+        let bs = 0;
+        // eslint-disable-next-line security/detect-object-injection -- numeric index into a string
+        for (let j = i - 1; j >= 0 && line[j] === '\\'; j -= 1) bs += 1;
+        if (bs % 2 === 0) inBasic = false;
+      }
+      continue;
+    }
+    if (inLiteral) {
+      if (ch === "'") inLiteral = false; // TOML literal strings have no escapes
+      continue;
+    }
+    if (ch === '"') inBasic = true;
+    else if (ch === "'") inLiteral = true;
+    else if (ch === '#') {
+      let s = i;
+      while (s > 0 && (line[s - 1] === ' ' || line[s - 1] === '\t')) s -= 1;
+      return line.slice(s);
+    }
+  }
+  return '';
+}
+
+/**
  * Build an index of the TOML source: for each `[section]` header, what
  * line range does the section span? Top-level keys (above the first
  * header) live under the synthetic key `""`.
@@ -231,7 +280,9 @@ export function apply(src, changes) {
     if (!m) continue; // pathological; should match by construction
     const indent = m[1] || '';
     const k = m[2];
-    const tail = m[4] || '';
+    // Derive the trailing comment by scanning for an UNQUOTED `#` rather than
+    // trusting KEY_RE's regex tail, which misfires on `#` inside quoted values.
+    const tail = commentTail(orig);
     // eslint-disable-next-line security/detect-object-injection -- lineIdx is a verified array index
     lines[lineIdx] = `${indent}${k} = ${serializeValue(change.value)}${tail}`;
   }

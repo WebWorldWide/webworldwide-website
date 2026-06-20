@@ -29,7 +29,10 @@ body[data-page="editor"] {
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* `clip` (not `hidden`) keeps the rounded-corner clipping but does NOT make
+     the pane a scroll container — so the sticky toolbar below can stick
+     relative to the real scroller (.stage) instead of being trapped here. */
+  overflow: clip;
   position: relative;
   min-width: 0;
 }
@@ -273,8 +276,20 @@ body[data-page="editor"] {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 0 4px;
   flex-wrap: wrap;
+  /* Follow the writer down the page. Sticks to the top of the scrolling
+     .stage (the topbar is a separate, non-scrolling grid row, so top:0 lands
+     just beneath it). Depends on .editor-pane using overflow:clip so the pane
+     isn't a scroll container that would trap this. The contextual image/video
+     groups live inside this toolbar, so they ride along automatically. */
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  /* Opaque so body text (and proofreader squiggles) pass UNDER the bar; the
+     .te-editor gap below keeps the first line of text clear of it. */
+  background: var(--surface);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-www);
 }
 .te-editor-toolbar-spacer {
   flex: 1;
@@ -2028,6 +2043,12 @@ body[data-page="editor"] {
   .te-editor-toolbar {
     flex-wrap: wrap;
     gap: 8px;
+    /* The rich controls become a fixed bottom bar on mobile (below), so the
+       outer strip needn't stick — revert it to normal flow here. */
+    position: static;
+    background: transparent;
+    border-bottom: 0;
+    padding: 0 0 4px;
   }
   .te-editor-toolbar-rich {
     position: fixed;

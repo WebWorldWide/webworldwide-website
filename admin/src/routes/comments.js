@@ -191,17 +191,20 @@ function postIndex() {
  * @param {string} urlOrSlug
  * @returns {{ title: string, slug: string }}
  */
-function postFor(urlOrSlug) {
+export function postFor(urlOrSlug) {
   if (!urlOrSlug) return { title: '(unknown)', slug: '' };
   let slug = String(urlOrSlug).trim();
   try {
-    if (slug.includes('://')) {
-      const u = new URL(slug);
-      const parts = u.pathname.split('/').filter(Boolean);
-      slug = parts[0] || '__home__';
-    } else {
-      slug = slug.replace(/^\/+|\/+$/g, '').split('/')[0];
-    }
+    const segs = slug.includes('://')
+      ? new URL(slug).pathname.split('/').filter(Boolean)
+      : slug
+          .replace(/^\/+|\/+$/g, '')
+          .split('/')
+          .filter(Boolean);
+    // Posts live at /blog/<slug>/, so the first path segment is the literal
+    // "blog". Skip it and key on the real post slug — keying on "blog" matches
+    // no post and mislabels every comment/webmention's post as "blog".
+    slug = (segs[0] === 'blog' ? segs[1] : segs[0]) || '__home__';
   } catch (_) {
     /* leave as-is */
   }

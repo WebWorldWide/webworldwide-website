@@ -183,6 +183,24 @@ test('normaliseComment maps a Remark42 record to the unified shape', skipOpts(),
   assert.equal(out.score, 3);
 });
 
+test('postFor strips the /blog/ permalink prefix from the post slug', skipOpts(), async () => {
+  const { postFor } = await import('../src/routes/comments.js');
+  // /blog/<slug>/ must resolve to <slug>, NOT the literal "blog" (which matches
+  // no post and mislabels every comment/webmention's post as "blog"). Uses a
+  // slug with no fixture .md so postIndex() yields the slug-as-title fallback.
+  assert.equal(
+    postFor('https://webworldwide.online/blog/zzz-test-only-slug/').slug,
+    'zzz-test-only-slug',
+  );
+  assert.equal(
+    postFor('https://webworldwide.online/blog/zzz-test-only-slug/').title,
+    'zzz-test-only-slug',
+  );
+  assert.equal(postFor('https://webworldwide.online/blog/').slug, '__home__');
+  // A bare (non-/blog/) path still resolves to its first segment.
+  assert.equal(postFor('https://webworldwide.online/about-xyz/').slug, 'about-xyz');
+});
+
 test('lastComments hits /api/v1/last/N and parses array body', skipOpts(), async () => {
   resetFetch();
   registerFetch(

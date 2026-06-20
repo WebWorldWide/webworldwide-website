@@ -58,12 +58,15 @@
   function openAddForm() {
     const host = document.getElementById('redirect-form-host');
     if (!host) return;
-    if (host.querySelector('.te-redir-form')) {
+    // Only short-circuit if the ADD form is already open. The Test form shares
+    // the .te-redir-form class, so guarding on that class made "+ Add redirect"
+    // a dead button whenever the Test panel happened to be open.
+    if (host.querySelector('[data-redir-form="add"]')) {
       host.querySelector('[name="from"]')?.focus();
       return;
     }
     host.innerHTML = `
-      <form class="te-redir-form" novalidate>
+      <form class="te-redir-form" data-redir-form="add" novalidate>
         <div class="te-redir-form-grid">
           <label class="te-field"><span>From (path)</span>
             <input name="from" placeholder="/old-url/" autocomplete="off" required /></label>
@@ -221,15 +224,23 @@
     const start = normPath(input);
     if (!start) return { ok: false, msg: 'Enter a path to test.' };
     const chain = [start];
+    // Track NORMALIZED hops for cycle detection. The display `chain` holds
+    // formatted "to (code)" strings, so testing the raw hit.to against it never
+    // matched intermediate hops (only chain[0], and even that broke on a
+    // trailing-slash mismatch) — real loops slipped through to the 10-hop cap
+    // and were reported as a successful resolve. A normalized Set catches them.
+    const seen = new Set([start]);
     let cur = start;
     for (let i = 0; i < 10; i += 1) {
       const hit = rows.find((r) => r.from === cur);
       if (!hit) break;
-      if (chain.includes(hit.to)) {
+      const next = normPath(hit.to);
+      if (seen.has(next)) {
         return { ok: false, msg: `Loop detected: ${chain.join(' → ')} → ${hit.to}` };
       }
+      seen.add(next);
       chain.push(`${hit.to} (${hit.code})`);
-      cur = normPath(hit.to);
+      cur = next;
     }
     if (chain.length === 1) {
       return { ok: true, msg: `No redirect — ${start} is served directly.` };
