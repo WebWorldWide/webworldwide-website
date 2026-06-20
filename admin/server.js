@@ -222,23 +222,25 @@ app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 
 // Rate limiting.
 //
-// Key on Cloudflare's authoritative client IP. With trust proxy=1 but a
-// Cloudflare → cloudflared → Caddy → app chain (≥2 hops), req.ip resolves
-// to a fixed upstream proxy, so every client would share one bucket and
-// the limiter couldn't isolate a brute-forcer. CF-Connecting-IP is set by
-// Cloudflare and not client-spoofable through the tunnel.
-// CF-Connecting-IP is authoritative ONLY when the request actually transited
-// the local proxy chain. The app binds 0.0.0.0, so a host reaching port 3000
-// directly (LAN, or an exposed/forwarded port) can spoof CF-Connecting-IP — and
-// with trust proxy on, X-Forwarded-For (req.ip) too — to land each request in a
-// fresh bucket and defeat the limiter entirely. So only honour the header when
-// the immediate TCP peer is loopback (the co-located cloudflared/Caddy); for any
-// other peer, key on the unspoofable socket address. ipKeyGenerator normalizes
-// IPv6 to a subnet (required since express-rate-limit v8).
+// Key the rate limiter on the REAL client IP so each client gets its own bucket
+// (and one brute-forcer can't lock everyone else — incl. the admin — out).
+//
+// The cms publishes NO host port (docker-compose has no `ports:` for cms) and is
+// reachable ONLY via Caddy on the docker network (Caddyfile: `reverse_proxy
+// cms:3000`). So the immediate TCP peer is ALWAYS Caddy — there is no direct
+// LAN/host path to :3000 to spoof a forwarding header. That makes Cloudflare's
+// CF-Connecting-IP (set at the tunnel) / Caddy's X-Forwarded-For authoritative.
+// The previous loopback-only check never matched (peer is Caddy's bridge IP, not
+// loopback, now that cms + caddy are separate containers), so every client
+// collapsed into Caddy's single IP — one global bucket = a trivial login-lockout
+// DoS. ipKeyGenerator normalizes IPv6 to a subnet (required since v8).
 const clientIpKey = (/** @type {import('express').Request} */ req) => {
-  const peer = req.socket?.remoteAddress || '';
-  const trustedPeer = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
-  const key = trustedPeer ? req.headers['cf-connecting-ip'] || peer : peer;
+  const fwd =
+    req.headers['cf-connecting-ip'] ||
+    String(req.headers['x-forwarded-for'] || '')
+      .split(',')[0]
+      .trim();
+  const key = fwd || req.socket?.remoteAddress || '';
   return ipKeyGenerator(String(key || ''));
 };
 
@@ -327,6 +329,17 @@ app.use(
 // Serve uploaded media straight off Astro's public tree — the very files
 // the published site serves at the web root (`/images/...`, `/files/...`),
 // so the library UI and the live site agree the moment a file is uploaded.
+// Defense-in-depth for user-uploaded media served from the admin origin (and,
+// once committed, by GitHub Pages — which has NO CSP). Never let an uploaded
+// SVG/HTML render inline as active content: nosniff everything, and force a
+// download for script-capable types. (Such uploads are also blocked at the door
+// — see mediaTypes DENYLIST_EXTENSIONS.)
+const RISKY_INLINE_MEDIA = /\.(svg|svgz|html?|xhtml|xml|js|mjs|wasm)$/i;
+const mediaStaticHeaders = (/** @type {any} */ res, /** @type {string} */ filePath) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  if (RISKY_INLINE_MEDIA.test(filePath)) res.setHeader('Content-Disposition', 'attachment');
+};
+
 // Mounting `images` and `files` as separate roots so we never expose the
 // rest of `site/public/`.
 app.use(
@@ -334,6 +347,7 @@ app.use(
   express.static(join(SITE_PUBLIC_DIR, 'images'), {
     fallthrough: false,
     maxAge: '7d',
+    setHeaders: mediaStaticHeaders,
   }),
 );
 app.use(
@@ -341,6 +355,7 @@ app.use(
   express.static(join(SITE_PUBLIC_DIR, 'files'), {
     fallthrough: false,
     maxAge: '7d',
+    setHeaders: mediaStaticHeaders,
   }),
 );
 // `/assets` holds the static design images (app icons, globe) the homepage
@@ -352,6 +367,7 @@ app.use(
   express.static(join(SITE_PUBLIC_DIR, 'assets'), {
     fallthrough: false,
     maxAge: '7d',
+    setHeaders: mediaStaticHeaders,
   }),
 );
 

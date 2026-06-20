@@ -24,6 +24,7 @@ import { writeFileAtomic } from '../utils/atomicWrite.js';
 import * as mastodon from './mastodon.js';
 import { extractExcerpt, __test as blueskyCrosspost } from './bluesky-crosspost.js';
 import { logActivity } from './activity.js';
+import { hasSyndicated, recordSyndication } from './syndication-log.js';
 
 const parseDate = blueskyCrosspost.parseDate;
 
@@ -99,6 +100,12 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     }
 
     const slug = String(data.slug || filename.replace(/\.md$/, ''));
+    // Durable backstop (see bluesky-crosspost): a prior post whose front-matter
+    // write-back failed is still recorded, so we never re-post a duplicate.
+    if (hasSyndicated(slug, 'mastodon')) {
+      report.skipped.push({ filename, reason: 'already_posted' });
+      continue;
+    }
     // Canonical post URL is /blog/<slug>/ (site.toml [blog] permalink); the bare
     // /<slug>/ only 302s via a redirect stub with no og tags. See bluesky-crosspost.
     const url = `${baseUrl.replace(/\/+$/, '')}/blog/${slug}/`;
@@ -116,7 +123,10 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
         url,
         idempotencyKey: `wwwide:${slug}`,
       });
-      data.mastodon_uri = result.url || result.uri;
+      const uri = result.url || result.uri;
+      // Durable marker BEFORE the front-matter write — survives a lost write.
+      recordSyndication(slug, 'mastodon', uri);
+      data.mastodon_uri = uri;
       writeFileAtomic(fullPath, serializePost(data, parsed.content || ''));
       report.posted.push({ filename, uri: data.mastodon_uri });
       logActivity({

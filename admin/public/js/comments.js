@@ -666,12 +666,26 @@
 
   // ── Live updates via EventSource ─────────────────────────────
   let reconnectTimer = null;
+  let sseFailures = 0; // consecutive CLOSED reconnects — detects an expired session
+
+  // Coalesce SSE-driven refreshes: a single inbound webmention emits two events
+  // (-new + -validated) and a fan-out a burst, each otherwise firing the heavy
+  // list+counts fetches. Trailing-edge debounce (~400ms).
+  let reloadTimer = null;
+  function scheduleReload() {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => reloadActive(), 400);
+  }
+
   function openStream() {
     if (state.evt) return;
     try {
       const es = new EventSource('/api/comments/stream', { withCredentials: true });
       state.evt = es;
-      es.addEventListener('open', () => renderLive('live', 'Live'));
+      es.addEventListener('open', () => {
+        sseFailures = 0;
+        renderLive('live', 'Live');
+      });
       es.addEventListener('error', () => {
         renderLive('down', 'Offline');
         // When the browser gives up on the connection (CLOSED), it won't
@@ -680,10 +694,20 @@
         if (es.readyState === EventSource.CLOSED) {
           closeStream();
           clearTimeout(reconnectTimer);
+          sseFailures += 1;
+          // After a few straight failures the session has likely expired — the
+          // stream returns 401, which EventSource silently treats as a fatal
+          // CLOSED error and can't follow to /login. Periodically probe an
+          // authenticated endpoint; TE.fetchJSON redirects to /login.html on a
+          // 401, breaking the otherwise-infinite 4s reconnect loop.
+          if (sseFailures % 3 === 0) TE.fetchJSON('/api/comments/counts').catch(() => {});
           reconnectTimer = setTimeout(openStream, 4000);
         }
       });
-      es.addEventListener('hello', () => renderLive('live', 'Live'));
+      es.addEventListener('hello', () => {
+        sseFailures = 0;
+        renderLive('live', 'Live');
+      });
       const bump = (ev) => {
         try {
           const data = JSON.parse(ev.data || 'null');
@@ -699,7 +723,7 @@
             (isComment && state.activeTab === 'visible') ||
             (!isComment && state.activeTab === 'pending')
           ) {
-            reloadActive();
+            scheduleReload();
           }
         } catch (_) {
           /* swallow */
@@ -708,7 +732,7 @@
       es.addEventListener('comment-new', bump);
       es.addEventListener('webmention-new', bump);
       es.addEventListener('webmention-validated', () => {
-        if (state.activeTab === 'pending' || state.activeTab === 'all') reloadActive();
+        if (state.activeTab === 'pending' || state.activeTab === 'all') scheduleReload();
       });
     } catch (err) {
       console.warn('[comments] EventSource failed:', err);

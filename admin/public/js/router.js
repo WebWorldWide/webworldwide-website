@@ -229,6 +229,12 @@
       }
       activeRoute = next;
       activeHash = window.location.hash || `#${next}`;
+      // Dismiss any overlay left open from the previous view before rendering the
+      // new one (reachable via Back/Forward with a drawer/modal up) — otherwise
+      // the new view renders behind a still-inert .shell.
+      if (window.TE && typeof window.TE.dismissOverlays === 'function') {
+        window.TE.dismissOverlays();
+      }
       show(next, { focus: true });
     });
     if (window.TE && typeof window.TE.wireMobileNav === 'function') window.TE.wireMobileNav();

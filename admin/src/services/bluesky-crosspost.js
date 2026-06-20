@@ -31,6 +31,7 @@ import { parsePost, serializePost } from '../utils/frontmatter.js';
 import { writeFileAtomic } from '../utils/atomicWrite.js';
 import * as bluesky from './bluesky.js';
 import { logActivity } from './activity.js';
+import { hasSyndicated, recordSyndication } from './syndication-log.js';
 
 const SITE_DIR_DEFAULT = '..';
 
@@ -151,6 +152,12 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     }
 
     const slug = String(data.slug || filename.replace(/\.md$/, ''));
+    // Durable backstop: a prior post whose front-matter write-back failed (full
+    // SD card, …) is still recorded here, so we never re-post a duplicate.
+    if (hasSyndicated(slug, 'bluesky')) {
+      report.skipped.push({ filename, reason: 'already_posted' });
+      continue;
+    }
     // Posts live at /blog/<slug>/ (site.toml [blog] permalink). The bare
     // /<slug>/ path only 302s via a legacy redirect stub with no og tags, so
     // sharing it yields a blank link-preview card — use the canonical URL.
@@ -180,6 +187,9 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
         url,
         coverImageUrl,
       });
+      // Record the durable marker BEFORE the front-matter write — if the file
+      // write below fails, this still prevents a duplicate re-post next time.
+      recordSyndication(slug, 'bluesky', result.rootUri);
       // Persist the URI back to the post's front-matter so this row
       // is now idempotent.
       data.bluesky_uri = result.rootUri;
