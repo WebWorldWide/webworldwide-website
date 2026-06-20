@@ -99,7 +99,9 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     }
 
     const slug = String(data.slug || filename.replace(/\.md$/, ''));
-    const url = `${baseUrl.replace(/\/+$/, '')}/${slug}/`;
+    // Canonical post URL is /blog/<slug>/ (site.toml [blog] permalink); the bare
+    // /<slug>/ only 302s via a redirect stub with no og tags. See bluesky-crosspost.
+    const url = `${baseUrl.replace(/\/+$/, '')}/blog/${slug}/`;
     const title = String(data.title || slug);
     const excerpt = String(data.description || extractExcerpt(parsed.content || '', 480));
 

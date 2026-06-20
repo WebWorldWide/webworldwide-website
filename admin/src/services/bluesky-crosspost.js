@@ -135,7 +135,10 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     }
 
     const slug = String(data.slug || filename.replace(/\.md$/, ''));
-    const url = `${baseUrl.replace(/\/+$/, '')}/${slug}/`;
+    // Posts live at /blog/<slug>/ (site.toml [blog] permalink). The bare
+    // /<slug>/ path only 302s via a legacy redirect stub with no og tags, so
+    // sharing it yields a blank link-preview card — use the canonical URL.
+    const url = `${baseUrl.replace(/\/+$/, '')}/blog/${slug}/`;
     const title = String(data.title || slug);
     const excerpt = String(data.description || extractExcerpt(parsed.content || '', 280));
     const coverStr = data.cover !== null && data.cover !== undefined ? String(data.cover) : '';
