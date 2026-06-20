@@ -70,6 +70,13 @@ services:
       # LanguageTool (editor spell + grammar). Same-origin /api/proofread
       # proxies here; the browser never talks to it directly.
       - LANGUAGETOOL_URL=${LANGUAGETOOL_URL:-http://languagetool:8010/v2}
+      # Bluesky auto-cross-post (POSSE). Values come from docker/.env (0600,
+      # git-ignored). BLUESKY_APP_PASSWORD must be an APP password
+      # (bsky.app/settings/app-passwords), NOT the account password. Empty =
+      # feature stays off (isConfigured() requires both handle + app password).
+      - BLUESKY_HANDLE=${BLUESKY_HANDLE:-}
+      - BLUESKY_APP_PASSWORD=${BLUESKY_APP_PASSWORD:-}
+      - BLUESKY_SERVICE=${BLUESKY_SERVICE:-https://bsky.social}
     depends_on:
       - languagetool
     volumes:
