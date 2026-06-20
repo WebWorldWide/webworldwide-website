@@ -1,7 +1,7 @@
 ---
 title: Stop The Slop
 slug: stop-the-slop
-draft: true
+draft: false
 date: '2026-06-18T18:19:00.000Z'
 excerpt: AI can be useful but slop is negating all of it.
 ---
