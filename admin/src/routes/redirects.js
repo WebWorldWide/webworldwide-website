@@ -116,6 +116,9 @@ router.put('/:id', (req, res) => {
       message: 'from and to must differ (this would loop forever)',
     });
   }
+  if (![301, 302, 307, 308].includes(code)) {
+    return res.status(400).json({ error: 'code must be 301/302/307/308' });
+  }
   // Mirror POST's duplicate-`from` guard (PUT lacked it) and the chain/loop guard.
   if (rows.some((r) => r.id !== id && r.from === from)) {
     return res

@@ -132,3 +132,55 @@ test('POST /import bulk-upserts rows, skips invalid, collapses chains', skipOpts
   assert.ok(a, '/a imported');
   assert.equal(a.to, '/c', 'chain collapsed (/a → /c, not /a → /b)');
 });
+
+test('PUT rejects a non-allowlisted code instead of persisting garbage', skipOpts(), async () => {
+  // Seed a fresh row to update (unique paths so no chain/loop collision).
+  const created = await (
+    await fetch(`${baseUrl}/api/redirects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: '/put-code-src', to: '/put-code-dst' }),
+    })
+  ).json();
+  assert.ok(created.id);
+  assert.equal(created.code, 301);
+
+  // Non-numeric code → Number('abc') is NaN; must 400, not be written as null.
+  const bad = await fetch(`${baseUrl}/api/redirects/${created.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: 'abc' }),
+  });
+  assert.equal(bad.status, 400);
+
+  // Out-of-allowlist numeric code → also rejected (not silently persisted).
+  const bad2 = await fetch(`${baseUrl}/api/redirects/${created.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: 999 }),
+  });
+  assert.equal(bad2.status, 400);
+
+  // The stored code is untouched — still the original 301, never NaN/null/999.
+  const list = await (await fetch(`${baseUrl}/api/redirects`)).json();
+  const row = list.find((r) => r.id === created.id);
+  assert.equal(row.code, 301);
+});
+
+test('PUT accepts a valid allowlisted code change', skipOpts(), async () => {
+  const created = await (
+    await fetch(`${baseUrl}/api/redirects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: '/put-ok-src', to: '/put-ok-dst' }),
+    })
+  ).json();
+  const ok = await fetch(`${baseUrl}/api/redirects/${created.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: 308 }),
+  });
+  assert.equal(ok.status, 200);
+  const body = await ok.json();
+  assert.equal(body.code, 308);
+});
