@@ -1,1 +1,0 @@
-import{_ as i}from"./preload-helper.CVfkMyKi.js";i(()=>import("./typewriter.DTHzmreu.js"),[]);const t=document.querySelector("[data-copy-link]");if(t){const o=t.textContent;let e;t.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(location.href),t.textContent="✓ Copied",clearTimeout(e),e=setTimeout(()=>{t.textContent=o},1500)}catch{}})}
