@@ -67,12 +67,6 @@ export function getBlueskyConfig() {
 // Bluesky's hard limit is 300 graphemes (per richtext); we leave a few
 // chars of headroom for the link suffix to dodge grapheme miscounts.
 const MAX_POST_CHARS = 300;
-const LINK_RESERVE = 24; // newline + URL fits in this for short-ish slugs
-
-// Cap continuation posts at a sensible ceiling — anyone publishing more
-// than ~3000 characters of summary is doing it wrong, but a runaway
-// shouldn't fan out into 50 BSky posts.
-const MAX_CHAIN_LENGTH = 4;
 
 /**
  * Factory that returns a BskyAgent-shaped object. Tests can swap this
@@ -222,27 +216,22 @@ export function composeThread({ title, excerpt, url }) {
   const safeExcerpt = String(excerpt || '').trim();
   const safeUrl = String(url || '').trim();
 
-  // Phase 1: try to fit title + excerpt + URL into a single post.
-  const singleAttempt = singlePostText(safeTitle, safeExcerpt, safeUrl);
-  if (singleAttempt.length <= MAX_POST_CHARS) {
-    return [{ text: singleAttempt, isRoot: true }];
+  // ONE post only — title + hook + URL. We deliberately do NOT thread a blog
+  // excerpt across reply posts (it reads as spammy, and the link card already
+  // carries the description). If the hook is long, trim it so the post still fits.
+  let text = singlePostText(safeTitle, safeExcerpt, safeUrl);
+  if (text.length > MAX_POST_CHARS) {
+    const fixedLen =
+      safeTitle.length + safeUrl.length + (safeTitle && safeExcerpt ? 2 : 0) + (safeUrl ? 2 : 0);
+    const room = MAX_POST_CHARS - fixedLen;
+    const trimmed = room > 1 ? truncateForRoot(safeExcerpt, room) : '';
+    text = singlePostText(safeTitle, trimmed, safeUrl);
+    // Last resort (e.g. an enormous title): drop the excerpt + hard-cap.
+    if (text.length > MAX_POST_CHARS) {
+      text = singlePostText(safeTitle, '', safeUrl).slice(0, MAX_POST_CHARS);
+    }
   }
-
-  // Phase 2: title + URL on the root (always fits even if huge titles
-  // get truncated), then chain the excerpt across continuation posts.
-  const rootBudget = MAX_POST_CHARS - LINK_RESERVE;
-  const rootBody = truncateForRoot(safeTitle, rootBudget);
-  const rootText = `${rootBody}\n\n${safeUrl}`.slice(0, MAX_POST_CHARS);
-
-  const chunks = chunkExcerpt(safeExcerpt, MAX_POST_CHARS);
-  // Cap the chain to avoid runaway mass-publish (see header).
-  const limited = chunks.slice(0, MAX_CHAIN_LENGTH - 1);
-  const total = limited.length + 1;
-  const numbered = limited.map((c, i) => ({
-    text: numberedSuffix(c, i + 2, total),
-    isRoot: false,
-  }));
-  return [{ text: rootText, isRoot: true }, ...numbered];
+  return [{ text, isRoot: true }];
 }
 
 /**
@@ -269,46 +258,9 @@ function truncateForRoot(title, budget) {
 }
 
 /**
- * Split `text` into chunks no larger than `max` chars. Prefers cutting
- * on whitespace; falls back to a hard cut if a single word is wider
- * than the limit. We reserve a small tail for the `(n/N)` numerator
- * suffix so the final composed post still fits.
- *
- * @param {string} text
- * @param {number} max
- * @returns {string[]}
- */
-function chunkExcerpt(text, max) {
-  const NUMBER_TAIL = 8; // ` (n/N)` worst case
-  const budget = Math.max(20, max - NUMBER_TAIL);
-  const out = [];
-  let remaining = String(text || '');
-  while (remaining.length > budget) {
-    let cut = remaining.lastIndexOf(' ', budget);
-    if (cut <= budget * 0.5) cut = budget; // give up on a clean boundary
-    out.push(remaining.slice(0, cut).trim());
-    remaining = remaining.slice(cut).trim();
-  }
-  if (remaining.length > 0) out.push(remaining);
-  return out.filter(Boolean);
-}
-
-/**
- * @param {string} text
- * @param {number} index
- * @param {number} total
- */
-function numberedSuffix(text, index, total) {
-  const suffix = ` (${index}/${total})`;
-  // Defensive: if the chunk itself is already at budget, slice harder.
-  const max = MAX_POST_CHARS - suffix.length;
-  return text.slice(0, max) + suffix;
-}
-
-/**
- * Post a thread to Bluesky. The first record carries an `app.bsky.embed.external`
- * link card so the in-app preview is rich; subsequent records chain via
- * `reply.root` / `reply.parent` so they render as a thread.
+ * Post to Bluesky. A single record carries an `app.bsky.embed.external` link
+ * card so the in-app preview is rich. (Historically this could chain a long
+ * excerpt across reply posts; that was removed — cross-posts are one post.)
  *
  * @param {any} agent — a pre-authenticated BskyAgent (caller's responsibility)
  * @param {{ title: string, excerpt: string, url: string, coverImageUrl?: string | null }} input
@@ -489,7 +441,6 @@ export const __test = {
   },
   // Re-export the private helpers so the unit tests can drive them
   // without touching the network.
-  chunkExcerpt,
   truncateForRoot,
   buildLinkCard,
   MAX_POST_CHARS,

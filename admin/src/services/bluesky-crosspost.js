@@ -55,6 +55,22 @@ function getMaxPerRun() {
 }
 
 /**
+ * First image URL referenced in markdown/HTML body content — used as the link
+ * card thumbnail when a post has no explicit `cover`. Returns '' if none.
+ *
+ * @param {string} content
+ * @returns {string}
+ */
+export function firstImage(content) {
+  const s = String(content || '');
+  const md = s.match(/!\[[^\]]*\]\(\s*([^)\s]+)/);
+  if (md && md[1]) return md[1];
+  const html = s.match(/<img[^>]+\bsrc\s*=\s*["']([^"']+)["']/i);
+  if (html && html[1]) return html[1];
+  return '';
+}
+
+/**
  * Cross-post the given list of changed post filenames to Bluesky.
  * Returns a report of what happened — never throws.
  *
@@ -140,8 +156,17 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     // sharing it yields a blank link-preview card — use the canonical URL.
     const url = `${baseUrl.replace(/\/+$/, '')}/blog/${slug}/`;
     const title = String(data.title || slug);
-    const excerpt = String(data.description || extractExcerpt(parsed.content || '', 280));
-    const coverStr = data.cover !== null && data.cover !== undefined ? String(data.cover) : '';
+    // Prefer the authored hook line (data.excerpt); fall back to description,
+    // then a SHORT body extract. This is a social teaser, not the whole post.
+    const excerpt = String(
+      data.excerpt || data.description || extractExcerpt(parsed.content || '', 200),
+    );
+    // Link-card image: the authored `cover`, else the first image in the body
+    // (matches the site's og:image). Bluesky needs a thumb URL to upload — without
+    // this the card renders image-less.
+    const coverStr =
+      (data.cover !== null && data.cover !== undefined ? String(data.cover) : '') ||
+      firstImage(parsed.content || '');
     const coverImageUrl = coverStr
       ? coverStr.startsWith('http')
         ? coverStr
