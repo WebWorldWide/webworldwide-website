@@ -1992,7 +1992,10 @@ body[data-page="editor"] {
   opacity: 0;
   width: 22px;
   height: 22px;
-  z-index: 50;
+  /* Above the sticky editor toolbar (--z-sticky) so the grab handle stays
+     clickable for a block whose top has scrolled under the toolbar band; still
+     below popovers (--z-dropdown). */
+  z-index: calc(var(--z-sticky) + 1);
   cursor: grab;
   border-radius: 4px;
   background-color: transparent;
@@ -2074,8 +2077,12 @@ body[data-page="editor"] {
     min-height: 44px;
     font-size: 14px;
   }
-  .ed-body {
-    /* Leave room for the sticky toolbar so the cursor isn't hidden */
+  .ed-body,
+  .ed-side {
+    /* Leave room for the fixed bottom toolbar. The spacer must be on BOTH the
+       editor body AND the settings sidebar: at this width the grid is single
+       column with .ed-side ordered last, so .ed-side is the bottom of the
+       scroll — without this its final controls hide behind the bar. */
     padding-bottom: 80px;
   }
   /* The fixed bottom toolbar would otherwise cover the status foot; its
