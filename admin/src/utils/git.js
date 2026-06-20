@@ -12,11 +12,14 @@
 
 import simpleGit from 'simple-git';
 import { join } from 'path';
+import { statSync, unlinkSync } from 'fs';
 
 // Get repo path based on environment
 const getGitInstance = () => {
   const siteDir = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
   const repoPath = join(siteDir, '..');
+  // Clear a crashed process's leftover index.lock before any git op (see below).
+  clearStaleLock(repoPath);
   // `timeout.block` kills a git child that produces no output for 30s, so a
   // stalled push (flaky Cloudflare Tunnel) can never hang the publish
   // request — and the event loop — indefinitely.
@@ -33,6 +36,24 @@ const getGitInstance = () => {
   });
   return git;
 };
+
+/**
+ * Remove a stale `.git/index.lock`. A crashed/interrupted git process — e.g. the
+ * CMS content auto-commit racing a manual "Publish site" — leaves the lock
+ * behind, and every subsequent commit then fails with "Unable to create
+ * '.git/index.lock': File exists." A real index operation holds the lock for
+ * well under a second, so a lock older than 20s is stale and safe to clear.
+ *
+ * @param {string} repoPath
+ */
+function clearStaleLock(repoPath) {
+  try {
+    const lock = join(repoPath, '.git', 'index.lock');
+    if (Date.now() - statSync(lock).mtimeMs > 20_000) unlinkSync(lock);
+  } catch {
+    /* no lock (statSync throws) or another cleaner won the race — both fine */
+  }
+}
 
 /**
  * Push HEAD to origin/main, retrying a few times to ride out a transient

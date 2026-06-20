@@ -103,7 +103,11 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     // /<slug>/ only 302s via a redirect stub with no og tags. See bluesky-crosspost.
     const url = `${baseUrl.replace(/\/+$/, '')}/blog/${slug}/`;
     const title = String(data.title || slug);
-    const excerpt = String(data.description || extractExcerpt(parsed.content || '', 480));
+    // Prefer the authored hook line (data.excerpt) over the long body extract —
+    // a Mastodon post should be title + hook + the link card, not the whole intro.
+    const excerpt = String(
+      data.excerpt || data.description || extractExcerpt(parsed.content || '', 200),
+    );
 
     try {
       const result = await mastodon.postStatus({

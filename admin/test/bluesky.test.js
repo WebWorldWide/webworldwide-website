@@ -132,46 +132,31 @@ test('composeThread fits short title+excerpt into a single post', () => {
   assert.ok(posts[0].text.length <= 300);
 });
 
-test('composeThread chains long excerpts into a numbered thread', () => {
-  // 900-char excerpt → root + 2-3 continuation posts.
+test('composeThread always returns a SINGLE post — never threads', () => {
+  // A long excerpt must NOT fan out into reply posts; it gets trimmed to fit.
   const longExcerpt = 'word '.repeat(180).trim(); // ~900 chars
   const posts = bluesky.composeThread({
     title: 'Long Post',
     excerpt: longExcerpt,
     url: 'https://webworldwide.online/long/',
   });
-  assert.ok(posts.length >= 2, `expected chain, got ${posts.length}`);
+  assert.equal(posts.length, 1, 'single post, no thread');
   assert.equal(posts[0].isRoot, true);
-  // Each post under the limit.
-  for (const p of posts) {
-    assert.ok(p.text.length <= 300, `post over 300 chars: ${p.text.length}`);
-  }
-  // Continuation posts carry the (n/N) numerator.
-  for (let i = 1; i < posts.length; i++) {
-    assert.match(posts[i].text, /\(\d+\/\d+\)$/, `post ${i} missing numerator`);
-  }
-  // Order survives: numerators are 2/N, 3/N, …
-  posts.slice(1).forEach((p, i) => {
-    const m = p.text.match(/\((\d+)\/(\d+)\)$/);
-    assert.ok(m, 'numerator parse');
-    assert.equal(Number(m[1]), i + 2);
-    assert.equal(Number(m[2]), posts.length);
-  });
+  assert.ok(posts[0].text.length <= 300, `post over 300 chars: ${posts[0].text.length}`);
+  assert.ok(posts[0].text.startsWith('Long Post'), 'keeps the title');
+  assert.ok(posts[0].text.includes('https://webworldwide.online/long/'), 'keeps the URL');
 });
 
-test('composeThread never emits an empty or orphan continuation', () => {
-  // Excerpt exactly at the boundary — no orphan single char post.
+test('composeThread keeps a boundary excerpt within the limit, single post', () => {
   const excerpt = 'a'.repeat(295);
   const posts = bluesky.composeThread({
     title: 'Edge',
     excerpt,
     url: 'https://x.example/e/',
   });
-  for (const p of posts) {
-    // No empty body posts (just numerator).
-    const stripped = p.text.replace(/\(\d+\/\d+\)$/, '').trim();
-    assert.ok(stripped.length > 0, 'continuation has body');
-  }
+  assert.equal(posts.length, 1);
+  assert.ok(posts[0].text.length <= 300, `over 300: ${posts[0].text.length}`);
+  assert.ok(posts[0].text.includes('https://x.example/e/'), 'keeps the URL');
 });
 
 // ── AT URI / web URL ─────────────────────────────────────────────────
@@ -245,7 +230,7 @@ test('postThread sends a single record for short input', async () => {
   assert.ok(result.rootCid);
 });
 
-test('postThread chains continuation posts with reply.root / parent', async () => {
+test('postThread posts a SINGLE post (no continuation) even for a long excerpt', async () => {
   const agent = makeMockAgent();
   const longExcerpt = 'word '.repeat(180).trim();
   const result = await bluesky.postThread(agent, {
@@ -253,17 +238,10 @@ test('postThread chains continuation posts with reply.root / parent', async () =
     excerpt: longExcerpt,
     url: 'https://webworldwide.online/long/',
   });
-  assert.ok(agent.posted.length >= 2, 'expected continuation posts');
-  // First post has no reply field.
-  assert.equal(agent.posted[0].reply, undefined);
-  // Subsequent posts point at the root.
-  for (let i = 1; i < agent.posted.length; i++) {
-    const r = agent.posted[i].reply;
-    assert.ok(r, `post ${i} missing reply ref`);
-    assert.equal(r.root.uri, result.rootUri);
-    assert.equal(r.root.cid, result.rootCid);
-    assert.ok(r.parent.uri.startsWith('at://'));
-  }
+  assert.equal(agent.posted.length, 1, 'exactly one post — no thread');
+  assert.equal(agent.posted[0].reply, undefined, 'no reply ref on a single post');
+  assert.ok(result.rootUri.startsWith('at://'));
+  assert.equal(result.partial, false);
 });
 
 test('replyToPost posts a reply chained on parent + root', async () => {
