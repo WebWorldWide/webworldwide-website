@@ -81,20 +81,47 @@ test.describe('editor polish', () => {
     await expect(page.locator('.te-tb-clear svg')).toHaveCount(1);
   });
 
-  test('ships a contextual image-alignment group', async ({ page }) => {
+  test('ships a contextual image options group', async ({ page }) => {
     await page.goto(editorUrl);
     const group = page.locator('.te-tb-image-group');
     await expect(group).toHaveCount(1);
 
-    // left / center / right / full / reset — each a real SVG-icon button.
-    const alignButtons = group.locator('button.te-tb-btn');
+    // Five alignment controls — left / center / right / full / reset — each a
+    // real SVG-icon button.
+    const alignButtons = group.locator('button.te-tb-img-align');
     await expect(alignButtons).toHaveCount(5);
-    expect(await group.locator('button.te-tb-btn svg').count()).toBe(5);
+    expect(await alignButtons.locator('svg').count()).toBe(5);
     for (const label of ['Center image', 'Full-width image', 'Reset image alignment']) {
       await expect(group.locator(`button[aria-label="${label}"]`)).toHaveCount(1);
     }
 
+    // …plus the caption + alt-text editors: seven image controls in all.
+    await expect(group.locator('button.te-tb-img-caption')).toHaveCount(1);
+    await expect(group.locator('button.te-tb-img-alt')).toHaveCount(1);
+    await expect(group.locator('button.te-tb-btn')).toHaveCount(7);
+
     // Hidden until an image node is selected (matches the table/code groups).
     await expect(group).toHaveClass(/is-hidden/);
+  });
+
+  test('hides every contextual divider when its group is hidden', async ({ page }) => {
+    await page.goto(editorUrl);
+    // Each contextual group (code/table/image/video) is preceded by its own
+    // leading divider. With nothing selected the group is hidden — and its
+    // divider must hide too, otherwise it renders as a stray "|" bar in the
+    // toolbar (the "| |" regression this guards against).
+    for (const cls of [
+      'te-tb-code-group',
+      'te-tb-table-group',
+      'te-tb-image-group',
+      'te-tb-video-group',
+    ]) {
+      const group = page.locator(`.${cls}`);
+      await expect(group).toHaveClass(/is-hidden/);
+      // The element immediately before the group is its leading divider.
+      const divider = group.locator('xpath=preceding-sibling::*[1]');
+      await expect(divider).toHaveClass(/te-tb-divider/);
+      await expect(divider).toHaveClass(/is-hidden/);
+    }
   });
 });
