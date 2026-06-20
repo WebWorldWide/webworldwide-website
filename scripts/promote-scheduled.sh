@@ -41,5 +41,14 @@ export GH_TOKEN
 cd "$REPO_DIR"
 
 echo "[$(date -Is)] scheduler: starting"
-node "$REPO_DIR/admin/src/services/scheduler.js" "$@"
+# Run the promoter INSIDE the cms container so it uses the REAL auth DB (the
+# cms_data volume at /app/data/auth.db) for its activity log and shares the
+# container's env (SITE_DIR, GH_TOKEN, git identity) + the proven publish path.
+# A host-side `node` defaulted AUTH_DB_PATH to the non-existent
+# admin/data/auth.db, materialising a stray throwaway DB the admin UI never reads.
+if [ "$(docker inspect -f '{{.State.Running}}' cms 2>/dev/null)" != "true" ]; then
+  echo "[$(date -Is)] scheduler: cms container not running — skipping"
+  exit 0
+fi
+docker exec cms node /app/src/services/scheduler.js "$@"
 echo "[$(date -Is)] scheduler: done"

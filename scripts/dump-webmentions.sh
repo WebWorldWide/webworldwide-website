@@ -44,7 +44,17 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 fi
 
 echo "[$(date -Is)] dump-webmentions: starting"
-node "$REPO_DIR/admin/src/services/dump-webmentions.js" $DRY_RUN_FLAG
+# Run the dump INSIDE the cms container: it reads the REAL auth DB (the cms_data
+# named volume at /app/data/auth.db) and writes per-slug JSON into /app/site
+# (bind-mounted to the host site/, owned by uid 1000 = adam, so the git commit
+# below picks it up). A host-side `node` defaulted AUTH_DB_PATH to
+# admin/data/auth.db, which does NOT exist — so it always read an empty DB and
+# dumped nothing (approved webmentions never reached the site).
+if [ "$(docker inspect -f '{{.State.Running}}' cms 2>/dev/null)" != "true" ]; then
+  echo "[$(date -Is)] dump-webmentions: cms container not running — skipping"
+  exit 0
+fi
+docker exec cms node /app/src/services/dump-webmentions.js $DRY_RUN_FLAG
 
 if [[ -n "$DRY_RUN_FLAG" ]]; then
   echo "[$(date -Is)] dump-webmentions: dry-run complete"
