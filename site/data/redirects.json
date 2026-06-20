@@ -34,5 +34,17 @@
     "from": "/the-terminal/",
     "to": "/blog/web-world-wide/",
     "code": 301
+  },
+  {
+    "id": "9ndhtE4y0jGsYiEfij3aM",
+    "from": "/blog/stop-trying-to-make-ai-sexy",
+    "to": "/blog/stop-the-slop",
+    "code": 301
+  },
+  {
+    "id": "nMCaMyz27i4FHm4Gg0WAy",
+    "from": "/stop-trying-to-make-ai-sexy",
+    "to": "/blog/stop-the-slop",
+    "code": 301
   }
 ]
