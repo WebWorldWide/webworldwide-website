@@ -510,6 +510,88 @@ function buildParser(schema) {
   // media blocks into `video` / `embed` node tokens so they render as real,
   // selectable nodes and round-trip to the same HTML the published Astro site
   // renders. Anything else is left untouched. Mirrors splitAttachment.
+  // Build an inline `image` token from a `<figure …><img …>…</figure>` HTML
+  // string — alignment class, max-width style, alt/title, and figcaption.
+  // Returns null when there's no <img>. Shared by the block reviver
+  // (splitBlockHtml) and the inline reviver (splitInlineFigure) so the two
+  // paths can never drift.
+  function figureToImageToken(html, TokCtor) {
+    const figM = /<figure\b([^>]*)>([\s\S]*?)<\/figure>/i.exec(html);
+    if (!figM) return null;
+    const figAttrs = figM[1] || '';
+    const figBody = figM[2] || '';
+    const imgTag = (/<img\b[^>]*>/i.exec(figBody) || [''])[0];
+    if (!imgTag) return null;
+    const alignM = /\bimg-align-(left|right|center|full)\b/i.exec(figAttrs);
+    const src = (/\bsrc\s*=\s*"([^"]*)"/i.exec(imgTag) || ['', ''])[1];
+    const altM = /\balt\s*=\s*"([^"]*)"/i.exec(imgTag);
+    const titleM = /\btitle\s*=\s*"([^"]*)"/i.exec(imgTag);
+    // max-width may be on <img> (legacy) or <figure>.
+    const widthM =
+      /\bmax-width\s*:\s*(\d+)px/i.exec(imgTag) || /\bmax-width\s*:\s*(\d+)px/i.exec(figAttrs);
+    const captionM = /<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i.exec(figBody);
+    const captionText = captionM ? htmlAttrUnescape(captionM[1]).trim() : '';
+    const imgTok = new TokCtor('image', 'img', 0);
+    imgTok.attrSet('src', htmlAttrUnescape(src));
+    if (altM) imgTok.attrSet('alt', htmlAttrUnescape(altM[1]));
+    if (titleM) imgTok.attrSet('title', htmlAttrUnescape(titleM[1]));
+    if (alignM) imgTok.attrSet('align', alignM[1]);
+    if (widthM) imgTok.attrSet('width', widthM[1]);
+    if (captionText !== '') imgTok.attrSet('caption', captionText);
+    imgTok.children = [];
+    return imgTok;
+  }
+  // Inline counterpart to the figure handling in splitBlockHtml. When an
+  // aligned/width/captioned image sits in a paragraph that ALSO has text, its
+  // serialized `<figure>…</figure>` is tokenized as `html_inline` (not a
+  // top-level `html_block`), so splitBlockHtml never sees it and the default
+  // html_inline→underline mapping turns the tags into literal underlined text —
+  // silently destroying the image on load/round-trip. This reassembles such a
+  // run from the inline children and replaces it with a real inline `image`
+  // token. Mirrors splitAttachment.
+  function splitInlineFigure(children, TokCtor) {
+    let has = false;
+    for (const c of children) {
+      if (c.type === 'html_inline' && /^<(figure|img)\b/i.test(c.content || '')) {
+        has = true;
+        break;
+      }
+    }
+    if (!has) return children;
+    const out = [];
+    for (let i = 0; i < children.length; i++) {
+      const t = children[i];
+      if (t.type === 'html_inline' && /^<figure\b/i.test(t.content || '')) {
+        // markdown-it emits one html_inline per tag (figcaption text arrives as
+        // text tokens in between); accumulate content until the matching close.
+        let html = '';
+        let j = i;
+        for (; j < children.length; j++) {
+          html += children[j].content || '';
+          if (/<\/figure>/i.test(children[j].content || '')) break;
+        }
+        const imgTok = figureToImageToken(html, TokCtor);
+        if (imgTok) {
+          imgTok.level = t.level;
+          out.push(imgTok);
+          i = j;
+          continue;
+        }
+      }
+      if (t.type === 'html_inline' && /^<img\b/i.test(t.content || '')) {
+        // A bare inline <img> (hand-written / pasted) → image token. Wrap it so
+        // the single figureToImageToken path applies.
+        const imgTok = figureToImageToken('<figure>' + t.content + '</figure>', TokCtor);
+        if (imgTok) {
+          imgTok.level = t.level;
+          out.push(imgTok);
+          continue;
+        }
+      }
+      out.push(t);
+    }
+    return out;
+  }
   function splitBlockHtml(toks, TokCtor) {
     const srcOf = (tag) => {
       const m = tag && /\bsrc\s*=\s*"([^"]*)"/i.exec(tag);
@@ -529,6 +611,10 @@ function buildParser(schema) {
         const webmTag = (/<source\b[^>]*type\s*=\s*"video\/webm"[^>]*>/i.exec(seg) || [])[0];
         const posterM = /\bposter\s*=\s*"([^"]*)"/i.exec(vtag);
         const bareSrc = /\bsrc\s*=\s*"([^"]*)"/i.exec(vtag);
+        // Strip quoted attribute values before the boolean-flag presence
+        // checks, so a URL like poster="…/hero-loop.jpg" or src="bg-muted.mp4"
+        // can't spuriously trip \bloop\b / \bmuted\b / \bautoplay\b.
+        const vflags = vtag.replace(/"[^"]*"|'[^']*'/g, '');
         const t = new TokCtor('video', '', 0);
         t.block = true;
         t.meta = {
@@ -536,9 +622,9 @@ function buildParser(schema) {
           webm: srcOf(webmTag),
           poster: posterM ? posterM[1] : '',
           src: mp4Tag || webmTag ? '' : bareSrc ? bareSrc[1] : '',
-          autoplay: /\bautoplay\b/i.test(vtag),
-          muted: /\bmuted\b/i.test(vtag),
-          loop: /\bloop\b/i.test(vtag),
+          autoplay: /\bautoplay\b/i.test(vflags),
+          muted: /\bmuted\b/i.test(vflags),
+          loop: /\bloop\b/i.test(vflags),
         };
         out.push(t);
         continue;
@@ -547,37 +633,14 @@ function buildParser(schema) {
       // serialized as `<figure …><img …><figcaption>…</figcaption></figure>`.
       // Pull back into a paragraph-wrapped `image` node so the editor shows
       // them correctly and the next round-trip is stable.
-      const figM = /<figure\b([^>]*)>([\s\S]*?)<\/figure>/i.exec(tk.content);
-      if (figM) {
-        const figAttrs = figM[1] || '';
-        const figBody = figM[2] || '';
-        const imgTag = (/<img\b[^>]*>/i.exec(figBody) || [''])[0];
-        if (imgTag) {
-          const alignM = /\bimg-align-(left|right|center|full)\b/i.exec(figAttrs);
-          const src = (/\bsrc\s*=\s*"([^"]*)"/i.exec(imgTag) || ['', ''])[1];
-          const altM = /\balt\s*=\s*"([^"]*)"/i.exec(imgTag);
-          const titleM = /\btitle\s*=\s*"([^"]*)"/i.exec(imgTag);
-          // max-width may be on <img> (legacy) or <figure>
-          const widthM =
-            /\bmax-width\s*:\s*(\d+)px/i.exec(imgTag) ||
-            /\bmax-width\s*:\s*(\d+)px/i.exec(figAttrs);
-          const captionM = /<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i.exec(figBody);
-          const captionText = captionM ? htmlAttrUnescape(captionM[1]).trim() : '';
-          const pOpen = new TokCtor('paragraph_open', 'p', 1);
-          pOpen.block = true;
-          const imgTok = new TokCtor('image', 'img', 0);
-          imgTok.attrSet('src', htmlAttrUnescape(src));
-          if (altM) imgTok.attrSet('alt', htmlAttrUnescape(altM[1]));
-          if (titleM) imgTok.attrSet('title', htmlAttrUnescape(titleM[1]));
-          if (alignM) imgTok.attrSet('align', alignM[1]);
-          if (widthM) imgTok.attrSet('width', widthM[1]);
-          if (captionText !== '') imgTok.attrSet('caption', captionText);
-          imgTok.children = [];
-          const pClose = new TokCtor('paragraph_close', 'p', -1);
-          pClose.block = true;
-          out.push(pOpen, imgTok, pClose);
-          continue;
-        }
+      const figImg = figureToImageToken(tk.content, TokCtor);
+      if (figImg) {
+        const pOpen = new TokCtor('paragraph_open', 'p', 1);
+        pOpen.block = true;
+        const pClose = new TokCtor('paragraph_close', 'p', -1);
+        pClose.block = true;
+        out.push(pOpen, figImg, pClose);
+        continue;
       }
       // Any other block HTML (iframe embeds + any raw HTML) → an `embed`
       // passthrough node, so prosemirror-markdown never sees an unmapped
@@ -690,6 +753,9 @@ function buildParser(schema) {
       }
       if (tk.children && tk.type === 'inline') {
         tk.children = splitAttachment(tk.children, tk.constructor);
+      }
+      if (tk.children && tk.type === 'inline') {
+        tk.children = splitInlineFigure(tk.children, tk.constructor);
       }
     }
     if (hasMath && TokCtor) {
@@ -2349,12 +2415,19 @@ const Video = Node.create({
       },
     ];
   },
-  renderHTML({ HTMLAttributes, node }) {
+  renderHTML({ node }) {
+    // Build the attrs explicitly rather than merging HTMLAttributes: the schema
+    // would otherwise render mp4=""/webm=""/src=""/poster="" plus the booleans
+    // as autoplay="false" — and in HTML `autoplay="false"` is still TRUE
+    // (presence-based). Emit each flag only when set; omit it when false.
     const attrs = { class: 'te-video', controls: 'controls' };
     if (node.attrs.poster) attrs.poster = node.attrs.poster;
     const src = node.attrs.mp4 || node.attrs.src;
     if (src) attrs.src = src;
-    return ['video', mergeAttributes(HTMLAttributes, attrs)];
+    if (node.attrs.autoplay) attrs.autoplay = 'autoplay';
+    if (node.attrs.muted) attrs.muted = 'muted';
+    if (node.attrs.loop) attrs.loop = 'loop';
+    return ['video', attrs];
   },
   addNodeView() {
     return ({ node }) => videoNodeView(node);
@@ -5003,12 +5076,15 @@ export function mount(rootEl, initialMarkdown, options) {
       canRun: () => editor.isActive('video'),
       active: () => Boolean(editor.isActive('video') && editor.getAttributes('video')[attr]),
       run: () => {
-        const cur = editor.getAttributes('video')[attr];
-        editor
-          .chain()
-          .focus()
-          .updateAttributes('video', { [attr]: !cur })
-          .run();
+        const next = !editor.getAttributes('video')[attr];
+        const patch = { [attr]: next };
+        // Browsers block autoplay of videos with sound, so autoplay only works
+        // when muted. Keep the invariant autoplay ⇒ muted: enabling autoplay
+        // force-mutes, and un-muting cancels autoplay — otherwise the toggle
+        // would silently do nothing on the published page.
+        if (attr === 'autoplay' && next) patch.muted = true;
+        if (attr === 'muted' && !next) patch.autoplay = false;
+        editor.chain().focus().updateAttributes('video', patch).run();
       },
     });
   }
