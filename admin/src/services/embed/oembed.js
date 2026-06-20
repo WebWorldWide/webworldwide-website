@@ -18,16 +18,29 @@
  * tests can run without touching the network.
  */
 
+import { screenedFetch } from '../../utils/ssrf.js';
+
 let _fetch = globalThis.fetch ? globalThis.fetch.bind(globalThis) : null;
+// Real-DNS rebinding screen runs only on the PRODUCTION fetch path. A test that
+// injects its own fetch owns networking, so skip the live lookup (test hosts
+// would otherwise NXDOMAIN-reject). Mirrors routes/webmentions.js.
+let _screenDns = true;
 
 /** @param {typeof fetch} fn */
 export function setFetchImpl(fn) {
   _fetch = fn;
+  _screenDns = !fn;
 }
 
 /** Restore the global fetch (test cleanup helper). */
 export function resetFetchImpl() {
   _fetch = globalThis.fetch ? globalThis.fetch.bind(globalThis) : null;
+  _screenDns = true;
+}
+
+/** Whether to run the live DNS-rebinding screen (false once a test fetch is injected). */
+export function shouldScreenDns() {
+  return _screenDns;
 }
 
 const USER_AGENT = 'WebWorldWide/1.0 (+https://webworldwide)';
@@ -65,14 +78,17 @@ export async function fetchOEmbed(endpoint, opts) {
   const timer = setTimeout(() => controller.abort(), opts?.timeoutMs || DEFAULT_TIMEOUT_MS);
   let res;
   try {
-    res = await _fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': USER_AGENT,
+    res = await screenedFetch(endpoint, {
+      fetchImpl: _fetch,
+      screenDns: _screenDns,
+      init: {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': USER_AGENT,
+        },
+        signal: controller.signal,
       },
-      signal: controller.signal,
-      redirect: 'follow',
     });
   } catch (err) {
     clearTimeout(timer);
