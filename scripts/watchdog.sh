@@ -108,7 +108,13 @@ fi
 disk=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${disk:-0}" -ge "$DISK_EMERGENCY" ]; then
   alert "disk at ${disk}% — running emergency cleanup"
-  docker system prune -f >/dev/null 2>&1 || true
+  # Container-SAFE cleanup ONLY. `docker system prune` also removes STOPPED
+  # containers — during a backup.sh / maintenance-monthly window (which
+  # deliberately stops cms to snapshot/VACUUM its DB) that would DELETE the
+  # stopped cms container and its state (a real past data-loss incident).
+  # Prune unused images + build cache instead; never touch containers.
+  docker image prune -af >/dev/null 2>&1 || true
+  docker builder prune -f >/dev/null 2>&1 || true
   journalctl --vacuum-size=100M >/dev/null 2>&1 || true
 fi
 

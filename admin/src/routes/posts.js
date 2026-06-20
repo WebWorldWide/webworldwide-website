@@ -25,6 +25,7 @@ import {
   listSnapshots,
   getSnapshot,
   renameSnapshots,
+  deleteSnapshots,
 } from '../services/snapshots.js';
 import { readRedirects, writeRedirects, upsertRedirect } from '../services/redirects-store.js';
 
@@ -154,6 +155,7 @@ router.post('/bulk', (req, res) => {
       try {
         if (action === 'delete') {
           unlinkSync(filePath);
+          deleteSnapshots(filename);
           ok.push(filename);
           continue;
         }
@@ -683,6 +685,7 @@ router.delete('/:filename', (req, res) => {
   try {
     const safeFilename = path.basename(req.params.filename);
     unlinkSync(join(postsDir, safeFilename));
+    deleteSnapshots(safeFilename);
     invalidatePostRefs();
     invalidatePostsCache();
     logActivity({ req, action: 'post.delete', target: safeFilename });

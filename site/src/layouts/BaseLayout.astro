@@ -179,7 +179,11 @@ const dataAttrs = Object.fromEntries(
     <meta name="twitter:image" content={ogImageURL} />
     {resolvedOgImageAlt && <meta name="twitter:image:alt" content={resolvedOgImageAlt} />}
 
-    <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}
+    />
 
     <slot name="head" />
   </head>

@@ -90,11 +90,20 @@ export interface PostImage {
   alt: string;
 }
 
-/** First markdown image in the body, or null if the post has none. */
+/** First image in the body (markdown or raw HTML), or null if none. */
 export function firstImage(body: string): PostImage | null {
   const m = body.match(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/);
-  if (!m) return null;
-  return { src: m[2], alt: (m[1] ?? '').trim() };
+  if (m) return { src: m[2], alt: (m[1] ?? '').trim() };
+  // Fallback: the editor writes aligned/inline images as raw HTML
+  // `<figure><img src="…" alt="…">`, which the markdown regex misses — so a
+  // post whose lead image is HTML-only would otherwise fall back to the
+  // generic OG card instead of its actual image.
+  const h = body.match(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i);
+  if (h) {
+    const altM = h[0].match(/\balt=["']([^"']*)["']/i);
+    return { src: h[1], alt: (altM?.[1] ?? '').trim() };
+  }
+  return null;
 }
 
 /**
