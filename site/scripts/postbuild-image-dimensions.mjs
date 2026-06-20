@@ -18,23 +18,18 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cpSync, existsSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DIST = resolve(HERE, '..', 'dist');
-const PUBLIC = resolve(HERE, '..', 'public');
 
-// Astro/Vite drops the `.well-known` dot-directory when copying public/ -> dist/,
-// which 404s the IANA webfinger path (no extension) that Bridgy Fed / Mastodon
-// query to resolve the @domain@domain fediverse handle. Copy it back so the
-// federation handshake works. (Confirmed: /.well-known/webfinger was 404 live.)
-if (existsSync(join(PUBLIC, '.well-known'))) {
-  cpSync(join(PUBLIC, '.well-known'), join(DIST, '.well-known'), { recursive: true });
-}
-// GitHub Pages applies Jekyll, which OMITS dot-directories (like .well-known)
-// from what it serves — so the copied webfinger 404s without this marker.
-// `.nojekyll` disables that processing so the whole dist/ is served verbatim.
+// Astro already copies public/.well-known/webfinger into dist/, so the IANA path
+// Bridgy Fed / Mastodon query for the @domain@domain handle is built correctly.
+// Drop a .nojekyll marker so Pages never runs Jekyll over the artifact (Jekyll
+// strips dot-directories like .well-known). NOTE: the artifact upload must also
+// set include-hidden-files (see deploy.yml "Upload artifact"), or the tar excludes
+// every dot-path and the webfinger 404s regardless of this marker.
 writeFileSync(join(DIST, '.nojekyll'), '');
 
 /** @param {string} dir @returns {AsyncGenerator<string>} */
