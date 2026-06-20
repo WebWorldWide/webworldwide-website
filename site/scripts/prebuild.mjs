@@ -41,6 +41,15 @@ for (const file of files) {
   // the build, so emitting /<slug>/ → /blog/<slug>/ would 301 to a page that
   // doesn't exist (and would shadow a vanity redirect for the same path).
   if (/^draft:\s*true\s*$/m.test(fm)) continue;
+  // Also skip scheduled posts whose publish_at is still in the future:
+  // isPublished() excludes them too, so no /blog/<slug>/ page is built yet —
+  // emitting the redirect would 301 to a 404 and shadow a same-path vanity
+  // redirect until the post actually goes live.
+  const pubAtLine = fm.match(/^publish_at:\s*["']?([^"'\r\n]+?)["']?\s*$/m);
+  if (pubAtLine) {
+    const when = new Date(pubAtLine[1].trim());
+    if (!Number.isNaN(when.getTime()) && when.getTime() > Date.now()) continue;
+  }
   const slugLine = fm.match(slugRe);
   const slug = slugLine ? slugLine[1].trim() : file.replace(/\.md$/, '');
   const from = `/${slug}/`;

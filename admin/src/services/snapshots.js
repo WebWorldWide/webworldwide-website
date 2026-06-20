@@ -102,6 +102,24 @@ export function renameSnapshots(oldFilename, newFilename) {
 }
 
 /**
+ * Drop a post's entire snapshot history — called when the post is deleted so
+ * the table doesn't accumulate orphan rows (recordSnapshot only self-prunes to
+ * MAX_PER_FILE PER live filename; nothing else ever removed a deleted post's
+ * rows, so every slug ever created leaked up to MAX_PER_FILE full bodies
+ * forever). Idempotent; safe when there's nothing to delete.
+ *
+ * @param {string} filename
+ */
+export function deleteSnapshots(filename) {
+  if (!filename) return;
+  try {
+    db().prepare('DELETE FROM post_snapshots WHERE filename = ?').run(filename);
+  } catch (err) {
+    console.warn('[snapshots] delete failed:', err instanceof Error ? err.message : err);
+  }
+}
+
+/**
  * List snapshots for a post, newest first (metadata only).
  * @param {string} filename
  * @returns {Array<{ id: string, ts: number, title: string | null }>}
