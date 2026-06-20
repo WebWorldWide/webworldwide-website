@@ -51,20 +51,36 @@ the Fediverse:
 The single-user shortcut: set `WEBMENTION_AUTO_APPROVE=1` in the admin's
 production `.env` so verified mentions skip the moderation queue.
 
-### 4. Bluesky cross-post
+### 4. Social syndication (Bluesky + Mastodon)
 
-To auto-post every new article to Bluesky on publish:
+Auto-post every new article to Bluesky and/or Mastodon on publish (title + hook
+line + a rich link card — a single post, never a thread).
 
-```bash
-# admin/.env (production)
-BLUESKY_HANDLE=you.bsky.social
-BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
-```
+**Preferred — the admin UI.** Go to **Settings → Syndication** and fill in:
 
-Generate the app password at <https://bsky.app/settings/app-passwords>. The
-cross-post hook lives in `admin/services/publish.js` and is idempotent (it
-writes the AT URI back into `webmentions.bluesky_uri`, so the second publish
-of the same post never duplicates).
+- **Bluesky** — your handle + an app password from
+  <https://bsky.app/settings/app-passwords> (never the account password).
+- **Mastodon** — your instance URL (e.g. `https://mastodon.social`) + an access
+  token with the `write:statuses` scope, created at
+  `<instance>/settings/applications`.
+
+Hit **Test connection**, then **Save**. Credentials are encrypted at rest in the
+CMS database (AES-256-GCM) — never written to `.env` or the repo.
+
+**Alternative — env vars** (headless setups): `BLUESKY_HANDLE` /
+`BLUESKY_APP_PASSWORD` and `MASTODON_INSTANCE` / `MASTODON_ACCESS_TOKEN` in
+`docker/.env`. See `docker/.env.example`.
+
+The cross-post hooks live in `admin/src/services/{bluesky,mastodon}-crosspost.js`
+(invoked from `admin/src/routes/publish.js` and the scheduled-publish path). They
+are idempotent — the resulting `bluesky_uri` / `mastodon_uri` is written back
+into the post's front-matter, so re-publishing the same post never duplicates.
+Posts dated more than 30 days ago are skipped on first cross-post so a
+back-catalog import never spams your followers.
+
+> Threads + the wider fediverse are reached separately via **Bridgy Fed** (see
+> §3) — Threads has no simple token API. Bluesky/Mastodon here post directly to
+> your own accounts.
 
 ## Optional — operational cron
 
