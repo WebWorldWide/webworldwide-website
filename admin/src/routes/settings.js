@@ -755,7 +755,9 @@ router.get('/mastodon', (_req, res) => {
   const uiTok = hasSecret('mastodon_access_token');
   res.json({
     configured: mastodon.isConfigured(),
-    instance: getSecret('mastodon_instance') || process.env.MASTODON_INSTANCE || '',
+    // Normalized (a pasted handle is reduced to its https origin) so the field
+    // shows the URL that's actually used, not the raw mistyped value.
+    instance: mastodon.getMastodonConfig().instance,
     tokenSet: uiTok || Boolean(process.env.MASTODON_ACCESS_TOKEN),
     source: uiTok ? 'ui' : process.env.MASTODON_ACCESS_TOKEN ? 'env' : null,
   });
