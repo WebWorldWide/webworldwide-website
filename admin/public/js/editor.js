@@ -1238,6 +1238,10 @@
         // The façade is the new bodyEl. It exposes .value, .selectionStart,
         // .selectionEnd, addEventListener('input'), .focus(), .setMode().
         bodyEl = instance;
+        // Debug/test handle: a single-admin, authenticated surface, so a
+        // read-only reference to the editor façade is harmless and lets the
+        // e2e suite drive real node selections (toolbar-persistence specs).
+        window.__teEditor = instance;
         return true;
       } catch (err) {
         // Don't bring the page down; fall back to the prerendered textarea.
