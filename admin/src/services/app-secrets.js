@@ -37,10 +37,19 @@ function db() {
 
 // 32-byte AES key from SESSION_SECRET. A fixed salt is fine — the entropy is in
 // the secret, and we want the same key across restarts for a given secret.
+/** @type {{ secret: string, key: Buffer } | null} */
+let keyCache = null;
 function keyBytes() {
   const secret = process.env.SESSION_SECRET || '';
   if (!secret) throw new Error('SESSION_SECRET not set — cannot (de)crypt app secrets');
-  return scryptSync(secret, 'wwwide-app-secrets-v1', 32);
+  // Memoize: scryptSync is ~50ms and SYNCHRONOUS (blocks the event loop), and
+  // the derived key is identical for a given secret. getSecret() runs on every
+  // config read (3× per Bluesky config, per-post in the cross-post loop), so
+  // re-deriving each time stalls all concurrent admin requests. Derive once.
+  if (keyCache && keyCache.secret === secret) return keyCache.key;
+  const key = scryptSync(secret, 'wwwide-app-secrets-v1', 32);
+  keyCache = { secret, key };
+  return key;
 }
 
 /** @param {string} plain */

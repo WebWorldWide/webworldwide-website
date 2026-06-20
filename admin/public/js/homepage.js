@@ -765,14 +765,41 @@
    * normalized model.
    * @returns {Promise<boolean>} whether the save succeeded
    */
+  // In-flight guard: Save/Publish must not double-fire. #hp-publish is
+  // intentionally always-enabled, so a double-click would otherwise run two
+  // concurrent PATCH/publish requests → a git commit+push race. Guard in code
+  // and disable the controls for the duration (dashboard.js/editor.js do the same).
+  let hpBusy = false;
+  function setHpBusy(on) {
+    const save = document.getElementById('hp-save');
+    const pub = document.getElementById('hp-publish');
+    const disc = document.getElementById('hp-discard');
+    if (on) {
+      if (save) save.disabled = true;
+      if (pub) pub.disabled = true;
+      if (disc) disc.disabled = true;
+    } else {
+      const dirty = isDirty();
+      if (save) save.disabled = !dirty;
+      if (pub) pub.disabled = false;
+      if (disc) disc.disabled = !dirty;
+    }
+  }
+
   async function saveDraft() {
+    // Snapshot what we send so we can tell whether the user kept editing while
+    // the PATCH was in flight — blindly adopting the server model would silently
+    // discard those keystrokes.
+    const sent = JSON.stringify(draft);
     try {
       const updated = await TE.fetchJSON('/api/settings/homepage', {
         method: 'PATCH',
-        body: JSON.stringify(draft),
+        body: sent,
       });
       saved = clone(updated);
-      draft = clone(updated);
+      // Only adopt the server model into the live draft if nothing changed
+      // locally during the round-trip; otherwise keep the in-progress edits.
+      if (JSON.stringify(draft) === sent) draft = clone(updated);
       savedNotLive = true;
       return true;
     } catch (err) {
@@ -785,17 +812,28 @@
   }
 
   async function onSave() {
-    if (!(await saveDraft())) return;
-    renderAll();
-    TE.toast('Homepage saved to the Pi — publish to make it live.');
+    if (hpBusy) return;
+    hpBusy = true;
+    setHpBusy(true);
+    try {
+      if (!(await saveDraft())) return;
+      renderAll();
+      TE.toast('Homepage saved to the Pi — publish to make it live.');
+    } finally {
+      hpBusy = false;
+      setHpBusy(false);
+    }
   }
 
   async function onPublish() {
-    if (isDirty() && !(await saveDraft())) {
-      renderAll();
-      return;
-    }
+    if (hpBusy) return;
+    hpBusy = true;
+    setHpBusy(true);
     try {
+      if (isDirty() && !(await saveDraft())) {
+        renderAll();
+        return;
+      }
       const res = await TE.fetchJSON('/api/publish', { method: 'POST' });
       savedNotLive = false;
       renderAll();
@@ -806,6 +844,9 @@
     } catch (err) {
       renderAll();
       TE.toast(/** @type {Error} */ (err).message || 'Publish failed', 'error');
+    } finally {
+      hpBusy = false;
+      setHpBusy(false);
     }
   }
 

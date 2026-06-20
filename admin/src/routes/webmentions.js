@@ -433,19 +433,32 @@ publicRouter.post('/', async (req, res) => {
   // re-sends on edits and periodically), so re-validate the existing row in
   // place rather than inserting a duplicate that inflates like/reply counts.
   let id;
+  // A fresh/pending mention gets (re)validated below. But a mention the admin
+  // ALREADY moderated (approved/rejected) must keep that decision on a
+  // re-delivery — Bridgy Fed re-sends periodically + on edits, and resetting it
+  // to 'pending' would silently un-publish an approved reply/like from the
+  // public feed (which only shows status='approved') until re-approved.
+  let revalidate = true;
   try {
     const existing = db()
-      .prepare('SELECT id FROM webmentions WHERE source = ? AND target = ?')
+      .prepare('SELECT id, status FROM webmentions WHERE source = ? AND target = ?')
       .get(v.source, normTarget);
     if (existing) {
       id = existing.id;
-      db()
-        .prepare(
-          `UPDATE webmentions
-              SET status = 'pending', received_at = ?, validated_at = NULL
-            WHERE id = ?`,
-        )
-        .run(Date.now(), id);
+      if (existing.status === 'approved' || existing.status === 'rejected') {
+        // Already moderated — record the re-delivery time but PRESERVE the
+        // decision; do not re-validate (which would reset it to pending).
+        db().prepare(`UPDATE webmentions SET received_at = ? WHERE id = ?`).run(Date.now(), id);
+        revalidate = false;
+      } else {
+        db()
+          .prepare(
+            `UPDATE webmentions
+                SET status = 'pending', received_at = ?, validated_at = NULL
+              WHERE id = ?`,
+          )
+          .run(Date.now(), id);
+      }
     } else {
       id = nanoid();
       db()
@@ -464,6 +477,8 @@ publicRouter.post('/', async (req, res) => {
   // Fire-and-forget validation. The spec says we MAY do this
   // asynchronously and return 202 immediately — that's what we do.
   setImmediate(() => {
+    // Skip an already-moderated re-delivery — keep the prior approve/reject.
+    if (!revalidate) return;
     validateMention(id).catch((err) => {
       console.warn('[webmention] validate failed for', id, err && err.message);
     });
