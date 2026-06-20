@@ -479,6 +479,51 @@
               </div>
             </div>
             <div id="settings-form" class="te-form-grid">Loading…</div>
+            <div class="settings-syndication" style="margin-top: 24px">
+              <div class="panel" id="syndication-panel" aria-label="Syndication">
+                <div class="panel-head">
+                  <span class="panel-title"
+                    ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span
+                    >Syndication — Bluesky</span
+                  >
+                  <span id="bsky-status" class="panel-head-r" aria-live="polite"></span>
+                </div>
+                <div class="panel-body">
+                  <p style="margin: 0 0 12px; color: var(--fg-dim)">
+                    Auto-post each published post to Bluesky. Use an
+                    <a
+                      href="https://bsky.app/settings/app-passwords"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >app password</a
+                    >
+                    — not your account password. It's stored encrypted on this server, never in your
+                    public repo.
+                  </p>
+                  <label class="te-field"
+                    ><span>Handle</span>
+                    <input
+                      type="text"
+                      id="bsky-handle"
+                      placeholder="you.bsky.social"
+                      autocomplete="off"
+                  /></label>
+                  <label class="te-field"
+                    ><span>App password</span>
+                    <input
+                      type="password"
+                      id="bsky-password"
+                      placeholder="app password"
+                      autocomplete="new-password"
+                  /></label>
+                  <div class="sec-actions" style="margin-top: 12px; gap: 8px">
+                    <button type="button" class="btn primary" id="bsky-save">Save</button>
+                    <button type="button" class="btn" id="bsky-test">Test connection</button>
+                    <button type="button" class="btn ghost" id="bsky-clear">Disconnect</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="settings-security" style="margin-top: 24px">
               <div class="panel" id="security-panel" aria-label="Security">
                 <div class="panel-head">
