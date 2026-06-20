@@ -191,7 +191,7 @@ const dataAttrs = Object.fromEntries(
     <a href="#main" class="skip-link">Skip to content</a>
     <SkyBackdrop />
     <Nav currentPath={currentPath} />
-    <main id="main"><slot /></main>
+    <main id="main" tabindex="-1"><slot /></main>
     <slot name="after-main" />
     <Analytics />
 

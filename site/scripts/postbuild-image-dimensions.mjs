@@ -61,11 +61,22 @@ for await (const file of walk(DIST)) {
 
   /** @type {Map<string, string>} */
   const replacements = new Map();
+  // The FIRST local image in document order is the likely LCP element (esp. an
+  // image-led blog post whose lead image is the first <img> in the body). Load
+  // it eagerly with a high fetch priority — lazy-loading the LCP image is the
+  // documented Web-Vitals anti-pattern. Every later image stays lazy.
+  let firstStamped = false;
   for (const tag of new Set(tags)) {
     const src = tag.match(/\bsrc="([^"]+)"/)?.[1];
     if (!src || !src.startsWith('/')) continue;
     let next = tag;
-    if (!/\bloading\s*=/.test(next)) next = next.replace(/>$/, ' loading="lazy">');
+    if (!/\bloading\s*=/.test(next)) {
+      next = next.replace(
+        />$/,
+        firstStamped ? ' loading="lazy">' : ' loading="eager" fetchpriority="high">',
+      );
+      firstStamped = true;
+    }
     if (!/\bdecoding\s*=/.test(next)) next = next.replace(/>$/, ' decoding="async">');
     if (!/\b(?:width|height)\s*=/.test(next)) {
       const size = await measure(src);

@@ -28,11 +28,14 @@ function isCurrent(path: string): boolean {
     >
       <canvas data-globe aria-hidden="true"></canvas>
     </a>
-    <a class={`nav-link${isCurrent('/#apps') ? ' is-current' : ''}`} href="/#apps">Apps</a>
+    <!-- Section anchors: no server-side active state. Astro.url.pathname never
+         carries a #fragment, so isCurrent('/#…') was always false (dead code);
+         a real in-view highlight would need a client-side scroll-spy. -->
+    <a class="nav-link" href="/#apps">Apps</a>
     <span class="sep" aria-hidden="true"></span>
-    <a class={`nav-link${isCurrent('/#videos') ? ' is-current' : ''}`} href="/#videos">Videos</a>
+    <a class="nav-link" href="/#videos">Videos</a>
     <span class="sep" aria-hidden="true"></span>
-    <a class={`nav-link${isCurrent('/#socials') ? ' is-current' : ''}`} href="/#socials">Socials</a>
+    <a class="nav-link" href="/#socials">Socials</a>
     <span class="sep" aria-hidden="true"></span>
     <a class={`nav-link${isCurrent('/blog/') ? ' is-current' : ''}`} href="/blog/" aria-current={isCurrent('/blog/') ? 'page' : undefined}>Blog</a>
   </div>
