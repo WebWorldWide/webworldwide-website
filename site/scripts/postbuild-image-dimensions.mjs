@@ -18,10 +18,20 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cpSync, existsSync } from 'node:fs';
 import sharp from 'sharp';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DIST = resolve(HERE, '..', 'dist');
+const PUBLIC = resolve(HERE, '..', 'public');
+
+// Astro/Vite drops the `.well-known` dot-directory when copying public/ -> dist/,
+// which 404s the IANA webfinger path (no extension) that Bridgy Fed / Mastodon
+// query to resolve the @domain@domain fediverse handle. Copy it back so the
+// federation handshake works. (Confirmed: /.well-known/webfinger was 404 live.)
+if (existsSync(join(PUBLIC, '.well-known'))) {
+  cpSync(join(PUBLIC, '.well-known'), join(DIST, '.well-known'), { recursive: true });
+}
 
 /** @param {string} dir @returns {AsyncGenerator<string>} */
 async function* walk(dir) {
