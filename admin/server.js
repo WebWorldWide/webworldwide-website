@@ -424,6 +424,36 @@ app.use('/api', (req, res, next) => {
   }
 });
 
+// CSRF / cross-origin defense for state-changing /api requests. The session
+// cookie is SameSite=Lax + host-only, which does NOT isolate same-site SIBLING
+// subdomains — comments. (third-party Remark42 UGC), analytics., and the no-CSP
+// public apex all share the registrable domain, so one of them could otherwise
+// issue a no-preflight form POST that rides the cookie to a mutating route (incl.
+// the /api/health terminal). Browsers always send Origin on non-GET requests;
+// require it to be the admin origin (fall back to the Referer origin if absent).
+const ADMIN_ORIGINS = new Set(
+  [
+    process.env.ADMIN_ORIGIN,
+    process.env.DOMAIN_ADMIN ? `https://${process.env.DOMAIN_ADMIN}` : null,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ].filter(Boolean),
+);
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  const origin = req.headers.origin;
+  if (origin) {
+    if (ADMIN_ORIGINS.has(origin)) return next();
+  } else if (req.headers.referer) {
+    try {
+      if (ADMIN_ORIGINS.has(new URL(req.headers.referer).origin)) return next();
+    } catch {
+      /* malformed Referer → fall through to reject */
+    }
+  }
+  return res.status(403).json({ error: 'cross-origin request blocked' });
+});
+
 // API routes
 app.use('/api/posts', postsRoutes);
 app.use('/api/media', mediaRoutes);

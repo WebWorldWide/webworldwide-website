@@ -51,3 +51,28 @@ test('missing slug/platform are safe no-ops', () => {
   svc.recordSyndication('', 'bluesky', 'x'); // must not throw
   assert.equal(svc.hasSyndicated('p4', ''), false);
 });
+
+test('claimSyndication is atomic — only the first claimant wins (per slug+platform)', () => {
+  if (skip) return;
+  assert.equal(svc.claimSyndication('c1', 'bluesky'), true); // first wins
+  assert.equal(svc.claimSyndication('c1', 'bluesky'), false); // second blocked (in-flight)
+  assert.equal(svc.claimSyndication('c1', 'mastodon'), true); // other platform independent
+  assert.equal(svc.claimSyndication('c2', 'bluesky'), true); // other slug independent
+});
+
+test('releaseSyndication re-opens an unposted claim but never deletes a posted record', () => {
+  if (skip) return;
+  assert.equal(svc.claimSyndication('c3', 'bluesky'), true);
+  svc.releaseSyndication('c3', 'bluesky');
+  assert.equal(svc.claimSyndication('c3', 'bluesky'), true); // re-claimable after release
+  svc.recordSyndication('c3', 'bluesky', 'at://x'); // now posted
+  svc.releaseSyndication('c3', 'bluesky'); // must NOT remove a posted record
+  assert.equal(svc.hasSyndicated('c3', 'bluesky'), true);
+  assert.equal(svc.claimSyndication('c3', 'bluesky'), false); // can't re-claim a posted slug
+});
+
+test('claimSyndication refuses a slug already recorded as posted', () => {
+  if (skip) return;
+  svc.recordSyndication('c4', 'mastodon', 'https://x');
+  assert.equal(svc.claimSyndication('c4', 'mastodon'), false);
+});

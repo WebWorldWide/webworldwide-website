@@ -24,7 +24,7 @@ import { writeFileAtomic } from '../utils/atomicWrite.js';
 import * as mastodon from './mastodon.js';
 import { extractExcerpt, __test as blueskyCrosspost } from './bluesky-crosspost.js';
 import { logActivity } from './activity.js';
-import { hasSyndicated, recordSyndication } from './syndication-log.js';
+import { claimSyndication, recordSyndication, releaseSyndication } from './syndication-log.js';
 
 const parseDate = blueskyCrosspost.parseDate;
 
@@ -100,9 +100,8 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     }
 
     const slug = String(data.slug || filename.replace(/\.md$/, ''));
-    // Durable backstop (see bluesky-crosspost): a prior post whose front-matter
-    // write-back failed is still recorded, so we never re-post a duplicate.
-    if (hasSyndicated(slug, 'mastodon')) {
+    // Atomically claim the slug — durable + concurrency-safe (see bluesky-crosspost).
+    if (!claimSyndication(slug, 'mastodon')) {
       report.skipped.push({ filename, reason: 'already_posted' });
       continue;
     }
@@ -137,6 +136,7 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
       });
       posted++;
     } catch (err) {
+      releaseSyndication(slug, 'mastodon'); // free the claim so a later run can retry
       report.errors.push({ filename, error: err.message });
       logActivity({
         user: 'system',

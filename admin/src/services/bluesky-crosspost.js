@@ -31,7 +31,7 @@ import { parsePost, serializePost } from '../utils/frontmatter.js';
 import { writeFileAtomic } from '../utils/atomicWrite.js';
 import * as bluesky from './bluesky.js';
 import { logActivity } from './activity.js';
-import { hasSyndicated, recordSyndication } from './syndication-log.js';
+import { claimSyndication, recordSyndication, releaseSyndication } from './syndication-log.js';
 
 const SITE_DIR_DEFAULT = '..';
 
@@ -152,9 +152,10 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
     }
 
     const slug = String(data.slug || filename.replace(/\.md$/, ''));
-    // Durable backstop: a prior post whose front-matter write-back failed (full
-    // SD card, …) is still recorded here, so we never re-post a duplicate.
-    if (hasSyndicated(slug, 'bluesky')) {
+    // Atomically claim the slug — durable (survives a failed front-matter write)
+    // AND concurrency-safe: skips if already posted OR if another process (the
+    // cron scheduler) is mid-post on the same slug, closing the dup-post race.
+    if (!claimSyndication(slug, 'bluesky')) {
       report.skipped.push({ filename, reason: 'already_posted' });
       continue;
     }
@@ -207,6 +208,7 @@ export async function crossPostChangedPosts(changedPosts, opts = {}) {
       });
       posted++;
     } catch (err) {
+      releaseSyndication(slug, 'bluesky'); // free the claim so a later run can retry
       report.errors.push({ filename, error: err.message });
       logActivity({
         user: 'system',

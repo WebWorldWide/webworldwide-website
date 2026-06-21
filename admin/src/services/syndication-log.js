@@ -57,6 +57,57 @@ export function hasSyndicated(slug, platform) {
   }
 }
 
+// A crashed-mid-post claim (uri still NULL) is re-claimable after this, so a
+// process that died between claim and post doesn't block the slug forever.
+const CLAIM_STALE_MS = 10 * 60 * 1000;
+
+/**
+ * ATOMICALLY claim a slug+platform for cross-posting. Returns true only if THIS
+ * caller won the claim — closing the TOCTOU race where the cms publish hook and
+ * the cron scheduler.js (separate processes, shared DB) both pass a hasSyndicated
+ * check and both post. Claims when there's no row, or when the existing row is an
+ * unposted (uri IS NULL) claim older than CLAIM_STALE_MS; never claims a row that
+ * already has a uri (already posted) or a fresh in-flight claim. Fails CLOSED.
+ * @param {string} slug
+ * @param {string} platform
+ * @returns {boolean}
+ */
+export function claimSyndication(slug, platform) {
+  if (!slug || !platform) return false;
+  try {
+    const now = Date.now();
+    const r = db()
+      .prepare(
+        `INSERT INTO syndication_log (slug, platform, uri, posted_at)
+         VALUES (?, ?, NULL, ?)
+         ON CONFLICT(slug, platform) DO UPDATE SET posted_at = excluded.posted_at
+           WHERE syndication_log.uri IS NULL AND syndication_log.posted_at < ?`,
+      )
+      .run(String(slug), String(platform), now, now - CLAIM_STALE_MS);
+    return r.changes === 1;
+  } catch (err) {
+    console.warn('[syndication-log] claim failed:', err && err.message);
+    return false; // fail closed — don't post if we couldn't atomically claim
+  }
+}
+
+/**
+ * Release an UNPOSTED claim (uri still NULL) so a failed post can be retried.
+ * Never deletes a real (posted) record.
+ * @param {string} slug
+ * @param {string} platform
+ */
+export function releaseSyndication(slug, platform) {
+  if (!slug || !platform) return;
+  try {
+    db()
+      .prepare('DELETE FROM syndication_log WHERE slug = ? AND platform = ? AND uri IS NULL')
+      .run(String(slug), String(platform));
+  } catch (err) {
+    console.warn('[syndication-log] release failed:', err && err.message);
+  }
+}
+
 /**
  * Record that this post was cross-posted to this platform (idempotent upsert).
  * @param {string} slug
