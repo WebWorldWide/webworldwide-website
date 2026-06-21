@@ -1003,7 +1003,7 @@ body[data-page="login"] {
 .row-grid .r-link {
   display: grid;
   flex: 1;
-  grid-template-columns: 44px minmax(0, 1fr) 96px 104px;
+  grid-template-columns: minmax(0, 1fr) 96px 104px;
   gap: var(--space-3);
   align-items: center;
   min-width: 0;
@@ -1042,13 +1042,6 @@ body[data-page="login"] {
 }
 .row-grid.head .r-link {
   cursor: default;
-}
-.r-num {
-  font-family: var(--font-data);
-  font-size: var(--fs-xs);
-  color: var(--ink-mute);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 .r-title-wrap {
   display: flex;
@@ -2034,16 +2027,14 @@ body[data-page="login"] {
   .sec-title {
     font-size: var(--fs-h1);
   }
-  /* Posts list: drop №/length/date, keep title + actions. */
+  /* Posts list: drop length/date, keep title + actions. */
   .row-grid .r-link {
     grid-template-columns: minmax(0, 1fr);
   }
-  .row-grid .r-link .r-num,
   .row-grid .r-link .r-status,
   .row-grid .r-link .r-date,
   .row-grid.head .r-status,
-  .row-grid.head .r-date,
-  .row-grid.head .r-num {
+  .row-grid.head .r-date {
     display: none;
   }
   .row-grid .r-actions {

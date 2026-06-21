@@ -152,11 +152,10 @@
     }
 
     rows.innerHTML = visible
-      .map((p, i) => {
+      .map((p) => {
         const status = postStatus(p);
         const pillCls = status === 'draft' ? 'draft' : status === 'scheduled' ? 'sched' : 'pub';
         const pillLabel = status.toUpperCase();
-        const num = String(i + 1).padStart(3, '0');
         const fn = TE.escape(p.filename);
         const title = TE.escape(p.title || '(untitled)');
         const href = `/editor.html?file=${encodeURIComponent(p.filename)}`;
@@ -166,7 +165,6 @@
         return `
         <div class="row-grid" data-filename="${fn}">
           <a class="r-link" href="${href}" aria-label="Edit ${title}">
-            <span class="r-num">${num}</span>
             <span class="r-title-wrap">
               <span class="r-pill ${pillCls}">${pillLabel}</span>
               <span class="r-title">${title}</span>
