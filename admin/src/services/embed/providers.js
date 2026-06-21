@@ -35,6 +35,7 @@
 
 import { fetchOEmbed } from './oembed.js';
 import { scrapeOpenGraph } from './og-scraper.js';
+import { sanitizeEmbedHtml } from '../../utils/sanitizeHtml.js';
 
 // Hosts that look like Mastodon but aren't. Add new ones here.
 const MASTODON_HOST_DENY = new Set([
@@ -448,7 +449,10 @@ function shape(provider, id, shortcode, oembed, fallbackType) {
     provider,
     id,
     shortcode,
-    html: o.html || '',
+    // Sanitize provider HTML — an oEmbed `html` can come from an attacker host
+    // (the Mastodon provider accepts any instance) and is published raw to the
+    // no-CSP public site. Strips <script>/on*/javascript: while keeping iframes.
+    html: sanitizeEmbedHtml(o.html || ''),
     thumbnail: o.thumbnail_url || '',
     title: o.title || '',
     author: o.author_name || '',

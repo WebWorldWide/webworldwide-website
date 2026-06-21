@@ -17,7 +17,12 @@ services:
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "80:80"
+      # Bind to loopback only. The Cloudflare tunnel reaches Caddy as `caddy:80`
+      # over the docker network (see docker/cloudflare-tunnel-routes.md), so the
+      # host port is needed ONLY for local `curl 127.0.0.1` checks. Publishing on
+      # 0.0.0.0 let a LAN host hit Caddy directly with a spoofed CF-Connecting-IP
+      # / X-Forwarded-For and bypass the cms rate limiter; loopback closes that.
+      - "127.0.0.1:80:80"
     environment:
       - DOMAIN_ADMIN=${DOMAIN_ADMIN}
       - DOMAIN_COMMENTS=${DOMAIN_COMMENTS}

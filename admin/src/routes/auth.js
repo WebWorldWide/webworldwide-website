@@ -143,6 +143,12 @@ router.post('/setup', async (req, res) => {
   res.json({ success: true, message: 'Admin account created. You can now register a passkey.' });
 });
 
+// A valid cost-12 bcrypt hash (of a random throwaway string) computed once at
+// boot. Compared against in the user-not-found branch so that path does the same
+// ~hundreds-of-ms of work as a real compare — otherwise the latency delta lets an
+// unauthenticated caller enumerate valid usernames. Cost matches registration (12).
+const DUMMY_LOGIN_HASH = bcrypt.hashSync(randomBytes(16).toString('hex'), 12);
+
 // ── Password Login ──
 router.post('/login/password', async (req, res) => {
   const { username, password } = req.body;
@@ -152,6 +158,8 @@ router.post('/login/password', async (req, res) => {
 
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   if (!user) {
+    // Equalize timing with the found-user path before the identical 401.
+    await bcrypt.compare(password, DUMMY_LOGIN_HASH);
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 

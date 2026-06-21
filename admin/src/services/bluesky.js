@@ -366,10 +366,11 @@ async function buildLinkCard(agent, { url, title, description, coverImageUrl }) 
       maxRedirects: 2,
     });
     if (!res.ok) return card;
-    // Bail before buffering if the server declares an over-cap body.
-    if (Number(res.headers.get('content-length') || 0) > 1_000_000) return card;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > 1_000_000) return card; // Bluesky caps blobs ~1 MB
+    // Stream with a HARD byte cap (Bluesky caps blobs ~1 MB) — a host that omits
+    // or understates Content-Length must not be able to force an unbounded
+    // in-memory download; the cap is enforced DURING the read, not after.
+    const buf = await readCappedBytes(res, 1_000_000);
+    if (!buf) return card;
     const mime = res.headers.get('content-type') || 'image/jpeg';
     const upload = await agent.uploadBlob(buf, { encoding: mime });
     if (upload?.data?.blob) {
@@ -381,6 +382,43 @@ async function buildLinkCard(agent, { url, title, description, coverImageUrl }) 
     clearTimeout(timer);
   }
   return card;
+}
+
+/**
+ * Read a fetch Response body into a Buffer, aborting once `maxBytes` is exceeded
+ * DURING the stream (so an absent/understated Content-Length can't blow memory).
+ * Returns null if over the cap or no body. Falls back to arrayBuffer when the
+ * body isn't a readable stream (test fetch impls).
+ *
+ * @param {Response} res
+ * @param {number} maxBytes
+ * @returns {Promise<Buffer | null>}
+ */
+async function readCappedBytes(res, maxBytes) {
+  const body = /** @type {any} */ (res).body;
+  if (!body || typeof body.getReader !== 'function') {
+    const ab = await res.arrayBuffer();
+    return ab.byteLength > maxBytes ? null : Buffer.from(ab);
+  }
+  const reader = body.getReader();
+  /** @type {Buffer[]} */
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch (_) {
+        /* ignore */
+      }
+      return null;
+    }
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks);
 }
 
 /**

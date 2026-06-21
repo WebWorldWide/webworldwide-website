@@ -93,7 +93,14 @@ export function classifyMime(mime) {
  * @returns {boolean}
  */
 export function isDeniedExtension(filename) {
-  const lower = String(filename || '').toLowerCase();
+  // Normalize the SAME way the on-disk name is derived (safeFilenameParts trims),
+  // then strip trailing dots/whitespace, so `evil.html ` / `evil.svg\t` / `evil.js.`
+  // can't smuggle the live extension past the denylist while landing on disk as
+  // the real, servable type.
+  const lower = String(filename || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s.]+$/, '');
   const dot = lower.lastIndexOf('.');
   if (dot < 0) return false;
   return DENYLIST_EXTENSIONS.has(lower.slice(dot));
