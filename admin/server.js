@@ -434,6 +434,9 @@ app.use('/api', (req, res, next) => {
 const ADMIN_ORIGINS = new Set(
   [
     process.env.ADMIN_ORIGIN,
+    // The cms env sets ORIGIN=https://<DOMAIN_ADMIN> (the WebAuthn RP origin) —
+    // this is the admin's real origin. DOMAIN_ADMIN itself is NOT in the cms env.
+    process.env.ORIGIN,
     process.env.DOMAIN_ADMIN ? `https://${process.env.DOMAIN_ADMIN}` : null,
     'http://localhost:3000',
     'http://127.0.0.1:3000',
