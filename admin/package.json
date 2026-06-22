@@ -57,7 +57,7 @@
     "nanoid": "^5.0.9",
     "prosemirror-markdown": "^1.13.4",
     "prosemirror-model": "^1.25.8",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.2",
     "shiki": "^4.0.2",
     "simple-git": "^3.27.0",
     "tiptap-extension-global-drag-handle": "^0.1.18",
