@@ -39,7 +39,7 @@
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.4.1",
     "cookie-parser": "^1.4.7",
-    "dompurify": "^3.4.10",
+    "dompurify": "^3.4.11",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "fluent-ffmpeg": "^2.1.3",
