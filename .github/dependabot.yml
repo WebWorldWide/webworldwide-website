@@ -43,6 +43,11 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
+      # katex is hand-vendored into admin/public/vendor/katex (no auto-copy
+      # step), so a Dependabot bump of the devDependency alone would leave the
+      # served assets stale. It's updated manually together with the vendor
+      # copy; ignore it here so Dependabot stops opening incomplete PRs.
+      - dependency-name: katex
 
   - package-ecosystem: npm
     directory: /site
