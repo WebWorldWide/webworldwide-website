@@ -12,7 +12,7 @@
  *   - aria-live polite on the count for SR announcement
  *   - Focus trap: focus returns to the trigger on close
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react';
 
 import type { PostSummary } from '@/lib/post-utils';
 
