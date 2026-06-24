@@ -131,9 +131,13 @@ function buildMultipart(filename, buf, mime) {
 
 async function upload(filename, buf, mime) {
   const { body, contentType } = buildMultipart(filename, buf, mime);
+  // Content-Length is intentionally NOT set: fetch derives it from the Buffer
+  // body, and undici >=7.28 rejects a caller-supplied Content-Length (anti
+  // request-smuggling hardening). This also matches the real browser upload,
+  // which never sets it by hand.
   return fetch(`${baseUrl}/api/media/upload`, {
     method: 'POST',
-    headers: { 'Content-Type': contentType, 'Content-Length': String(body.length) },
+    headers: { 'Content-Type': contentType },
     body,
   });
 }

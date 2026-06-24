@@ -1,3 +1,13 @@
+# Dependabot configuration.
+#
+# Strategy (tuned 2026-06-24) — keep dependency maintenance quiet and safe:
+#   • minor + patch updates are GROUPED into a single PR per ecosystem, so a
+#     week's worth of updates arrives as one reviewable PR instead of a dozen.
+#   • major updates are IGNORED here. Majors are breaking by definition and are
+#     done deliberately by hand (astro, react, eslint, typescript, zod, …), not
+#     as surprise PRs. Delete the relevant `ignore` entry to let a major through.
+#   • security updates are unaffected by the above and still come through.
+#   • /site is covered (it was previously unwatched, so its deps drifted).
 version: 2
 updates:
   - package-ecosystem: npm
@@ -10,18 +20,12 @@ updates:
     open-pull-requests-limit: 5
     labels: [dependencies, root]
     groups:
-      eslint:
-        patterns: ['eslint*', '@eslint/*']
-      stylelint:
-        patterns: ['stylelint*']
-      vitest:
-        patterns: ['vitest', '@vitest/*']
-      playwright:
-        patterns: ['@playwright/*', '@axe-core/*']
-      lighthouse:
-        patterns: ['@lhci/*']
-      types:
-        patterns: ['@types/*', 'typescript']
+      root:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /admin
@@ -33,10 +37,29 @@ updates:
     open-pull-requests-limit: 5
     labels: [dependencies, admin]
     groups:
-      express:
-        patterns: ['express*', 'cookie-parser', 'cors', 'helmet', 'csrf-csrf']
-      webauthn:
-        patterns: ['@simplewebauthn/*']
+      admin:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: America/Chicago
+    open-pull-requests-limit: 5
+    labels: [dependencies, site]
+    groups:
+      site:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /migrate
@@ -44,7 +67,16 @@ updates:
       interval: monthly
     open-pull-requests-limit: 2
     labels: [dependencies, migrate]
+    groups:
+      migrate:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
 
+  # GitHub Actions bumps are low-risk; group them all (including majors) into a
+  # single occasional PR.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -52,3 +84,6 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ['*']
