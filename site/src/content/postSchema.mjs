@@ -32,7 +32,7 @@ export const postSchema = z
     canonical_url: z.string().optional(),
     type: z.string().optional(),
   })
-  .passthrough();
+  .loose();
 
 /**
  * Validate a frontmatter object against the post schema.

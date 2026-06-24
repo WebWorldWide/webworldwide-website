@@ -6,7 +6,7 @@
  * account; signing in (GitHub, etc.) is optional. We just load the embed
  * script and let it populate the #remark42 container.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type JSX } from 'react';
 
 interface Props {
   /** Stable thread identifier — the post slug. Used to build the canonical url. */

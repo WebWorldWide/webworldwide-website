@@ -48,6 +48,13 @@ export default defineConfig({
       timeout: 60_000,
       stdout: 'ignore',
       stderr: 'pipe',
+      // Astro 7 auto-detaches `astro dev` into a background daemon when it
+      // detects an automation/agent (CI, Playwright), so the foreground
+      // command exits immediately and Playwright reports "webServer exited
+      // early". Setting ASTRO_DEV_BACKGROUND keeps it in the foreground so
+      // Playwright owns the process lifecycle. (A human `npm run dev` is
+      // unaffected — agent mode only triggers under automation.)
+      env: { ASTRO_DEV_BACKGROUND: '0' },
     },
   ],
 });
