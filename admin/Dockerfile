@@ -1,6 +1,9 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
-# Debian (glibc) base — not Alpine/musl. sharp 0.34 ships self-contained
+# Node 22 (LTS) to match the repo's engines (>=22), CI, and @atproto's
+# node>=22 requirement (Node 20 logged EBADENGINE on every build).
+#
+# Debian (glibc) base — not Alpine/musl. sharp 0.35 ships self-contained
 # glibc prebuilts that install with NO source build (on Alpine it insisted on
 # a source build that needs local node-gyp). Raspberry Pi OS is Debian/glibc
 # too, so this also matches the deploy target.
