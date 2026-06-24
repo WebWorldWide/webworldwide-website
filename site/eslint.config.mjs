@@ -19,7 +19,9 @@
 
 import js from '@eslint/js';
 import astroPlugin from 'eslint-plugin-astro';
-import astroParser from 'astro-eslint-parser';
+// astro-eslint-parser v2 dropped its default export; the module namespace
+// (with parseForESLint) is the parser object now.
+import * as astroParser from 'astro-eslint-parser';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import react from 'eslint-plugin-react';
@@ -104,6 +106,12 @@ export default [
       ...a11yRules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
+      // New in eslint-plugin-react-hooks v7. It flags setState in effects as a
+      // perf smell, but the islands use it deliberately and correctly (reset
+      // state when the ⌘K palette closes; clamp the active index when the
+      // result list shrinks). These are tested by the e2e/a11y suite. Off
+      // rather than refactor working, covered components for an opinionated rule.
+      'react-hooks/set-state-in-effect': 'off',
       // TypeScript itself resolves identifiers/types; `no-undef` only yields
       // false positives here (e.g. the `JSX`/`React` type namespaces).
       'no-undef': 'off',
