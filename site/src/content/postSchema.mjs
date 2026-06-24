@@ -32,7 +32,12 @@ export const postSchema = z
     canonical_url: z.string().optional(),
     type: z.string().optional(),
   })
-  .loose();
+  // Keep .passthrough() (not zod-4's .loose()): admin/src/utils/frontmatter.js
+  // imports this schema, and in the admin test job site/node_modules isn't
+  // installed, so `zod` resolves to a different (v3) copy that has no .loose().
+  // .passthrough() exists in both zod 3 and 4, so the shared schema stays
+  // version-agnostic. (zod 4 flags it deprecated — a harmless hint.)
+  .passthrough();
 
 /**
  * Validate a frontmatter object against the post schema.
