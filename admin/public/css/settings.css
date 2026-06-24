@@ -87,3 +87,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Syndication help-text links. The surrounding copy is --fg-dim and the link
+   colour (--accent) sits at only ~1.2:1 against it, so colour alone does not
+   distinguish the link (axe `link-in-text-block`, WCAG 1.4.1). Underline them
+   so they are distinguishable without relying on colour. */
+.synd-block p a {
+  text-decoration: underline;
+}

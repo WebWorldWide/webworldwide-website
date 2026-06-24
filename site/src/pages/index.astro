@@ -47,7 +47,7 @@ const homeAvatar = new URL('/favicon.png', siteConfig.site.url).toString();
       this; the rel=me links in the Socials section verify the identity. */}
   <div class="h-card" hidden>
     <a class="u-url u-uid p-name" rel="me" href={homeUrl}>{siteConfig.site.title}</a>
-    <img class="u-photo" src={homeAvatar} alt="" />
+    <img class="u-photo" src={homeAvatar} alt="" loading="lazy" decoding="async" />
     <p class="p-note">{siteConfig.site.description}</p>
   </div>
   <a class="u-bridgy-fed" href="https://fed.brid.gy/" hidden>fediverse</a>
