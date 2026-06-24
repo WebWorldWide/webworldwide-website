@@ -70,7 +70,7 @@
     "@fontsource/newsreader": "^5.2.10",
     "@simplewebauthn/browser": "^13.3.0",
     "esbuild": "^0.28.1",
-    "katex": "^0.16.11"
+    "katex": "^0.17.0"
   },
   "overrides": {
     "undici": "^7.28.0"
