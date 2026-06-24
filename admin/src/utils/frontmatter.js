@@ -1,4 +1,5 @@
 import matter from 'gray-matter';
+import jsYaml from 'js-yaml';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,12 +32,29 @@ const { validatePost: validatePostSchema, postSchema } = await import(
 export { postSchema, validatePostSchema };
 
 /**
+ * gray-matter bundles js-yaml 3, which carries a moderate ReDoS advisory
+ * (GHSA-h67p-54hq-rp68) and is unmaintained. Drive its YAML through js-yaml 4
+ * instead: `load`/`dump` are the v4 names for v3's `safeLoad`/`safeDump` and
+ * emit byte-compatible output, so existing post frontmatter serializes
+ * unchanged. The package override pins gray-matter's js-yaml to 4.x so the
+ * vulnerable 3.x leaves the dependency tree entirely.
+ *
+ *   lineWidth: -1 — never wrap long strings; front-matter URLs would otherwise
+ *   fold across newlines and break parsers.
+ */
+const yamlEngine = {
+  parse: (/** @type {string} */ str) => jsYaml.load(str),
+  stringify: (/** @type {any} */ obj) => jsYaml.dump(obj, { lineWidth: -1 }),
+};
+const matterOpts = /** @type {any} */ ({ engines: { yaml: yamlEngine }, language: 'yaml' });
+
+/**
  * Parse frontmatter and content from a markdown string.
  * @param {string} fileContent - Raw markdown file content with optional YAML frontmatter.
  * @returns {{ data: Record<string, unknown>, content: string }} Parsed frontmatter and body.
  */
 export function parsePost(fileContent) {
-  const parsed = matter(fileContent);
+  const parsed = matter(fileContent, matterOpts);
   return {
     data: parsed.data, // Frontmatter object
     content: parsed.content, // Markdown body
@@ -46,21 +64,12 @@ export function parsePost(fileContent) {
 /**
  * Stringify frontmatter object and content back into a markdown string.
  *
- * Phase 9 fix: the previous shape (`{ engines: { yaml: { lineWidth: -1 } } }`)
- * REPLACED gray-matter's default yaml engine with a plain options
- * object, causing `engine.stringify is not a function`. Gray-matter
- * passes `options` straight through to `js-yaml.safeDump`, so the
- * correct way to set `lineWidth` is as a top-level option.
- *
  * @param {Record<string, any>} data - Frontmatter fields to serialize.
  * @param {string} content - Markdown body.
  * @returns {string} Combined markdown string with YAML frontmatter.
  */
 export function serializePost(data, content) {
-  // js-yaml options (passed through by gray-matter to safeDump):
-  //   lineWidth: -1 — never wrap long strings (URLs in front-matter
-  //     would otherwise fold across newlines and break parsers).
-  return matter.stringify(content, data, /** @type {any} */ ({ lineWidth: -1 }));
+  return matter.stringify(content, data, matterOpts);
 }
 
 /**
