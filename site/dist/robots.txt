@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://webworldwide.online/sitemap-index.xml
