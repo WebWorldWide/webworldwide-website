@@ -5,7 +5,7 @@
  * `defineCollection` wrapper) and imported by admin/src/utils/frontmatter.js
  * for pre-publish validation.
  *
- * Schema is a LOOSE SUPERSET (`.passthrough()`) — the admin can add new
+ * Schema is a LOOSE SUPERSET (`.catchall(z.unknown())`) — the admin can add new
  * fields without breaking the build, and partial drafts pass validation
  * during authoring. We deliberately avoid strict validators (.url(),
  * .nonempty()) — the admin commits drafts.
@@ -32,12 +32,10 @@ export const postSchema = z
     canonical_url: z.string().optional(),
     type: z.string().optional(),
   })
-  // Keep .passthrough() (not zod-4's .loose()): admin/src/utils/frontmatter.js
-  // imports this schema, and in the admin test job site/node_modules isn't
-  // installed, so `zod` resolves to a different (v3) copy that has no .loose().
-  // .passthrough() exists in both zod 3 and 4, so the shared schema stays
-  // version-agnostic. (zod 4 flags it deprecated — a harmless hint.)
-  .passthrough();
+  // `.catchall(z.unknown())` preserves unknown keys under both the Zod 3 copy
+  // available to the admin-only CI job and the site's Zod 4 copy. Unlike the
+  // older `.passthrough()` spelling, it is not deprecated by Zod 4.
+  .catchall(z.unknown());
 
 /**
  * Validate a frontmatter object against the post schema.
