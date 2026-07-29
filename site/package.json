@@ -25,7 +25,7 @@
     "@fontsource/space-mono": "^5.2.9",
     "@fontsource/vt323": "^5.2.7",
     "@iarna/toml": "^2.2.5",
-    "astro": "^7.0.2",
+    "astro": "^7.1.6",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "sharp": "^0.35.2",
