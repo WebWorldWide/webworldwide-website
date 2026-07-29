@@ -38,6 +38,14 @@ export AUTH_DB_PATH
 
 cd "$REPO_DIR"
 
+# Keep the generated files, Git commit, and push atomic with respect to deploys,
+# backups, scheduled publishing, and manual CMS publishing.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+if ! acquire_wwwide_operation_lock "$REPO_DIR" skip; then
+  exit 0
+fi
+
 DRY_RUN_FLAG=""
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN_FLAG="--dry-run"

@@ -5,6 +5,18 @@
 # Runs via cron to clean up system resources and prevent disk exhaustion
 # ==============================================================================
 
+set -uo pipefail
+
+APP_DIR="${WWWIDE_APP_DIR:-/opt/web-world-wide}"
+SCRIPT_DIR="$APP_DIR/scripts"
+
+# Pruning and the child publish jobs must not overlap backup/deploy/restore.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+if ! acquire_wwwide_operation_lock "$APP_DIR" skip; then
+  exit 0
+fi
+
 echo "Starting system maintenance at $(date)"
 
 # 1. Prune dangling Docker images and build cache.
@@ -28,7 +40,7 @@ sudo journalctl --vacuum-time=7d
 # Cron usually invokes scripts/promote-scheduled.sh directly every 5 min
 # (see CONTRIBUTING.md), but we also fire here so a daily maintenance
 # pass catches any drift if the 5-min cron was off.
-SCHED_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/promote-scheduled.sh"
+SCHED_SCRIPT="$SCRIPT_DIR/promote-scheduled.sh"
 if [ -x "$SCHED_SCRIPT" ]; then
   echo "[4/5] Running scheduled-post promoter..."
   "$SCHED_SCRIPT" || echo "scheduler failed (continuing)"
@@ -37,7 +49,7 @@ fi
 # 5. Dump approved webmentions to site/data/webmentions/.
 # Same safety-net rationale as (4) — the 5-min cron is the primary
 # trigger; this catches drift if the cron was off.
-DUMP_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/dump-webmentions.sh"
+DUMP_SCRIPT="$SCRIPT_DIR/dump-webmentions.sh"
 if [ -x "$DUMP_SCRIPT" ]; then
   echo "[5/6] Running webmention dumper..."
   "$DUMP_SCRIPT" || echo "webmention dump failed (continuing)"
@@ -45,7 +57,7 @@ fi
 
 # 6. Email comment-activity digest (Phase 8.5).
 # Self-noops if SMTP_HOST is unset, so it's safe to keep enabled.
-DIGEST_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/email-digest.mjs"
+DIGEST_SCRIPT="$SCRIPT_DIR/email-digest.mjs"
 if [ -f "$DIGEST_SCRIPT" ]; then
   echo "[6/6] Sending email digest (if SMTP configured)..."
   node "$DIGEST_SCRIPT" || echo "email digest failed (continuing)"

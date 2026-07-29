@@ -6,6 +6,13 @@ set -euo pipefail
 
 APP_DIR="/opt/web-world-wide"
 BACKUP_REPO_DIR="/opt/www-blog-backups"
+SCRIPT_DIR="$APP_DIR/scripts"
+
+# Restore is destructive and stops the full stack, so it must never overlap a
+# deploy, backup, watchdog recovery, or content publish.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+acquire_wwwide_operation_lock "$APP_DIR" wait 300
 
 echo -e "\n  ■ TERMINAL EIGHTY // RESTORE\n"
 

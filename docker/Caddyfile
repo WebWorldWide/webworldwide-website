@@ -4,30 +4,30 @@
 # The `admin.webworldwide.online` etc. are handled by Cloudflare routing here.
 
 http://{$DOMAIN_ADMIN} {
-    # Compress text responses (the editor bundle alone is ~1.2 MB raw).
-    encode zstd gzip
+	# Compress text responses (the editor bundle alone is ~1.2 MB raw).
+	encode zstd gzip
 
-    # Phase 8 — Webmention receiver. Public (no auth) endpoint that
-    # accepts pings forwarded by Bridgy Fed from the Fediverse. Mounts
-    # at /webmention on the same admin subdomain so the existing TLS +
-    # tunnel config covers it.
-    @webmention path /webmention /webmention/*
-    reverse_proxy @webmention cms:3000
+	# Phase 8 — Webmention receiver. Public (no auth) endpoint that
+	# accepts pings forwarded by Bridgy Fed from the Fediverse. Mounts
+	# at /webmention on the same admin subdomain so the existing TLS +
+	# tunnel config covers it.
+	@webmention path /webmention /webmention/*
+	reverse_proxy @webmention cms:3000
 
-    reverse_proxy cms:3000
+	reverse_proxy cms:3000
 }
 
 http://{$DOMAIN_COMMENTS} {
-    encode zstd gzip
-    reverse_proxy remark42:8080
+	encode zstd gzip
+	reverse_proxy remark42:8080
 }
 
 http://{$DOMAIN_ANALYTICS} {
-    encode zstd gzip
-    reverse_proxy umami:3000
+	encode zstd gzip
+	reverse_proxy umami:3000
 }
 
 # Catch-all fallback (useful for local testing)
 :80 {
-    respond "Web World Wide internal proxy running." 200
+	respond "Web World Wide internal proxy running." 200
 }

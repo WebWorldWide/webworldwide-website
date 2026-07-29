@@ -16,8 +16,16 @@ set -uo pipefail
 
 APP_DIR="${WWWIDE_APP_DIR:-/opt/web-world-wide}"
 DOCKER_DIR="$APP_DIR/docker"
+SCRIPT_DIR="$APP_DIR/scripts"
 STATE_DIR="${WWWIDE_STATE_DIR:-/var/lib/wwwide-watchdog}"
 ENV_FILE="$DOCKER_DIR/.env"
+
+# Never "heal" containers that a backup/restore/deploy intentionally stopped.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+if ! acquire_wwwide_operation_lock "$APP_DIR" skip; then
+  exit 0
+fi
 
 # Containers we keep alive. Order doesn't matter — each is checked
 # independently so one failure never blocks the others.

@@ -154,8 +154,7 @@ export async function getBackupStatus() {
   try {
     const { readFileSync, statSync, existsSync } = await import('fs');
     const { join } = await import('path');
-    const { homedir } = await import('os');
-    const markerDir = process.env.TE_STATE_DIR || join(homedir(), '.web-world-wide');
+    const markerDir = process.env.TE_STATE_DIR || process.env.TE_HEALTH_DIR || '/app/health';
     const marker = join(markerDir, '.last_backup');
     if (existsSync(marker)) {
       const iso = readFileSync(marker, 'utf-8').trim();

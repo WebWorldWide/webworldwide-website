@@ -40,6 +40,13 @@ export GH_TOKEN
 
 cd "$REPO_DIR"
 
+# Serialize with CMS publishing and every host operation that can move main.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+if ! acquire_wwwide_operation_lock "$REPO_DIR" skip; then
+  exit 0
+fi
+
 echo "[$(date -Is)] scheduler: starting"
 # Run the promoter INSIDE the cms container so it uses the REAL auth DB (the
 # cms_data volume at /app/data/auth.db) for its activity log and shares the
@@ -50,5 +57,5 @@ if [ "$(docker inspect -f '{{.State.Running}}' cms 2>/dev/null)" != "true" ]; th
   echo "[$(date -Is)] scheduler: cms container not running — skipping"
   exit 0
 fi
-docker exec cms node /app/src/services/scheduler.js "$@"
+docker exec -e WWWIDE_OPERATION_LOCK_HELD=1 cms node /app/src/services/scheduler.js "$@"
 echo "[$(date -Is)] scheduler: done"

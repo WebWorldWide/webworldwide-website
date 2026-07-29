@@ -13,7 +13,14 @@ set -euo pipefail
 # Configuration
 APP_DIR="/opt/web-world-wide"
 BACKUP_REPO_DIR="/opt/www-blog-backups"
+SCRIPT_DIR="$APP_DIR/scripts"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# A backup may briefly stop stateful services. Wait for any deploy/publish to
+# finish, and keep the watchdog or another maintenance run out until restart.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+acquire_wwwide_operation_lock "$APP_DIR" wait 300
 
 # Git auth: token lives in docker/.env (0600). The repos' credential
 # helper reads $GH_TOKEN — see .git/config credential.helper.
@@ -130,8 +137,8 @@ fi
 echo "Backup completed successfully at $(date)"
 
 # Phase 5e: write a marker file the admin dashboard reads to surface
-# "Last backup: N hours ago". Lives in the per-user state dir so the
-# admin process can find it without elevated permissions.
-MARKER_DIR="${TE_STATE_DIR:-$HOME/.web-world-wide}"
+# "Last backup: N hours ago". The docker/health directory is already mounted
+# read-only at /app/health, so the container sees the root cron's marker too.
+MARKER_DIR="${TE_STATE_DIR:-$APP_DIR/docker/health}"
 mkdir -p "$MARKER_DIR"
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$MARKER_DIR/.last_backup"

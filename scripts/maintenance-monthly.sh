@@ -12,10 +12,16 @@ set -uo pipefail
 
 APP_DIR="${WWWIDE_APP_DIR:-/opt/web-world-wide}"
 DOCKER_DIR="$APP_DIR/docker"
+SCRIPT_DIR="$APP_DIR/scripts"
 log() { echo "$(date '+%Y-%m-%dT%H:%M:%S%z') [maint-monthly] $*"; }
 log "starting"
 
 cd "$DOCKER_DIR" || { log "no docker dir at $DOCKER_DIR"; exit 1; }
+
+# VACUUM stops the CMS, so wait for other stateful operations to finish.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+acquire_wwwide_operation_lock "$APP_DIR" wait 300
 
 # Whatever happens, never leave cms stopped.
 CMS_STOPPED=0

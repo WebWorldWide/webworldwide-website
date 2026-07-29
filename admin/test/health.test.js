@@ -19,7 +19,9 @@ before(async () => {
   // Skip the Docker socket in tests; point the health reader + site at temp.
   process.env.NODE_ENV = 'development';
   process.env.TE_HEALTH_DIR = tempDir;
+  process.env.TE_STATE_DIR = tempDir;
   process.env.SITE_DIR = join(tempDir, 'site');
+  writeFileSync(join(tempDir, '.last_backup'), new Date().toISOString());
 
   writeFileSync(
     join(tempDir, 'system-health.json'),
@@ -81,6 +83,8 @@ test('GET /api/health includes storage, power, and swap from the marker', async 
   assert.equal(body.power.status, 'ok');
   assert.equal(body.swap.usagePercent, 2);
   assert.equal(body.health_status, 'warn');
+  assert.equal(body.backup.status, 'ok');
+  assert.equal(body.backup.age_hours, 0);
 });
 
 test('missing marker degrades to unknown without throwing', async () => {

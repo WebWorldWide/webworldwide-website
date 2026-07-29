@@ -11,6 +11,7 @@ if [ "$(id -u)" = 0 ]; then
   fi
 fi
 
+set -euo pipefail
 
 # ==============================================================================
 # Web World Wide Auto-Update Script
@@ -20,6 +21,7 @@ fi
 # Variables
 REPO_DIR="/opt/web-world-wide"
 DOCKER_DIR="$REPO_DIR/docker"
+SCRIPT_DIR="$REPO_DIR/scripts"
 
 # Git auth: token lives in docker/.env (0600). The repo's credential
 # helper reads $GH_TOKEN. The repo is public today, so fetch/pull work
@@ -29,6 +31,14 @@ export GH_TOKEN
 
 # Navigate to repo
 cd "$REPO_DIR" || { echo "$(date): Failed to find repo at $REPO_DIR"; exit 1; }
+
+# Do not pull/rebuild while a backup, restore, watchdog recovery, or content
+# publish is using the same containers and Git index.
+# shellcheck source=scripts/_operation-lock.sh
+. "$SCRIPT_DIR/_operation-lock.sh"
+if ! acquire_wwwide_operation_lock "$REPO_DIR" skip; then
+    exit 0
+fi
 
 # Fetch latest from remote. Gate every step explicitly (a failed fetch/pull
 # must never fall through to a rebuild of a partial/conflicted tree).
@@ -75,6 +85,9 @@ fi
 # Rebuild containers gracefully (no "down" — only recreates changed containers)
 # This keeps cloudflared and other unchanged services running during rebuild
 echo "$(date): Rebuilding changed containers..."
-docker compose --project-directory "$DOCKER_DIR" up -d --build --remove-orphans
+if ! docker compose --project-directory "$DOCKER_DIR" up -d --build --remove-orphans; then
+    echo "$(date): Docker rebuild failed — deployment is incomplete."
+    exit 1
+fi
 
 echo "$(date): Update and deployment complete."

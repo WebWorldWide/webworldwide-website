@@ -13,13 +13,16 @@
 import simpleGit from 'simple-git';
 import { join } from 'path';
 import { statSync, unlinkSync } from 'fs';
+import { spawn } from 'child_process';
+
+const getRepoPath = () => {
+  const siteDir = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
+  return join(siteDir, '..');
+};
 
 // Get repo path based on environment
 const getGitInstance = () => {
-  const siteDir = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
-  const repoPath = join(siteDir, '..');
-  // Clear a crashed process's leftover index.lock before any git op (see below).
-  clearStaleLock(repoPath);
+  const repoPath = getRepoPath();
   // `timeout.block` kills a git child that produces no output for 30s, so a
   // stalled push (flaky Cloudflare Tunnel) can never hang the publish
   // request — and the event loop — indefinitely.
@@ -42,25 +45,99 @@ const getGitInstance = () => {
  * CMS content auto-commit racing a manual "Publish site" — leaves the lock
  * behind, and every subsequent commit then fails with "Unable to create
  * '.git/index.lock': File exists." A real index operation holds the lock for
- * well under a second, so a lock older than 20s is stale and safe to clear.
+ * well under a second, so a lock older than five minutes is stale and safe to
+ * clear. The shared operation lock below prevents our own processes from ever
+ * reaching this cleanup while another managed Git operation is active.
  *
  * @param {string} repoPath
  */
 function clearStaleLock(repoPath) {
   try {
     const lock = join(repoPath, '.git', 'index.lock');
-    if (Date.now() - statSync(lock).mtimeMs > 20_000) unlinkSync(lock);
+    if (Date.now() - statSync(lock).mtimeMs > 5 * 60_000) unlinkSync(lock);
   } catch {
     /* no lock (statSync throws) or another cleaner won the race — both fine */
   }
 }
 
-// Serialize index-mutating git ops WITHIN this process so the scheduler's content
-// auto-commit can't race a manual "Publish site" (both reach publishChanges /
-// commitAndPush → a concurrent `git add`/commit on one index, which the loser
-// hits as "index.lock exists"). The cross-process race with the host cron scripts
-// is handled by clearStaleLock + the small index (build artifacts are untracked).
-// A simple promise chain runs the wrapped fns one at a time.
+/**
+ * Acquire the same advisory lock used by the Pi's backup/deploy/cron scripts.
+ * `flock` holds the lock while its child blocks on stdin; ending stdin releases
+ * it. This keeps the whole multi-command Git transaction atomic across the
+ * Express server, docker-exec scheduler processes, and host maintenance jobs.
+ *
+ * Windows development falls back to the in-process chain below. Production and
+ * Linux CI have util-linux/flock explicitly installed.
+ *
+ * @param {string} repoPath
+ * @returns {Promise<() => Promise<void>>}
+ */
+async function acquireOperationLock(repoPath) {
+  if (process.env.WWWIDE_OPERATION_LOCK_HELD === '1' || process.platform === 'win32') {
+    return async () => {};
+  }
+
+  const configuredMs = Number(process.env.WWWIDE_OPERATION_LOCK_TIMEOUT_MS);
+  const timeoutMs = Number.isFinite(configuredMs) && configuredMs > 0 ? configuredMs : 60_000;
+  const timeoutSeconds = (timeoutMs / 1000).toFixed(3);
+  const lockPath =
+    process.env.WWWIDE_OPERATION_LOCK_FILE || join(repoPath, '.git', 'wwwide-operation.lock');
+  const child = spawn(
+    'flock',
+    ['-x', '-w', timeoutSeconds, lockPath, 'sh', '-c', 'printf "LOCKED\\n"; cat >/dev/null'],
+    { stdio: ['pipe', 'pipe', 'pipe'] },
+  );
+
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let stdout = '';
+    let stderr = '';
+
+    const fail = (message) => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(message));
+    };
+
+    child.once('error', (err) => {
+      fail(`Could not start the CMS operation lock: ${err.message}`);
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.once('exit', (code, signal) => {
+      if (!settled) {
+        const detail = stderr.trim() || `exit ${code ?? signal ?? 'unknown'}`;
+        fail(`Another CMS backup, deploy, or publish operation is active (${detail}).`);
+      }
+    });
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+      if (settled || !stdout.includes('LOCKED\n')) return;
+      settled = true;
+      resolve(async () => {
+        if (child.exitCode !== null) return;
+        child.stdin.end();
+        await new Promise((resolve) => {
+          const timer = setTimeout(() => {
+            child.kill('SIGTERM');
+            resolve();
+          }, 5_000);
+          child.once('exit', () => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+      });
+    });
+  });
+}
+
+// Serialize index-mutating Git operations both within this process and across
+// the host/container boundary.
 let gitChain = Promise.resolve();
 /**
  * @template T
@@ -68,7 +145,19 @@ let gitChain = Promise.resolve();
  * @returns {Promise<T>}
  */
 function withGitLock(fn) {
-  const run = gitChain.then(fn, fn);
+  const runLocked = async () => {
+    const release = await acquireOperationLock(getRepoPath());
+    try {
+      // Only remove a crashed process's leftover index lock while we own the
+      // cross-process operation lock. Read-only history/status requests never
+      // need to touch it and must not race a long host backup or deployment.
+      clearStaleLock(getRepoPath());
+      return await fn();
+    } finally {
+      await release();
+    }
+  };
+  const run = gitChain.then(runLocked, runLocked);
   // Keep the chain alive even if fn rejects — never poison later ops.
   gitChain = run.then(
     () => undefined,
