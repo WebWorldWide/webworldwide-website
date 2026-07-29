@@ -53,6 +53,7 @@ services:
       - ORIGIN=https://${DOMAIN_ADMIN}
       - SITE_DIR=/app/site
       - TE_HEALTH_DIR=/app/health
+      - TE_STATE_DIR=/app/health
       # Git push auth — the repo's credential helper (.git/config, which
       # is bind-mounted below) reads this. The token never appears in a
       # remote URL.

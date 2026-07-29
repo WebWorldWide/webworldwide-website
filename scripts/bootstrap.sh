@@ -42,7 +42,7 @@ readonly CRON_MARKER="# WWW-PI:"
 # $GH_TOKEN without ever writing the secret into a remote URL.
 # shellcheck disable=SC2016 # single-quoted on purpose; git expands at use time
 readonly GIT_CRED_HELPER='!f() { test "$1" = get && echo "username=x-access-token" && echo "password=${GH_TOKEN}"; }; f' 
-readonly REQUIRED_APT_PKGS="git curl jq age openssl ufw cron ca-certificates"
+readonly REQUIRED_APT_PKGS="git curl jq age openssl ufw cron ca-certificates util-linux"
 readonly NODE_MAJOR=22
 
 # ── Args (defaults; overridden by flags or existing .env) ───────────────────
@@ -477,6 +477,9 @@ Wants=docker.service network-online.target
 
 [Service]
 Type=oneshot
+# The self-test retries for up to 180s after the initial 60s grace period.
+# systemd's default start timeout is too short and can kill a healthy warm-up.
+TimeoutStartSec=300
 ExecStartPre=/bin/sleep 60
 ExecStart=$APP_DIR/scripts/bootstrap.sh --self-test
 StandardOutput=journal
@@ -485,6 +488,7 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
+  chmod 0644 "$SYSTEMD_UNIT"
   systemctl daemon-reload
   systemctl enable wwwide-boot-check.service >/dev/null
   ok "systemd unit installed (runs 60s after every boot)"
@@ -567,9 +571,9 @@ self_test() {
   if [ ! -f "$ENV_FILE" ]; then
     die "$ENV_FILE missing — run full bootstrap first" 2
   fi
-  local domain_admin
-  domain_admin=$(grep '^DOMAIN_ADMIN=' "$ENV_FILE" | cut -d= -f2-)
-  if check_health "$domain_admin"; then
+  # Reuse the bounded retry loop used by first install. A one-shot check here
+  # races slow-starting services (notably LanguageTool's JVM) after reboot.
+  if healthcheck_loop; then
     ok "self-test PASS"
     exit 0
   fi
@@ -592,6 +596,16 @@ harden() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     unattended-upgrades fail2ban ufw smartmontools lm-sensors vnstat >/dev/null 2>&1 ||
     warn "some hardening packages failed to install"
+
+  # Raspberry Pi SD/eMMC devices do not expose SMART. Debian enables smartd
+  # when the package is installed; with no eligible drive it exits 17 and
+  # leaves every boot degraded. Keep the tools available for future USB/NVMe
+  # diagnostics, but disable the daemon when there is nothing it can monitor.
+  if command -v smartctl >/dev/null 2>&1 \
+    && ! smartctl --scan-open 2>/dev/null | grep -q .; then
+    systemctl disable --now smartmontools.service >/dev/null 2>&1 || true
+    systemctl reset-failed smartmontools.service >/dev/null 2>&1 || true
+  fi
 
   # Automatic security updates.
   cat >/etc/apt/apt.conf.d/20auto-upgrades <<'CONF'

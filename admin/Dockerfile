@@ -10,6 +10,7 @@ FROM node:22-bookworm-slim
 #
 # System packages:
 #   git, procps        — runtime for publish + monitoring
+#   util-linux         — flock for host/container publish coordination
 #   ca-certificates    — TLS trust store. The slim base ships NONE, so
 #                        `git push https://github.com/…` fails with
 #                        "server certificate verification failed.
@@ -21,7 +22,7 @@ FROM node:22-bookworm-slim
 #   python3, make, g++ — fallback compile for any native dep without a
 #                        prebuilt (better-sqlite3 normally ships one)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      git ca-certificates procps ffmpeg poppler-utils libheif1 python3 make g++ \
+      git ca-certificates procps util-linux ffmpeg poppler-utils libheif1 python3 make g++ \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
