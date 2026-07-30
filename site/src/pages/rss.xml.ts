@@ -2,7 +2,7 @@ import rss from '@astrojs/rss';
 import type { APIContext } from 'astro';
 import { siteConfig } from '@/lib/site-config';
 import { getPosts } from '@/lib/posts';
-import { postSlug } from '@/lib/post-utils';
+import { postSlug, deriveExcerpt } from '@/lib/post-utils';
 
 const siteToml = siteConfig;
 
@@ -19,7 +19,10 @@ export async function GET(context: APIContext) {
         title: post.data.title,
         link: `/blog/${slug}/`,
         pubDate: post.data.date,
-        description: post.data.excerpt ?? '',
+        // Same fallback as the post page's meta description — most posts have
+        // no frontmatter excerpt, and @astrojs/rss omits <description> entirely
+        // for a falsy value, so an empty string here silently ships item-less feed entries.
+        description: post.data.excerpt || deriveExcerpt(post.body) || '',
       };
     }),
     customData: `<language>en-US</language>`,

@@ -124,8 +124,12 @@ export function coverImage(post: PostEntry, body: string): PostImage | null {
  * the line rather than show a nonsensical fragment.
  */
 export function deriveExcerpt(body: string): string {
+  // body is always mod.rawContent() (see posts.ts), which never includes the
+  // frontmatter block — a frontmatter-strip step here would be redundant, and
+  // worse, would wrongly eat a post body that opens with a `---` thematic
+  // break (a valid CommonMark horizontal rule) up to the next literal `---`
+  // anywhere later in the document.
   const cleaned = body
-    .replace(/^---[\s\S]+?---/, '') // frontmatter
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // images
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → label
     .replace(/[`*_>#]/g, '') // md noise (keep hyphens/dashes in prose)

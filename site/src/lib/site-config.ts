@@ -80,6 +80,7 @@ export interface SiteConfig {
   };
   comments: { provider: string; url: string; url_dev?: string; site_id: string };
   analytics: { provider: string; url: string; site_id: string };
+  webmention?: { url: string };
   rss: { url: string };
   fediverse: { enabled: boolean; handle_user: string };
   /** Legacy fileid/doc_finder keys kept as fallbacks for old site.toml files. */

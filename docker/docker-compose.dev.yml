@@ -25,7 +25,7 @@ services:
       POSTGRES_USER: umami
       POSTGRES_PASSWORD: dev_only_password_change_me
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
@@ -46,7 +46,7 @@ services:
       DATABASE_TYPE: postgresql
       APP_SECRET: dev-only-app-secret-not-for-prod
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
 
   remark42:
     image: umputun/remark42:latest
@@ -61,7 +61,7 @@ services:
       DEBUG: "true"
       ALLOWED_HOSTS: "*"
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     volumes:
       - remark42_data_dev:/srv/var
 

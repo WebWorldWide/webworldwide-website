@@ -245,9 +245,14 @@ export function ipIsPrivate(ip) {
  * @param {string} hostname
  */
 async function assertPublicHost(hostname) {
+  // u.hostname keeps the brackets for an IPv6 literal (e.g. "[::1]"), but
+  // dns.lookup() rejects a bracketed literal outright (ENOTFOUND) — without
+  // stripping them here, every IPv6-literal target (public or private) fails
+  // this check, not just private ones. Kept in sync with utils/ssrf.js.
+  const target = String(hostname || '').replace(/^\[|\]$/g, '');
   let addrs;
   try {
-    addrs = await dnsPromises.lookup(hostname, { all: true });
+    addrs = await dnsPromises.lookup(target, { all: true });
   } catch {
     throw new Error('refusing fetch: host did not resolve');
   }

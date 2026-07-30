@@ -28,11 +28,26 @@ const idFromPath = (path: string): string => path.split('/').pop()!.replace(/\.m
  */
 export function getPosts(): PostEntry[] {
   return Object.entries(modules)
-    .map(([path, mod]) => ({
-      id: idFromPath(path),
-      data: postSchema.parse(mod.frontmatter) as PostEntry['data'],
-      body: mod.rawContent(),
-    }))
+    .flatMap(([path, mod]) => {
+      // safeParse, not parse: a single post with invalid/incomplete
+      // frontmatter (e.g. a work-in-progress draft missing title/date) must
+      // never throw here and take down the entire static build — every page
+      // that lists posts (blog index, every post's getStaticPaths, rss.xml)
+      // calls getPosts(). Skip the offending post instead.
+      const result = postSchema.safeParse(mod.frontmatter);
+      if (!result.success) {
+        const issues = result.error.issues.map((i) => i.path.join('.') || '(root)').join(', ');
+        console.warn(`[posts] skipping ${path}: invalid frontmatter (${issues})`);
+        return [];
+      }
+      return [
+        {
+          id: idFromPath(path),
+          data: result.data as PostEntry['data'],
+          body: mod.rawContent(),
+        },
+      ];
+    })
     .filter((post) => isPublished(post))
     .sort(sortByDateDesc);
 }

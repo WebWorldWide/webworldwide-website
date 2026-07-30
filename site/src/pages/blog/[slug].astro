@@ -24,14 +24,16 @@ export const getStaticPaths = (() => {
   return posts.map((post, i) => ({
     params: { slug: postSlug(post) },
     // "Next" = the next-older post, wrapping to the newest after the last one
-    // (matches the design — there's always a next-post card).
-    props: { post, next: posts[(i + 1) % posts.length] }
+    // (matches the design — there's always a next-post card). With exactly
+    // one published post, that wrap would point the post at itself — omit
+    // the card entirely in that edge case instead.
+    props: { post, next: posts.length > 1 ? posts[(i + 1) % posts.length] : undefined }
   }));
 }) satisfies GetStaticPaths;
 
 interface Props {
   post: PostEntry;
-  next: PostEntry;
+  next?: PostEntry;
 }
 
 const { post, next } = Astro.props;
@@ -113,15 +115,17 @@ const remarkUrl =
           <div class="end-actions">
             <button class="end-action" type="button" data-copy-link data-umami-event="blog: copy link">↗ Copy link</button>
             <a class="end-action" href="/blog/">← All posts</a>
-            <a class="end-action" href={postUrl(next)} data-umami-event="blog: next post">Next post →</a>
+            {next && <a class="end-action" href={postUrl(next)} data-umami-event="blog: next post">Next post →</a>}
           </div>
-          <a class="next-post" href={postUrl(next)} data-umami-event="blog: next post card">
-            <div>
-              <div class="next-label">Next post</div>
-              <div class="next-title">{next.data.title}</div>
-            </div>
-            <span class="next-arrow" aria-hidden="true">→</span>
-          </a>
+          {next && (
+            <a class="next-post" href={postUrl(next)} data-umami-event="blog: next post card">
+              <div>
+                <div class="next-label">Next post</div>
+                <div class="next-title">{next.data.title}</div>
+              </div>
+              <span class="next-arrow" aria-hidden="true">→</span>
+            </a>
+          )}
         </div>
 
         <section class="comments">

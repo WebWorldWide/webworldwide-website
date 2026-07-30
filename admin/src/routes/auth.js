@@ -133,11 +133,19 @@ router.post('/setup', async (req, res) => {
 
   const id = randomBytes(16).toString('hex');
   const hash = await bcrypt.hash(password, 12);
-  db.prepare('INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?)').run(
-    id,
-    username,
-    hash,
-  );
+  // bcrypt.hash() yields the event loop, so the hasUsers() check above is not
+  // atomic with this insert — two concurrent /setup requests could both pass
+  // it and both create an account. Make the insert itself conditional so
+  // SQLite's own single-writer serialization is what actually prevents a
+  // second admin account, not the earlier (racy) hasUsers() check.
+  const result = db
+    .prepare(
+      'INSERT INTO users (id, username, password_hash) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM users)',
+    )
+    .run(id, username, hash);
+  if (result.changes === 0) {
+    return res.status(403).json({ error: 'Setup already complete' });
+  }
 
   createSession(res, { id, username });
   res.json({ success: true, message: 'Admin account created. You can now register a passkey.' });
