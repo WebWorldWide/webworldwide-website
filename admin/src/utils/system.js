@@ -90,7 +90,11 @@ export async function getDiskUsage() {
   }
 }
 
-// Helper to hit Docker engine API over unix socket
+// Helper to hit the Docker engine API — via the read-only socket proxy
+// (docker-compose.yml's docker-socket-proxy service) when configured, which
+// exposes only GET /containers/* and nothing else. Falls back to a direct
+// /var/run/docker.sock request only if the proxy env vars aren't set (e.g. a
+// dev environment that still bind-mounts the raw socket into this container).
 function fetchDockerAPI(path) {
   return new Promise((resolve, reject) => {
     // Fallback for non-docker dev environment
@@ -98,11 +102,15 @@ function fetchDockerAPI(path) {
       return resolve([]);
     }
 
-    const options = {
-      socketPath: '/var/run/docker.sock',
-      path: path,
-      method: 'GET',
-    };
+    const proxyHost = process.env.DOCKER_PROXY_HOST;
+    const options = proxyHost
+      ? {
+          host: proxyHost,
+          port: Number(process.env.DOCKER_PROXY_PORT) || 2375,
+          path,
+          method: 'GET',
+        }
+      : { socketPath: '/var/run/docker.sock', path, method: 'GET' };
 
     const req = http.request(options, (res) => {
       let data = '';
