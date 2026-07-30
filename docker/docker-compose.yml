@@ -138,7 +138,6 @@ services:
       - ../site:/app/site          # So it can read/write site files
       - ../.git:/app/.git          # So it can commit/push
       - cms_data:/app/data         # SQLite DB for auth
-      - /var/run/docker.sock:/var/run/docker.sock:ro # For health dashboard
       - /sys/class/thermal:/sys/class/thermal:ro     # For Pi temp
       - ./health:/app/health:ro                      # SD/system-health marker (scripts/system-health.sh)
 
