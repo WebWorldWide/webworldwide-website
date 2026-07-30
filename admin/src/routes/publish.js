@@ -72,6 +72,13 @@ function classifyPublishError(err) {
       message: 'Publish was blocked because the site was updated elsewhere. Try publishing again.',
     };
   }
+  if (m.includes('another cms backup, deploy, or publish operation is active')) {
+    return {
+      code: 'operation_locked',
+      message:
+        'Another CMS operation (backup, deploy, or scheduled publish) was running. Try publishing again in a minute.',
+    };
+  }
   if (
     m.includes('timeout') ||
     m.includes('could not resolve host') ||

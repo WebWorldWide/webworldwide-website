@@ -5,7 +5,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isPrivateHost, ipIsPrivate, screenedFetch } from '../src/utils/ssrf.js';
+import { isPrivateHost, ipIsPrivate, screenedFetch, assertPublicHost } from '../src/utils/ssrf.js';
 
 test('isPrivateHost flags loopback / private / link-local / reserved', () => {
   for (const h of [
@@ -95,6 +95,21 @@ test('screenedFetch BLOCKS a redirect to a PRIVATE host (the SSRF fix)', async (
   await assert.rejects(
     () => screenedFetch('https://innocent.example/', { screenDns: false, fetchImpl: fake }),
     /private/,
+  );
+});
+
+test('assertPublicHost strips IPv6 brackets before resolving (a bare literal fails dns.lookup)', async () => {
+  // new URL('http://[::1]/').hostname is '[::1]' WITH brackets — dns.lookup()
+  // rejects that bracketed form outright (ENOTFOUND), which previously made
+  // every IPv6-literal target fail this check, public or private alike.
+  await assert.rejects(
+    () => assertPublicHost('[::1]'),
+    /private|non-public/,
+    'private literal is still blocked, not just failed-to-resolve',
+  );
+  await assert.doesNotReject(
+    () => assertPublicHost('[2606:4700:4700::1111]'),
+    'a public IPv6 literal must resolve and pass now that brackets are stripped',
   );
 });
 

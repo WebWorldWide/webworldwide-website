@@ -101,19 +101,35 @@ test('initial status: setup not complete', skipOpts(), async () => {
   assert.equal(body.authenticated, false);
 });
 
-test('setup creates the first admin user and returns a session cookie', skipOpts(), async () => {
-  const res = await fetch(`${baseUrl}/auth/setup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'correcthorse' }),
-  });
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.equal(body.success, true);
-  const cookie = res.headers.get('set-cookie');
-  assert.ok(cookie, 'session cookie was set');
-  assert.match(cookie, /session=/, 'cookie name is `session`');
-});
+test(
+  'setup is atomic under concurrent requests — only one admin account is ever created',
+  skipOpts(),
+  async () => {
+    // bcrypt.hash() yields the event loop between the hasUsers() check and the
+    // insert (see auth.js), so two concurrent /setup requests can both observe
+    // an empty users table. Fire them together and assert exactly one wins —
+    // proving the insert itself (INSERT ... WHERE NOT EXISTS), not just the
+    // earlier check, is what prevents a second admin account.
+    // Same username for both racers: the account that must exist afterward
+    // (for the login tests below) is 'admin' either way, regardless of which
+    // concurrent request happens to win.
+    const post = () =>
+      fetch(`${baseUrl}/auth/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: 'correcthorse' }),
+      });
+    const [resA, resB] = await Promise.all([post(), post()]);
+    const statuses = [resA.status, resB.status].sort();
+    assert.deepEqual(statuses, [200, 403], 'exactly one request wins, the other is rejected');
+    const winner = resA.status === 200 ? resA : resB;
+    const body = await winner.json();
+    assert.equal(body.success, true);
+    const cookie = winner.headers.get('set-cookie');
+    assert.ok(cookie, 'the winning request got a session cookie');
+    assert.match(cookie, /session=/, 'cookie name is `session`');
+  },
+);
 
 test('setup rejects a second admin once one exists', skipOpts(), async () => {
   const res = await fetch(`${baseUrl}/auth/setup`, {
