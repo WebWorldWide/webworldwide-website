@@ -11,11 +11,39 @@ services:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     # Cloudflared routes to Caddy
 
+  # 1b. Read-only Docker socket proxy for the CMS health dashboard.
+  # Exposes ONLY GET /containers/* (CONTAINERS=1; every other API group
+  # defaults to 0/denied — no POST, no EXEC, no IMAGES, no NETWORKS). cms
+  # talks to this over the compose network instead of a raw bind mount of
+  # /var/run/docker.sock, so a compromise of cms (the most attack-exposed
+  # service — it processes untrusted uploads via sharp/ffmpeg/poppler-utils)
+  # can list containers but cannot use the Engine API to escape to the host.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      - CONTAINERS=1
+      - POST=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   # 2. Caddy Reverse Proxy (Internal routing to services)
   caddy:
     image: caddy:2-alpine
     container_name: caddy
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 1
+    healthcheck:
+      # The catch-all :80 block answers any Host header with a plain 200, so
+      # this proves Caddy itself is up and serving without depending on any
+      # particular upstream (cms/remark42/umami) also being healthy.
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     ports:
       # Bind to loopback only. The Cloudflare tunnel reaches Caddy as `caddy:80`
       # over the docker network (see docker/cloudflare-tunnel-routes.md), so the
@@ -38,13 +66,29 @@ services:
       context: ../admin
     container_name: cms
     restart: unless-stopped
+    mem_limit: 1200m
+    cpus: 2
+    healthcheck:
+      # No curl/wget in this image (see admin/Dockerfile) — Node itself is
+      # always present, so use it directly rather than adding a package.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/auth/status',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     # Run as the host owner of the mounted site/ + .git (adam, uid 1000)
     # so container writes don't litter the repo with root-owned files and
-    # git needs no safe.directory escape hatch. group_add grants read on
-    # the docker socket for the health dashboard (host docker gid).
+    # git needs no safe.directory escape hatch.
     user: "1000:1000"
-    group_add:
-      - "${DOCKER_GID:-985}"
+    depends_on:
+      - languagetool
+      - docker-socket-proxy
     environment:
       - PORT=3000
       - NODE_ENV=production
@@ -54,6 +98,8 @@ services:
       - SITE_DIR=/app/site
       - TE_HEALTH_DIR=/app/health
       - TE_STATE_DIR=/app/health
+      - DOCKER_PROXY_HOST=docker-socket-proxy
+      - DOCKER_PROXY_PORT=2375
       # Git push auth — the repo's credential helper (.git/config, which
       # is bind-mounted below) reads this. The token never appears in a
       # remote URL.
@@ -88,8 +134,6 @@ services:
       # scope. Empty = off (isConfigured() requires both instance + token).
       - MASTODON_INSTANCE=${MASTODON_INSTANCE:-}
       - MASTODON_ACCESS_TOKEN=${MASTODON_ACCESS_TOKEN:-}
-    depends_on:
-      - languagetool
     volumes:
       - ../site:/app/site          # So it can read/write site files
       - ../.git:/app/.git          # So it can commit/push
