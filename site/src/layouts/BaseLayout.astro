@@ -143,7 +143,10 @@ const dataAttrs = Object.fromEntries(
     {/* Webmention autodiscovery — Bridgy Fed delivers fediverse (Mastodon/Threads)
        replies + likes here. The receiver is the Pi cms (a different origin from
        this static site; cross-origin discovery is allowed). */}
-    <link rel="webmention" href="https://admin.webworldwide.online/webmention" />
+    <link
+      rel="webmention"
+      href={siteToml.webmention?.url ?? 'https://admin.webworldwide.online/webmention'}
+    />
 
     {/* Resource hints — warm DNS + TLS for third-party origins so the
         first comment-iframe or analytics ping doesn't pay the full

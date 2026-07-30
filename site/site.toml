@@ -47,6 +47,11 @@ provider = "umami"
 url = "https://analytics.webworldwide.online"
 site_id = "680f36bd-688c-4816-b764-685860911396"
 
+[webmention]
+# Bridgy Fed delivers fediverse (Mastodon/Threads) replies + likes here. The
+# receiver is the Pi cms — a different origin from this static site.
+url = "https://admin.webworldwide.online/webmention"
+
 [rss]
 url = "/rss.xml"
 
