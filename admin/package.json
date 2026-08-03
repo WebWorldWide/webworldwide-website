@@ -16,7 +16,7 @@
     "dedupe:media": "node scripts/dedupe-media.js"
   },
   "dependencies": {
-    "@atproto/api": "^0.20.15",
+    "@atproto/api": "^0.20.36",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/search": "^6.7.0",
@@ -59,7 +59,7 @@
     "prosemirror-markdown": "^1.13.4",
     "prosemirror-model": "^1.25.8",
     "sharp": "^0.35.2",
-    "shiki": "^4.0.2",
+    "shiki": "^4.4.1",
     "simple-git": "^3.27.0",
     "tiptap-extension-global-drag-handle": "^0.1.18",
     "yauzl": "^3.3.0",
