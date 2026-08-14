@@ -96,7 +96,7 @@ subtitle = ""
 # the array single-line lets edits round-trip without losing comments.
 # status: "live" (★ live), "soon" (coming soon), "lab" (in the lab).
 # Empty icon = placeholder card; empty link = tile is a no-op.
-items = [{ name = "FileID", status = "soon", link = "https://claude.ai/design/p/51500a82-3faf-4144-9a89-94e738dbb888?file=index.html", icon = "/assets/fileid.png" }, { name = "Document Finder", status = "live", link = "https://documentfinder.webworldwide.online/", icon = "/assets/doc-finder.png" }, { name = "Untitled", status = "lab", link = "", icon = "" }, { name = "Untitled", status = "lab", link = "", icon = "" }]
+items = [{ name = "FileID", status = "live", link = "https://fileid.webworldwide.online/", icon = "/assets/fileid.png" }, { name = "Document Finder", status = "live", link = "https://documentfinder.webworldwide.online/", icon = "/assets/doc-finder.png" }, { name = "Untitled", status = "lab", link = "", icon = "" }, { name = "Untitled", status = "lab", link = "", icon = "" }]
 
 [homepage.videos]
 episode = "EP. 001"
