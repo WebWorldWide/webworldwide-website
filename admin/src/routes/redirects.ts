@@ -4,8 +4,8 @@
  *
  * Backing store: `site/data/redirects.json`, a flat array of
  * `{ id, from, to, code }`. The Astro build reads this at build time:
- * site/scripts/prebuild.mjs merges these entries into
- * legacy-redirects.json, which astro.config.mjs turns into
+ * site/scripts/prebuild.ts merges these entries into
+ * legacy-redirects.json, which astro.config.ts turns into
  * meta-refresh redirect pages.
  *
  * This manager is for site-wide / one-off redirects (typos, deleted

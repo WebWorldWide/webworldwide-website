@@ -4,14 +4,14 @@
 # CI + quality scaffolding
 /.github/                      @AdamNolle
 /.husky/                       @AdamNolle
-/eslint.config.js              @AdamNolle
+/eslint.config.ts              @AdamNolle
 /.stylelintrc.json             @AdamNolle
 /.prettierrc.json              @AdamNolle
 /.markdownlint.json            @AdamNolle
 /.htmlhintrc                   @AdamNolle
 /tsconfig.json                 @AdamNolle
-/vitest.config.js              @AdamNolle
-/playwright.config.js          @AdamNolle
+/vitest.config.ts              @AdamNolle
+/playwright.config.ts          @AdamNolle
 /lighthouserc.json             @AdamNolle
 /package.json                  @AdamNolle
 

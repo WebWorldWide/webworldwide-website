@@ -3,8 +3,6 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "allowJs": true,
-    "checkJs": true,
     "noEmit": true,
     "strict": false,
     "noImplicitAny": false,
@@ -17,7 +15,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
-  "include": ["scripts/**/*.js", "scripts/**/*.mjs"],
+  "include": ["scripts/**/*.ts", "migrate/**/*.ts", "playwright.config.ts", "vitest.config.ts"],
   "exclude": [
     "node_modules",
     "**/node_modules",

@@ -453,7 +453,7 @@ function applySlugRename(oldSlug, newSlug) {
   try {
     const rows = readRedirects();
     // Canonical /blog/<slug>/ plus the legacy bare /<slug>/ form
-    // (astro.config.mjs only auto-redirects bare URLs for CURRENT posts,
+    // (astro.config.ts only auto-redirects bare URLs for CURRENT posts,
     // so the old one needs an explicit entry once the slug moves).
     const a = upsertRedirect(rows, `/blog/${oldSlug}/`, `/blog/${newSlug}/`);
     const b = upsertRedirect(rows, `/${oldSlug}/`, `/blog/${newSlug}/`);

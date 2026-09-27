@@ -13,7 +13,7 @@
  */
 import type { MarkdownInstance } from 'astro';
 
-import { postSchema } from '../content/postSchema.mjs';
+import { postSchema } from '../content/postSchema.ts';
 import { isPublished, sortByDateDesc, type PostEntry } from './post-utils';
 
 type PostModule = MarkdownInstance<Record<string, unknown>>;

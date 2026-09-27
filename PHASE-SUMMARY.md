@@ -53,9 +53,9 @@ Grand total: **353 test cases** across the three harnesses.
 | --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | 1   | CI green on redesign branch (quality + e2e + lighthouse)           | All three workflows wired in Phase 1.5; expected green on push                                |
 | 2   | Every public page renders (home, tags, posts, RSS, 404)            | 52 HTML pages generated; sitemap has 34 URLs; 404 layout added in Phase 12                    |
-| 3   | Admin smoke test against temp git branch                           | Covered by `admin/test/*.test.js` (157 cases); live-server tests gated on `DEV_STACK_RUNNING` |
+| 3   | Admin smoke test against temp git branch                           | Covered by `admin/test/*.test.ts` (157 cases); live-server tests gated on `DEV_STACK_RUNNING` |
 | 4   | Hugo `--gc --minify` + Lighthouse mobile pass                      | `lighthouserc.json` enforces perf ≥ 0.95, a11y = 1.0, BP = 1.0, SEO = 1.0                     |
-| 5   | axe-core zero serious violations on home/post/tag/connect          | `test/playwright/a11y.spec.js` + `admin-a11y.spec.js` — 5 + 10 passing                        |
+| 5   | axe-core zero serious violations on home/post/tag/connect          | `test/playwright/a11y.spec.ts` + `admin-a11y.spec.ts` — 5 + 10 passing                        |
 | 6   | Keyboard-only publish path                                         | Focus traps + skip links audited Phase 10; editor toolbar keyboard-navigable                  |
 | 7   | Viewport pass 375 / 414 / 768 / 1440 / 1920 — no horizontal scroll | Responsive design verified through Lighthouse mobile + a11y suite                             |
 | 8   | `prefers-reduced-motion: reduce` disables animation                | Phase 10 + Phase 11 — lava blobs disabled, transitions suppressed                             |
@@ -63,7 +63,7 @@ Grand total: **353 test cases** across the three harnesses.
 | 10  | Live integration deploy preview (Remark42 + Umami)                 | Wired in `deploy.yml` + `docker/`; verifiable post-deploy                                     |
 | 11  | Fresh clone → install → seed → dev:all                             | Phase 5d — `npm run dev:all` boots full stack in one command                                  |
 | 12  | Authoring completeness (schedule, duplicate, rename tag, template) | Phase 5e shipped all four                                                                     |
-| 13  | Comment moderation (post → SSE → reply → reply visible)            | Phase 8 + 8.5 — `admin/test/comments.test.js` covers SSE channel + reply round-trip           |
+| 13  | Comment moderation (post → SSE → reply → reply visible)            | Phase 8 + 8.5 — `admin/test/comments.test.ts` covers SSE channel + reply round-trip           |
 | 14  | Mobile authoring (375px viewport draft → publish)                  | Admin SPA responsive (Phase 2); editor uses native viewport meta + mobile-first CSS           |
 
 ## Outstanding items / known limitations
@@ -71,7 +71,7 @@ Grand total: **353 test cases** across the three harnesses.
 - **`better-sqlite3` on macOS + Node 26**: the admin `node:test` SQLite tests skip locally on this combo (127 cases). CI runs them on Linux + Node 20, where they all pass. Track the upstream prebuilt binary; pinning to Node 20 LTS locally works around it today.
 - **Lighthouse local run**: must be invoked with `LHCI=true` to use the right preset; CI does this automatically via `lighthouserc.json`.
 - **Hugo `.Site.Data` deprecation WARN**: one warning fires from an internal vendored template (not from this repo's templates). Doesn't fail the build; will clear when Hugo updates the internal template.
-- **Live-server Playwright scenarios**: 3 cases gated on `DEV_STACK_RUNNING=1` (Cmd+K palette, login theme toggle, New Post modal). Documented in `test/playwright/admin.spec.js` and `admin-a11y.spec.js` — set the env var when the full dev stack is up to exercise them.
+- **Live-server Playwright scenarios**: 3 cases gated on `DEV_STACK_RUNNING=1` (Cmd+K palette, login theme toggle, New Post modal). Documented in `test/playwright/admin.spec.ts` and `admin-a11y.spec.ts` — set the env var when the full dev stack is up to exercise them.
 
 ## Setup steps required post-merge
 

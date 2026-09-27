@@ -57,10 +57,10 @@ fi
 
 # 6. Email comment-activity digest (Phase 8.5).
 # Self-noops if SMTP_HOST is unset, so it's safe to keep enabled.
-DIGEST_SCRIPT="$SCRIPT_DIR/email-digest.mjs"
+DIGEST_SCRIPT="$SCRIPT_DIR/email-digest.ts"
 if [ -f "$DIGEST_SCRIPT" ]; then
   echo "[6/6] Sending email digest (if SMTP configured)..."
-  node "$DIGEST_SCRIPT" || echo "email digest failed (continuing)"
+  npx --no-install tsx "$DIGEST_SCRIPT" || echo "email digest failed (continuing)"
 fi
 
 echo "Maintenance completed successfully at $(date)"

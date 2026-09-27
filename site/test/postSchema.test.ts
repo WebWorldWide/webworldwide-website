@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { postSchema, validatePost } from '../src/content/postSchema.mjs';
+import { postSchema, validatePost } from '../src/content/postSchema.ts';
 
 describe('postSchema (shared admin ↔ Astro)', () => {
   it('accepts a minimal published post', () => {

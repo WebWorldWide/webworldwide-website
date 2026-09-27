@@ -17,7 +17,9 @@ updates:
       day: monday
       time: '07:00'
       timezone: America/Chicago
-    open-pull-requests-limit: 5
+    # Keep main as the repository's only persistent branch. Dependency
+    # upgrades are reviewed and landed directly during scheduled maintenance.
+    open-pull-requests-limit: 0
     labels: [dependencies, root]
     groups:
       root:
@@ -34,7 +36,7 @@ updates:
       day: monday
       time: '07:00'
       timezone: America/Chicago
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels: [dependencies, admin]
     groups:
       admin:
@@ -43,11 +45,6 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
-      # katex is hand-vendored into admin/public/vendor/katex (no auto-copy
-      # step), so a Dependabot bump of the devDependency alone would leave the
-      # served assets stale. It's updated manually together with the vendor
-      # copy; ignore it here so Dependabot stops opening incomplete PRs.
-      - dependency-name: katex
 
   - package-ecosystem: npm
     directory: /site
@@ -56,7 +53,7 @@ updates:
       day: monday
       time: '07:00'
       timezone: America/Chicago
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels: [dependencies, site]
     groups:
       site:
@@ -70,7 +67,7 @@ updates:
     directory: /migrate
     schedule:
       interval: monthly
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 0
     labels: [dependencies, migrate]
     groups:
       migrate:
@@ -87,7 +84,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels: [dependencies, ci]
     groups:
       actions:

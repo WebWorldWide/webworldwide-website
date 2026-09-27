@@ -8,8 +8,8 @@
  * old→new redirect so the public URL change never 404s. Centralizing the
  * store keeps both writers consistent and the table loop/chain-free.
  *
- * The build reads this file at build time: `site/scripts/prebuild.mjs`
- * merges it into legacy-redirects.json, which astro.config.mjs turns into
+ * The build reads this file at build time: `site/scripts/prebuild.ts`
+ * merges it into legacy-redirects.json, which astro.config.ts turns into
  * meta-refresh redirect pages.
  */
 

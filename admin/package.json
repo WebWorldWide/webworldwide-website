@@ -5,17 +5,18 @@
   "main": "dist/admin/server.js",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/admin/src/db && cp -R src/db/migrations dist/admin/src/db/",
+    "build": "npm run build:client && tsc -p tsconfig.json && mkdir -p dist/admin/src/db && cp -R src/db/migrations dist/admin/src/db/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/admin/server.js",
     "dev": "tsx watch server.ts",
-    "build:editor": "NODE_ENV=production node scripts/build-editor.mjs",
-    "dev:editor": "node scripts/build-editor.mjs --watch",
-    "backfill:media": "node scripts/backfill-media.js",
-    "test": "node --import tsx --test --test-reporter spec test/auth.test.js test/git.test.js test/backfill-alt-text.test.js test/analytics.test.js test/media.test.js test/dedupe-media.test.js test/conversion.test.js test/conversion-av.test.js test/conversion-pdc.test.js test/posts-bulk.test.js test/posts-safety.test.js test/atomic-write.test.js test/rename-media-db.test.js test/settings.test.js test/redirects.test.js test/activity.test.js test/scheduler.test.js test/retention.test.js test/snapshots.test.js test/app-secrets.test.js test/syndication-log.test.js test/security-fixes.test.js test/toml-roundtrip.test.js test/embed.test.js test/ssrf.test.js test/webmentions.test.js test/comments.test.js test/bluesky.test.js test/mastodon.test.js test/health.test.js test/assets.test.js test/proofread.test.js test/boot.test.js",
+    "build:client": "NODE_ENV=production tsx scripts/build-client.ts",
+    "dev:client": "tsx scripts/build-client.ts --watch",
+    "backfill:media": "tsx scripts/backfill-media.ts",
+    "pretest": "npm run build:client",
+    "test": "node --import tsx --test --test-reporter spec test/auth.test.ts test/git.test.ts test/backfill-alt-text.test.ts test/analytics.test.ts test/media.test.ts test/dedupe-media.test.ts test/conversion.test.ts test/conversion-av.test.ts test/conversion-pdc.test.ts test/posts-bulk.test.ts test/posts-safety.test.ts test/atomic-write.test.ts test/rename-media-db.test.ts test/settings.test.ts test/redirects.test.ts test/activity.test.ts test/scheduler.test.ts test/retention.test.ts test/snapshots.test.ts test/app-secrets.test.ts test/syndication-log.test.ts test/security-fixes.test.ts test/toml-roundtrip.test.ts test/embed.test.ts test/ssrf.test.ts test/webmentions.test.ts test/comments.test.ts test/bluesky.test.ts test/mastodon.test.ts test/health.test.ts test/assets.test.ts test/proofread.test.ts test/boot.test.ts",
     "lint": "cd .. && npm run lint:js -- admin/",
-    "backfill:alt": "node scripts/backfill-alt-text.js",
-    "dedupe:media": "node scripts/dedupe-media.js"
+    "backfill:alt": "tsx scripts/backfill-alt-text.ts",
+    "dedupe:media": "tsx scripts/dedupe-media.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.20.15",

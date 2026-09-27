@@ -10,7 +10,7 @@ to every contribution — including future-me.
 ├── site/        Astro 5 static site (public-facing blog) + React islands
 │   ├── content/ Markdown posts (single source of truth for the schema)
 │   ├── public/  Static assets, fonts, webfinger template
-│   ├── scripts/ prebuild.mjs — generates legacy redirects + webfinger
+│   ├── scripts/ prebuild.ts — generates legacy redirects + webfinger
 │   └── src/     Astro pages, components, islands, layouts
 ├── admin/       Express CMS (runs on the Pi, never deployed to Pages)
 ├── migrate/     One-shot Ghost → Markdown migrator (legacy)
@@ -191,14 +191,13 @@ Short, declarative, no period. Match the existing log: `Phase 1.5: lint, test, a
 
 ## Adding new tests
 
-- **Public-site JS** (`site/static/js/*.js`) → add a `*.test.js` file under
-  `site/test/`. Use Vitest + jsdom. Load `app.js` via the eval pattern in
-  `site/test/app.test.js` if you need to drive the IIFE.
-- **Admin backend** (`admin/src/routes/*.js`) → add a `*.test.js` file under
+- **Public-site TypeScript** (`site/src/**/*.ts`) → add a `*.test.ts` file under
+  `site/test/`. Use Vitest + jsdom.
+- **Admin backend** (`admin/src/routes/*.ts`) → add a `*.test.ts` file under
   `admin/test/`. Use Node's built-in `test` runner, an ephemeral `AUTH_DB_PATH`,
   and a real SQLite database. **Never mock `better-sqlite3`** — integration
   tests catch real schema mismatches.
-- **Cross-cutting site behavior** → add a `*.spec.js` file under
+- **Cross-cutting site behavior** → add a `*.spec.ts` file under
   `test/playwright/`. The Astro dev server (port 4321) starts automatically.
 
 ## Adding new lint rules
@@ -270,15 +269,15 @@ catches it.
 
 ```bash
 # Static-surface axe runs (no live admin server needed)
-npx playwright test test/playwright/a11y.spec.js
-npx playwright test test/playwright/admin-a11y.spec.js
+npx playwright test test/playwright/a11y.spec.ts
+npx playwright test test/playwright/admin-a11y.spec.ts
 
 # Token contrast (Vitest, sub-second)
-npx vitest run --config vitest.config.js site/test/contrast.test.js
+npx vitest run --config vitest.config.ts site/test/contrast.test.ts
 
 # Optional: live-server axe scenarios for the cmdk palette + modals
 DEV_STACK_RUNNING=1 ADMIN_ORIGIN=http://127.0.0.1:8787 \
-  npx playwright test test/playwright/admin-a11y.spec.js
+  npx playwright test test/playwright/admin-a11y.spec.ts
 ```
 
 CI runs the first three on every PR. The live-server scenarios are
@@ -288,12 +287,12 @@ skipped by default; flip `DEV_STACK_RUNNING=1` locally when you have
 ### Accepted axe rule exceptions
 
 We disable the following rules on the admin a11y spec only, each with
-a one-line justification (see `test/playwright/admin-a11y.spec.js`):
+a one-line justification (see `test/playwright/admin-a11y.spec.ts`):
 
 | Rule                   | Where      | Why                                                                                                                     |
 | ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `region`               | admin only | The admin is a single-purpose shell with `<aside>` + `<header>` landmarks; content panels are layout `<div>` by design. |
-| `page-has-heading-one` | admin only | Hash-router views with the H1 are hidden on file:// boot; the H1 is asserted directly in `admin.spec.js`.               |
+| `page-has-heading-one` | admin only | Hash-router views with the H1 are hidden on file:// boot; the H1 is asserted directly in `admin.spec.ts`.               |
 
 Don't expand this list without a PR-level conversation. Every exception
 is a place where a real defect can hide.
@@ -333,10 +332,10 @@ The Phase 1.5 config at `lighthouserc.json` enforces those budgets via
 
 ```bash
 npm run test:lighthouse     # full @lhci/cli run, ~2 min, requires Chromium
-LHCI=true npx playwright test test/playwright/lighthouse.spec.js
+LHCI=true npx playwright test test/playwright/lighthouse.spec.ts
 ```
 
-Fast feedback runs as part of `npm test`: `site/test/perf.test.js`
+Fast feedback runs as part of `npm test`: `site/test/perf.test.ts`
 asserts the critical-CSS budget, the CSP meta tag, the deferred
 stylesheet shape, and the JS fingerprint contract. If you break one of
 those, the unit suite fails before you ever boot Chromium.
@@ -368,7 +367,7 @@ public, max-age=31536000, immutable`.
   bundles. The vitest config covers both paths to catch a stale file
   if a refactor drops one there by accident.
 - Tests load the canonical asset paths
-  (`site/test/{app,embed-loader,lightbox}.test.js`). If you rename a
+  (`site/test/{app,embed-loader,lightbox}.test.ts`). If you rename a
   bundle, update the test imports as part of the same commit.
 
 ### Image rendering
@@ -782,7 +781,7 @@ state outside `$HOME`.
 
 Site-wide forwards live in `site/data/redirects.json`. The admin's
 **Redirects** page wraps `GET/POST/PUT/DELETE /api/redirects`.
-At build time, `scripts/dev/build-redirects.mjs` emits one static
+At build time, `scripts/dev/build-redirects.ts` emits one static
 HTML page per entry under `site/static/<from>/index.html` with a
 meta-refresh + JS fallback + canonical link. `npm run build` and
 `npm run build:check` invoke it automatically.
@@ -828,13 +827,13 @@ descend from one. Don't reuse the attribute name for anything else.
 ### Adding a new provider
 
 1. Add a `match(URL)` + `resolve(URL, m)` pair to the `PROVIDERS`
-   array in `admin/src/services/embed/providers.js`. The matcher
+   array in `admin/src/services/embed/providers.ts`. The matcher
    returns `null` to defer to the next provider; the resolver returns
    the uniform `{ provider, id, shortcode, … }` record.
 2. Create `site/layouts/shortcodes/embed-<name>.html` that emits the
    placeholder button. Reuse the `embed-placeholder` class so the
    theme tokens carry across.
-3. Add a coverage row to `admin/test/embed.test.js`.
+3. Add a coverage row to `admin/test/embed.test.ts`.
 4. Add the provider id to the "Supported first-class providers" list
    above.
 
@@ -1073,11 +1072,11 @@ DIGEST_WINDOW_MS=3600000     # last hour
 Then add the cron:
 
 ```cron
-5 * * * * cd /opt/web-world-wide && node scripts/email-digest.mjs >>/var/log/t80-digest.log 2>&1
+5 * * * * cd /opt/web-world-wide && npx --no-install tsx scripts/email-digest.ts >>/var/log/t80-digest.log 2>&1
 ```
 
 Or rely on `scripts/maintenance.sh` (which already calls
-`email-digest.mjs` and no-ops when SMTP isn't configured).
+`email-digest.ts` and no-ops when SMTP isn't configured).
 
 ### Block-list reconciliation
 

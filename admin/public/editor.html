@@ -219,7 +219,7 @@
               <div class="ed-body">
                 <!--
                   Phase 3a: TipTap (WYSIWYG) + CodeMirror (Markdown source).
-                  Bundled via admin/scripts/build-editor.mjs to editor.bundle.js.
+                  Bundled via admin/scripts/build-client.ts to editor.bundle.js.
                   The bundle's mount() takes over this element, inserts its own
                   toolbar + ProseMirror + CM6 surfaces, and appends a hidden
                   <textarea id="editor-fallback"> as the Markdown source-of-truth
@@ -641,7 +641,7 @@
     <script src="/js/auth.js"></script>
     <script src="/js/dropzone.js"></script>
     <script src="/js/media.js"></script>
-    <!-- TipTap + CodeMirror bundle. Built by admin/scripts/build-editor.mjs. -->
+    <!-- TipTap + CodeMirror bundle. Built by admin/scripts/build-client.ts. -->
     <script src="/js/editor.bundle.js"></script>
     <script src="/js/editor.js"></script>
   </body>

@@ -5,9 +5,9 @@
 // Posts are loaded from content/posts/*.md via Vite's import.meta.glob (see
 // lib/posts.ts), NOT Astro content collections — getCollection() returned 0
 // entries on the Linux build. PostEntry is therefore a structural type whose
-// data shape is inferred from postSchema.mjs (type-only import — no runtime
+// data shape is inferred from postSchema.ts (type-only import — no runtime
 // dependency, no zod in the client bundle).
-export type PostData = import('zod').infer<typeof import('../content/postSchema.mjs').postSchema>;
+export type PostData = import('zod').infer<typeof import('../content/postSchema.ts').postSchema>;
 
 export interface PostEntry {
   id: string;

@@ -1,1 +1,0 @@
-import{_ as a}from"./preload-helper.CVfkMyKi.js";a(()=>import("./globe-nav.A4yGc8mY.js"),[]).then(t=>{const e=()=>t.initGlobes("canvas[data-globe]");"requestIdleCallback"in window?window.requestIdleCallback(e):setTimeout(e,100)});

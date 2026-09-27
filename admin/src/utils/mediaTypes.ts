@@ -43,7 +43,7 @@ export const DENYLIST_EXTENSIONS = new Set([
   '.xhtml',
   '.xml',
   '.js',
-  '.mjs',
+  '.ts',
   '.wasm',
 ]);
 

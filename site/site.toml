@@ -1,6 +1,6 @@
 # Web World Wide — user-editable site parameters
 #
-# This file is read by both `astro.config.mjs` (at build time) and the admin
+# This file is read by both `astro.config.ts` (at build time) and the admin
 # CMS's settings route (at runtime). It exists so user-facing config — analytics
 # URLs, social handles, tagline, author — can change without touching the Astro
 # build config. The admin's TOML round-trip test asserts this stays parseable.

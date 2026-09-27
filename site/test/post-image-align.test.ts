@@ -8,7 +8,7 @@
  *
  * We run the same `@astrojs/markdown-remark` processor Astro uses for `.md`
  * content, with a rehype pass mirroring the image hygiene the build applies
- * (scripts/postbuild-image-dimensions.mjs stamps lazy/async onto dist HTML),
+ * (scripts/postbuild-image-dimensions.ts stamps lazy/async onto dist HTML),
  * so this asserts the real rendered output rather than a hand-rolled mock.
  */
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';

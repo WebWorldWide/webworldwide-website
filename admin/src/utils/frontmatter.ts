@@ -10,9 +10,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
  */
 const here = dirname(fileURLToPath(import.meta.url));
 const schemaCandidates = [
-  ...(process.env.SITE_DIR ? [join(process.env.SITE_DIR, 'src', 'content', 'postSchema.mjs')] : []),
-  join(here, '..', '..', '..', 'site', 'src', 'content', 'postSchema.mjs'),
-  join(here, '..', '..', '..', '..', '..', 'site', 'src', 'content', 'postSchema.mjs'),
+  ...(process.env.SITE_DIR ? [join(process.env.SITE_DIR, 'src', 'content', 'postSchema.ts')] : []),
+  join(here, '..', '..', '..', 'site', 'src', 'content', 'postSchema.ts'),
+  join(here, '..', '..', '..', '..', '..', 'site', 'src', 'content', 'postSchema.ts'),
 ];
 const schemaPath =
   schemaCandidates.find((candidate) => existsSync(candidate)) ?? schemaCandidates[0];

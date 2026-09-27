@@ -16,10 +16,8 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "allowJs": true,
-    "checkJs": true,
     "types": ["node"]
   },
-  "include": ["server.ts", "src/**/*.ts", "src/**/*.js"],
-  "exclude": ["dist", "node_modules", "public", "scripts", "test"]
+  "include": ["server.ts", "src/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["dist", "node_modules", "public", "client", "test"]
 }

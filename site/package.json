@@ -5,15 +5,15 @@
   "type": "module",
   "description": "Web World Wide — Astro site (public-facing). Built from Markdown content collections and React islands; deploys to GitHub Pages.",
   "scripts": {
-    "dev": "node scripts/prebuild.mjs && astro sync && astro dev --port 4321 --host 127.0.0.1",
-    "prebuild": "node scripts/prebuild.mjs",
-    "build": "npm run prebuild && astro sync && astro check && astro build && npm run postbuild",
-    "postbuild": "node scripts/postbuild-image-dimensions.mjs",
+    "dev": "npm run prebuild && astro sync && astro dev --port 4321 --host 127.0.0.1",
+    "prebuild": "tsx scripts/prebuild.ts && tsx scripts/build-assets.ts",
+    "build": "npm run prebuild && astro sync && astro check && astro build",
+    "postbuild": "tsx scripts/postbuild-image-dimensions.ts",
     "preview": "astro preview --port 4322 --host 127.0.0.1",
     "astro": "astro",
     "check": "astro check",
-    "lint": "eslint . --ext .astro,.ts,.tsx,.js,.mjs",
-    "lint:fix": "eslint . --ext .astro,.ts,.tsx,.js,.mjs --fix",
+    "lint": "eslint . --ext .astro,.ts,.tsx",
+    "lint:fix": "eslint . --ext .astro,.ts,.tsx --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -52,7 +52,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
+    "jiti": "^2.6.1",
     "typescript": "^6.0.3",
+    "tsx": "^4.23.15",
+    "esbuild": "^0.28.1",
     "vitest": "^4.1.8"
   },
   "overrides": {

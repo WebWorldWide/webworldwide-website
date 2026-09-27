@@ -63,7 +63,7 @@ jobs:
         working-directory: site
         run: npm ci --ignore-scripts
 
-      # lint:types runs `tsc` over admin/**/*.js (checkJs), so admin's
+      # lint:types runs `tsc` over the TypeScript source tree, so admin's
       # runtime deps must resolve. Only install them for that task.
       - name: Install admin dependencies
         if: matrix.task == 'lint:types'

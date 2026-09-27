@@ -2,12 +2,16 @@
   "name": "web-world-wide-migrate",
   "version": "1.0.0",
   "description": "Migrate Ghost blog content to Hugo",
-  "main": "migrate.js",
+  "main": "migrate.ts",
   "scripts": {
-    "migrate": "node migrate.js"
+    "migrate": "tsx migrate.ts"
   },
   "dependencies": {
     "turndown": "^7.1.3",
     "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
   }
 }
