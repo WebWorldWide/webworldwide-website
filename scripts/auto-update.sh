@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Repo hygiene: cron installs this as root, but everything below only
+# Repo hygiene: cron may install this as root, but everything below only
 # needs adam (repo owner; in the docker group). While still root, fix
 # any .git objects left root-owned by previous runs, then re-exec as
 # adam so future pulled/committed files are never root-owned again.
+REPO_DIR="${WWWIDE_APP_DIR:-/opt/web-world-wide}"
 if [ "$(id -u)" = 0 ]; then
-  chown -R 1000:1000 /opt/web-world-wide/.git 2>/dev/null || true
+  chown -R 1000:1000 "$REPO_DIR/.git" 2>/dev/null || true
   if command -v runuser >/dev/null 2>&1; then
     exec runuser -u adam -- "$0" "$@"
   fi
@@ -19,7 +20,6 @@ set -euo pipefail
 # ==============================================================================
 
 # Variables
-REPO_DIR="/opt/web-world-wide"
 DOCKER_DIR="$REPO_DIR/docker"
 SCRIPT_DIR="$REPO_DIR/scripts"
 

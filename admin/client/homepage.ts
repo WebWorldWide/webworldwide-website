@@ -818,7 +818,7 @@
     try {
       if (!(await saveDraft())) return;
       renderAll();
-      TE.toast('Homepage saved to the Pi — publish to make it live.');
+      TE.toast('Homepage saved to the server — publish to make it live.');
     } finally {
       hpBusy = false;
       setHpBusy(false);
@@ -1303,7 +1303,7 @@
             <button type="button" class="btn" id="hp-save" data-act="save" disabled>${IC.check} Save</button>
             <button type="button" class="btn solid" id="hp-publish" data-act="publish">${IC.rocket} Publish</button>
           </div>
-          <div class="hp-hint" id="hp-hint" hidden>Saved to Pi · not yet live — Publish pushes the site.</div>
+          <div class="hp-hint" id="hp-hint" hidden>Saved to server · not yet live — Publish pushes the site.</div>
           <div class="hp-rail-scroll" id="hp-rail-scroll"></div>
         </div>
         <div class="hp-preview">

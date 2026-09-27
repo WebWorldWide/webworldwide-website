@@ -33,7 +33,7 @@ instagram = "https://www.instagram.com/mywebworldwide"
 threads = "https://www.threads.net/@mywebworldwide"
 
 [comments]
-# Remark42 self-hosted commenting (deployed alongside the admin Pi via Docker).
+# Remark42 self-hosted commenting (deployed alongside the admin via Docker).
 # Anonymous posting is enabled server-side (AUTH_ANON=true) so no account is
 # needed to comment. `url_dev` points at the local dev Remark42 container.
 provider = "remark42"
@@ -49,7 +49,7 @@ site_id = "680f36bd-688c-4816-b764-685860911396"
 
 [webmention]
 # Bridgy Fed delivers fediverse (Mastodon/Threads) replies + likes here. The
-# receiver is the Pi cms — a different origin from this static site.
+# receiver is the CMS host — a different origin from this static site.
 url = "https://admin.webworldwide.online/webmention"
 
 [rss]

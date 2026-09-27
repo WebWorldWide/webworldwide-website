@@ -1,181 +1,188 @@
-# Web World Wide Blog Architecture
+# Web World Wide
 
 [![Quality](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/quality.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/quality.yml)
 [![E2E + a11y](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/e2e.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/e2e.yml)
 [![Lighthouse](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/lighthouse.yml)
 [![Deploy](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/deploy.yml/badge.svg)](https://github.com/WebWorldWide/webworldwide-website/actions/workflows/deploy.yml)
 
-Welcome to **Web World Wide**, a high-performance, $0/month, self-hosted blog stack designed for Raspberry Pi. It replaces bloated, database-heavy platforms (like Ghost or WordPress) with a hyper-fast static site generator and a lightweight Node.js admin panel.
+Web World Wide is Adam Nolle's fast, self-hosted publishing stack. Markdown is
+the source of truth, Astro produces the public site, and a custom TypeScript CMS
+handles writing, media, comments, analytics, scheduling, and syndication.
 
-🌐 **Live site → [webworldwide.online](https://webworldwide.online)**
+**Live site:** [webworldwide.online](https://webworldwide.online)
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local development, the quality pipeline, and branch-protection setup.
+## Production architecture
 
-## Quickstart (local dev)
-
-A fresh clone runs the entire stack — Astro, the admin CMS, Remark42, Umami,
-and Postgres — on a laptop (Windows, macOS, or Linux) in two commands.
-
-**Requires**: Node 22+ and Docker. Start Docker before running the dev
-command.
-
-| Platform | Docker option(s)                                                                                        |
-| -------- | ------------------------------------------------------------------------------------------------------- |
-| Windows  | Docker Desktop (with WSL2 backend recommended)                                                          |
-| macOS    | Docker Desktop, OrbStack, or Colima — any one works                                                     |
-| Linux    | Docker Engine (`apt install docker.io` or distro equivalent) — start with `sudo systemctl start docker` |
-
-```bash
-git clone https://github.com/WebWorldWide/webworldwide-website
-cd webworldwide-website
-npm install        # cascades into site/ and admin/ on first run
-npm run dev        # preflight → docker + astro + admin in parallel
+```mermaid
+flowchart LR
+  Reader[Readers] --> Pages[GitHub Pages<br/>Astro static site]
+  Author[Author] --> CF[Cloudflare Tunnel]
+  CF --> Caddy[Caddy]
+  Caddy --> CMS[TypeScript CMS]
+  Caddy --> Remark[Remark42]
+  Caddy --> Umami[Umami]
+  CMS --> GitHub[GitHub main]
+  GitHub --> Actions[GitHub Actions]
+  Actions --> Pages
+  Umami --> Postgres[(PostgreSQL)]
 ```
 
-The same two commands work identically on Windows (PowerShell or Git
-Bash), macOS, and Linux. `npm run dev` shells through
-`npm-run-all2`/`run-p`, which uses platform-native parallel execution
-on all three; no bash-isms in any npm script.
+The production backend runs on the Ubuntu server named **Adlon**:
 
-The first `npm install` takes a few minutes (pulls Astro, React, Three.js,
-TipTap, better-sqlite3 prebuilt binaries). Subsequent runs are fast.
+| Component                                             | Production location | Purpose                                                    |
+| ----------------------------------------------------- | ------------------- | ---------------------------------------------------------- |
+| Public site                                           | GitHub Pages        | Global static hosting for the Astro build                  |
+| CMS, Caddy, Remark42, Umami, PostgreSQL, LanguageTool | Docker on Adlon     | Authoring and stateful services                            |
+| Public ingress                                        | Cloudflare Tunnel   | HTTPS without inbound router ports                         |
+| Application checkout and Docker data                  | Samsung NVMe SSD    | Low-latency builds, databases, and containers              |
+| Backup archives and shared media                      | 2 TB data disk      | Capacity-oriented storage outside the hot application path |
 
-`npm run dev` runs a preflight that auto-creates `docker/.env.dev` from
-`.env.dev.example` and verifies Docker is reachable — if Docker isn't
-running it tells you so and exits cleanly.
+Production endpoints:
+
+- Site: <https://webworldwide.online>
+- Admin: <https://admin.webworldwide.online>
+- Comments: <https://comments.webworldwide.online>
+- Analytics: <https://analytics.webworldwide.online>
+
+`main` is the only persistent branch. A push to `main` builds and deploys the
+public Astro site through GitHub Actions. The Adlon checkout follows the same
+branch and rebuilds the Docker stack when backend code changes.
+
+## Stack
+
+- **Astro 7 + React 19** — static pages and small interactive islands
+- **TypeScript** — site scripts, CMS backend, browser source, tests, and tooling
+- **Express 5 + SQLite** — CMS API, authentication, media metadata, and activity
+- **TipTap + CodeMirror** — block and Markdown editing
+- **Remark42** — privacy-friendly comments
+- **Umami + PostgreSQL** — privacy-friendly analytics
+- **LanguageTool** — private spell and grammar checks
+- **Caddy + Cloudflare Tunnel** — internal routing and public ingress
+- **GitHub Actions + Pages** — tested static deployment
+
+Browser JavaScript is generated from TypeScript during the build. Generated
+bundles are intentionally ignored; the repository does not track JavaScript
+source or build output.
+
+## Local development
+
+Requirements:
+
+- Node.js 22 or newer
+- npm
+- Docker Engine, Docker Desktop, OrbStack, or Colima
+
+```bash
+git clone https://github.com/WebWorldWide/webworldwide-website.git
+cd webworldwide-website
+npm install
+npm run dev
+```
 
 Open:
 
 - Public site: <http://localhost:4321>
-- Admin: <http://localhost:3000> (log in: `admin` / `password`)
-- Comments (Remark42): <http://localhost:8081> (admin user: `admin`)
-- Analytics (Umami): <http://localhost:3001> (configure on first visit)
+- Admin: <http://localhost:3000>
+- Comments: <http://localhost:8081>
+- Analytics: <http://localhost:3001>
 
-Operational scripts:
+The development admin account is `admin` / `password`. Those credentials are
+created only by the local seed command and must never be used in production.
 
-- `npm run dev:check` — ping every service, print a status table, non-zero on any failure
-- `npm run db:seed` — create the admin user (`admin`/`password`) and 5 sample media rows
-- `npm run db:reset` — wipe the local DB and dev uploads, then re-seed (prompts unless `--yes`)
-- `npm run dev:stop` — shut down the Docker services
-- `npm run dev:site` / `npm run dev:admin` — run just the Astro site or just the admin (no Docker)
+Useful commands:
 
-WebAuthn uses `rpID=localhost` in dev, so passkeys work without HTTPS on
-every browser. Register one from **Settings → Security** after first login.
+| Command               | Purpose                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| `npm run dev`         | Run the Astro site and CMS                                        |
+| `npm run dev:full`    | Run the complete local stack, including Docker services           |
+| `npm run dev:check`   | Verify every local service                                        |
+| `npm run build:check` | Type-check, build, and validate generated HTML                    |
+| `npm run lint`        | Run TypeScript, CSS, Markdown, formatting, HTML, and site linting |
+| `npm test`            | Run the site and CMS test suites                                  |
+| `npm run test:unit`   | Run browser and development-tool unit tests                       |
+| `npm run test:e2e`    | Run Playwright end-to-end and accessibility coverage              |
+| `npm run db:seed`     | Seed the local development database                               |
+| `npm run db:reset`    | Recreate local development data after confirmation                |
 
-## The Stack
+See [CONTRIBUTING.md](CONTRIBUTING.md) for editor internals, testing patterns,
+accessibility requirements, and extension points.
 
-- **Site Generator**: Astro 5 (compiles Markdown + React islands into ultra-fast static HTML)
-- **CMS Admin**: Custom Node.js/Express Dashboard with WebAuthn (Passkeys)
-- **Analytics**: Umami (Self-hosted privacy-friendly analytics via PostgreSQL)
-- **Comments**: Remark42 (Self-hosted privacy-focused commenting engine)
-- **Reverse Proxy**: Caddy (Automatic HTTPS and routing)
-- **Tunneling**: Cloudflare Tunnel (Exposes your Pi to the internet securely without port-forwarding)
+## Repository layout
 
-## Feature matrix
-
-The full stack ships everything a personal blog needs out of the box. Every
-capability has a CONTRIBUTING.md section explaining how it's wired and how to
-extend it.
-
-| Capability                      | What it gives you                                                                                                                                                         | Where it's documented                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Local development**           | One-command full stack (Astro + admin + Remark42 + Umami + Postgres)                                                                                                      | [Local development](CONTRIBUTING.md#local-development)                                                 |
-| **Passkey auth**                | WebAuthn passkeys for passwordless admin login (Touch ID / Face ID / Windows Hello)                                                                                       | [Passkeys in local dev](CONTRIBUTING.md#passkeys-in-local-dev)                                         |
-| **Block editor**                | TipTap + CodeMirror with slash commands, tables, callouts, math, footnotes, code highlighting, find & replace                                                             | [Editor shortcuts](CONTRIBUTING.md#editor-shortcuts)                                                   |
-| **Block types**                 | Headings, lists, blockquotes, tables, callouts, KaTeX math, footnotes, code blocks with syntax highlighting                                                               | [Editor block types](CONTRIBUTING.md#editor-block-types)                                               |
-| **Media library**               | Drop any file — auto-converts images (AVIF/WebP/responsive srcset), video, audio, PDFs, archives, code                                                                    | [Testing the conversion pipeline](CONTRIBUTING.md#testing-the-conversion-pipeline)                     |
-| **Authoring extras**            | Scheduled publishing, draft preview links, per-post custom CSS/JS, cover images, redirects, activity log                                                                  | [Phase 5e — CMS authoring extras](CONTRIBUTING.md#phase-5e--cms-authoring-extras)                      |
-| **Embeds**                      | Paste-to-embed for YouTube, Vimeo, Bluesky, Mastodon, CodePen, Gist, Spotify, SoundCloud, TikTok + generic OG                                                             | [Phase 7 — embeds](CONTRIBUTING.md#phase-7--embeds-paste-to-embed)                                     |
-| **Fediverse**                   | h-card / h-entry microformats, webmention receiver, Bridgy Fed federation, Mastodon-style replies                                                                         | [Phase 8 — Fediverse federation](CONTRIBUTING.md#phase-8--fediverse-federation-via-bridgy-fed)         |
-| **Comments**                    | Unified moderation queue (Remark42 + webmentions + Bluesky) with SSE live updates and one-tap reply                                                                       | [Phase 8.5 — unified comment moderation](CONTRIBUTING.md#phase-85--unified-comment-moderation)         |
-| **Cross-post (POSSE)**          | Auto-post to **Bluesky + Mastodon** on publish — one post + a rich link card — configured in **Settings → Syndication**; Bluesky replies mirror into the moderation queue | [Phase 9 — Bluesky cross-post](CONTRIBUTING.md#phase-9--at-protocol--bluesky-cross-post--thread-embed) |
-| **Accessibility (WCAG 2.2 AA)** | Skip links, focus traps, contrast tokens, motion respect, status independence, axe-core in CI                                                                             | [Accessibility](CONTRIBUTING.md#accessibility-wcag-22-aa)                                              |
-| **Performance**                 | Inline critical CSS, fingerprinted JS + SRI, responsive images, lazy embeds, CSP, Lighthouse gates                                                                        | [Performance](CONTRIBUTING.md#performance-phase-11)                                                    |
-
-## Operational checklist
-
-The first push to `main` triggers `deploy.yml` (already wired). Before that,
-read [MIGRATION.md](MIGRATION.md) for the post-merge steps: GitHub branch
-protection, Bluesky / SMTP / Bridgy Fed credentials, and the two cron entries
-that drive scheduled publish + webmention dump.
-
-## Thanks
-
-This stack stands on the shoulders of:
-
-[Astro](https://astro.build) (static site engine + React islands),
-[TipTap](https://tiptap.dev) + [ProseMirror](https://prosemirror.net) (editor),
-[CodeMirror](https://codemirror.net) (raw markdown / code panes),
-[KaTeX](https://katex.org) (math),
-[Express](https://expressjs.com) + [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) (admin backend),
-[Bridgy Fed](https://fed.brid.gy) (Fediverse bridge),
-[Remark42](https://remark42.com) (comments),
-[Umami](https://umami.is) (analytics),
-[Caddy](https://caddyserver.com) (HTTPS + reverse proxy),
-[Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/) (secure ingress),
-[@atproto/api](https://github.com/bluesky-social/atproto) (Bluesky / AT Protocol),
-[axe-core](https://github.com/dequelabs/axe-core) + [Playwright](https://playwright.dev) (a11y + e2e),
-[Vitest](https://vitest.dev) + [node:test](https://nodejs.org/api/test.html) (unit tests),
-[Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) (perf budget).
-
-## How It Works
-
-1. You access the **Admin CMS** (`admin.yourdomain.com`) from your phone or laptop using Touch ID / Face ID.
-2. You write a post using the WYSIWYG editor and hit `Save`. The post is saved as a `.md` file on the Raspberry Pi.
-3. You click `[PUBLISH SITE]`. The CMS commits the markdown files to GitHub.
-4. GitHub Actions automatically builds the Astro site and deploys it to GitHub Pages for free, global CDN hosting.
-5. Visitors view your ultra-fast site while Umami and Remark42 handle analytics and comments via the Cloudflare Tunnel.
-
-## Setup Instructions
-
-### 1. Prerequisites
-
-- A Raspberry Pi (or any Linux server)
-- A Cloudflare account with a Domain name
-- A GitHub account and a Personal Access Token (PAT)
-
-### 2. Cloudflare Zero Trust
-
-1. Create a Cloudflare Tunnel in Zero Trust.
-2. Add Public Hostnames pointing to `http://caddy:80` for:
-   - `admin.yourdomain.com`
-   - `comments.yourdomain.com`
-   - `analytics.yourdomain.com`
-
-### 3. Pi Bootstrap
-
-SSH into your fresh Raspberry Pi OS Lite (64-bit) and run:
-
-```bash
-sudo apt-get update -y && sudo apt-get install -y git
-sudo git clone https://github.com/WebWorldWide/webworldwide-website.git /opt/web-world-wide
-sudo /opt/web-world-wide/scripts/bootstrap.sh
+```text
+admin/       TypeScript CMS server, browser source, migrations, and tests
+docker/      Production and development Compose definitions plus Caddy routing
+migrate/     One-time Ghost/content migration utilities
+scripts/     Deployment, backup, maintenance, health, and local-dev tooling
+site/        Astro site, Markdown content, styles, assets, and tests
+test/        Playwright end-to-end and accessibility tests
 ```
 
-The script is idempotent — re-running on an already-set-up Pi prints "all
-phases healthy" in under 30 seconds. On a fresh Pi it:
+Generated directories such as `site/dist`, `site/.astro`, `admin/dist`, and
+`admin/public/js` are disposable build output and are not committed.
 
-1. Verifies arch, OS, disk, network connectivity (fail-fast).
-2. Installs Docker, Node 22, and required apt packages.
-3. Sets up a 2 GB swapfile.
-4. Prompts for your **Cloudflare Tunnel token** and **GitHub PAT** (with `--cf-token=` and `--gh-pat=` flag overrides for scripted runs).
-5. Validates the Cloudflare token against the Cloudflare API in under 5 seconds.
-6. Generates random secrets, creates `docker/.env`, brings the stack up.
-7. Installs systemd boot-check + cron jobs (backups, auto-update, maintenance).
-8. Polls every service with backoff until all healthy, then prints a status table.
-9. Generates the age-encrypted backup keypair and pushes the public key to `www-blog-backups` (creates the repo automatically if your PAT has `repo` scope).
-10. Prints the age private key **last** — save it to a password manager before closing the SSH session.
+## Production deployment
 
-Expected runtime on a Pi 5 with good network: under 6 minutes from `sudo ./bootstrap.sh` to passkey-registration prompt.
+Create `docker/.env` from `docker/.env.example`, keep it mode `0600`, and never
+commit it. From the production checkout:
 
-### 4. Admin Setup
+```bash
+git pull --ff-only origin main
+docker compose --project-directory docker up -d --build --remove-orphans
+docker compose --project-directory docker ps
+```
 
-1. Go to `admin.yourdomain.com`
-2. Create your first admin account.
-3. Once logged in, click "Register Passkey" to bind your device (Face ID / Touch ID) for instant passwordless logins.
+The Cloudflare tunnel routes all backend hostnames to Caddy over the private
+Compose network. Caddy's host port is bound to loopback only; production traffic
+does not require a public inbound port on Adlon.
 
-## Backups
+Confirm a deployment with:
 
-The `bootstrap.sh` script automatically sets up daily automated backups of your SQLite Auth DB, PostgreSQL analytics, and Remark42 comments. These are encrypted using `age` and pushed to a private `www-blog-backups` repository.
+```bash
+curl -fsS https://admin.webworldwide.online/auth/status
+curl -fsS https://comments.webworldwide.online/ping
+curl -fsS -o /dev/null https://analytics.webworldwide.online/
+curl -fsS -o /dev/null https://webworldwide.online/
+```
 
-Enjoy your blazingly fast, fully-owned piece of the internet!
+## Backups and maintenance
+
+The operational scripts support both the historical `/opt` layout and a custom
+production checkout through environment variables:
+
+```bash
+export WWWIDE_APP_DIR=/path/to/webworldwide-website
+export WWWIDE_BACKUP_DIR=/path/to/www-blog-backups
+export WWWIDE_STATE_DIR=/path/to/runtime-state
+```
+
+- `scripts/backup.sh` snapshots PostgreSQL, Remark42, the CMS SQLite database
+  and WAL, and an age-encrypted copy of `docker/.env`.
+- `scripts/auto-update.sh` performs fast-forward-only updates and rebuilds only
+  after a successful pull.
+- `scripts/watchdog.sh` checks and rate-limits recovery of unhealthy services.
+- `scripts/promote-scheduled.sh` publishes posts whose scheduled time arrived.
+- `scripts/dump-webmentions.sh` publishes approved webmention snapshots.
+- Daily, monthly, and yearly maintenance scripts checkpoint databases, verify
+  integrity, and report dependency risk.
+
+Backups are useful only after a restore test. `scripts/restore.sh` is the
+documented recovery path; keep the age private key outside the server.
+
+## Security posture
+
+- Secrets live only in the ignored, permission-restricted production env file.
+- CMS containers run as the unprivileged host user.
+- The CMS sees Docker through a read-only, GET-only socket proxy.
+- Stateful services are reachable only through Caddy's private Compose network.
+- WebAuthn passkeys protect the production admin account.
+- Uploaded files, outbound embeds, and server-side fetches are validated before
+  processing.
+- CI enforces type checks, unit tests, accessibility checks, end-to-end tests,
+  and Lighthouse budgets.
+
+## License and acknowledgements
+
+This project builds on Astro, React, TipTap, ProseMirror, CodeMirror, KaTeX,
+Express, better-sqlite3, Remark42, Umami, PostgreSQL, Caddy, Cloudflare Tunnel,
+the AT Protocol SDK, Playwright, axe-core, Vitest, and Lighthouse.

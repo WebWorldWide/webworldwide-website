@@ -139,13 +139,13 @@ services:
       - ../site:/app/site          # So it can read/write site files
       - ../.git:/app/.git          # So it can commit/push
       - cms_data:/app/data         # SQLite DB for auth
-      - /sys/class/thermal:/sys/class/thermal:ro     # For Pi temp
+      - /sys/class/thermal:/sys/class/thermal:ro     # Host thermal sensors
       - ./health:/app/health:ro                      # SD/system-health marker (scripts/system-health.sh)
 
   # 3b. LanguageTool — spell + grammar engine for the post editor.
   # Internal only (no published port, no tunnel/Caddy route); reachable as
   # http://languagetool:8010 on the compose network. No n-gram model (that
-  # data is multi-GB) so the footprint stays ~0.5 GB heap — sized for the Pi.
+  # data is multi-GB), keeping the footprint near 0.5 GB heap.
   # The /api/proofread route degrades gracefully while this is starting/down.
   languagetool:
     image: erikvl87/languagetool:latest
@@ -153,8 +153,8 @@ services:
     restart: unless-stopped
     expose:
       - "8010"
-    # Hard cap so the JVM (512m heap + ~256m overhead) can never balloon and
-    # OOM the 4GB Pi alongside cms/postgres/umami. If it exceeds this Docker
+    # Hard cap so the JVM (512m heap + ~256m overhead) cannot balloon alongside
+    # cms/postgres/umami. If it exceeds this Docker
     # kills it and restart:unless-stopped brings it back.
     mem_limit: 768m
     environment:

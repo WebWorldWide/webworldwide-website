@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 #
-# system-health.sh — collect Raspberry Pi SD-card + system health into a JSON
+# system-health.sh — collect Linux host storage + system health into a JSON
 # marker that the CMS dashboard reads, and alert (once per state change) via
 # HEALTHCHECK_WEBHOOK_URL.
 #
-# SD cards expose no SMART/wear data, so "health" is inferred from: read-only
-# remount, recent kernel filesystem/I-O errors, disk + inode usage, and write
-# volume (sectors written from /sys/block/<dev>/stat). Throttle/undervoltage
-# comes from vcgencmd (host-only — the cms container has no vcgencmd, which is
-# exactly why this runs on the host and the CMS just reads the marker).
+# Health is inferred from read-only remounts, recent filesystem/I/O errors,
+# disk + inode usage, and write volume (sectors written from
+# /sys/block/<dev>/stat). Raspberry Pi hosts additionally report
+# throttle/undervoltage via vcgencmd when it is available.
 #
 # Runs from cron every 5 min (see bootstrap install_crons). Idempotent; no args.
 # Writes $OUT_DIR/system-health.json, where OUT_DIR is the dir bind-mounted into
@@ -81,6 +80,14 @@ if [ -n "$root_src" ]; then
   else
     dev_base="$b"
   fi
+
+  # Device-mapper/LVM roots report the logical volume above. Resolve the
+  # underlying physical disk so NVMe/SATA hosts still expose write counters.
+  physical_disk=$(lsblk -s -n -r -o NAME,TYPE "$root_src" 2>/dev/null |
+    awk '$2 == "disk" { print $1; exit }')
+  if [ -n "$physical_disk" ]; then
+    dev_base="$physical_disk"
+  fi
 fi
 
 # ── Disk + inode usage ──────────────────────────────────────────────────────
@@ -97,7 +104,7 @@ if command -v journalctl >/dev/null 2>&1; then
 fi
 [ -n "$fs_errors" ] || fs_errors=0
 
-# ── Write volume → GB/day (SD endurance proxy) ──────────────────────────────
+# ── Write volume → GB/day ────────────────────────────────────────────────────
 write_gb_day="null"
 sectors=""
 if [ -n "$dev_base" ] && [ -r "/sys/block/$dev_base/stat" ]; then
@@ -109,7 +116,7 @@ if [ -n "$dev_base" ] && [ -r "/sys/block/$dev_base/stat" ]; then
   fi
 fi
 
-# ── Swap (zram-first is healthy; SD swapfile churn is not) ──────────────────
+# ── Swap ─────────────────────────────────────────────────────────────────────
 swap_total=$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
 swap_free=$(awk '/^SwapFree:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
 swap_pct=0

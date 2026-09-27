@@ -11,8 +11,8 @@
 set -euo pipefail
 
 # Configuration
-APP_DIR="/opt/web-world-wide"
-BACKUP_REPO_DIR="/opt/www-blog-backups"
+APP_DIR="${WWWIDE_APP_DIR:-/opt/web-world-wide}"
+BACKUP_REPO_DIR="${WWWIDE_BACKUP_DIR:-/opt/www-blog-backups}"
 SCRIPT_DIR="$APP_DIR/scripts"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -129,7 +129,7 @@ git add .
 if git diff --cached --quiet; then
     echo "Nothing new to back up."
 else
-    git -c user.name="Web World Wide Pi" -c user.email="pi@webworldwide.online" \
+    git -c user.name="Web World Wide Backup" -c user.email="backups@webworldwide.online" \
         commit -m "Automated backup: $TIMESTAMP"
     git push origin main
 fi

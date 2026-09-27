@@ -105,7 +105,7 @@
   justify-content: center;
 }
 
-/* "Saved to Pi · not yet live" hint shown between Save and Publish. */
+/* "Saved to server · not yet live" hint shown between Save and Publish. */
 .hp-hint {
   padding: 8px var(--pad);
   font-family: "Space Mono", monospace;
