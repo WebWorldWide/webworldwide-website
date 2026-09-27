@@ -5,26 +5,17 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /**
- * Single source of truth post schema + validator, defined in
- * site/src/content/postSchema.mjs and shared by Admin and Astro — adding a
- * field means editing postSchema.mjs only.
- *
- * postSchema.mjs is part of the site SOURCE tree, whose location relative to
- * this file differs by deployment: in the repo, admin/ and site/ are siblings;
- * in the Docker image the admin code lives at /app and site is mounted at
- * /app/site. Probe both source locations rather than hardcoding one (the old
- * fixed '../../../site' specifier resolved to /site and crash-looped the
- * container). It is resolved from the source tree, NOT from SITE_DIR, because
- * SITE_DIR may point at a content-only directory (e.g. a test fixture) that
- * does not carry the schema source.
+ * Single source of truth post schema + validator. The source tree is mounted
+ * at a different depth in Docker, so probe both supported locations.
  */
 const here = dirname(fileURLToPath(import.meta.url));
 const schemaCandidates = [
-  join(here, '..', '..', '..', 'site', 'src', 'content', 'postSchema.mjs'), // repo: admin/ & site/ siblings
-  join(here, '..', '..', 'site', 'src', 'content', 'postSchema.mjs'), // image: site under /app
+  ...(process.env.SITE_DIR ? [join(process.env.SITE_DIR, 'src', 'content', 'postSchema.mjs')] : []),
+  join(here, '..', '..', '..', 'site', 'src', 'content', 'postSchema.mjs'),
+  join(here, '..', '..', '..', '..', '..', 'site', 'src', 'content', 'postSchema.mjs'),
 ];
-const schemaPath = schemaCandidates.find((p) => existsSync(p)) ?? schemaCandidates[0];
-
+const schemaPath =
+  schemaCandidates.find((candidate) => existsSync(candidate)) ?? schemaCandidates[0];
 const { validatePost: validatePostSchema, postSchema } = await import(
   pathToFileURL(schemaPath).href
 );
@@ -46,7 +37,7 @@ const yamlEngine = {
   parse: (/** @type {string} */ str) => jsYaml.load(str),
   stringify: (/** @type {any} */ obj) => jsYaml.dump(obj, { lineWidth: -1 }),
 };
-const matterOpts = /** @type {any} */ ({ engines: { yaml: yamlEngine }, language: 'yaml' });
+const matterOpts: any = { engines: { yaml: yamlEngine }, language: 'yaml' };
 
 /**
  * Parse frontmatter and content from a markdown string.

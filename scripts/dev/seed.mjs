@@ -94,7 +94,7 @@ export const SAMPLE_MEDIA = Object.freeze([
  * Open the dev SQLite DB after running migrations. Returns the handle —
  * the caller is responsible for closing.
  *
- * @returns {Database.Database}
+ * @returns {any}
  */
 function openDevDb() {
   loadDevEnv();
@@ -118,7 +118,7 @@ function openDevDb() {
  * Seed the dev admin user. Returns the user id (newly minted or
  * pre-existing).
  *
- * @param {Database.Database} db
+ * @param {any} db
  * @returns {Promise<{ id: string, created: boolean }>}
  */
 export async function seedAdminUser(db) {
@@ -146,7 +146,7 @@ export async function seedAdminUser(db) {
  * Insert the five sample media rows. Idempotent — `INSERT OR IGNORE`
  * on the `filename` unique key.
  *
- * @param {Database.Database} db
+ * @param {any} db
  * @returns {{ inserted: number, skipped: number }}
  */
 export function seedSampleMedia(db) {

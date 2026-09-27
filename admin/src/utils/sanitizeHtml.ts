@@ -17,7 +17,7 @@ import { JSDOM } from 'jsdom';
 import createDOMPurify from 'dompurify';
 
 const purifyWindow = new JSDOM('').window;
-const purify = createDOMPurify(/** @type {any} */ (purifyWindow));
+const purify = createDOMPurify(/** @type {any} */ purifyWindow);
 
 /** Conservative allowlist — inline formatting, links, lists, code/quote. */
 const ALLOWED_TAGS = [

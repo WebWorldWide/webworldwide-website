@@ -55,8 +55,8 @@ export function runMigrations(dbPath) {
     .filter((f) => f.endsWith('.sql'))
     .sort();
 
-  const applied = /** @type {string[]} */ ([]);
-  const skipped = /** @type {string[]} */ ([]);
+  const applied = /** @type {string[]} */ [];
+  const skipped = /** @type {string[]} */ [];
 
   const isApplied = db.prepare('SELECT 1 FROM schema_migrations WHERE version = ?');
   const markApplied = db.prepare(

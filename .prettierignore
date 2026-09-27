@@ -9,6 +9,7 @@ site/scripts/legacy-redirects.json
 # must not police it (it would otherwise fail CI after each content change).
 site/data/
 admin/data/
+admin/dist/
 admin/public/fonts/
 Blog/
 .planning/

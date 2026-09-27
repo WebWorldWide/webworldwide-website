@@ -56,7 +56,7 @@ import TOML from '@iarna/toml';
  * @returns {Record<string, any>}
  */
 export function parse(src) {
-  return /** @type {Record<string, any>} */ (TOML.parse(src));
+  return /** @type {Record<string, any>} */ TOML.parse(src);
 }
 
 /**

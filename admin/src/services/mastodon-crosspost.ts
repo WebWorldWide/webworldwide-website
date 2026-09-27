@@ -50,7 +50,10 @@ function getMaxPerRun() {
  * @param {{ siteDir?: string, baseUrl?: string }} [opts]
  * @returns {Promise<{ posted: { filename: string, uri: string }[], skipped: { filename: string, reason: string }[], errors: { filename: string, error: string }[] }>}
  */
-export async function crossPostChangedPosts(changedPosts, opts = {}) {
+export async function crossPostChangedPosts(
+  changedPosts,
+  opts: { siteDir?: string; baseUrl?: string } = {},
+) {
   const report = { posted: [], skipped: [], errors: [] };
   if (!Array.isArray(changedPosts) || changedPosts.length === 0) return report;
   if (!mastodon.isConfigured()) {

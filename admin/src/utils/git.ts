@@ -10,7 +10,7 @@
  * pre-commit status is the working-tree set we just added.
  */
 
-import simpleGit from 'simple-git';
+import { simpleGit } from 'simple-git';
 import { join } from 'path';
 import { statSync, unlinkSync } from 'fs';
 import { spawn } from 'child_process';
@@ -91,7 +91,7 @@ async function acquireOperationLock(repoPath) {
   child.stdout.setEncoding('utf8');
   child.stderr.setEncoding('utf8');
 
-  return new Promise((resolve, reject) => {
+  return new Promise<() => Promise<void>>((resolve, reject) => {
     let settled = false;
     let stdout = '';
     let stderr = '';
@@ -103,6 +103,15 @@ async function acquireOperationLock(repoPath) {
     };
 
     child.once('error', (err) => {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        // macOS and some minimal development environments do not ship
+        // util-linux/flock. The in-process promise chain still serializes CMS
+        // writes there; production images explicitly install util-linux.
+        if (settled) return;
+        settled = true;
+        resolve(async () => {});
+        return;
+      }
       fail(`Could not start the CMS operation lock: ${err.message}`);
     });
     child.stderr.on('data', (chunk) => {
@@ -121,7 +130,7 @@ async function acquireOperationLock(repoPath) {
       resolve(async () => {
         if (child.exitCode !== null) return;
         child.stdin.end();
-        await new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
           const timer = setTimeout(() => {
             child.kill('SIGTERM');
             resolve();
@@ -146,7 +155,7 @@ let gitChain = Promise.resolve();
  */
 function withGitLock(fn) {
   const runLocked = async () => {
-    const release = await acquireOperationLock(getRepoPath());
+    const release: () => Promise<void> = await acquireOperationLock(getRepoPath());
     try {
       // Only remove a crashed process's leftover index lock while we own the
       // cross-process operation lock. Read-only history/status requests never

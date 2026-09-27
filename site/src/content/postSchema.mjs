@@ -1,9 +1,7 @@
 // @ts-check
 /**
  * Plain ESM module — single source of truth for post frontmatter shape.
- * Re-exported by site/src/content/config.ts (which adds the Astro
- * `defineCollection` wrapper) and imported by admin/src/utils/frontmatter.js
- * for pre-publish validation.
+ * Re-exported by the Astro site and loaded by the compiled admin service.
  *
  * Schema is a LOOSE SUPERSET (`.catchall(z.unknown())`) — the admin can add new
  * fields without breaking the build, and partial drafts pass validation

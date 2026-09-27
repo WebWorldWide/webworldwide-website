@@ -116,6 +116,8 @@ export async function processGifVideo(ctx) {
           '32',
           '-b:v',
           '0',
+          '-pix_fmt',
+          'yuva420p',
           '-row-mt',
           '1',
           '-deadline',

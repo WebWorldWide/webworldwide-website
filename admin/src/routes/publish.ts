@@ -29,7 +29,7 @@ const router = Router();
  * @returns {{ code: string, message: string }}
  */
 function classifyPublishError(err) {
-  const e = /** @type {any} */ (err);
+  const e = /** @type {any} */ err;
   const raw = `${(e && e.message) || ''} ${(e && e.cause && e.cause.message) || ''}`;
   const m = raw.toLowerCase();
   if (m.includes('dubious ownership') || m.includes('safe.directory')) {
@@ -198,7 +198,10 @@ router.get('/deploy/:sha', async (req, res) => {
   if (!/^[0-9a-f]{7,40}$/i.test(sha)) return res.status(400).json({ error: 'bad_sha' });
   const repo = process.env.GITHUB_REPO || 'WebWorldWide/webworldwide-website';
   const url = `https://api.github.com/repos/${repo}/actions/runs?head_sha=${sha}&per_page=20`;
-  const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'wwwide-cms' };
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'wwwide-cms',
+  };
   if (process.env.GH_TOKEN) headers.Authorization = `Bearer ${process.env.GH_TOKEN}`;
   try {
     const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });

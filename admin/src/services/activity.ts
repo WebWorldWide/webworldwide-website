@@ -80,7 +80,7 @@ export function logActivity(entry) {
         .run(nanoid(), Date.now(), user, action, target, metaJson);
     } catch (err) {
       // Never throw out of a fire-and-forget log call. Surface to stderr.
-      console.warn('[activity] log failed:', err && /** @type {Error} */ (err).message);
+      console.warn('[activity] log failed:', err && /** @type {Error} */ err.message);
     }
   });
 }

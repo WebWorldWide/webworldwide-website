@@ -160,9 +160,9 @@ const upload = multer({
     if (isDeniedExtension(file.originalname)) {
       // Tag the error so the route handler can return 415 (vs Multer's
       // default 500). We don't write any bytes for denied extensions.
-      const err = /** @type {Error & { code?: string }} */ (
-        new Error(`File extension is not allowed: ${file.originalname}`)
-      );
+      const err = new Error(`File extension is not allowed: ${file.originalname}`) as Error & {
+        code?: string;
+      };
       err.code = 'MEDIA_DENIED_EXT';
       cb(err);
       return;
@@ -432,7 +432,7 @@ router.post('/upload', (req, res, next) => {
   handler(req, res, (err) => {
     if (err) return handleMulterError(err, res);
     // Fallback for legacy single-`file` clients (Phase 2 admin/editor).
-    if ((!req.files || !(/** @type {any[]} */ (req.files).length)) && !req.file) {
+    if ((!req.files || !(/** @type {any[]} */ req.files.length)) && !req.file) {
       // Re-run multer with the legacy field name. We do this in two
       // passes so existing callers don't need to change anything.
       return upload.single('file')(req, res, (legacyErr) => {
@@ -441,7 +441,7 @@ router.post('/upload', (req, res, next) => {
         finalizeUploads([req.file], res).catch(next);
       });
     }
-    const files = /** @type {any[]} */ (req.files || (req.file ? [req.file] : []));
+    const files = /** @type {any[]} */ req.files || (req.file ? [req.file] : []);
     finalizeUploads(files, res).catch(next);
   });
 });
@@ -508,7 +508,7 @@ async function finalizeUploads(files, res) {
       try {
         renameSync(file.path, targetPath);
       } catch (renameErr) {
-        if (/** @type {any} */ (renameErr).code === 'EXDEV') {
+        if (/** @type {any} */ renameErr.code === 'EXDEV') {
           await copyAcrossFs(file.path, targetPath);
           try {
             unlinkSync(file.path);
@@ -595,7 +595,7 @@ async function finalizeUploads(files, res) {
  * @returns {Promise<void>}
  */
 function copyAcrossFs(src, dst) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const r = createReadStream(src);
     const w = createWriteStream(dst);
     r.on('error', reject);
@@ -679,7 +679,7 @@ router.get('/', (req, res) => {
 
   res.json({
     items: slice.map((r) => {
-      const s = shapeMedia(r);
+      const s: any = shapeMedia(r);
       s.used_in = usedInFor(s.url, usageMap);
       return s;
     }),
@@ -792,14 +792,12 @@ function applyMediaEdit(id, body) {
   // actually finished, the worker's post-job status update may have raced
   // past this row. Sync it now so the edit response and the media list
   // don't show a stale "processing" badge.
-  if (/** @type {any} */ (row).status === 'processing') {
-    const pending = /** @type {any} */ (
-      db
-        .prepare(
-          "SELECT COUNT(*) as n FROM conversion_jobs WHERE media_id = ? AND status IN ('pending','running')",
-        )
-        .get(id)
-    );
+  if (/** @type {any} */ row.status === 'processing') {
+    const pending = /** @type {any} */ db
+      .prepare(
+        "SELECT COUNT(*) as n FROM conversion_jobs WHERE media_id = ? AND status IN ('pending','running')",
+      )
+      .get(id);
     if (pending && pending.n === 0) {
       sets.push('status = ?');
       args.push('ready');

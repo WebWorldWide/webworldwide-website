@@ -14,9 +14,9 @@
     "lint:css": "stylelint \"admin/public/css/**/*.css\"",
     "lint:css:fix": "stylelint \"admin/public/css/**/*.css\" --fix",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#admin/node_modules\" \"#site/node_modules\" \"#migrate/node_modules\" \"#.planning\" \"#Blog\" \"#site/dist\" \"#site/.astro\" \"#site/.legacy\" \"#coverage\" \"#playwright-report\" \"#test-results\" \"#.lighthouseci\"",
-    "lint:prettier": "prettier --check \"**/*.{js,mjs,css,json,md,yaml,yml}\" --ignore-path .prettierignore",
-    "lint:prettier:fix": "prettier --write \"**/*.{js,mjs,css,json,md,yaml,yml}\" --ignore-path .prettierignore",
-    "lint:types": "tsc --noEmit -p tsconfig.json",
+    "lint:prettier": "prettier --check \"**/*.{js,mjs,ts,tsx,css,json,md,yaml,yml}\" --ignore-path .prettierignore",
+    "lint:prettier:fix": "prettier --write \"**/*.{js,mjs,ts,tsx,css,json,md,yaml,yml}\" --ignore-path .prettierignore",
+    "lint:types": "tsc --noEmit -p tsconfig.json && npm --prefix admin run typecheck",
     "lint:html-admin": "htmlhint --config .htmlhintrc \"admin/public/*.html\"",
     "lint:html-site": "htmlhint --config .htmlhintrc.site \"site/dist/**/*.html\"",
     "lint:shell": "shellcheck scripts/*.sh || echo 'shellcheck not installed locally — runs in CI'",
@@ -72,6 +72,7 @@
     "stylelint-no-unsupported-browser-features": "^8.0.4",
     "stylelint-order": "^8.1.1",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
     "vitest": "^4.1.9"
   },
   "lint-staged": {

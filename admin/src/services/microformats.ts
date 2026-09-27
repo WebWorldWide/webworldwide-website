@@ -75,12 +75,12 @@ export function parseSource(html, sourceUrl, targetUrl) {
   let type = 'mention';
   let matchedEntry = null;
 
-  const TYPE_PROPS = /** @type {const} */ ([
+  const TYPE_PROPS = /** @type {const} */ [
     ['in-reply-to', 'reply'],
     ['like-of', 'like'],
     ['repost-of', 'repost'],
     ['bookmark-of', 'bookmark'],
-  ]);
+  ];
 
   for (const entry of entries) {
     for (const [prop, t] of TYPE_PROPS) {

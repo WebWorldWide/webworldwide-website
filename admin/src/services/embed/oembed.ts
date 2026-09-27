@@ -48,11 +48,14 @@ const DEFAULT_TIMEOUT_MS = 5000;
 const MAX_BYTES = 256 * 1024;
 
 export class UpstreamError extends Error {
+  status: number;
+  provider: string | null;
+
   /**
    * @param {string} message
    * @param {{ status?: number, provider?: string, cause?: any }} [opts]
    */
-  constructor(message, opts) {
+  constructor(message: string, opts: { status?: number; provider?: string; cause?: unknown } = {}) {
     super(message);
     this.name = 'UpstreamError';
     this.status = opts?.status ?? 502;

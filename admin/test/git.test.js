@@ -27,6 +27,15 @@ let seedDir; // a full clone used to push "other" changes to origin
 const git = (cwd, ...args) =>
   execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
 
+const hasFlock = (() => {
+  try {
+    execFileSync('flock', ['--version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 /** Files at HEAD of the bare origin's main branch. */
 const originTree = () => git(originDir, 'ls-tree', '-r', '--name-only', 'main').trim().split('\n');
 
@@ -117,39 +126,35 @@ test('publishChanges reports changed:false when site/ is clean (despite the dirt
   assert.equal(git(originDir, 'rev-parse', 'main').trim(), before_, 'no commit was pushed');
 });
 
-test(
-  'publishChanges refuses to race a host backup/deploy lock',
-  { skip: process.platform === 'win32' },
-  async () => {
-    const { publishChanges } = await import('../src/utils/git.js');
-    const lockPath = join(containerDir, '.git', 'wwwide-operation.lock');
-    const holder = spawn(
-      'flock',
-      ['-x', lockPath, 'sh', '-c', 'printf "LOCKED\\n"; cat >/dev/null'],
-      { stdio: ['pipe', 'pipe', 'pipe'] },
-    );
-    holder.stdout.setEncoding('utf8');
-    await new Promise((resolve, reject) => {
-      holder.once('error', reject);
-      holder.stdout.once('data', (chunk) => {
-        if (chunk.includes('LOCKED')) resolve();
-        else reject(new Error(`Unexpected lock handshake: ${chunk}`));
-      });
+test('publishChanges refuses to race a host backup/deploy lock', { skip: !hasFlock }, async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+  const lockPath = join(containerDir, '.git', 'wwwide-operation.lock');
+  const holder = spawn(
+    'flock',
+    ['-x', lockPath, 'sh', '-c', 'printf "LOCKED\\n"; cat >/dev/null'],
+    { stdio: ['pipe', 'pipe', 'pipe'] },
+  );
+  holder.stdout.setEncoding('utf8');
+  await new Promise((resolve, reject) => {
+    holder.once('error', reject);
+    holder.stdout.once('data', (chunk) => {
+      if (chunk.includes('LOCKED')) resolve();
+      else reject(new Error(`Unexpected lock handshake: ${chunk}`));
     });
+  });
 
-    process.env.WWWIDE_OPERATION_LOCK_TIMEOUT_MS = '200';
-    try {
-      await assert.rejects(
-        publishChanges(),
-        /Another CMS backup, deploy, or publish operation is active/,
-      );
-    } finally {
-      delete process.env.WWWIDE_OPERATION_LOCK_TIMEOUT_MS;
-      holder.stdin.end();
-      await once(holder, 'exit');
-    }
-  },
-);
+  process.env.WWWIDE_OPERATION_LOCK_TIMEOUT_MS = '200';
+  try {
+    await assert.rejects(
+      publishChanges(),
+      /Another CMS backup, deploy, or publish operation is active/,
+    );
+  } finally {
+    delete process.env.WWWIDE_OPERATION_LOCK_TIMEOUT_MS;
+    holder.stdin.end();
+    await once(holder, 'exit');
+  }
+});
 
 test('commitAndPush is scoped to site/** too', async () => {
   const { commitAndPush } = await import('../src/utils/git.js');

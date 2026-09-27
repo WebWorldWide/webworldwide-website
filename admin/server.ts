@@ -55,7 +55,7 @@ import { startRetention } from './src/services/retention.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number.parseInt(process.env.PORT || '3000', 10);
 const SITE_DIR = process.env.SITE_DIR || join(__dirname, '..', 'site');
 // Astro serves everything under `site/public` at the web root, so uploaded
 // media (images/files) lives there — NOT in Hugo's old `site/static`.
@@ -100,7 +100,7 @@ try {
 // hosts. SIGTERM/SIGINT trigger a graceful drain.
 if (process.env.CONVERSION_WORKER !== 'off') {
   try {
-    startWorker();
+    startWorker({});
     bindShutdownSignals();
   } catch (workerErr) {
     console.error('[conversion-worker] failed to start:', workerErr);
@@ -122,7 +122,7 @@ if (process.env.NODE_ENV !== 'test' && process.env.RETENTION !== 'off') {
 // without docker up don't see a hot error loop.
 if (process.env.REMARK42_POLLER !== 'off') {
   try {
-    remark42Poller.start();
+    remark42Poller.start({});
     const drainPoller = () => remark42Poller.stop();
     process.once('SIGTERM', drainPoller);
     process.once('SIGINT', drainPoller);

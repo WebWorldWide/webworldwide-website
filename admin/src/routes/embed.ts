@@ -109,7 +109,7 @@ function normaliseInput(raw) {
 }
 
 router.get('/', async (req, res) => {
-  const parsed = normaliseInput(/** @type {string} */ (req.query?.url));
+  const parsed = normaliseInput(/** @type {string} */ req.query?.url);
   if (parsed.ok !== true) {
     return res.status(parsed.status).json({ error: parsed.error });
   }

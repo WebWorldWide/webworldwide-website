@@ -67,7 +67,7 @@ const TARGET_HOSTS = (process.env.WEBMENTION_HOSTS || 'webworldwide.online')
 const FETCH_TIMEOUT_MS = Number(process.env.WEBMENTION_FETCH_TIMEOUT_MS || 8000);
 const MAX_BODY_BYTES = Number(process.env.WEBMENTION_MAX_BYTES || 5 * 1024 * 1024); // 5 MB
 const MAX_REDIRECTS = Number(process.env.WEBMENTION_MAX_REDIRECTS || 5);
-const STATUSES = /** @type {const} */ (['pending', 'approved', 'rejected']);
+const STATUSES = /** @type {const} */ ['pending', 'approved', 'rejected'];
 
 // ── Test seam: pluggable fetch (defaults to globalThis.fetch). ───────
 /** @type {typeof globalThis.fetch} */
@@ -597,7 +597,7 @@ adminRouter.get('/', (req, res) => {
   const status = String(req.query?.status || '');
   const limit = Math.max(1, Math.min(500, Number(req.query?.limit) || 100));
   let rows;
-  if (status && STATUSES.includes(/** @type {any} */ (status))) {
+  if (status && STATUSES.includes(/** @type {any} */ status)) {
     rows = db()
       .prepare(`SELECT * FROM webmentions WHERE status = ? ORDER BY received_at DESC LIMIT ?`)
       .all(status, limit);

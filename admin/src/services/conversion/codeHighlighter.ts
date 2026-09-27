@@ -31,17 +31,17 @@ const loadedLangs = {};
  */
 export async function getHighlighter(lang, theme) {
   if (!Object.prototype.hasOwnProperty.call(cache, theme)) {
-    cache[/** @type {string} */ (theme)] = createHighlighter({
+    cache[/** @type {string} */ theme] = createHighlighter({
       themes: [theme],
       langs: [lang],
     });
-    loadedLangs[/** @type {string} */ (theme)] = new Set([lang]);
+    loadedLangs[/** @type {string} */ theme] = new Set([lang]);
   }
-  const highlighter = await cache[/** @type {string} */ (theme)];
-  const seen = loadedLangs[/** @type {string} */ (theme)];
+  const highlighter = await cache[/** @type {string} */ theme];
+  const seen = loadedLangs[/** @type {string} */ theme];
   if (!seen.has(lang)) {
     try {
-      await highlighter.loadLanguage(/** @type {any} */ (lang));
+      await highlighter.loadLanguage(/** @type {any} */ lang);
       seen.add(lang);
     } catch {
       // Unknown language: caller falls back to plain wrapper. We

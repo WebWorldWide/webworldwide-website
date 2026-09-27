@@ -91,8 +91,8 @@ function getAllPosts() {
 
     posts.sort(
       (a, b) =>
-        new Date(/** @type {string} */ (b.date)).getTime() -
-        new Date(/** @type {string} */ (a.date)).getTime(),
+        new Date(/** @type {string} */ b.date).getTime() -
+        new Date(/** @type {string} */ a.date).getTime(),
     );
     postsListCache = { at: Date.now(), list: posts };
     return posts;
@@ -442,13 +442,13 @@ function rewriteSlugLinksEverywhere(oldSlug, newSlug) {
  */
 function applySlugRename(oldSlug, newSlug) {
   const report = {
-    redirected: /** @type {Array<{from:string,to:string}>} */ ([]),
+    redirected: /** @type {Array<{from:string,to:string}>} */ [],
     linksUpdated: 0,
     // Side effects are best-effort and never fail the save, but a swallowed
     // failure is otherwise indistinguishable from "nothing to do" — so we
     // record it here and the editor surfaces a non-blocking warning, since a
     // missing redirect means the old public URL will 404.
-    warnings: /** @type {string[]} */ ([]),
+    warnings: /** @type {string[]} */ [],
   };
   try {
     const rows = readRedirects();
@@ -594,7 +594,7 @@ router.put('/:filename', (req, res) => {
           conflicting_title: conflictTitle,
         });
       } catch (e) {
-        if (/** @type {any} */ (e).code !== 'ENOENT') throw e;
+        if (/** @type {any} */ e.code !== 'ENOENT') throw e;
         /* target free — good */
       }
     }
@@ -622,7 +622,7 @@ router.put('/:filename', (req, res) => {
     try {
       const prev = readFileSync(oldPath, 'utf-8');
       const parsedPrev = parsePost(prev);
-      const prevData = /** @type {Record<string, unknown>} */ (parsedPrev.data || {});
+      const prevData = /** @type {Record<string, unknown>} */ parsedPrev.data || {};
       recordSnapshot(oldFilename, {
         title: typeof prevData.title === 'string' ? prevData.title : undefined,
         data: prevData,

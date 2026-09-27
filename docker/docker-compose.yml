@@ -63,7 +63,8 @@ services:
   # 3. Web World Wide CMS (Node.js Admin Panel)
   cms:
     build:
-      context: ../admin
+      context: ..
+      dockerfile: admin/Dockerfile
     container_name: cms
     restart: unless-stopped
     mem_limit: 1200m

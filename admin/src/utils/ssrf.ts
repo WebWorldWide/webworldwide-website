@@ -111,7 +111,14 @@ export async function assertPublicHost(hostname) {
  * }} [opts]
  * @returns {Promise<Response>}
  */
-export async function screenedFetch(url, opts = {}) {
+type ScreenedFetchOptions = {
+  fetchImpl?: typeof fetch;
+  init?: RequestInit;
+  maxRedirects?: number;
+  screenDns?: boolean;
+};
+
+export async function screenedFetch(url, opts: ScreenedFetchOptions = {}) {
   const doFetch = opts.fetchImpl || globalThis.fetch;
   const init = opts.init || {};
   const maxRedirects = opts.maxRedirects ?? 4;

@@ -42,7 +42,10 @@ const MAX_BYTES = 256 * 1024;
  * @param {{ timeoutMs?: number, fetchImpl?: typeof fetch }} [opts]
  * @returns {Promise<{ title: string, description: string, image: string, siteName: string }>}
  */
-export async function scrapeOpenGraph(href, opts) {
+export async function scrapeOpenGraph(
+  href: string,
+  opts: { timeoutMs?: number; fetchImpl?: typeof fetch } = {},
+) {
   let url;
   try {
     url = new URL(href);

@@ -11,6 +11,7 @@
 site/dist/
 site/.astro/
 site/.vite/
+admin/dist/
 
 # Phase 5e — redirects emitter marker dir (regenerated each build by
 # site/scripts/prebuild.mjs)

@@ -165,13 +165,17 @@ export function verifyJwt(token) {
 // ── shared HTTP helper ───────────────────────────────────────────────
 
 class Remark42Error extends Error {
+  status: number;
+  url: string;
+  body: any;
+
   /**
    * @param {string} message
    * @param {number} status
    * @param {string} url
    * @param {any} [body]
    */
-  constructor(message, status, url, body) {
+  constructor(message: string, status: number, url: string, body: any = null) {
     super(message);
     this.name = 'Remark42Error';
     this.status = status;
@@ -186,7 +190,17 @@ export { Remark42Error };
  * @param {string} path
  * @param {{ method?: string, query?: Record<string, string|number|boolean>, body?: any, admin?: boolean, secret?: boolean, accept?: string }} [opts]
  */
-async function call(path, opts) {
+async function call(
+  path: string,
+  opts: {
+    method?: string;
+    query?: Record<string, string | number | boolean>;
+    body?: any;
+    admin?: boolean;
+    secret?: boolean;
+    accept?: string;
+  } = {},
+) {
   const o = opts || {};
   const url = new URL(`${baseUrl()}${path}`);
   if (o.query) {
@@ -202,7 +216,7 @@ async function call(path, opts) {
     url.searchParams.set('secret', secret());
   }
   /** @type {Record<string, string>} */
-  const headers = {
+  const headers: Record<string, string> = {
     Accept: o.accept || 'application/json',
   };
   if (o.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -315,9 +329,9 @@ export function normaliseComment(c) {
  *
  * @param {{ max?: number, since?: number }} [opts]
  */
-export async function lastComments(opts) {
+export async function lastComments(opts: { max?: number; since?: number } = {}) {
   const max = Math.max(1, Math.min(500, Number(opts?.max) || 50));
-  const query = /** @type {Record<string, string | number>} */ ({ site: siteId() });
+  const query: Record<string, string | number> = { site: siteId() };
   if (opts?.since) query.since = opts.since;
   const data = await call(`/api/v1/last/${max}`, { query });
   const list = Array.isArray(data) ? data : Array.isArray(data?.comments) ? data.comments : [];
@@ -334,7 +348,7 @@ export async function lastComments(opts) {
  * @param {string} id
  * @param {string} [postUrl]
  */
-export async function getComment(id, postUrl) {
+export async function getComment(id: string, postUrl?: string) {
   if (!id) throw new Remark42Error('id required', 400, '/api/v1/id');
   if (postUrl) {
     const data = await call(`/api/v1/id/${encodeURIComponent(id)}`, {
@@ -460,11 +474,11 @@ export async function pinComment(id, postUrl, pinned) {
  * @param {string} userId
  * @param {{ block?: boolean, ttl?: string }} [opts]
  */
-export async function blockUser(userId, opts) {
+export async function blockUser(userId: string, opts: { block?: boolean; ttl?: string } = {}) {
   if (!userId) throw new Remark42Error('userId required', 400, '/api/v1/admin/user');
   const block = opts?.block !== false; // default true
   /** @type {Record<string, string|number>} */
-  const query = { block: block ? 1 : 0, site: siteId() };
+  const query: Record<string, string | number> = { block: block ? 1 : 0, site: siteId() };
   if (block && opts?.ttl) query.ttl = opts.ttl;
   await call(`/api/v1/admin/user/${encodeURIComponent(userId)}`, {
     method: 'PUT',

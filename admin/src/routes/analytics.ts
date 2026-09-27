@@ -195,7 +195,7 @@ async function umamiGet(cfg, path) {
 function metricValue(field) {
   if (typeof field === 'number' && Number.isFinite(field)) return field;
   if (field && typeof field === 'object') {
-    const value = /** @type {{ value?: unknown }} */ (field).value;
+    const value = /** @type {{ value?: unknown }} */ field.value;
     if (typeof value === 'number' && Number.isFinite(value)) return value;
   }
   return 0;

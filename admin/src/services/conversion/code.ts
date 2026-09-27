@@ -121,7 +121,7 @@ export async function processCode(ctx) {
   const size = safeSize(diskPath);
   const ext = extname(diskPath).toLowerCase();
   const language = Object.prototype.hasOwnProperty.call(EXT_TO_LANG, ext)
-    ? EXT_TO_LANG[/** @type {keyof typeof EXT_TO_LANG} */ (ext)]
+    ? EXT_TO_LANG[/** @type {keyof typeof EXT_TO_LANG} */ ext]
     : 'text';
 
   const baseName = stripExt(basename(diskPath));

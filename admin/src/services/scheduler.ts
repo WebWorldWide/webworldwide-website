@@ -36,7 +36,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * @param {{ siteDir?: string, dryRun?: boolean, now?: number, commit?: (filenames: string[]) => Promise<void> }} [opts]
  * @returns {Promise<{ promoted: string[], errors: { filename: string, error: string }[], dryRun: boolean }>}
  */
-export async function promoteScheduledPosts(opts = {}) {
+type SchedulerOptions = {
+  siteDir?: string;
+  dryRun?: boolean;
+  now?: number;
+  commit?: (filenames: string[]) => Promise<void>;
+};
+
+export async function promoteScheduledPosts(opts: SchedulerOptions = {}) {
   const now = opts.now || Date.now();
   const siteDir = opts.siteDir || process.env.SITE_DIR || join(__dirname, '..', '..', '..', 'site');
   const postsDir = join(siteDir, 'content', 'posts');
@@ -55,7 +62,7 @@ export async function promoteScheduledPosts(opts = {}) {
       const { data, content } = parsePost(raw);
       if (data.draft !== true) continue;
       if (!data.publish_at) continue;
-      const ts = new Date(/** @type {string} */ (data.publish_at)).getTime();
+      const ts = new Date(/** @type {string} */ data.publish_at).getTime();
       if (Number.isNaN(ts)) {
         errors.push({ filename: file, error: 'invalid publish_at' });
         continue;

@@ -21,6 +21,7 @@ import security from 'eslint-plugin-security';
 import n from 'eslint-plugin-n';
 import jsdoc from 'eslint-plugin-jsdoc';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 const sharedRules = {
   'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
@@ -51,7 +52,7 @@ export default [
       'test-results/**',
       '.lighthouseci/**',
       'docker/**',
-      'dist/**',
+      '**/dist/**',
     ],
   },
 
@@ -128,6 +129,34 @@ export default [
   },
 
   // Admin Express backend (Node ESM).
+  {
+    files: ['admin/**/*.ts'],
+    plugins: { '@typescript-eslint': tseslint.plugin, security, n },
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: { project: './admin/tsconfig.json' },
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: { ...globals.node },
+    },
+    rules: {
+      ...sharedRules,
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+      'n/no-missing-import': 'off',
+      'n/no-unpublished-import': 'off',
+      'jsdoc/require-jsdoc': 'off',
+      'jsdoc/require-param-description': 'off',
+      'jsdoc/require-returns-description': 'off',
+      'jsdoc/tag-lines': 'off',
+    },
+  },
+
+  // Admin Express backend compatibility modules still checked as JavaScript.
   {
     files: ['admin/**/*.js'],
     ignores: ['admin/public/**'],

@@ -31,7 +31,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['admin/public/js/**/*.js', 'admin/src/**/*.js', 'scripts/**/*.{js,mjs}'],
+      include: ['admin/public/js/**/*.js', 'admin/src/**/*.{js,ts}', 'scripts/**/*.{js,mjs}'],
       exclude: ['**/*.test.js', '**/*.spec.js'],
     },
   },

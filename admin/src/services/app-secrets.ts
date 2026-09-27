@@ -85,9 +85,9 @@ function decrypt(stored) {
  */
 export function getSecret(k) {
   try {
-    const row = /** @type {any} */ (
-      db().prepare('SELECT value FROM app_secrets WHERE key = ?').get(k)
-    );
+    const row = /** @type {any} */ db()
+      .prepare('SELECT value FROM app_secrets WHERE key = ?')
+      .get(k);
     return row ? decrypt(row.value) : null;
   } catch {
     return null;
