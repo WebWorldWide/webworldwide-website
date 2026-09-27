@@ -39,7 +39,8 @@ if docker inspect -f '{{.State.Status}}' cms 2>/dev/null | grep -q running; then
 fi
 
 # 3. Trim our own logs if any single one exceeds 50MB (keep the tail).
-for lf in /var/log/wwwide-*.log; do
+LOG_DIR="${WWWIDE_LOG_DIR:-/var/log}"
+for lf in "$LOG_DIR"/wwwide-*.log; do
   [ -f "$lf" ] || continue
   size=$(stat -c%s "$lf" 2>/dev/null || echo 0)
   if [ "$size" -gt $((50 * 1024 * 1024)) ]; then
