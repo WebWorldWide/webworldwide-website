@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: lighthouse-${{ github.ref }}
@@ -38,34 +37,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Both the build below and lhci's preview need site/ deps (Astro, Sharp,
-      # and @iarna/toml in prebuild.mjs).
+      # The build and the static Lighthouse test need site/ deps (Astro,
+      # Sharp, and @iarna/toml in prebuild.mjs).
       - name: Install site dependencies
         working-directory: site
         run: npm ci --ignore-scripts
 
-      # Build once here so lhci's startServerCommand only has to `preview` the
-      # prebuilt dist/. Building inside startServerCommand raced lhci's
-      # server-ready timeout (Sharp image processing is slow on the runner).
+      # Build the production output once; the Lighthouse test audits site/dist.
       - name: Build the Astro site
         working-directory: site
         env:
           NODE_ENV: production
         run: npm run build
 
-      - name: Run Lighthouse CI
-        env:
-          # astro/Vite emit ANSI colour codes between "Local" and the URL, which
-          # broke lhci's startServerReadyPattern; NO_COLOR keeps the ready line
-          # (and the rest of the log) plain.
-          NO_COLOR: '1'
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-        run: npx lhci autorun --config=lighthouserc.json
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
-      - name: Upload Lighthouse reports
+      - name: Run Lighthouse mobile budgets
+        env:
+          LHCI: 'true'
+        run: npx playwright test test/playwright/lighthouse.spec.ts --project=chromium
+
+      - name: Upload Playwright reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-reports
-          path: .lighthouseci/
+          path: |
+            test-results/
+            playwright-report/
           retention-days: 14

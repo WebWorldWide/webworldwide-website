@@ -4,17 +4,16 @@
  *
  * Gated by the LHCI=true env var so it only fires when explicitly
  * requested — a real throttled Lighthouse audit is too slow for the
- * default `npm test` gate. The Phase 1.5 `lighthouserc.json` enforces
- * the same budgets in CI via \@lhci/cli; this file is the local "run it
- * once before opening a PR" check.
+ * default `npm test` gate. This same Playwright test is the Lighthouse
+ * CI gate and the local "run it once before opening a PR" check.
  *
- * Budgets (mirror lighthouserc.json):
+ * Budgets (mirror the former LHCI thresholds):
  *   - performance     ≥ 0.90
  *   - accessibility   ≥ 0.95
  *   - best-practices  ≥ 0.95
  *   - seo             = 1.00
  *
- * Pages covered (same three URLs lighthouserc.json audits):
+ * Pages covered:
  *   /                    home (above-the-fold + featured card + first row)
  *   /blog/               listing index (card grid + pager)
  *   /blog/bye-bye-dji/   representative single post (h-entry + cover slot)
@@ -22,7 +21,7 @@
  * Run:
  *   LHCI=true npx playwright test test/playwright/lighthouse.spec.ts
  *
- * Like the canonical \@lhci/cli gate, this audits the PRODUCTION build
+ * This audits the PRODUCTION build
  * (site/dist, built on demand) served over a local static origin — the
  * Astro dev server is unminified and unbundled, so dev-server perf
  * scores are meaningless. Lighthouse drives a dedicated Chromium
@@ -30,8 +29,8 @@
  * no longer exposes a CDP endpoint).
  *
  * If you can't hit a budget locally:
- *   1. Check `npm run test:lighthouse` — that goes through \@lhci/cli
- *      with the canonical config.
+ *   1. Check `npm run test:lighthouse` — it runs this suite against the
+ *      production build.
  *   2. If the score gap is environmental (CPU throttling on a hot
  *      laptop, etc.) document it in CONTRIBUTING.md → Performance and
  *      move the assertion behind a softer guard.
@@ -89,19 +88,8 @@ test.describe('Lighthouse mobile budgets', () => {
       // A throttled (4× CPU) Lighthouse audit is slow on modest hardware.
       test.setTimeout(300_000);
 
-      let lighthouse;
-      try {
-        // Dynamic import so the test file parses on machines where
-        // lighthouse isn't installed yet.
-        const mod = await import('lighthouse');
-        lighthouse = mod.default || mod;
-      } catch (err) {
-        test.skip(
-          true,
-          `lighthouse package not installed (npm i -D lighthouse). Original error: ${err.message}`,
-        );
-        return;
-      }
+      const mod = await import('lighthouse');
+      const lighthouse = mod.default || mod;
 
       // Offset the debug port by workerIndex so parallel workers never
       // collide.
