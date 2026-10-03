@@ -327,12 +327,10 @@ the design calls for a bare icon. Hard errors use
 
 The public site targets Lighthouse mobile **Performance ≥ 95** and
 **Accessibility / Best Practices / SEO = 100** on every published route.
-The Phase 1.5 config at `lighthouserc.json` enforces those budgets via
-`@lhci/cli` in CI; locally:
+The Chromium Playwright test enforces those budgets in CI; locally:
 
 ```bash
-npm run test:lighthouse     # full @lhci/cli run, ~2 min, requires Chromium
-LHCI=true npx playwright test test/playwright/lighthouse.spec.ts
+npm run test:lighthouse     # full production-build audit; requires Chromium
 ```
 
 Fast feedback runs as part of `npm test`: `site/test/perf.test.ts`
