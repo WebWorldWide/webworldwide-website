@@ -22,6 +22,7 @@ masthead_name = "Web World Wide"
 masthead_kicker = "Blog"
 
 [social]
+email = "hello@webworldwide.online"
 youtube = "https://www.youtube.com/@web_world_wide"
 youtube_handle = "@web_world_wide"
 github = "https://github.com/WebWorldWide"
