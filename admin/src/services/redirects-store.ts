@@ -39,6 +39,30 @@ export function normPath(p) {
 }
 
 /**
+ * Why a redirect SOURCE path can't be used, or null if it's fine. Sources are
+ * pages on this static site, so they must be a plain site path — never the
+ * homepage, the blog index, an absolute URL, or something with a query string
+ * (GitHub Pages can't match those).
+ *
+ * @param {string} from already normPath()'d
+ * @returns {string | null}
+ */
+export function invalidFromReason(from) {
+  if (!from || from === '/') return 'The homepage can’t be redirected.';
+  if (/^https?:/i.test(from)) return '“From” must be a path on this site, like /old-post/.';
+  if (/[?#\s]/.test(from)) return '“From” can’t contain spaces, ? or #.';
+  if (from.split('/').some((seg) => seg === '..' || seg === '.'))
+    return '“From” can’t contain . or .. segments.';
+  if (
+    from === '/blog' ||
+    from === '/rss.xml' ||
+    from.startsWith('/_assets') ||
+    from.startsWith('/images')
+  )
+    return 'That path is used by the site itself.';
+  return null;
+}
+/**
  * Read the redirect table, coercing every row to a clean shape. Returns
  * [] if the file is missing or unparseable (never throws).
  *
