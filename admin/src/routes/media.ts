@@ -351,6 +351,22 @@ function buildUsageMap(postsDir) {
       map.set(key, arr);
     }
   }
+  // The homepage (site.toml: app icons etc.) references media too — without
+  // this its images showed as "unused" and could be deleted from under it.
+  try {
+    const toml = readFileSync(join(postsDir, '..', '..', 'site.toml'), 'utf8');
+    const keys = new Set();
+    let m;
+    const re = /\/(?:images|files|assets)\/[A-Za-z0-9_./-]+/g;
+    while ((m = re.exec(toml)) !== null) keys.add(variantBaseKey(m[0]));
+    for (const key of keys) {
+      const arr = map.get(key) || [];
+      arr.push({ filename: 'site.toml', title: 'Homepage' });
+      map.set(key, arr);
+    }
+  } catch {
+    /* no site.toml (tests) */
+  }
   return map;
 }
 

@@ -618,24 +618,41 @@
             </div>
             <div id="settings-form" class="te-form-grid">Loading…</div>
             <div class="settings-security" style="margin-top: 24px">
-              <div class="panel" id="security-panel" aria-label="Security">
+              <div class="panel" id="security-panel" aria-label="Account security">
                 <div class="panel-head">
-                  <span class="panel-title"
-                    ><span class="ind" data-icon="chevron_down" aria-hidden="true"></span
-                    >Security</span
-                  >
+                  <span class="panel-title">Account security</span>
                   <span id="passkey-status" class="panel-head-r" aria-live="polite"></span>
                 </div>
-                <div class="panel-body">
-                  <p style="margin: 0 0 12px; color: var(--fg-dim)">
-                    Register a passkey on this device to sign in with Face ID or Touch ID next time.
+                <div class="panel-body" id="account-security">
+                  <p id="account-warning" class="account-warning" hidden></p>
+
+                  <h4 class="health-section-label">Passkeys</h4>
+                  <ul id="passkey-list" class="account-list" aria-live="polite">
+                    <li class="account-empty">Loading…</li>
+                  </ul>
+                  <div class="account-row">
+                    <label for="passkey-name" class="sr-only">New passkey name</label>
+                    <input type="text" id="passkey-name" maxlength="60" placeholder="Name, e.g. MacBook Touch ID" />
+                    <button type="button" class="btn primary" id="btn-register-passkey">Add passkey</button>
+                  </div>
+                  <p class="account-hint">
+                    Once a passkey is added, password sign-in is switched off. Adding or removing a passkey
+                    needs a sign-in from the last 15 minutes.
                   </p>
-                  <button type="button" class="btn primary" id="btn-register-passkey">
-                    Register passkey
-                  </button>
-                  <p style="margin: 14px 0 0; color: var(--fg-mute); font-size: 11px">
-                    Passkeys and password sign-in are both supported.
-                  </p>
+
+                  <h4 class="health-section-label">Signed-in sessions</h4>
+                  <ul id="session-list" class="account-list" aria-live="polite"></ul>
+                  <button type="button" class="btn" id="btn-revoke-others">Sign out all other sessions</button>
+
+                  <h4 class="health-section-label">Change password</h4>
+                  <form id="password-form" class="account-form" autocomplete="on">
+                    <input type="text" name="username" autocomplete="username" hidden />
+                    <label for="pw-current">Current password</label>
+                    <input type="password" id="pw-current" autocomplete="current-password" required />
+                    <label for="pw-next">New password (min 12 characters)</label>
+                    <input type="password" id="pw-next" autocomplete="new-password" minlength="12" required />
+                    <button type="submit" class="btn">Change password</button>
+                  </form>
                 </div>
               </div>
             </div>
@@ -852,7 +869,7 @@
               <div>
                 <h1 class="sec-title">System</h1>
                 <div class="sec-sub">
-                  Health · Containers · Backups · Terminal — the server at a glance.
+                  Health · Containers · Backups — the server at a glance.
                 </div>
               </div>
               <div class="sec-actions">
@@ -887,15 +904,6 @@
                   aria-selected="false"
                 >
                   Backups
-                </button>
-                <button
-                  type="button"
-                  class="tab"
-                  role="tab"
-                  data-systab="terminal"
-                  aria-selected="false"
-                >
-                  Terminal
                 </button>
               </div>
 
@@ -944,34 +952,7 @@
               <div class="panel-body" id="systab-backups" role="tabpanel" hidden>
                 <div id="backup-status" class="health-status">—</div>
               </div>
-
-              <div class="panel-body" id="systab-terminal" role="tabpanel" hidden>
-                <pre
-                  class="terminal-output"
-                  id="terminal-output"
-                  tabindex="0"
-                  role="region"
-                  aria-label="Terminal output"
-                  aria-live="polite"
-                >
-Web World Wide — server shell. Full shell access (runs via /bin/sh, 60s timeout).
-Type a command and press Enter.
-</pre>
-                <form class="terminal-form" id="terminal-form" autocomplete="off">
-                  <span class="terminal-prompt" aria-hidden="true">&gt;</span>
-                  <label for="terminal-input" class="sr-only">Command</label>
-                  <input
-                    type="text"
-                    id="terminal-input"
-                    placeholder="e.g. uptime"
-                    autocomplete="off"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                  />
-                  <button type="submit" class="btn primary">Run</button>
-                </form>
-              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -1076,7 +1057,6 @@ Type a command and press Enter.
       <div id="media-drawer-body" class="te-media-drawer-body"></div>
     </aside>
 
-    <!-- Terminal modal -->
     <!-- Delete-post confirm modal -->
     <div
       class="modal"
@@ -1119,7 +1099,7 @@ Type a command and press Enter.
     <script src="/js/icons.js"></script>
     <script src="/js/common.js"></script>
     <script src="/js/auth.js"></script>
-    <script src="/js/terminal.js"></script>
+    <script src="/js/account.js"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/dropzone.js"></script>
     <script src="/js/media.js"></script>

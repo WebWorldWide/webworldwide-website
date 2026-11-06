@@ -165,6 +165,77 @@
     return data;
   };
 
+  /**
+   * Follow the GitHub Pages deploy for a published commit. Calls `onUpdate`
+   * with { phase, url } as it progresses and resolves with the final state:
+   *   live       — deploy.yml finished successfully for this commit
+   *   failed     — the build/deploy failed (url → the run)
+   *   superseded — a newer publish's deploy covers this content
+   *   not_pushed — the commit is not on GitHub's main (publish didn't land)
+   *   timeout    — still building after ~10 minutes
+   *   unknown    — GitHub API unreachable / rate limited repeatedly
+   * Shared by the post editor, homepage editor, and dashboard so they all give
+   * the same, truthful signal.
+   *
+   * @param {string} sha
+   * @param {(s: {phase: string, url?: string}) => void} [onUpdate]
+   * @returns {Promise<{phase: string, url?: string}>}
+   */
+  TE.watchDeploy = function watchDeploy(sha, onUpdate) {
+    const notify = (/** @type {{phase: string, url?: string}} */ st) => {
+      try {
+        if (onUpdate) onUpdate(st);
+      } catch (_) {
+        /* UI callback errors must not stop polling */
+      }
+    };
+    return new Promise((resolve) => {
+      let tries = 0;
+      let errors = 0;
+      let missing = 0;
+      const done = (/** @type {{phase: string, url?: string}} */ st) => {
+        notify(st);
+        resolve(st);
+      };
+      const tick = async () => {
+        tries += 1;
+        /** @type {any} */
+        let d;
+        try {
+          d = await TE.fetchJSON(`/api/publish/deploy/${encodeURIComponent(sha)}`);
+        } catch (_) {
+          d = { status: 'error' };
+        }
+        const url = d && d.url;
+        switch (d && d.status) {
+          case 'completed':
+            return done({ phase: d.conclusion === 'success' ? 'live' : 'failed', url });
+          case 'superseded':
+            return done({ phase: 'superseded' });
+          case 'not_pushed':
+          case 'not_on_main':
+            // GitHub's API can lag a just-pushed commit by a few seconds.
+            missing += 1;
+            if (missing >= 3) return done({ phase: 'not_pushed' });
+            break;
+          case 'error':
+          case 'unknown':
+            errors += 1;
+            if (errors >= 8) return done({ phase: 'unknown' });
+            break;
+          default:
+            missing = 0;
+            errors = 0;
+            notify({ phase: d && d.status === 'in_progress' ? 'building' : 'queued', url });
+        }
+        if (tries < 120) setTimeout(tick, 5000);
+        else done({ phase: 'timeout', url });
+      };
+      notify({ phase: 'queued' });
+      setTimeout(tick, 4000);
+    });
+  };
+
   // ── Focus trap ─────────────────────────────────────────────
   const FOCUSABLE =
     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),' +

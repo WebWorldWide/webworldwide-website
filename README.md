@@ -173,9 +173,19 @@ documented recovery path; keep the age private key outside the server.
 
 - Secrets live only in the ignored, permission-restricted production env file.
 - CMS containers run as the unprivileged host user.
-- The CMS sees Docker through a read-only, GET-only socket proxy.
+- No container can reach the Docker socket; container status for the CMS
+  dashboard is written to a read-only file by a host cron job.
 - Stateful services are reachable only through Caddy's private Compose network.
-- WebAuthn passkeys protect the production admin account.
+- Admin sign-in uses WebAuthn passkeys; password sign-in is disabled once a
+  passkey exists. Sessions are server-side, revocable, and expire after 12h idle.
+- Caddy listens on loopback only; all public traffic arrives via Cloudflare
+  Tunnel, and services sit on segmented Docker networks.
+- The CMS has no shell/terminal endpoint and cannot rewrite the host's git
+  config or hooks.
+- Publishing is branch-independent and verified: the CMS commits on top of
+  `origin/main` with a 3-way merge and confirms GitHub has the commit.
+- Alerts (drift, failed deploys, stale backups, disk) go to
+  `HEALTHCHECK_WEBHOOK_URL`.
 - Uploaded files, outbound embeds, and server-side fetches are validated before
   processing.
 - CI enforces type checks, unit tests, accessibility checks, end-to-end tests,

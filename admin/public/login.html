@@ -40,7 +40,7 @@
           <div class="field">
             <label for="setup-pass">
               Password
-              <span style="text-transform: none; color: var(--ink-soft)">(min 8 chars)</span>
+              <span style="text-transform: none; color: var(--ink-soft)">(min 12 chars)</span>
             </label>
             <div class="pw-wrap">
               <input
@@ -48,7 +48,7 @@
                 id="setup-pass"
                 autocomplete="new-password"
                 required
-                minlength="8"
+                minlength="12"
               />
               <button
                 type="button"
@@ -59,6 +59,13 @@
                 Show
               </button>
             </div>
+          </div>
+          <div class="field">
+            <label for="setup-token">
+              Setup token
+              <span style="text-transform: none; color: var(--ink-soft)">(SETUP_TOKEN in the server env; production only)</span>
+            </label>
+            <input type="password" id="setup-token" autocomplete="off" />
           </div>
           <button type="submit" class="btn btn-primary submit">Create account</button>
         </form>

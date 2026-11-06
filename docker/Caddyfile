@@ -27,7 +27,12 @@ http://{$DOMAIN_ANALYTICS} {
 	reverse_proxy umami:3000
 }
 
-# Catch-all fallback (useful for local testing)
+# Host-local extra sites (git-ignored), e.g. homelab services reached through
+# the host's own cloudflared at 127.0.0.1:80. See caddy-sites.d/README.md.
+# Caddy is published on LOOPBACK ONLY — never add public listeners here.
+import /etc/caddy/sites.d/*.caddy
+
+# Catch-all fallback (used by the container healthcheck)
 :80 {
-	respond "Web World Wide internal proxy running." 200
+	respond "ok" 200
 }

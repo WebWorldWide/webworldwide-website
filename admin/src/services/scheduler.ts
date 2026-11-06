@@ -70,8 +70,11 @@ export async function promoteScheduledPosts(opts: SchedulerOptions = {}) {
       if (ts > now) continue; // not yet
 
       data.draft = false;
-      // Keep publish_at as a historical record — Hugo ignores it; the
-      // admin UI uses it to render "published on X" badges.
+      // Drop the consumed publish_at. Keeping a PAST publish_at meant that
+      // flipping the post back to Draft later (editor or bulk unpublish) left
+      // `draft: true` + past `publish_at`, and the next 5-min tick silently
+      // re-published it. `date` remains the published-on record.
+      delete data.publish_at;
       const serialized = serializePost(data, content || '');
       if (!opts.dryRun) {
         // No-op guard: only write when the serialized output actually
@@ -133,7 +136,13 @@ export async function defaultCommit(filenames) {
   // retries) — that throw propagates to promoteScheduledPosts' commit try/catch,
   // which records it as a (git) error for the run.
   const { publishChanges } = await import('../utils/git.js');
-  const result = await publishChanges();
+  // Ship ONLY the promoted posts (+ media, which they may reference) — never
+  // unrelated saved-but-unpublished edits like a half-finished homepage change.
+  const postPaths = filenames.map((f) => `site/content/posts/${f}`);
+  const result = await publishChanges({
+    message: `Publish scheduled post${filenames.length === 1 ? '' : 's'}: ${filenames.join(', ')}`,
+    paths: [...postPaths, 'site/public'],
+  });
 
   // Bluesky cross-post — best-effort; mirrors the manual /publish route. Without
   // it a SCHEDULED post goes live but is never syndicated to Bluesky (the manual
@@ -156,6 +165,7 @@ export async function defaultCommit(filenames) {
         const { commitAndPush } = await import('../utils/git.js');
         await commitAndPush(
           `Update Bluesky URIs (${report.posted.length} post${report.posted.length === 1 ? '' : 's'})`,
+          postPaths,
         );
       }
     }
@@ -181,6 +191,7 @@ export async function defaultCommit(filenames) {
         const { commitAndPush } = await import('../utils/git.js');
         await commitAndPush(
           `Update Mastodon URIs (${report.posted.length} post${report.posted.length === 1 ? '' : 's'})`,
+          postPaths,
         );
       }
     }
@@ -210,7 +221,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const e of result.errors) {
         console.warn(`${tag} ERROR ${e.filename}: ${e.error}`);
       }
-      process.exit(0);
+      // Non-zero when a promotion's publish failed, so cron/alerting notices
+      // (the post is draft:false on disk but NOT live until the next publish).
+      process.exit(result.errors.some((e) => e.filename === '(git)') ? 2 : 0);
     } catch (err) {
       console.error('[scheduler] fatal:', err.message || err);
       process.exit(1);

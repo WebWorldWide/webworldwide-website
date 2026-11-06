@@ -133,8 +133,6 @@ const DEFAULT_SOCIAL_ORDER = [
 const isNonEmptyStringArray = (v: unknown): v is string[] =>
   Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string');
 
-const isNonEmptyArray = <T>(v: T[] | undefined): v is T[] => Array.isArray(v) && v.length > 0;
-
 /**
  * Normalize the homepage-related slices of site.toml into a fully-populated
  * model. An OLD site.toml (no [homepage], [hero], [videos], or [apps].items)
@@ -154,7 +152,9 @@ export function normalizeHomepage(cfg: Partial<SiteConfig>): HomepageConfig {
   const cta = hp.blog_cta ?? {};
 
   const rawItems = hp.apps?.items ?? cfg.apps?.items;
-  const items: AppItem[] = isNonEmptyArray(rawItems)
+  // An explicit empty list (the editor's "remove all tiles") means NO tiles —
+  // only a missing list falls back to the legacy defaults below.
+  const items: AppItem[] = Array.isArray(rawItems)
     ? rawItems.map((it) => ({
         name: typeof it.name === 'string' ? it.name : 'Untitled',
         status: typeof it.status === 'string' ? it.status : 'soon',
@@ -191,22 +191,23 @@ export function normalizeHomepage(cfg: Partial<SiteConfig>): HomepageConfig {
     },
     hero: {
       words: isNonEmptyStringArray(hero.words) ? hero.words : ['Web', 'World', 'Wide'],
-      tagline: hero.tagline || 'W · W · W',
+      tagline: hero.tagline ?? 'W · W · W',
       subtitle: hero.subtitle ?? '',
     },
     apps: { items },
     videos: {
-      episode: videos.episode || 'EP. 001',
-      film_title: videos.film_title || 'First video — coming soon',
+      episode: videos.episode ?? 'EP. 001',
+      film_title: videos.film_title ?? 'First video — coming soon',
     },
     socials: {
       order: isNonEmptyStringArray(socials.order) ? socials.order : [...DEFAULT_SOCIAL_ORDER],
       hidden: isNonEmptyStringArray(socials.hidden) ? socials.hidden : [],
     },
     blog_cta: {
-      kicker: cta.kicker || 'Latest',
-      title: cta.title || 'The Web World Wide',
+      kicker: cta.kicker ?? 'Latest',
+      title: cta.title ?? 'The Web World Wide',
       title_accent: cta.title_accent ?? 'Blog',
+      // An empty URL would make the CTA a dead link; keep the blog as the floor.
       url: cta.url || '/blog/',
       description: cta.description ?? '',
     },

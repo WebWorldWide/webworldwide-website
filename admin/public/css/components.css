@@ -1425,7 +1425,7 @@ body[data-page="login"] {
 }
 
 /* ============================================================
-   14. SYSTEM (metrics / containers / terminal)
+   14. SYSTEM (metrics / containers / backups)
    ============================================================ */
 .metric {
   display: grid;
@@ -1511,46 +1511,6 @@ body[data-page="login"] {
   font-size: var(--fs-sm);
   line-height: var(--lh-relaxed);
   color: var(--ink-soft);
-}
-.terminal-output {
-  max-height: min(360px, 50vh);
-  padding: var(--space-4) var(--space-5);
-  overflow-y: auto;
-  font-family: var(--font-data);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-relaxed);
-  color: #e8eefb;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: #0b1f4a;
-  border-radius: var(--radius-sm);
-}
-.terminal-form {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  margin-top: var(--space-3);
-}
-.terminal-prompt {
-  font-family: var(--font-data);
-  color: var(--accent-bg);
-}
-.terminal-form input {
-  flex: 1;
-  min-width: 0;
-  min-height: 36px;
-  padding: 8px var(--space-3);
-  font-family: var(--font-data);
-  font-size: 16px; /* >=16px so iOS doesn't zoom the page on focus */
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line-strong-www);
-  border-radius: var(--radius-sm);
-  outline: 0;
-}
-.terminal-form input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* ============================================================
@@ -2257,4 +2217,66 @@ body[data-page="login"] {
 .hp-rail-actions .btn.hp-history-btn {
   flex: 0 0 auto;
   padding-inline: var(--space-3);
+}
+
+/* ============================================================
+   Account security (Settings)
+   ============================================================ */
+.account-warning {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--warn, #d9a400);
+  border-radius: 6px;
+  color: var(--fg);
+}
+.account-list {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.account-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line, rgb(127 127 127 / 20%));
+}
+.account-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.account-main small {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.account-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.account-empty {
+  padding: 8px 0;
+  color: var(--ink-soft);
+}
+.account-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+.account-row input {
+  flex: 1 1 220px;
+}
+.account-hint {
+  margin: 4px 0 14px;
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+}
+.account-form {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
 }

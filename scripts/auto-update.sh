@@ -40,54 +40,84 @@ if ! acquire_wwwide_operation_lock "$REPO_DIR" skip; then
     exit 0
 fi
 
+# shellcheck source=scripts/_notify.sh
+. "$SCRIPT_DIR/_notify.sh"
+
+# Production must track main. A checkout left on another branch silently
+# froze deploys for a month in 2026-10 (CMS publishes were also stranded).
+BRANCH="$(wwwide_git symbolic-ref --short -q HEAD || echo '(detached)')"
+if [ "$BRANCH" != "main" ]; then
+    wwwide_notify auto-update-branch 21600 \
+        "Production checkout is on '$BRANCH', not main — deploys are paused. Fix: cd $REPO_DIR && git switch main"
+    exit 1
+fi
+wwwide_notify_clear auto-update-branch
+
 # Fetch latest from remote. Gate every step explicitly (a failed fetch/pull
 # must never fall through to a rebuild of a partial/conflicted tree).
-if ! git fetch origin main; then
-    echo "$(date): fetch failed — skipping this run."
+if ! wwwide_git fetch origin +refs/heads/main:refs/remotes/origin/main; then
+    wwwide_notify auto-update-fetch 21600 "git fetch failed on the production checkout."
     exit 0
 fi
+wwwide_notify_clear auto-update-fetch
 
-LOCAL=$(git rev-parse HEAD)
-# shellcheck disable=SC1083 # `@{u}` is git's upstream-ref syntax, not brace expansion
-REMOTE=$(git rev-parse '@{u}')
+LOCAL=$(wwwide_git rev-parse HEAD)
+REMOTE=$(wwwide_git rev-parse refs/remotes/origin/main)
 
 if [ "$LOCAL" = "$REMOTE" ]; then
     echo "$(date): System is up to date."
+    wwwide_notify_clear auto-update-diverged
     exit 0
 fi
 
-# Only rebuild when origin is genuinely AHEAD of us (a fast-forward is
-# possible). If local main is merely AHEAD of / diverged from origin — a commit
-# pushed from this host, or one stranded by a failed cron push — then HEAD is
-# NOT an ancestor of origin. The old `LOCAL != REMOTE` test stayed true forever
-# in that state and re-ran `up -d --build` every 5 minutes (a rebuild storm);
-# bail instead, and never let a default merge-pull fabricate a local merge.
-if ! git merge-base --is-ancestor HEAD "$REMOTE"; then
-    echo "$(date): local is ahead of / diverged from origin (not a fast-forward) — skipping rebuild; a push is needed to realign."
-    exit 0
+# Only fast-forward. If local main has commits origin lacks, a human must
+# decide (push or drop them) — never fabricate a merge here.
+if ! wwwide_git merge-base --is-ancestor HEAD "$REMOTE"; then
+    wwwide_notify auto-update-diverged 21600 \
+        "Production main has diverged from origin/main ($(wwwide_git rev-list --count "$REMOTE..HEAD") local-only commit(s)). Deploys are paused until it is realigned."
+    exit 1
 fi
 
 echo "$(date): Updates found on origin. Fast-forwarding..."
-if ! git pull --ff-only origin main; then
-    echo "$(date): ff-only pull failed — NOT rebuilding (tree may be partial). Will retry next run."
+# The CMS publishes straight to origin without moving this checkout, so the
+# site/ files it published are already on disk as "local modifications". Stage
+# site/ first: a fast-forward then accepts files whose staged content already
+# equals the incoming commit, and still refuses (safely) if an unpublished edit
+# collides with an incoming change to the same file.
+wwwide_git add -A -- site
+if ! wwwide_git merge --ff-only -q "$REMOTE"; then
+    wwwide_git reset -q -- site || true
+    wwwide_notify auto-update-ff 3600 \
+        "Fast-forward to origin/main failed (local edits collide with incoming changes). Run: cd $REPO_DIR && git status"
     exit 1
 fi
+# Leave any still-unpublished CMS edits as plain worktree changes.
+wwwide_git reset -q -- site || true
+wwwide_notify_clear auto-update-ff
 
 # Keep the HOST admin deps in sync — promote-scheduled.sh and
 # dump-webmentions.sh run admin code with the host's node, outside
 # the container. Only reinstall when the lockfile actually changed.
-if ! git diff --quiet "$LOCAL" HEAD -- admin/package-lock.json; then
+if ! wwwide_git diff --quiet "$LOCAL" HEAD -- admin/package-lock.json; then
     echo "$(date): admin lockfile changed — refreshing host node_modules..."
     npm ci --omit=dev --prefix "$REPO_DIR/admin" || \
         echo "$(date): WARNING: host npm ci failed — scheduler/webmention crons may break."
+fi
+
+# Content-only updates (CMS publishes touch only site/, which is bind-mounted
+# live) need no container rebuild.
+if wwwide_git diff --quiet "$LOCAL" HEAD -- . ':(exclude)site'; then
+    echo "$(date): Content-only update ($(wwwide_git rev-list --count "$LOCAL..HEAD") commit(s)) — no rebuild needed."
+    exit 0
 fi
 
 # Rebuild containers gracefully (no "down" — only recreates changed containers)
 # This keeps cloudflared and other unchanged services running during rebuild
 echo "$(date): Rebuilding changed containers..."
 if ! docker compose --project-directory "$DOCKER_DIR" up -d --build --remove-orphans; then
-    echo "$(date): Docker rebuild failed — deployment is incomplete."
+    wwwide_notify auto-update-rebuild 3600 "docker compose rebuild failed after updating to $(wwwide_git rev-parse --short HEAD) — deployment is incomplete."
     exit 1
 fi
+wwwide_notify_clear auto-update-rebuild
 
 echo "$(date): Update and deployment complete."

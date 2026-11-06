@@ -11,9 +11,10 @@
  */
 
 import { simpleGit } from 'simple-git';
-import { join } from 'path';
-import { statSync, unlinkSync } from 'fs';
-import { spawn } from 'child_process';
+import { join, dirname } from 'path';
+import { statSync, unlinkSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { spawn, execFile } from 'child_process';
+import { randomBytes } from 'crypto';
 
 const getRepoPath = () => {
   const siteDir = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
@@ -176,232 +177,468 @@ function withGitLock(fn) {
 }
 
 /**
- * Push HEAD to origin/main, retrying a few times to ride out a transient
- * tunnel/network blip (the realistic failure on the Pi). We deliberately
- * do NOT `pull --rebase` on failure: the cms container's worktree is
- * permanently "dirty" (admin/ etc. read as deleted — see SITE_PATHSPEC),
- * so a rebase would abort. A genuine non-fast-forward (someone else
- * pushed) is essentially impossible for this repo; if it ever happens the
- * push keeps failing and we throw a clear error, leaving the commit local
- * for `reconcileUnpushed` to retry on the next publish.
- *
- * @param {import('simple-git').SimpleGit} git
- * @param {number} attempts
+ * The publish flow may run inside the cms container, where the repo
+ * worktree (/app) does NOT mirror the real repo layout — only `site/`
+ * and `.git` are mounted; everything else (admin/, docker/, scripts/,
+ * .github/) is absent and the container's own files (server.js, src/,
+ * node_modules/, …) are untracked strays. Every git operation here is
+ * therefore scoped to the `site/` pathspec.
  */
-async function pushMain(git, attempts = 3) {
-  let lastErr;
-  for (let i = 0; i < attempts; i += 1) {
+const SITE_PATHSPEC = 'site';
+const ORIGIN_MAIN_REF = 'refs/remotes/origin/main';
+/**
+ * The last commit this CMS published. After a publish the on-disk site/ equals
+ * this commit's site/, but HEAD only catches up when the host's auto-update
+ * syncs (≤5 min). Using it as the merge base avoids spurious conflicts when a
+ * just-published file is edited again before that sync.
+ */
+const LAST_PUBLISH_REF = 'refs/wwwide/last-publish';
+
+/**
+ * Paths that must never be published, whatever the ignore rules say. The
+ * container mounts only `site/` + `.git`, so the repo-root .gitignore is not
+ * visible there; `site/.gitignore` covers these, and this list is the last
+ * line of defence (a 2026-10 publish committed 26k `site/node_modules` files).
+ */
+const FORBIDDEN_PUBLISH_PATH =
+  /^site\/(?:node_modules|dist|\.astro|\.vite|\.legacy|\.media-staging)(?:\/|$)/;
+
+/** A publish failure the route can classify into a user-facing message. */
+export class PublishError extends Error {
+  code: string;
+  detail?: unknown;
+  constructor(code: string, message: string, detail?: unknown) {
+    super(message);
+    this.name = 'PublishError';
+    this.code = code;
+    this.detail = detail;
+  }
+}
+
+/**
+ * Run a git plumbing command and return its exit code + output. simple-git's
+ * `raw()` RESOLVES on a non-zero exit when stderr is empty, which silently
+ * turns `merge-base --is-ancestor` → always true and a conflicted
+ * `merge-tree` → success. Plumbing therefore goes through execFile directly.
+ *
+ * @param {string[]} args
+ * @param {{ env?: NodeJS.ProcessEnv, allowCodes?: number[], encoding?: 'utf8' | 'buffer' }} [opts]
+ * @returns {Promise<{ code: number, stdout: any, stderr: string }>}
+ */
+interface GitExecOpts {
+  env?: NodeJS.ProcessEnv;
+  allowCodes?: number[];
+  encoding?: 'utf8' | 'buffer';
+}
+interface GitExecResult {
+  code: number;
+  stdout: any;
+  stderr: string;
+}
+function gitExec(args: string[], opts: GitExecOpts = {}): Promise<GitExecResult> {
+  const repo = getRepoPath();
+  const allow = opts.allowCodes || [0];
+  return new Promise((resolve, reject) => {
+    execFile(
+      'git',
+      ['-c', `safe.directory=${repo}`, ...args],
+      {
+        cwd: repo,
+        env: opts.env || process.env,
+        encoding: opts.encoding === 'buffer' ? 'buffer' : 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: 60_000,
+      },
+      (err, stdout, stderr) => {
+        const code = err ? (typeof (err as any).code === 'number' ? (err as any).code : -1) : 0;
+        if (!allow.includes(code)) {
+          const e = new Error(
+            `git ${args[0]} failed (exit ${code}): ${String(stderr || err?.message || '').trim()}`,
+          );
+          (e as any).stdout = stdout;
+          return reject(e);
+        }
+        resolve({ code, stdout, stderr: String(stderr || '') });
+      },
+    );
+  });
+}
+
+const out = async (args: string[], opts?: GitExecOpts): Promise<string> =>
+  String((await gitExec(args, opts)).stdout).trim();
+
+/** Absolute path of the git dir (works for normal repos and linked worktrees). */
+async function gitDir() {
+  return out(['rev-parse', '--absolute-git-dir']);
+}
+
+/**
+ * Run `fn` with a throwaway index file so the shared repo index (also used by
+ * the host checkout) is never touched by a publish.
+ *
+ * @template T
+ * @param {(env: NodeJS.ProcessEnv) => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+async function withTempIndex<T>(fn: (env: NodeJS.ProcessEnv) => Promise<T>): Promise<T> {
+  const dir = await gitDir();
+  const indexFile = join(
+    dir,
+    `wwwide-publish-${process.pid}-${randomBytes(4).toString('hex')}.index`,
+  );
+  const env = { ...process.env, GIT_INDEX_FILE: indexFile };
+  try {
+    return await fn(env);
+  } finally {
     try {
-      await git.push('origin', 'main');
-      return;
+      unlinkSync(indexFile);
+    } catch {
+      /* never created */
+    }
+  }
+}
+
+/** Fetch origin/main and return its SHA. Throws PublishError on failure. */
+async function fetchOriginMain(git) {
+  try {
+    await git.fetch('origin', `+refs/heads/main:${ORIGIN_MAIN_REF}`);
+  } catch (err) {
+    throw new PublishError('network_error', `Could not fetch origin/main: ${err.message}`, err);
+  }
+  return out(['rev-parse', '--verify', ORIGIN_MAIN_REF]);
+}
+
+/** SHA of HEAD, or '' on an unborn branch. */
+async function headSha() {
+  const r = await gitExec(['rev-parse', '--verify', '-q', 'HEAD'], { allowCodes: [0, 1] });
+  return r.code === 0 ? String(r.stdout).trim() : '';
+}
+
+async function treeOf(rev) {
+  return out(['rev-parse', '--verify', `${rev}^{tree}`]);
+}
+
+async function isAncestor(a, b) {
+  const r = await gitExec(['merge-base', '--is-ancestor', a, b], { allowCodes: [0, 1] });
+  return r.code === 0;
+}
+
+/** `git diff-tree --name-status` between two tree-ish values, parsed. */
+async function diffTrees(a: string, b: string): Promise<Array<{ status: string; path: string }>> {
+  const text = await out(['diff-tree', '-r', '--no-renames', '--name-status', a, b]);
+  return text
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [status, path] = line.split('\t');
+      return { status, path };
+    });
+}
+
+/**
+ * Build the tree for "HEAD, with site/ replaced by what is on disk". When
+ * `paths` is given, only those repo-relative paths are captured from disk —
+ * the scheduler uses this so a timed promotion never ships unrelated,
+ * saved-but-unpublished edits.
+ *
+ * @param {string} base commit the on-disk site/ was last synced to (HEAD)
+ * @param {string[] | null} paths
+ */
+async function snapshotDiskTree(base: string, paths: string[] | null): Promise<string> {
+  return withTempIndex(async (env) => {
+    await gitExec(base ? ['read-tree', base] : ['read-tree', '--empty'], { env });
+    const spec = paths && paths.length ? paths : [SITE_PATHSPEC];
+    await gitExec(['add', '-A', '--', ...spec], { env });
+    return out(['write-tree'], { env });
+  });
+}
+
+/**
+ * 3-way merge "HEAD + on-disk site/" with origin/main. Returns the merged tree
+ * plus the snapshot tree it was built from. Throws PublishError on conflict.
+ *
+ * @param {string} origin
+ * @param {string[] | null} paths
+ */
+async function computePublishTree(
+  origin: string,
+  paths: string[] | null,
+): Promise<{ oursTree: string; mergedTree: string }> {
+  const head = await headSha();
+  const lp = await gitExec(['rev-parse', '--verify', '-q', `${LAST_PUBLISH_REF}^{commit}`], {
+    allowCodes: [0, 1],
+  });
+  const lastPublish = lp.code === 0 ? String(lp.stdout).trim() : '';
+  // Which commit does the on-disk site/ derive from?
+  //  - HEAD behind the last publish (host hasn't synced yet) → the last publish
+  //  - HEAD at/after the last publish (host synced, or local commits on top)
+  //    → HEAD; any local code commits then show up and are refused below
+  //  - HEAD diverged from the last publish (left on another branch, or a
+  //    stranded local commit) → ambiguous; refuse rather than guess, because a
+  //    wrong base silently reverts or duplicates edits.
+  let base = head;
+  if (lastPublish && head && lastPublish !== head) {
+    if (await isAncestor(head, lastPublish)) base = lastPublish;
+    else if (!(await isAncestor(lastPublish, head))) {
+      throw new PublishError(
+        'checkout_diverged',
+        `The server checkout (HEAD ${head.slice(0, 12)}) has diverged from the last published commit ${lastPublish.slice(0, 12)}.`,
+      );
+    }
+  } else if (lastPublish && !head) {
+    base = lastPublish;
+  }
+  const oursTree = await snapshotDiskTree(base, paths);
+  if (base && oursTree === (await treeOf(base)) && (await isAncestor(base, origin))) {
+    return { oursTree, mergedTree: await treeOf(origin) };
+  }
+  const ours = await out([
+    'commit-tree',
+    oursTree,
+    ...(base ? ['-p', base] : []),
+    '-m',
+    'cms snapshot',
+  ]);
+  const r = await gitExec(['merge-tree', '--write-tree', '--name-only', origin, ours], {
+    allowCodes: [0, 1],
+  });
+  const lines = String(r.stdout).split('\n');
+  if (r.code === 1) {
+    const conflicted = lines
+      .slice(1)
+      .filter((l) => l && !/^\s/.test(l) && !/^Auto-merging|^CONFLICT/.test(l));
+    throw new PublishError(
+      'merge_conflict',
+      `Your changes conflict with newer changes on GitHub in: ${[...new Set(conflicted)].slice(0, 10).join(', ') || 'unknown files'}`,
+    );
+  }
+  return { oursTree, mergedTree: lines[0].trim() };
+}
+
+/**
+ * After publishing a merge that pulled in upstream site/ changes the disk did
+ * not have (e.g. an edit pushed from a laptop), write those files to disk so
+ * the host checkout's next fast-forward sees a consistent worktree. A file is
+ * only overwritten if it still holds exactly what we snapshotted — an edit the
+ * author made during the publish is never clobbered.
+ *
+ * @param {string} oursTree tree we snapshotted from disk
+ * @param {string} publishedCommit commit that reached origin
+ */
+async function syncUpstreamSiteChangesToDisk(oursTree, publishedCommit) {
+  const repo = getRepoPath();
+  const changes = (await diffTrees(oursTree, `${publishedCommit}^{tree}`)).filter((c) =>
+    c.path.startsWith(`${SITE_PATHSPEC}/`),
+  );
+  for (const { status, path } of changes) {
+    const abs = join(repo, path);
+    const diskBlob = existsSync(abs) ? await out(['hash-object', '--', abs]) : null;
+    const o = await gitExec(['rev-parse', '--verify', '-q', `${oursTree}:${path}`], {
+      allowCodes: [0, 1],
+    });
+    const oursBlob = o.code === 0 ? String(o.stdout).trim() : null;
+    if (diskBlob !== oursBlob) {
+      console.warn(`[git] ${path} changed during publish — leaving the newer on-disk copy.`);
+      continue;
+    }
+    if (status === 'D') {
+      try {
+        unlinkSync(abs);
+      } catch {
+        /* already gone */
+      }
+      continue;
+    }
+    const { stdout: content } = await gitExec(['cat-file', 'blob', `${publishedCommit}:${path}`], {
+      encoding: 'buffer',
+    });
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, content);
+  }
+}
+
+/** Push `sha` to origin main; returns 'ok' | 'rejected'. Other failures throw. */
+async function pushCommit(git, sha) {
+  let lastErr;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      await git.push('origin', `${sha}:refs/heads/main`);
+      return 'ok';
     } catch (err) {
       lastErr = err;
-      console.warn(`[git] push attempt ${i + 1}/${attempts} failed: ${err.message}`);
+      const m = String(err.message || '').toLowerCase();
+      if (m.includes('non-fast-forward') || m.includes('fetch first') || m.includes('rejected')) {
+        return 'rejected';
+      }
+      console.warn(`[git] push attempt ${i + 1}/3 failed: ${err.message}`);
     }
   }
   throw lastErr;
 }
 
-/**
- * Count commits on local `main` that origin/main doesn't have yet. A failed
- * push leaves the commit local AND leaves the local `origin/main` ref stale,
- * so `origin/main..main` reveals it WITHOUT a network round-trip — and
- * `rev-list` ignores worktree state, so the container's dirty layout can't
- * break it. Returns 0 on any error (never block a publish on this).
- *
- * We deliberately range over `main`, NOT `HEAD`: pushMain runs
- * `git push origin main`, which moves the local `main` ref. If HEAD is ever
- * on another branch (e.g. a shared bind-mounted .git checked out elsewhere),
- * `origin/main..HEAD` would count unrelated commits and trigger a no-op push
- * that falsely reports success. `main` matches exactly what the push moves.
- *
- * @param {import('simple-git').SimpleGit} git
- * @returns {Promise<number>}
- */
-async function countUnpushedCommits(git) {
-  try {
-    const out = await git.raw(['rev-list', '--count', 'origin/main..main']);
-    return Number(String(out).trim()) || 0;
-  } catch {
-    return 0;
+/** Confirm origin's main really is `sha` (guards against silent push no-ops). */
+async function verifyRemoteMain(git, sha) {
+  const listing = String(await git.raw(['ls-remote', 'origin', 'refs/heads/main']));
+  const remote = listing.split(/\s+/)[0] || '';
+  if (remote !== sha) {
+    throw new PublishError(
+      'push_unverified',
+      `Push reported success but origin/main is ${remote.slice(0, 12) || 'unknown'}, not ${sha.slice(0, 12)}.`,
+    );
   }
+  await gitExec(['update-ref', ORIGIN_MAIN_REF, sha]);
+  await gitExec(['update-ref', LAST_PUBLISH_REF, sha]);
 }
 
 /**
- * The publish flow may run inside the cms container, where the repo
- * worktree (/app) does NOT mirror the real repo layout — only `site/`
- * and `.git` are mounted; everything else (admin/, docker/, scripts/,
- * .github/) is absent and the container's own files (server.js, src/,
- * node_modules/, …) are untracked strays. A bare `git add .` from there
- * would stage the deletion of most of the repo and push it. Every git
- * operation here is therefore scoped to the `site/` pathspec, and
- * emptiness is computed from the STAGED set (`diff --cached`), never
- * from working-tree cleanliness (which is permanently "dirty" in the
- * container).
- */
-const SITE_PATHSPEC = 'site';
-
-/**
- * Re-base the local `main` ref + git index onto the freshest `origin/main`
- * WITHOUT touching the (permanently-dirty) container worktree, so the commit
- * we're about to make is always a fast-forward of origin — the push can never
- * be rejected as "non-fast-forward" just because a code deploy pushed to main
- * between publishes. This is the durable fix for "push rejected: branch moved
- * on".
+ * Core publish transaction. Branch-independent: it never reads or moves the
+ * checked-out branch, the shared index, or local `main` — so a production
+ * checkout left on a feature branch can no longer swallow publishes.
  *
- * How it stays safe with a dirty worktree: `update-ref` moves the branch
- * pointer and `read-tree` resets the index to origin/main's tree — neither
- * checks out files, so the container's missing admin/ etc. are irrelevant.
- * The caller then runs `git add -A site`, which re-applies the on-disk site/
- * content (adds/edits/deletions) on top. Any site/ edits a prior failed
- * publish left in orphaned local commits are still on disk, so they're
- * recaptured — nothing is lost.
- *
- * Returns false (caller commits on current HEAD) when origin/main can't be
- * seen (offline / first run) or HEAD isn't `main`.
- *
- * @param {import('simple-git').SimpleGit} git
- * @returns {Promise<boolean>}
- */
-async function alignToOriginMain(git) {
-  let originSha;
-  try {
-    await git.fetch('origin', 'main');
-    originSha = (await git.revparse(['origin/main'])).trim();
-  } catch (err) {
-    console.warn('[git] could not fetch origin/main — publishing on local state:', err.message);
-    return false;
-  }
-  if (!originSha) return false;
-  let branch;
-  try {
-    branch = (await git.revparse(['--abbrev-ref', 'HEAD'])).trim();
-  } catch {
-    return false;
-  }
-  if (branch !== 'main') {
-    console.warn(`[git] HEAD is "${branch}", not main — skipping origin realign.`);
-    return false;
-  }
-  // Move main → origin/main and reset the index to match; worktree untouched.
-  await git.raw(['update-ref', 'refs/heads/main', originSha]);
-  await git.raw(['read-tree', originSha]);
-  return true;
-}
-
-/**
- * Stage site/ changes, commit, and push.
- *
- * Returns:
- *   {
- *     success: true,
- *     message: string,
- *     changed: false,                 // when nothing to commit
- *     // OR
- *     changed: true,
- *     changedPosts: string[],         // filenames under site/content/posts/
- *     commitHash: string,             // SHA of the new commit
- *   }
- *
- * @returns {Promise<{ success: true, message: string, changed: boolean, changedPosts?: string[], commitHash?: string }>}
- */
-export async function publishChanges() {
-  return withGitLock(publishChangesImpl);
-}
-
-/** @returns {Promise<{ success: true, message: string, changed: boolean, changedPosts?: string[], commitHash?: string }>} */
-async function publishChangesImpl() {
-  const git = getGitInstance();
-  try {
-    console.log('Publishing changes...');
-    // Commit on top of the freshest origin/main so the push is always a
-    // fast-forward — prevents "branch moved on" when a code deploy landed on
-    // main since the last publish.
-    await alignToOriginMain(git);
-    // `-A` so deletions (a removed post) are staged too, not just edits/adds.
-    await git.raw(['add', '-A', SITE_PATHSPEC]);
-
-    // Snapshot the staged set BEFORE we run git commit — afterwards the
-    // cached diff would be empty and we'd lose the per-file list that
-    // the cross-post hook needs.
-    const stagedDiff = await git.diff(['--cached', '--name-status']);
-    const hasStaged = Boolean(stagedDiff.trim());
-
-    if (hasStaged) {
-      const commitMsg = `Update blog content: ${new Date().toISOString()}`;
-      await git.commit(commitMsg);
-    } else {
-      // Nothing new to commit — but a PREVIOUS publish may have committed
-      // and then failed to push (transient tunnel error), orphaning the
-      // commit locally. Detect and push it so it isn't stranded forever.
-      const unpushed = await countUnpushedCommits(git);
-      if (unpushed === 0) {
-        return { success: true, message: 'Nothing to commit. Site is up to date.', changed: false };
-      }
-      console.log(`[git] ${unpushed} unpushed commit(s) from a prior publish — pushing now.`);
-    }
-
-    const changedPosts = hasStaged ? extractChangedPostsFromDiff(stagedDiff) : [];
-
-    await pushMain(git);
-
-    // Hash of the commit we just made — useful for the activity log
-    // entry the publish route writes.
-    let commitHash = '';
-    try {
-      const head = await git.log({ maxCount: 1 });
-      commitHash = head.latest?.hash || '';
-    } catch (_) {
-      /* non-fatal */
-    }
-
-    return {
-      success: true,
-      message: 'Changes pushed successfully. Site is building.',
-      changed: true,
-      changedPosts,
-      commitHash,
-    };
-  } catch (err) {
-    console.error('Git publish error:', err);
-    throw new Error(`Failed to publish: ${err.message}`, { cause: err });
-  }
-}
-
-/**
- * Stage + commit + push an in-flight set of changes that we made
- * AFTER the main publish (e.g. front-matter updates from the Bluesky
- * cross-post hook). Returns the same shape as `publishChanges` minus
- * the changedPosts list (irrelevant on the follow-up commit).
+ *  1. fetch origin/main (the only thing we ever publish onto)
+ *  2. snapshot "HEAD + on-disk site/" into a temp index → `ours`
+ *  3. 3-way merge `ours` with origin/main (`git merge-tree --write-tree`), so
+ *     upstream edits the disk never pulled (code deploys, laptop edits) are
+ *     preserved instead of silently reverted
+ *  4. commit the merged tree on top of origin/main, push `<sha>:main`, and
+ *     verify with ls-remote that origin really is at that SHA
  *
  * @param {string} message
- * @returns {Promise<{ success: boolean, message: string, commitHash?: string }>}
+ * @param {{ paths?: string[] | null }} [opts]
  */
-export async function commitAndPush(message) {
-  return withGitLock(() => commitAndPushImpl(message));
+async function publishImpl(message: string, opts: { paths?: string[] | null } = {}) {
+  const git = getGitInstance();
+  const paths = opts.paths && opts.paths.length ? opts.paths : null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const origin = await fetchOriginMain(git);
+    const { oursTree, mergedTree } = await computePublishTree(origin, paths);
+
+    const changes = await diffTrees(origin, mergedTree);
+    if (!changes.length) {
+      return {
+        success: true,
+        message: 'Nothing to publish — the live site already has these changes.',
+        changed: false,
+        changedPosts: [],
+        commitHash: origin,
+        files: [],
+      };
+    }
+    const forbidden = changes.filter((c) => FORBIDDEN_PUBLISH_PATH.test(c.path));
+    if (forbidden.length) {
+      throw new PublishError(
+        'forbidden_paths',
+        `Refusing to publish build/dependency output (${forbidden.length} files, e.g. ${forbidden[0].path}). Check site/.gitignore.`,
+      );
+    }
+    // Only reachable if HEAD carries non-site commits origin lacks (e.g. the
+    // checkout sits on a local feature branch). The CMS publishes content,
+    // never code — refuse loudly rather than ship someone's WIP.
+    const outside = changes.filter((c) => !c.path.startsWith(`${SITE_PATHSPEC}/`));
+    if (outside.length) {
+      throw new PublishError(
+        'non_site_changes',
+        `The server checkout has unpublished code changes outside site/ (e.g. ${outside[0].path}). Content was not published; the server needs to be realigned with main.`,
+      );
+    }
+
+    const commit = await out(['commit-tree', mergedTree, '-p', origin, '-m', message]);
+    const pushed = await pushCommit(git, commit);
+    if (pushed === 'rejected') {
+      console.warn('[git] origin moved during publish — retrying on the new origin/main.');
+      continue;
+    }
+    await verifyRemoteMain(git, commit);
+    try {
+      await syncUpstreamSiteChangesToDisk(oursTree, commit);
+    } catch (err) {
+      console.warn('[git] could not sync upstream site changes to disk:', err.message);
+    }
+    const diffText = changes.map((c) => `${c.status}\t${c.path}`).join('\n');
+    return {
+      success: true,
+      message: 'Published to GitHub. The live site is rebuilding.',
+      changed: true,
+      changedPosts: extractChangedPostsFromDiff(diffText),
+      commitHash: commit,
+      files: changes,
+    };
+  }
+  throw new PublishError(
+    'push_rejected',
+    'GitHub kept moving while publishing (3 attempts). Try again in a moment.',
+  );
 }
 
-async function commitAndPushImpl(message) {
-  const git = getGitInstance();
+/**
+ * Publish everything under site/ (the editor's "Publish" button). Returns
+ * `{ success, message, changed, changedPosts, commitHash, files }`; throws
+ * (PublishError where classifiable) when nothing verifiably reached GitHub.
+ *
+ * @param {{ message?: string, paths?: string[] }} [opts]
+ */
+export async function publishChanges(opts: { message?: string; paths?: string[] } = {}) {
+  const message = opts.message || `Update site content: ${new Date().toISOString()}`;
+  return withGitLock(() => publishImpl(message, opts));
+}
+
+/**
+ * Follow-up commit after the main publish (e.g. front-matter URIs written by
+ * the Bluesky/Mastodon cross-post hooks). Never throws.
+ *
+ * @param {string} message
+ * @param {string[]} [paths] repo-relative paths to capture (default: all of site/)
+ * @returns {Promise<{ success: boolean, message: string, commitHash?: string }>}
+ */
+export async function commitAndPush(message: string, paths?: string[]) {
   try {
-    await alignToOriginMain(git);
-    await git.raw(['add', '-A', SITE_PATHSPEC]);
-    const stagedDiff = await git.diff(['--cached', '--name-status']);
-    if (!stagedDiff.trim()) {
-      return { success: true, message: 'nothing to commit' };
-    }
-    await git.commit(message);
-    await pushMain(git);
-    let commitHash = '';
-    try {
-      const head = await git.log({ maxCount: 1 });
-      commitHash = head.latest?.hash || '';
-    } catch (_) {
-      /* non-fatal */
-    }
-    return { success: true, message: 'pushed', commitHash };
+    const r = await withGitLock(() => publishImpl(message, { paths: paths || null }));
+    return {
+      success: true,
+      message: r.changed ? 'pushed' : 'nothing to commit',
+      commitHash: r.commitHash,
+    };
   } catch (err) {
     return { success: false, message: err.message };
+  }
+}
+
+/**
+ * What a Publish would ship right now, without fetching or pushing — feeds the
+ * editor's "unpublished changes" badge and the System health view.
+ *
+ * @returns {Promise<{ branch: string, head: string, origin: string, onMain: boolean, pending: Array<{status: string, path: string}>, error?: string }>}
+ */
+export async function getPublishState() {
+  try {
+    const r = await gitExec(['symbolic-ref', '--short', '-q', 'HEAD'], { allowCodes: [0, 1] });
+    const branch = r.code === 0 ? String(r.stdout).trim() : '(detached)';
+    const head = await headSha();
+    const o = await gitExec(['rev-parse', '--verify', '-q', ORIGIN_MAIN_REF], {
+      allowCodes: [0, 1],
+    });
+    const origin = o.code === 0 ? String(o.stdout).trim() : '';
+    let pending: Array<{ status: string; path: string }> = [];
+    let error;
+    if (origin) {
+      try {
+        const { mergedTree } = await computePublishTree(origin, null);
+        pending = await diffTrees(origin, mergedTree);
+      } catch (err) {
+        error = err.message;
+      }
+    }
+    return {
+      branch,
+      head,
+      origin,
+      onMain: branch === 'main',
+      pending,
+      ...(error ? { error } : {}),
+    };
+  } catch (err) {
+    return { branch: '', head: '', origin: '', onMain: false, pending: [], error: err.message };
   }
 }
 
@@ -463,6 +700,32 @@ export function extractChangedPostsFromDiff(diffText) {
   return [...set];
 }
 
+/**
+ * `git log` for one path on the newest known main (origin/main when present,
+ * else HEAD). Publishing never moves the local branch, so logging HEAD would
+ * hide versions published since the host last synced.
+ */
+async function logPath(relPath: string, maxCount: number) {
+  const o = await gitExec(['rev-parse', '--verify', '-q', ORIGIN_MAIN_REF], { allowCodes: [0, 1] });
+  const ref = o.code === 0 ? ORIGIN_MAIN_REF : 'HEAD';
+  const text = await out([
+    'log',
+    `--max-count=${Math.max(1, Math.min(200, Number(maxCount) || 50))}`,
+    '--format=%H%x1f%aI%x1f%s%x1f%an%x1e',
+    ref,
+    '--',
+    relPath,
+  ]);
+  return text
+    .split('\x1e')
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .map((r) => {
+      const [hash, date, message, author] = r.split('\x1f');
+      return { hash, date, message, author };
+    });
+}
+
 const POSTS_PATH_PREFIX = 'site/content/posts/';
 
 /**
@@ -477,15 +740,8 @@ const POSTS_PATH_PREFIX = 'site/content/posts/';
 export async function getPostHistory(filename, maxCount = 50) {
   const safe = String(filename || '');
   if (!safe || safe.includes('/') || safe.includes('..')) return [];
-  const git = getGitInstance();
   try {
-    const log = await git.log({ file: POSTS_PATH_PREFIX + safe, maxCount });
-    return log.all.map((c) => ({
-      hash: c.hash,
-      date: c.date,
-      message: c.message,
-      author: c.author_name,
-    }));
+    return await logPath(POSTS_PATH_PREFIX + safe, maxCount);
   } catch (err) {
     console.warn('[git] post history failed:', err instanceof Error ? err.message : err);
     return [];
@@ -526,15 +782,8 @@ export async function getPostAtCommit(filename, hash) {
  * @returns {Promise<Array<{ hash: string, date: string, message: string, author: string }>>}
  */
 export async function getFileHistory(relPath, maxCount = 50) {
-  const git = getGitInstance();
   try {
-    const log = await git.log({ file: relPath, maxCount });
-    return log.all.map((c) => ({
-      hash: c.hash,
-      date: c.date,
-      message: c.message,
-      author: c.author_name,
-    }));
+    return await logPath(relPath, maxCount);
   } catch (err) {
     console.warn('[git] file history failed:', err instanceof Error ? err.message : err);
     return [];

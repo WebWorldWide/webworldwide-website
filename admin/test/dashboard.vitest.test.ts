@@ -45,8 +45,10 @@ const POSTS_FIXTURE = [
     filename: 'c.md',
     title: 'Gamma',
     slug: 'c',
-    date: '2099-12-31T00:00:00.000Z',
-    draft: false,
+    date: '2026-03-01T00:00:00.000Z',
+    // Scheduled = a draft waiting for the scheduler at publish_at.
+    draft: true,
+    publish_at: '2099-12-31T00:00:00.000Z',
     tags: [],
   },
 ];

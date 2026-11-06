@@ -43,8 +43,104 @@ export const DENYLIST_EXTENSIONS = new Set([
   '.xhtml',
   '.xml',
   '.js',
+  '.mjs',
+  '.cjs',
   '.ts',
   '.wasm',
+  '.shtml',
+  '.xht',
+  '.xsl',
+  '.xslt',
+  '.htc',
+  '.mht',
+  '.mhtml',
+]);
+
+/**
+ * Every extension the media library accepts. Anything else is refused at
+ * upload time (415). Keep HTML-/script-capable types OUT of this list.
+ * @type {ReadonlySet<string>}
+ */
+export const ALLOWED_EXTENSIONS = new Set([
+  // images
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.heic',
+  '.heif',
+  '.ico',
+  '.bmp',
+  '.tif',
+  '.tiff',
+  // video
+  '.mp4',
+  '.m4v',
+  '.mov',
+  '.webm',
+  '.mkv',
+  '.avi',
+  // audio
+  '.mp3',
+  '.m4a',
+  '.aac',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.oga',
+  '.opus',
+  // documents
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  '.odt',
+  '.ods',
+  '.odp',
+  '.md',
+  '.txt',
+  '.csv',
+  '.json',
+  '.rtf',
+  '.epub',
+  // archives
+  '.zip',
+  '.tar',
+  '.gz',
+  '.tgz',
+  '.7z',
+  '.rar',
+  // fonts
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+  // source code shown via the highlighter (served as downloads, never executed)
+  '.py',
+  '.go',
+  '.rs',
+  '.rb',
+  '.java',
+  '.c',
+  '.cc',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.cs',
+  '.php',
+  '.css',
+  '.scss',
+  '.yml',
+  '.yaml',
+  '.toml',
+  '.sql',
+  '.swift',
+  '.kt',
 ]);
 
 const DOCUMENT_MIMES = new Set([
@@ -95,15 +191,20 @@ export function classifyMime(mime) {
 export function isDeniedExtension(filename) {
   // Normalize the SAME way the on-disk name is derived (safeFilenameParts trims),
   // then strip trailing dots/whitespace, so `evil.html ` / `evil.svg\t` / `evil.js.`
-  // can't smuggle the live extension past the denylist while landing on disk as
+  // can't smuggle the live extension past the check while landing on disk as
   // the real, servable type.
   const lower = String(filename || '')
     .toLowerCase()
     .trim()
     .replace(/[\s.]+$/, '');
   const dot = lower.lastIndexOf('.');
-  if (dot < 0) return false;
-  return DENYLIST_EXTENSIONS.has(lower.slice(dot));
+  if (dot < 0) return true; // no extension → refuse (can't reason about it)
+  const ext = lower.slice(dot);
+  if (DENYLIST_EXTENSIONS.has(ext)) return true;
+  // Allowlist (2026-11): a denylist kept missing script-capable types
+  // (.shtml, .mjs, .xsl, .htc…), each a stored-XSS vector on the admin origin
+  // and on GitHub Pages. Only known media/document/code types are accepted.
+  return !ALLOWED_EXTENSIONS.has(ext);
 }
 
 /**
