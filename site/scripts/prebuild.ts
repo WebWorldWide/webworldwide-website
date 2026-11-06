@@ -71,8 +71,14 @@ if (existsSync(vanityPath)) {
   try {
     const vanity = JSON.parse(await readFile(vanityPath, 'utf-8'));
     if (Array.isArray(vanity)) {
-      for (const r of vanity) {
-        if (!r?.from || !r?.to) continue;
+      // The CMS stores paths without a trailing slash; the site uses
+      // trailingSlash: 'always'. Normalise so the collision check below
+      // compares like with like (it missed '/x' vs '/x/').
+      const withSlash = (p: string) =>
+        /^https?:\/\//i.test(p) || /\.[a-z0-9]+$/i.test(p) || p.endsWith('/') ? p : `${p}/`;
+      for (const raw of vanity) {
+        if (!raw?.from || !raw?.to) continue;
+        const r = { ...raw, from: withSlash(String(raw.from)), to: withSlash(String(raw.to)) };
         if (seen.has(r.from)) {
           // A vanity redirect collides with a published post's auto-redirect
           // (or an earlier rule). Silently dropping it would leave the writer

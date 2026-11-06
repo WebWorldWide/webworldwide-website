@@ -9,7 +9,7 @@
 
 .te-redir-row {
   display: grid;
-  grid-template-columns: 1.2fr 1.8fr 80px 100px;
+  grid-template-columns: 1.2fr 1.8fr 100px;
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
@@ -39,7 +39,7 @@
 @media (max-width: 768px) {
   .te-redir-row {
     grid-template-columns: 1fr;
-    grid-template-areas: "from" "to" "code" "actions";
+    grid-template-areas: "from" "to" "actions";
     gap: 4px;
   }
   .te-redir-from {
@@ -47,10 +47,6 @@
   }
   .te-redir-to {
     grid-area: to;
-  }
-  .te-redir-code {
-    grid-area: code;
-    color: var(--fg-mute);
   }
   .te-redir-actions {
     grid-area: actions;

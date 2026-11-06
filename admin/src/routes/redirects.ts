@@ -26,6 +26,7 @@ import {
   writeRedirects as write,
   upsertRedirect,
   normPath,
+  invalidFromReason,
 } from '../services/redirects-store.js';
 
 const router = Router();
@@ -49,9 +50,11 @@ router.post('/import', (req, res) => {
   let imported = 0;
   let skipped = 0;
   for (const r of incoming) {
-    const code = Number(r?.code || 301);
-    const safeCode = [301, 302, 307, 308].includes(code) ? code : 301;
-    const result = upsertRedirect(rows, r?.from, r?.to, safeCode);
+    if (invalidFromReason(normPath(r?.from))) {
+      skipped += 1;
+      continue;
+    }
+    const result = upsertRedirect(rows, r?.from, r?.to, 301);
     if (result) imported += 1;
     else skipped += 1;
   }
@@ -68,16 +71,17 @@ router.post('/import', (req, res) => {
 router.post('/', (req, res) => {
   const from = normPath(req.body?.from);
   const to = normPath(req.body?.to);
-  const code = Number(req.body?.code || 301);
+  // GitHub Pages serves static meta-refresh pages: every redirect is a
+  // permanent one, whatever status a client asks for.
+  const code = 301;
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  const bad = invalidFromReason(from);
+  if (bad) return res.status(400).json({ error: 'invalid_from', message: bad });
   if (from === to) {
     return res.status(400).json({
       error: 'self_redirect',
       message: 'from and to must differ (this would loop forever)',
     });
-  }
-  if (![301, 302, 307, 308].includes(code)) {
-    return res.status(400).json({ error: 'code must be 301/302/307/308' });
   }
   const rows = read();
   if (rows.some((r) => r.from === from)) {
@@ -108,16 +112,15 @@ router.put('/:id', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'not_found' });
   const from = normPath(req.body?.from || rows[idx].from);
   const to = normPath(req.body?.to || rows[idx].to);
-  const code = Number(req.body?.code || rows[idx].code || 301);
+  const code = 301;
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  const badFrom = invalidFromReason(from);
+  if (badFrom) return res.status(400).json({ error: 'invalid_from', message: badFrom });
   if (from === to) {
     return res.status(400).json({
       error: 'self_redirect',
       message: 'from and to must differ (this would loop forever)',
     });
-  }
-  if (![301, 302, 307, 308].includes(code)) {
-    return res.status(400).json({ error: 'code must be 301/302/307/308' });
   }
   // Mirror POST's duplicate-`from` guard (PUT lacked it) and the chain/loop guard.
   if (rows.some((r) => r.id !== id && r.from === from)) {

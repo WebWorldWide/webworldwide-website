@@ -31,7 +31,7 @@
     }
     root.innerHTML = `
       <div class="te-redir-row te-redir-head">
-        <span>From</span><span>→ To</span><span>Code</span><span></span>
+        <span>From</span><span>→ To</span><span></span>
       </div>
       ${rows
         .map(
@@ -39,7 +39,6 @@
         <div class="te-redir-row" data-id="${escape(r.id)}">
           <span class="te-redir-from"><code>${escape(r.from)}</code></span>
           <span class="te-redir-to"><code>${escape(r.to)}</code></span>
-          <span class="te-redir-code">${r.code}</span>
           <span class="te-redir-actions">
             <button type="button" class="btn-mini bad js-del" data-id="${escape(r.id)}">Delete</button>
           </span>
@@ -72,13 +71,6 @@
             <input name="from" placeholder="/old-url/" autocomplete="off" required /></label>
           <label class="te-field"><span>To (URL or path)</span>
             <input name="to" placeholder="/blog/new-url/" autocomplete="off" required /></label>
-          <label class="te-field te-redir-code-field"><span>Code</span>
-            <select name="code">
-              <option value="301">301 — permanent</option>
-              <option value="302">302 — temporary</option>
-              <option value="307">307 — temporary (keep method)</option>
-              <option value="308">308 — permanent (keep method)</option>
-            </select></label>
         </div>
         <div class="te-redir-form-err" aria-live="polite"></div>
         <div class="te-redir-form-actions">
@@ -97,7 +89,6 @@
       e.preventDefault();
       const from = String(form.from.value || '').trim();
       const to = String(form.to.value || '').trim();
-      const code = Number(form.code.value || 301);
       if (!from.startsWith('/')) {
         errEl.textContent = 'From must be a path starting with “/”.';
         return;
@@ -112,7 +103,7 @@
       try {
         await window.TE.fetchJSON('/api/redirects', {
           method: 'POST',
-          body: JSON.stringify({ from, to, code }),
+          body: JSON.stringify({ from, to }),
         });
         window.TE.toast('Redirect added.');
         host.innerHTML = '';
@@ -155,8 +146,8 @@
       window.TE.toast('No redirects to export.', 'warn');
       return;
     }
-    const lines = ['from,to,code'];
-    rows.forEach((r) => lines.push([r.from, r.to, r.code].map(TE.csvField).join(',')));
+    const lines = ['from,to'];
+    rows.forEach((r) => lines.push([r.from, r.to].map(TE.csvField).join(',')));
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -168,7 +159,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // Minimal CSV parse for our own from,to,code shape (handles quotes + an
+  // Minimal CSV parse for our own from,to[,code] shape (handles quotes + an
   // optional header row). Good enough to round-trip exported files.
   function parseCsv(text) {
     const out = [];
@@ -200,7 +191,7 @@
     }
     const parsed = parseCsv(text);
     if (!parsed.length) {
-      window.TE.toast('No valid rows found (expected from,to,code).', 'warn');
+      window.TE.toast('No valid rows found (expected from,to).', 'warn');
       return;
     }
     try {
@@ -239,7 +230,7 @@
         return { ok: false, msg: `Loop detected: ${chain.join(' → ')} → ${hit.to}` };
       }
       seen.add(next);
-      chain.push(`${hit.to} (${hit.code})`);
+      chain.push(hit.to);
       cur = next;
     }
     if (chain.length === 1) {
