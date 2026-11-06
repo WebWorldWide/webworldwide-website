@@ -144,6 +144,16 @@ export async function defaultCommit(filenames) {
     paths: [...postPaths, 'site/public'],
   });
 
+  // Announce only once the page is live on GitHub Pages (otherwise the link
+  // cards are missing their image, or point at a not-yet-built page).
+  if (result?.changed && result.commitHash) {
+    const { waitForDeploy } = await import('./deploy-status.js');
+    if (!(await waitForDeploy(result.commitHash))) {
+      console.warn('[scheduler] deploy not confirmed live — skipping cross-posts');
+      return;
+    }
+  }
+
   // Bluesky cross-post — best-effort; mirrors the manual /publish route. Without
   // it a SCHEDULED post goes live but is never syndicated to Bluesky (the manual
   // route does crossPostChangedPosts; the scheduler historically did not, and as

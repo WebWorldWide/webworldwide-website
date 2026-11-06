@@ -9,6 +9,7 @@
  * the post's front-matter and a follow-up commit pushes that change.
  */
 
+import { getDeployStatus, waitForDeploy } from '../services/deploy-status.js';
 import { Router } from 'express';
 import {
   publishChanges,
@@ -141,82 +142,16 @@ router.post('/', async (req, res) => {
         : undefined,
     });
 
-    // Phase 9: Bluesky cross-post hook. Best-effort; logs but never
-    // throws. The publish response still reflects the git outcome —
-    // the cross-post report is folded in as `bluesky` for clients that
-    // care (the admin UI surfaces it in the activity log).
-    let blueskyReport = null;
-    if (result.changed && Array.isArray(result.changedPosts) && result.changedPosts.length > 0) {
-      if (!bluesky.isConfigured()) {
-        console.log('[publish] Bluesky cross-post skipped — BLUESKY_* env not set');
-      } else {
-        try {
-          blueskyReport = await crossPostChangedPosts(result.changedPosts);
-          console.log(
-            `[publish] Bluesky: posted=${blueskyReport.posted.length}` +
-              ` skipped=${blueskyReport.skipped.length}` +
-              ` errors=${blueskyReport.errors.length}`,
-          );
-          // If we wrote any bluesky_uri back into front-matter, push a
-          // follow-up commit so the on-disk content stays the source
-          // of truth.
-          if (blueskyReport.posted.length > 0) {
-            const followup = await commitAndPush(
-              `Update Bluesky URIs (${blueskyReport.posted.length} post${blueskyReport.posted.length === 1 ? '' : 's'})`,
-              result.changedPosts.map((f) => `site/content/posts/${f}`),
-            );
-            if (!followup.success) {
-              console.warn('[publish] Bluesky followup commit failed:', followup.message);
-            }
-          }
-        } catch (err) {
-          // Safety net — `crossPostChangedPosts` itself never throws,
-          // but the followup commit / sign-in path could.
-          console.warn('[publish] Bluesky cross-post crashed (continuing):', err.message);
-          logActivity({
-            user: 'system',
-            action: 'bluesky.crosspost_crashed',
-            meta: { error: err.message },
-          });
-        }
-      }
+    // Cross-post only once GitHub Pages has the new page (and its cover
+    // image) live — posting immediately produced cards with no image, or a
+    // 404 for a brand-new post. Runs in the background; the editor already
+    // shows deploy progress, and the activity log records the outcome.
+    const syndicate =
+      result.changed && Array.isArray(result.changedPosts) && result.changedPosts.length > 0;
+    if (syndicate && (bluesky.isConfigured() || mastodon.isConfigured())) {
+      void crossPostWhenLive(result);
     }
-
-    // Mastodon cross-post hook — same best-effort contract as Bluesky above,
-    // posting directly to the configured account. Independent of Bridgy Fed.
-    let mastodonReport = null;
-    if (result.changed && Array.isArray(result.changedPosts) && result.changedPosts.length > 0) {
-      if (!mastodon.isConfigured()) {
-        console.log('[publish] Mastodon cross-post skipped — MASTODON_* not set');
-      } else {
-        try {
-          mastodonReport = await mastodonCrossPost(result.changedPosts);
-          console.log(
-            `[publish] Mastodon: posted=${mastodonReport.posted.length}` +
-              ` skipped=${mastodonReport.skipped.length}` +
-              ` errors=${mastodonReport.errors.length}`,
-          );
-          if (mastodonReport.posted.length > 0) {
-            const followup = await commitAndPush(
-              `Update Mastodon URIs (${mastodonReport.posted.length} post${mastodonReport.posted.length === 1 ? '' : 's'})`,
-              result.changedPosts.map((f) => `site/content/posts/${f}`),
-            );
-            if (!followup.success) {
-              console.warn('[publish] Mastodon followup commit failed:', followup.message);
-            }
-          }
-        } catch (err) {
-          console.warn('[publish] Mastodon cross-post crashed (continuing):', err.message);
-          logActivity({
-            user: 'system',
-            action: 'mastodon.crosspost_crashed',
-            meta: { error: err.message },
-          });
-        }
-      }
-    }
-
-    res.json({ ...result, bluesky: blueskyReport, mastodon: mastodonReport });
+    res.json({ ...result, syndication: syndicate ? 'after_deploy' : null });
   } catch (err) {
     // Don't leak git/fs internals (absolute Pi paths, library detail) to
     // the client — log the detail, return a SAFE, actionable code + message
@@ -238,51 +173,7 @@ router.post('/', async (req, res) => {
 router.get('/deploy/:sha', async (req, res) => {
   const sha = String(req.params.sha || '');
   if (!/^[0-9a-f]{7,40}$/i.test(sha)) return res.status(400).json({ error: 'bad_sha' });
-  const repo = process.env.GITHUB_REPO || 'WebWorldWide/webworldwide-website';
-  const url = `https://api.github.com/repos/${repo}/actions/runs?head_sha=${sha}&per_page=20`;
-  const headers: Record<string, string> = {
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'wwwide-cms',
-  };
-  if (process.env.GH_TOKEN) headers.Authorization = `Bearer ${process.env.GH_TOKEN}`;
-  try {
-    // 1. Is the commit actually ON main? `/commits/:sha` alone returns 200 for
-    //    a commit on any pushed branch, which made a stranded feature-branch
-    //    commit look "pending" forever.
-    const cmp = await fetch(`https://api.github.com/repos/${repo}/compare/main...${sha}`, {
-      headers,
-      signal: AbortSignal.timeout(8000),
-    });
-    if (cmp.status === 404) return res.json({ status: 'not_pushed' });
-    if (!cmp.ok) return res.json({ status: 'error', reason: `github_${cmp.status}` });
-    const cmpData = await cmp.json();
-    if (cmpData.status !== 'identical' && cmpData.status !== 'behind') {
-      return res.json({ status: 'not_on_main' });
-    }
-
-    // 2. Find the Pages deploy run for this exact commit — matched by workflow
-    //    FILE, never by falling back to whatever ran first (a green Quality run
-    //    used to show up as "Live").
-    const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return res.json({ status: 'error', reason: `github_${r.status}` });
-    const data = await r.json();
-    const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
-    const deploy = runs.find((x) => String(x.path || '').endsWith('.github/workflows/deploy.yml'));
-    if (!deploy) {
-      // On main, but newer pushes can supersede (cancel-in-progress: false
-      // still means a later run covers this content).
-      return res.json({ status: cmpData.status === 'behind' ? 'superseded' : 'pending' });
-    }
-    res.json({
-      status: deploy.status, // queued | in_progress | completed
-      conclusion: deploy.conclusion, // success | failure | cancelled | null
-      url: deploy.html_url,
-      name: deploy.name,
-    });
-  } catch (err) {
-    console.warn('[publish] deploy-status failed:', err.message);
-    res.json({ status: 'error', reason: 'network' });
-  }
+  res.json(await getDeployStatus(sha));
 });
 
 /**
@@ -303,5 +194,107 @@ router.get('/status', async (req, res) => {
     res.status(500).json({ error: 'internal_error' });
   }
 });
+
+/**
+ * Wait for the Pages deploy of `result.commitHash`, then cross-post the
+ * changed posts to Bluesky / Mastodon (each best-effort, never throws).
+ *
+ * @param {{ commitHash?: string, changedPosts?: string[] }} result
+ */
+async function crossPostWhenLive(result) {
+  const live = result.commitHash ? await waitForDeploy(result.commitHash) : false;
+  if (!live) {
+    console.warn('[publish] deploy not confirmed live — skipping cross-posts this time');
+    logActivity({
+      user: 'system',
+      action: 'syndication.skipped',
+      meta: { reason: 'deploy_not_live', commit: result.commitHash },
+    });
+    return;
+  }
+  let blueskyReport = null;
+  let mastodonReport = null;
+  // Phase 9: Bluesky cross-post hook. Best-effort; logs but never
+  // throws. The publish response still reflects the git outcome —
+  // the cross-post report is folded in as `bluesky` for clients that
+  // care (the admin UI surfaces it in the activity log).
+  if (result.changed && Array.isArray(result.changedPosts) && result.changedPosts.length > 0) {
+    if (!bluesky.isConfigured()) {
+      console.log('[publish] Bluesky cross-post skipped — BLUESKY_* env not set');
+    } else {
+      try {
+        blueskyReport = await crossPostChangedPosts(result.changedPosts);
+        console.log(
+          `[publish] Bluesky: posted=${blueskyReport.posted.length}` +
+            ` skipped=${blueskyReport.skipped.length}` +
+            ` errors=${blueskyReport.errors.length}`,
+        );
+        // If we wrote any bluesky_uri back into front-matter, push a
+        // follow-up commit so the on-disk content stays the source
+        // of truth.
+        if (blueskyReport.posted.length > 0) {
+          const followup = await commitAndPush(
+            `Update Bluesky URIs (${blueskyReport.posted.length} post${blueskyReport.posted.length === 1 ? '' : 's'})`,
+            result.changedPosts.map((f) => `site/content/posts/${f}`),
+          );
+          if (!followup.success) {
+            console.warn('[publish] Bluesky followup commit failed:', followup.message);
+          }
+        }
+      } catch (err) {
+        // Safety net — `crossPostChangedPosts` itself never throws,
+        // but the followup commit / sign-in path could.
+        console.warn('[publish] Bluesky cross-post crashed (continuing):', err.message);
+        logActivity({
+          user: 'system',
+          action: 'bluesky.crosspost_crashed',
+          meta: { error: err.message },
+        });
+      }
+    }
+  }
+
+  // Mastodon cross-post hook — same best-effort contract as Bluesky above,
+  // posting directly to the configured account. Independent of Bridgy Fed.
+  if (result.changed && Array.isArray(result.changedPosts) && result.changedPosts.length > 0) {
+    if (!mastodon.isConfigured()) {
+      console.log('[publish] Mastodon cross-post skipped — MASTODON_* not set');
+    } else {
+      try {
+        mastodonReport = await mastodonCrossPost(result.changedPosts);
+        console.log(
+          `[publish] Mastodon: posted=${mastodonReport.posted.length}` +
+            ` skipped=${mastodonReport.skipped.length}` +
+            ` errors=${mastodonReport.errors.length}`,
+        );
+        if (mastodonReport.posted.length > 0) {
+          const followup = await commitAndPush(
+            `Update Mastodon URIs (${mastodonReport.posted.length} post${mastodonReport.posted.length === 1 ? '' : 's'})`,
+            result.changedPosts.map((f) => `site/content/posts/${f}`),
+          );
+          if (!followup.success) {
+            console.warn('[publish] Mastodon followup commit failed:', followup.message);
+          }
+        }
+      } catch (err) {
+        console.warn('[publish] Mastodon cross-post crashed (continuing):', err.message);
+        logActivity({
+          user: 'system',
+          action: 'mastodon.crosspost_crashed',
+          meta: { error: err.message },
+        });
+      }
+    }
+  }
+
+  logActivity({
+    user: 'system',
+    action: 'syndication.done',
+    meta: {
+      bluesky: blueskyReport && blueskyReport.posted.length,
+      mastodon: mastodonReport && mastodonReport.posted.length,
+    },
+  });
+}
 
 export default router;
