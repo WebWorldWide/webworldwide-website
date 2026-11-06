@@ -431,6 +431,43 @@ textarea {
   outline-offset: 1px;
 }
 
+/* Analytics date range: one segmented control, not three loose buttons. */
+.sec-actions.range-seg {
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong-www);
+  border-radius: var(--radius-sm);
+}
+.sec-actions.range-seg .btn {
+  min-height: 30px;
+  padding-inline: 12px;
+  color: var(--ink-soft);
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--radius-xs);
+}
+.sec-actions.range-seg .btn[aria-pressed="true"] {
+  color: var(--accent-on);
+  background: var(--accent);
+}
+
+/* Redirect rows: delete stays quiet until the row is hovered or focused,
+   matching the posts list. */
+.te-redir-row .btn-mini.bad {
+  color: var(--ink-mute);
+  background: transparent;
+  border-color: transparent;
+  transition:
+    color var(--dur-control) var(--ease),
+    border-color var(--dur-control) var(--ease);
+}
+.te-redir-row:hover .btn-mini.bad,
+.te-redir-row:focus-within .btn-mini.bad {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
 /* ── Floating surfaces keep elevation and the larger radius ──────────────── */
 .modal-card,
 .modal .card,
@@ -485,7 +522,8 @@ body[data-page="editor"] .stage {
   .side-item,
   .tab,
   .row-grid,
-  .btn {
+  .btn,
+  .te-redir-row .btn-mini.bad {
     transition: none;
   }
 }
