@@ -543,25 +543,9 @@ body[data-page="login"] {
 .auth-mast {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 40px clamp(32px, 5vw, 72px);
   border-right: 1px solid var(--line-www);
-}
-.am-kicker {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0;
-  font-size: var(--caps-size);
-  font-weight: 600;
-  font-stretch: 82%;
-  letter-spacing: var(--caps-track);
-  color: var(--ink-mute);
-  text-transform: uppercase;
-}
-.am-kicker .tmark {
-  width: 22px;
-  height: 22px;
 }
 .am-title {
   margin: 0;
@@ -611,34 +595,17 @@ body[data-page="login"] .auth-card {
   border: 0;
   box-shadow: none;
 }
-/* The masthead carries the wordmark on wide screens. */
-body[data-page="login"] .auth-brand {
-  display: none;
-}
 
 @media (width <= 900px) {
   body[data-page="login"] {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
   }
+  /* The decorative masthead goes; the form's own brand lock-up remains. */
   .auth-mast {
-    gap: 18px;
-    padding: 24px 24px 0;
-    border-right: 0;
-  }
-  .am-title {
-    font-size: 64px;
-    padding-bottom: 12px;
-  }
-  .am-title br {
-    display: none;
-  }
-  .am-meta {
     display: none;
   }
   body[data-page="login"] .auth-card {
-    align-self: start;
-    margin-top: 8px;
+    align-self: center;
   }
 }
 
