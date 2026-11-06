@@ -1382,7 +1382,7 @@
       <div class="hp">
         <div class="hp-rail">
           <div class="hp-rail-head">
-            <span class="hr-title">Homepage</span>
+            <h1 class="hr-title">Homepage</h1>
             <span class="hp-dirty" id="hp-dirty" role="status"><span class="d" aria-hidden="true"></span><span id="hp-dirty-text">All changes saved</span></span>
           </div>
           <div class="hp-rail-actions">

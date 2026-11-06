@@ -53,9 +53,9 @@
       <div class="sec-head">
         <div>
           <h1 class="sec-title">Analytics</h1>
-          <div class="sec-sub">UMAMI · SELF-HOSTED · COOKIE-FREE</div>
+          <div class="sec-sub">Umami · self-hosted · cookie-free</div>
         </div>
-        <div class="sec-actions" role="group" aria-label="Date range">
+        <div class="sec-actions range-seg" role="group" aria-label="Date range">
           ${['7d', '30d', '90d']
             .map(
               (r) =>

@@ -40,7 +40,7 @@
           <span class="te-redir-from"><code>${escape(r.from)}</code></span>
           <span class="te-redir-to"><code>${escape(r.to)}</code></span>
           <span class="te-redir-actions">
-            <button type="button" class="btn-mini bad js-del" data-id="${escape(r.id)}">Delete</button>
+            <button type="button" class="btn-mini bad js-del" data-id="${escape(r.id)}" aria-label="Delete redirect from ${escape(r.from)}">Delete</button>
           </span>
         </div>
       `,

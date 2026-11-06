@@ -1,0 +1,666 @@
+/* ==========================================================================
+   studio.css — the CMS design contract (admin/DESIGN.md), loaded LAST.
+
+   "An editorial ledger on warm paper": navy ink on an off-white sheet, page
+   titles set large in the condensed serif over a single ink rule, calm
+   condensed-caps metadata, selection shown by a precision mark instead of a
+   filled pill. Chrome is paper; content sits on flat white sheets; only
+   floating things (menus, modals, toasts, drawers) are elevated.
+   ========================================================================== */
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* Warm paper canvas + sheets (ink tiers stay AA: --ink-mute is 5.1:1 here) */
+  --bg-page: #f4f2ec;
+  --surface: #fffefb;
+  --surface-2: #f8f6f1;
+  --surface-3: #efece4;
+
+  /* Hairlines are warm-neutral so they sit quietly on paper. */
+  --line-www: rgb(48 40 24 / 0.13);
+  --line-strong-www: rgb(48 40 24 / 0.26);
+  --rule: rgb(14 41 96 / 0.85);
+
+  /* Radii by function: controls + sheets 6, floating 10, no pills. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  /* Flat sheets. Elevation only for floating surfaces. */
+  --shadow-card-xs: none;
+  --shadow-card-sm: none;
+  --shadow-card: none;
+  --shadow-button: none;
+  --shadow-button-hover: none;
+  --shadow-pop: 0 18px 48px rgb(40 32 16 / 0.16), 0 2px 6px rgb(40 32 16 / 0.08);
+
+  /* One motion vocabulary. */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-control: 140ms;
+  --dur-panel: 240ms;
+
+  /* Utility caps, as one shorthand-able set. */
+  --caps-size: 11px;
+  --caps-track: 0.08em;
+}
+
+::selection {
+  background: rgb(30 104 240 / 0.18);
+}
+
+/* Programmatic focus on the skip-link target drew a 2px ring down the whole
+   main column (it read as a stray blue border beside the sidebar). The skip
+   target needs focus, not a ring around the page. */
+#main:focus {
+  outline: none;
+}
+
+/* ── Chrome: paper sidebar + top bar ─────────────────────────────────────── */
+.sidebar,
+.topbar {
+  background: var(--bg-page);
+}
+.sidebar {
+  counter-reset: side-group;
+}
+.side-brand {
+  border-bottom-color: transparent;
+}
+.side-brand .name {
+  color: var(--ink);
+}
+
+/* Group labels: number + label + trailing hairline (Locomotive label/rule,
+   Loop's numbered groups). The number is decoration; alt text "" keeps it
+   out of the accessible name. */
+.side-group-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-inline: 10px;
+  color: var(--ink-mute);
+}
+.side-group-label::before {
+  counter-increment: side-group;
+  content: counter(side-group, decimal-leading-zero) / "";
+  color: var(--ink-faint);
+}
+.side-group-label::after {
+  flex: 1;
+  height: 1px;
+  content: "";
+  background: var(--line-www);
+}
+
+/* Navigation items: plain text; the selected one gains ink weight, a white
+   sheet, and a small accent triangle at the leading edge (Remy). */
+.side-item {
+  position: relative;
+  color: var(--ink-soft);
+  border: 1px solid transparent;
+  transition:
+    background-color var(--dur-control) var(--ease),
+    color var(--dur-control) var(--ease);
+}
+.side-item:hover,
+.side-item:focus-visible {
+  color: var(--ink);
+  background: rgb(48 40 24 / 0.05);
+}
+.side-item[aria-current="page"],
+.side-item.active {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line-www);
+  box-shadow: none;
+}
+.side-item[aria-current="page"]::before,
+.side-item.active::before {
+  position: absolute;
+  top: 50%;
+  left: -1px;
+  width: 0;
+  height: 0;
+  content: "";
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--accent);
+  transform: translateY(-50%);
+}
+
+/* Counts are bracketed figures, not pills: "Posts (24)". */
+.side-item .badge,
+.side-item .badge.ok,
+.side-item[aria-current="page"] .badge,
+.side-item.active .badge {
+  min-width: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 560;
+  font-stretch: 88%;
+  color: var(--ink-mute);
+  background: transparent;
+  border: 0;
+}
+.side-item .badge::before {
+  content: "(";
+}
+.side-item .badge::after {
+  content: ")";
+}
+.side-item .badge.cm:not(.zero) {
+  color: var(--danger-strong);
+}
+
+.btn-new {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+.side-foot {
+  border-top-color: var(--line-www);
+}
+
+/* Top bar: the crumb is a quiet utility label; the page title is below. */
+.topbar {
+  border-bottom-color: var(--line-www);
+}
+.crumb .c-title {
+  font-size: 12px;
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--caps-track);
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+.topbar-search {
+  background: var(--surface);
+  border-color: var(--line-strong-www);
+  border-radius: var(--radius-sm);
+}
+.topbar-search:focus-within {
+  border-color: var(--accent);
+}
+
+/* ── Page head: big serif title over one ink rule ───────────────────────── */
+.sec-head,
+.ov-hero {
+  padding-bottom: 14px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+.sec-title,
+.ov-hi {
+  font-size: clamp(40px, 3.3vw, 52px);
+  line-height: 0.92;
+  color: var(--ink);
+}
+.sec-sub,
+.ov-date {
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+
+/* ── Sheets ──────────────────────────────────────────────────────────────── */
+.panel,
+.stat,
+.kpi,
+.ed-panel,
+.ed-side,
+.editor-main,
+.hp-rail,
+.hp-card,
+.te-cm-detail,
+.te-cm-list,
+.te-media-card {
+  box-shadow: none;
+}
+.panel {
+  background: var(--surface);
+  border-color: var(--line-www);
+}
+.panel-head {
+  border-bottom-color: var(--line-www);
+}
+.panel-title {
+  font-size: var(--caps-size);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--caps-track);
+  color: var(--ink);
+}
+.panel-title .ind {
+  color: var(--ink-mute);
+}
+
+/* Overview stats: one ruled strip of key/value cells, not three cards. */
+.stat-row,
+.stat-row.three {
+  gap: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius);
+}
+.stat-row .stat {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.stat-row .stat + .stat {
+  border-left: 1px solid var(--line-www);
+}
+.stat-label {
+  color: var(--ink-mute);
+}
+.stat-val {
+  margin-top: 6px;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+/* ── Tabs: underline + bracketed counts, same selection vocabulary ───────── */
+.tabs {
+  gap: 18px;
+  padding-inline: var(--pad-panel, 20px);
+}
+.tab {
+  padding-inline: 0;
+  color: var(--ink-mute);
+  background: transparent;
+  transition: color var(--dur-control) var(--ease);
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab .count,
+.tab.active .count,
+.tab[aria-selected="true"] .count {
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-stretch: 88%;
+  color: inherit;
+  background: transparent;
+}
+.tab .count::before {
+  content: "(";
+}
+.tab .count::after {
+  content: ")";
+}
+.tab.active,
+.tab[aria-selected="true"] {
+  color: var(--ink);
+  background: transparent;
+  border-bottom-color: var(--accent);
+}
+
+/* Segmented controls (system tabs, homepage toggles) share the look. */
+.seg,
+.hp-seg,
+.te-editor-mode-toggle {
+  border-radius: var(--radius-sm);
+}
+
+/* ── Tables / lists: ledger rows ─────────────────────────────────────────── */
+.row-grid.head,
+.row-grid.head:hover {
+  background: transparent;
+  border-bottom: 1px solid var(--line-strong-www);
+}
+.row-grid {
+  transition: background-color var(--dur-control) var(--ease);
+}
+.row-grid:hover {
+  background: var(--surface-2);
+}
+.row-grid:has(input[type="checkbox"]:checked) {
+  background: var(--accent-soft);
+}
+.r-meta,
+.r-date,
+.r-len {
+  font-stretch: 92%;
+}
+
+/* Status: a dot + condensed caps, never a filled pill. */
+.r-pill {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+/* Generic data tables (activity, system, redirects). */
+table th {
+  font-stretch: 82%;
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.btn {
+  border-radius: var(--radius-sm);
+  border-color: var(--line-strong-www);
+  box-shadow: none;
+  transition:
+    background-color var(--dur-control) var(--ease),
+    border-color var(--dur-control) var(--ease),
+    color var(--dur-control) var(--ease);
+}
+.btn:hover,
+.btn:focus-visible {
+  border-color: var(--ink-mute);
+  box-shadow: none;
+}
+.btn.primary,
+.btn-primary,
+.btn.solid {
+  border-color: var(--accent);
+}
+.btn.ghost {
+  border-color: transparent;
+}
+
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]),
+select,
+textarea {
+  border-radius: var(--radius-sm);
+}
+
+/* Secondary filter lists (Comments) and chips (Media) use the same
+   selection vocabulary as the sidebar: ink text on a white sheet, a leading
+   accent mark, bracketed counts. Keyboard focus gets a real ring (the old
+   rules removed it). */
+.te-cm-nav-item {
+  position: relative;
+  color: var(--ink-soft);
+  border-radius: var(--radius-sm);
+}
+.te-cm-nav-item[aria-current="page"],
+.te-cm-nav-item.active {
+  color: var(--ink);
+  font-weight: 620;
+  background: var(--surface-2);
+  border-color: var(--line-www);
+}
+.te-cm-nav-item[aria-current="page"]::before,
+.te-cm-nav-item.active::before {
+  position: absolute;
+  top: 50%;
+  left: -1px;
+  content: "";
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--accent);
+  transform: translateY(-50%);
+}
+.te-cm-nav-item .count,
+.te-cm-nav-item.active .count,
+.te-media-chip .count {
+  padding: 0;
+  font-size: 12px;
+  font-stretch: 88%;
+  color: var(--ink-mute);
+  background: transparent;
+  border: 0;
+}
+.te-cm-nav-item .count::before,
+.te-media-chip .count::before {
+  content: "(";
+}
+.te-cm-nav-item .count::after,
+.te-media-chip .count::after {
+  content: ")";
+}
+.te-media-chip {
+  border-color: var(--line-strong-www);
+  border-radius: var(--radius-sm);
+}
+.te-media-chip.active {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--ink);
+}
+.te-cm-nav-item:focus-visible,
+.te-media-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Analytics date range: one segmented control, not three loose buttons. */
+.sec-actions.range-seg {
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong-www);
+  border-radius: var(--radius-sm);
+}
+.sec-actions.range-seg .btn {
+  min-height: 30px;
+  padding-inline: 12px;
+  color: var(--ink-soft);
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--radius-xs);
+}
+.sec-actions.range-seg .btn[aria-pressed="true"] {
+  color: var(--accent-on);
+  background: var(--accent);
+}
+
+/* Redirect rows: delete stays quiet until the row is hovered or focused,
+   matching the posts list. */
+.te-redir-row .btn-mini.bad {
+  color: var(--ink-mute);
+  background: transparent;
+  border-color: transparent;
+  transition:
+    color var(--dur-control) var(--ease),
+    border-color var(--dur-control) var(--ease);
+}
+.te-redir-row:hover .btn-mini.bad,
+.te-redir-row:focus-within .btn-mini.bad {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+/* ── Floating surfaces keep elevation and the larger radius ──────────────── */
+.modal-card,
+.modal .card,
+.cmdk,
+.cmdk-panel,
+.toast,
+.te-slash-menu,
+.te-link-pop,
+.popover {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+/* The homepage rail title is now the view's h1 (document outline fix). */
+.hp-rail-head .hr-title {
+  margin: 0;
+}
+
+/* ── Editor: paper around a white page; inspector reads as key/value ─────── */
+/* On the icon rail the selection mark sits at the rail's edge, clear of the
+   icon. */
+@media (width > 800px) {
+  body[data-page="editor"] .side-item[aria-current="page"]::before,
+  body[data-page="editor"] .side-item.active::before {
+    left: -10px;
+  }
+}
+body[data-page="editor"] .stage {
+  background: var(--bg-page);
+}
+.ed-side {
+  background: var(--surface);
+  box-shadow: none;
+}
+
+/* ── View change: fade + 6px rise. `backwards` fill only, so no transform
+   lingers on the view (it would trap the position:fixed drawers inside). */
+@keyframes studio-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+#stage > [id^="view-"]:not([hidden]) {
+  animation: studio-view-in var(--dur-panel) var(--ease) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #stage > [id^="view-"]:not([hidden]) {
+    animation: none;
+  }
+  .side-item,
+  .tab,
+  .row-grid,
+  .btn,
+  .te-redir-row .btn-mini.bad {
+    transition: none;
+  }
+}
+
+/* ── Login: a brand encounter (the one place the CMS may set a scene) ──────
+   A masthead beside the form: the wordmark set large over an ink rule, and
+   a ruled key/value colophon. Collapses above the form on narrow screens. */
+body[data-page="login"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  align-items: stretch;
+  height: auto;
+  min-height: 100dvh;
+  padding: 0;
+  background: var(--bg-page);
+}
+.auth-mast {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px clamp(32px, 5vw, 72px);
+  border-right: 1px solid var(--line-www);
+}
+.am-title {
+  margin: 0;
+  padding-bottom: 18px;
+  font-family: var(--font-display);
+  font-size: clamp(72px, 9.5vw, 156px);
+  font-weight: 400;
+  line-height: 0.84;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  font-synthesis: none;
+}
+.am-title em {
+  font-style: italic;
+  color: var(--accent);
+}
+.am-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 24px;
+  margin: 18px 0 0;
+}
+.am-meta div + div {
+  padding-left: 16px;
+  border-left: 1px solid var(--line-www);
+}
+.am-meta dt {
+  font-size: var(--caps-size);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--caps-track);
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+.am-meta dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+body[data-page="login"] .auth-card {
+  align-self: center;
+  justify-self: center;
+  width: min(100% - 48px, 400px);
+  margin: 40px 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+@media (width <= 900px) {
+  body[data-page="login"] {
+    grid-template-columns: 1fr;
+  }
+  /* The decorative masthead goes; the form's own brand lock-up remains. */
+  .auth-mast {
+    display: none;
+  }
+  body[data-page="login"] .auth-card {
+    align-self: center;
+  }
+}
+
+/* ── Small screens ───────────────────────────────────────────────────────── */
+@media (width <= 720px) {
+  .sec-title,
+  .ov-hi {
+    font-size: 38px;
+  }
+  .stat-row,
+  .stat-row.three {
+    gap: 0;
+  }
+  .stat-row .stat + .stat {
+    border-left: 0;
+  }
+  .stat-row .stat:nth-child(2n) {
+    border-left: 1px solid var(--line-www);
+  }
+  .stat-row .stat:nth-child(n + 3) {
+    border-top: 1px solid var(--line-www);
+  }
+}
+
+/* Phones: the top bar already offers "New post", and the posts list gives the
+   title the width — published rows show only the green mark (drafts and
+   scheduled posts keep their label, so status is never colour-only). The
+   row link's aria-label carries the title for assistive tech. */
+@media (width <= 800px) {
+  #view-dashboard .sec-head > .sec-actions {
+    display: none;
+  }
+  .r-pill.pub {
+    gap: 0;
+    font-size: 0;
+  }
+}
+@media (width <= 720px) {
+  .te-cm-inbox {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .te-cm-inbox-card + .te-cm-inbox-card {
+    border-top: 0;
+  }
+  .te-cm-inbox-card:nth-child(2n) {
+    border-left: 1px solid var(--line-www);
+  }
+  .te-cm-inbox-card:nth-child(n + 3) {
+    border-top: 1px solid var(--line-www);
+  }
+}
+
+/* Forced colors: marks drawn with borders/backgrounds must stay visible. */
+@media (forced-colors: active) {
+  .side-item[aria-current="page"]::before {
+    border-left-color: Highlight;
+  }
+}

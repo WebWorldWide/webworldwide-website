@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/css/components.css" />
     <link rel="stylesheet" href="/css/login.css" />
     <link rel="stylesheet" href="/css/design.css" />
+    <link rel="stylesheet" href="/css/studio.css" />
     <!-- WebAuthn library — defer so it doesn't block the login form's
          first paint. The passkey CTA is interactive within ~50ms of
          first render either way; defer is purely a latency win. -->
@@ -32,6 +33,26 @@
   </head>
   <body data-page="login">
     <a class="skip-link" href="#main">Skip to content</a>
+
+    <aside class="auth-mast" aria-hidden="true">
+      <div>
+        <p class="am-title">Web <br />World <br /><em>Wide</em></p>
+        <dl class="am-meta">
+          <div>
+            <dt>Site</dt>
+            <dd>webworldwide.online</dd>
+          </div>
+          <div>
+            <dt>Desk</dt>
+            <dd>Editorial CMS</dd>
+          </div>
+          <div>
+            <dt>Sign-in</dt>
+            <dd>Passkey</dd>
+          </div>
+        </dl>
+      </div>
+    </aside>
 
     <main class="auth-card" id="main" tabindex="-1">
       <div class="auth-brand">

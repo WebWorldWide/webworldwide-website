@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="/css/activity.css" />
     <link rel="stylesheet" href="/css/comments.css" />
     <link rel="stylesheet" href="/css/design.css" />
+    <link rel="stylesheet" href="/css/studio.css" />
     <!-- WebAuthn browser library (self-hosted vendor copy — passkey
        registration). Wrapped in try/catch in auth.js so a load failure
        doesn't crash the page. `defer` so it parses in parallel with
@@ -512,7 +513,7 @@
                         gap: 8px;
                       "
                     >
-                      <h3 style="margin: 0; font-size: 15px">Bluesky</h3>
+                      <h2 style="margin: 0; font-size: 15px">Bluesky</h2>
                       <span id="bsky-status" class="panel-head-r" aria-live="polite"></span>
                     </div>
                     <p style="margin: 6px 0 12px; color: var(--fg-dim); font-size: 13px">
@@ -566,7 +567,7 @@
                         gap: 8px;
                       "
                     >
-                      <h3 style="margin: 0; font-size: 15px">Mastodon</h3>
+                      <h2 style="margin: 0; font-size: 15px">Mastodon</h2>
                       <span id="masto-status" class="panel-head-r" aria-live="polite"></span>
                     </div>
                     <p style="margin: 6px 0 12px; color: var(--fg-dim); font-size: 13px">
@@ -606,9 +607,9 @@
                       padding-top: 20px;
                     "
                   >
-                    <h3 style="margin: 0 0 6px; font-size: 15px">
+                    <h2 style="margin: 0 0 6px; font-size: 15px">
                       Threads &amp; the wider fediverse
-                    </h3>
+                    </h2>
                     <p style="margin: 0; color: var(--fg-dim); font-size: 13px">
                       Threads has no simple token API, so it's reached via
                       <a
@@ -636,7 +637,7 @@
                 <div class="panel-body" id="account-security">
                   <p id="account-warning" class="account-warning" hidden></p>
 
-                  <h4 class="health-section-label">Passkeys</h4>
+                  <h2 class="health-section-label">Passkeys</h2>
                   <ul id="passkey-list" class="account-list" aria-live="polite">
                     <li class="account-empty">Loading…</li>
                   </ul>
@@ -657,13 +658,13 @@
                     passkey needs a sign-in from the last 15 minutes.
                   </p>
 
-                  <h4 class="health-section-label">Signed-in sessions</h4>
+                  <h2 class="health-section-label">Signed-in sessions</h2>
                   <ul id="session-list" class="account-list" aria-live="polite"></ul>
                   <button type="button" class="btn" id="btn-revoke-others">
                     Sign out all other sessions
                   </button>
 
-                  <h4 class="health-section-label">Change password</h4>
+                  <h2 class="health-section-label">Change password</h2>
                   <form id="password-form" class="account-form" autocomplete="on">
                     <input type="text" name="username" autocomplete="username" hidden />
                     <label for="pw-current">Current password</label>
@@ -960,7 +961,7 @@
                   <span class="metric-val" id="metric-swap-val">—</span>
                   <span class="metric-bar"><i id="metric-swap-bar" style="width: 0%"></i></span>
                 </div>
-                <h4 class="health-section-label">Storage &amp; power</h4>
+                <h2 class="health-section-label">Storage &amp; power</h2>
                 <div id="sdpower-status" class="health-status">—</div>
               </div>
 
