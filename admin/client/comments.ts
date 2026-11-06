@@ -382,7 +382,7 @@
           TE.toast('Unblocked.');
           await reloadActive();
         } catch (err) {
-          TE.toast(err.message || 'Unblock failed.', 'error');
+          TE.toast((err.data && err.data.message) || err.message || 'Unblock failed.', 'error');
         }
       });
       row.appendChild(btn);

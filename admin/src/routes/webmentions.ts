@@ -259,7 +259,7 @@ export async function validateMention(id) {
     console.error('[webmention] fetch failed for', row.id, '-', err && err.message);
     db()
       .prepare(
-        `UPDATE webmentions SET status = 'rejected', validated_at = ?, raw_html = ? WHERE id = ?`,
+        `UPDATE webmentions SET status = 'rejected', validated_at = ?, raw_html = ? WHERE id = ? AND status = 'pending'`,
       )
       .run(Date.now(), 'fetch_failed', id);
     return;
@@ -269,7 +269,7 @@ export async function validateMention(id) {
   if (!parsed.linksToTarget) {
     db()
       .prepare(
-        `UPDATE webmentions SET status = 'rejected', validated_at = ?, raw_html = ? WHERE id = ?`,
+        `UPDATE webmentions SET status = 'rejected', validated_at = ?, raw_html = ? WHERE id = ? AND status = 'pending'`,
       )
       .run(Date.now(), 'no_link_back', id);
     return;
@@ -290,7 +290,11 @@ export async function validateMention(id) {
     .prepare(
       `UPDATE webmentions
           SET type = ?, author_name = ?, author_avatar = ?, author_url = ?,
-              content = ?, validated_at = ?, status = ?, raw_html = ?
+              content = ?, validated_at = ?,
+              -- An admin may approve/reject while the fetch is in flight;
+              -- their decision wins over the validator's default.
+              status = CASE WHEN status = 'pending' THEN ? ELSE status END,
+              raw_html = ?
         WHERE id = ?`,
     )
     .run(
@@ -351,11 +355,17 @@ publicRouter.post('/', async (req, res) => {
   let revalidate = true;
   try {
     const existing = db()
-      .prepare('SELECT id, status FROM webmentions WHERE source = ? AND target = ?')
+      .prepare('SELECT id, status, raw_html FROM webmentions WHERE source = ? AND target = ?')
       .get(v.source, normTarget);
     if (existing) {
       id = existing.id;
-      if (existing.status === 'approved' || existing.status === 'rejected') {
+      // A rejection the validator made on its own (transient fetch failure, or
+      // the link back wasn't there yet) is not a moderation decision — a
+      // re-delivery should get a fresh check, not be ignored forever.
+      const systemRejected =
+        existing.status === 'rejected' &&
+        (existing.raw_html === 'fetch_failed' || existing.raw_html === 'no_link_back');
+      if (!systemRejected && (existing.status === 'approved' || existing.status === 'rejected')) {
         // Already moderated — record the re-delivery time but PRESERVE the
         // decision; do not re-validate (which would reset it to pending).
         db().prepare(`UPDATE webmentions SET received_at = ? WHERE id = ?`).run(Date.now(), id);
@@ -523,7 +533,9 @@ adminRouter.post('/:id/approve', (req, res) => {
 
 adminRouter.post('/:id/reject', (req, res) => {
   const id = String(req.params.id || '');
-  const r = db().prepare(`UPDATE webmentions SET status = 'rejected' WHERE id = ?`).run(id);
+  const r = db()
+    .prepare(`UPDATE webmentions SET status = 'rejected', raw_html = 'admin' WHERE id = ?`)
+    .run(id);
   if (r.changes === 0) return res.status(404).json({ error: 'not_found' });
   logActivity({ req, action: 'webmention.reject', target: id });
   res.json({ id, status: 'rejected' });
