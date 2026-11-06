@@ -5,7 +5,7 @@
  * Loads GET /api/settings, renders a grouped form (Site / Social /
  * Analytics / Author), patches back on Save. Hugo-toml fields go to
  * PATCH /api/settings/hugo as a flat `{ "params.umamiSiteID": "..." }`
- * change-map; author fields go to PATCH /api/settings/author.
+ * change-map.
  */
 (function () {
   if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') return;
@@ -46,8 +46,6 @@
     const hugo = cache.hugo || {};
     const site = hugo.site || {};
     const siteSocial = hugo.social || {};
-    const author = cache.author || {};
-    const social = author.social || {};
 
     root.innerHTML = `
       <section class="te-form-group" data-group="site">
@@ -55,11 +53,9 @@
         ${field('Title', 'site.title', site.title || '')}
         ${field('Description', 'site.description', site.description || '', 'textarea')}
         ${field('Base URL', 'site.url', site.url || '', 'url')}
-        ${field('Copyright', 'site.copyright', site.copyright || '')}
-        ${field('Tagline', 'site.tagline', site.tagline || '')}
       </section>
       <section class="te-form-group" data-group="analytics">
-        <h3>Analytics</h3>
+        <h3>Analytics &amp; comments</h3>
         ${field('Umami URL', 'analytics.url', (hugo.analytics && hugo.analytics.url) || '', 'url')}
         ${field('Umami site ID', 'analytics.site_id', (hugo.analytics && hugo.analytics.site_id) || '')}
         ${field('Remark42 URL', 'comments.url', (hugo.comments && hugo.comments.url) || '', 'url')}
@@ -83,18 +79,6 @@
           </select>
         </label>
         ${field('Custom dictionary (one word per line)', 'spell.words', ((dictCache && dictCache.words) || []).join('\n'), 'textarea')}
-      </section>
-      <section class="te-form-group" data-group="author">
-        <h3>Author profile</h3>
-        ${field('Name', 'author.name', author.name || '')}
-        ${field('Bio', 'author.bio', author.bio || '', 'textarea')}
-        ${field('Avatar URL', 'author.avatar', author.avatar || '', 'url')}
-        ${field('Homepage', 'author.url', author.url || '', 'url')}
-        ${field('Bluesky', 'author.social.bluesky', social.bluesky || '', 'url')}
-        ${field('Mastodon', 'author.social.mastodon', social.mastodon || '', 'url')}
-        ${field('GitHub', 'author.social.github', social.github || '', 'url')}
-        ${field('YouTube', 'author.social.youtube', social.youtube || '', 'url')}
-        ${field('Email', 'author.social.email', social.email || '', 'email')}
       </section>
     `;
   }
@@ -161,9 +145,8 @@
 
   function collect() {
     const root = document.getElementById('settings-form');
-    if (!root) return { hugo: {}, author: {} };
+    if (!root) return { hugoChanges: {}, spell: {} };
     /** @type {Record<string, any>} */ const hugoChanges = {};
-    /** @type {Record<string, any>} */ const author = { social: {} };
     /** @type {{ language?: string, words?: string[] }} */ const spell = {};
     root.querySelectorAll('input,textarea,select').forEach((el) => {
       const name = el.getAttribute('name') || '';
@@ -172,19 +155,13 @@
         spell.language = val;
       } else if (name === 'spell.words') {
         spell.words = val.split('\n');
-      } else if (!name.startsWith('author.')) {
+      } else if (name) {
         // Dotted site.toml path ("site.title", "analytics.site_id", …) —
         // the backend's flatToChanges maps it straight onto the file.
         hugoChanges[name] = val;
-      } else if (name === 'author.name') author.name = val;
-      else if (name === 'author.bio') author.bio = val;
-      else if (name === 'author.avatar') author.avatar = val;
-      else if (name === 'author.url') author.url = val;
-      else if (name.startsWith('author.social.')) {
-        author.social[name.slice('author.social.'.length)] = val;
       }
     });
-    return { hugoChanges, author, spell };
+    return { hugoChanges, spell };
   }
 
   async function save() {
@@ -197,17 +174,13 @@
     const btn = document.getElementById('btn-save-settings');
     if (btn) /** @type {HTMLButtonElement} */ btn.disabled = true;
     try {
-      const { hugoChanges, author, spell } = collect();
+      const { hugoChanges, spell } = collect();
       if (Object.keys(hugoChanges).length) {
         await window.TE.fetchJSON('/api/settings/hugo', {
           method: 'PATCH',
           body: JSON.stringify({ changes: hugoChanges }),
         });
       }
-      await window.TE.fetchJSON('/api/settings/author', {
-        method: 'PATCH',
-        body: JSON.stringify(author),
-      });
       // Persist spell-check config (best-effort: only when the endpoint
       // loaded, so a missing proofreader doesn't fail the whole save).
       if (dictCache && spell && (spell.language || spell.words)) {

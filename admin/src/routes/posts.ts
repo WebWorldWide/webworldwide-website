@@ -4,7 +4,6 @@
  *
  * Phase 5e adds (without changing the existing CRUD contract):
  *   POST   /api/posts/:filename/duplicate  → clone with `-copy` suffix
- *   POST   /api/posts/:filename/preview    → signed JWT preview link
  *   POST   /api/posts/bulk                 → delete/publish in bulk
  *
  * Activity log integration is fire-and-forget — `logActivity(...)` is
@@ -14,7 +13,6 @@
 import { Router } from 'express';
 import { readdirSync, readFileSync, unlinkSync, statSync } from 'fs';
 import path, { join } from 'path';
-import crypto from 'crypto';
 import { parsePost, serializePost, validateForPublish } from '../utils/frontmatter.js';
 import { writeFileAtomic } from '../utils/atomicWrite.js';
 import { invalidatePostRefs } from '../utils/postRefs.js';
@@ -39,12 +37,9 @@ const EDITOR_MANAGED_KEYS = new Set([
   'draft',
   'date',
   'excerpt',
-  'series',
   'publish_at',
   'cover',
   'cover_alt',
-  'custom_css',
-  'custom_js',
 ]);
 
 /**
@@ -294,50 +289,6 @@ router.post('/:filename/duplicate', (req, res) => {
   } catch (err) {
     console.error('[posts] duplicate failed:', err);
     res.status(500).json({ error: 'duplicate_failed', message: err.message });
-  }
-});
-
-/**
- * POST /api/posts/:filename/preview
- *
- * Returns a 7-day signed JWT URL to view the draft. Token payload is
- * `{ slug, exp }` signed HMAC-SHA256 with `SITE_SECRET`.
- *
- * Hugo's draft build emits `/drafts/<slug>/index.html`; verification of
- * the token happens server-side by a small Caddy/Worker layer (out of
- * scope for this phase — see CONTRIBUTING). The admin returns the
- * generated URL so the writer can share or open it directly.
- *
- * Design choice (recorded for posterity): plain HMAC + JWT, not ed25519
- * or a Cloudflare Worker dance. Reason: the Pi already holds the secret,
- * the admin is the only generator, and verification can be added later
- * by any stateless reverse proxy that shares the env var. Cloudflare
- * Worker support is a Phase 11+ followup if/when we move drafts behind
- * the CDN edge.
- */
-router.post('/:filename/preview', (req, res) => {
-  try {
-    const src = path.basename(req.params.filename);
-    const raw = readFileSync(join(postsDir, src), 'utf-8');
-    const { data } = parsePost(raw);
-    const slug = String(data.slug || src.replace(/\.md$/, ''));
-
-    const secret = process.env.SITE_SECRET || process.env.SESSION_SECRET || 'web-world-wide-secret';
-    const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
-    const token = signJwtHS256({ slug, exp }, secret);
-
-    const base =
-      process.env.SITE_BASE_URL ||
-      (req.headers['x-forwarded-host']
-        ? `https://${req.headers['x-forwarded-host']}`
-        : 'https://webworldwide.online');
-    const url = `${base.replace(/\/$/, '')}/drafts/${encodeURIComponent(slug)}/?token=${token}`;
-
-    logActivity({ req, action: 'post.preview', target: src, meta: { slug, exp } });
-    res.json({ url, token, expires: exp * 1000 });
-  } catch (err) {
-    console.error('[posts] preview failed:', err);
-    res.status(500).json({ error: 'preview_failed', message: err.message });
   }
 });
 
@@ -748,62 +699,5 @@ router.delete('/:filename', (req, res) => {
     res.status(500).json({ error: 'Failed to delete post' });
   }
 });
-
-// ── Helpers ────────────────────────────────────────────────────────
-
-/**
- * Sign a payload as a JWT-HS256 token. Tiny implementation — we don't
- * pull in `jsonwebtoken` because the only place we issue these is here,
- * and the only place we'd verify them is a reverse-proxy layer that
- * lives outside this codebase. Shared secret only.
- *
- * @param {Record<string, any>} payload
- * @param {string} secret
- * @returns {string}
- */
-function signJwtHS256(payload, secret) {
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const enc = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url').replace(/=+$/, '');
-  const head = enc(header);
-  const body = enc(payload);
-  const data = `${head}.${body}`;
-  const sig = crypto
-    .createHmac('sha256', secret)
-    .update(data)
-    .digest('base64url')
-    .replace(/=+$/, '');
-  return `${data}.${sig}`;
-}
-
-/**
- * Verify a JWT-HS256 token. Returns the parsed payload on success or
- * null on any failure (bad signature, expired, malformed). Exported
- * for tests; a real proxy layer would re-implement this in its own
- * runtime.
- *
- * @param {string} token
- * @param {string} secret
- * @returns {Record<string, any> | null}
- */
-export function verifyJwtHS256(token, secret) {
-  const parts = String(token || '').split('.');
-  if (parts.length !== 3) return null;
-  const [head, body, sig] = parts;
-  const expected = crypto
-    .createHmac('sha256', secret)
-    .update(`${head}.${body}`)
-    .digest('base64url')
-    .replace(/=+$/, '');
-  // Constant-time compare
-  if (sig.length !== expected.length) return null;
-  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf-8'));
-    if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-}
 
 export default router;

@@ -57,9 +57,10 @@ describe('settings.js', () => {
     await flush();
     const html = document.getElementById('settings-form').innerHTML;
     expect(html).toContain('value="T"');
-    expect(html).toContain('value="Tag"');
-    expect(html).toContain('value="A"');
-    expect(html).toContain('value="b"');
+    expect(html).toContain('value="https://x"');
+    // Fields the public site never reads (tagline, author profile) are gone.
+    expect(html).not.toContain('value="Tag"');
+    expect(html).not.toContain('value="A"');
   });
 });
 

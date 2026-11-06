@@ -144,19 +144,9 @@ test('duplicate creates a -copy clone', skipOpts(), async () => {
   assert.equal(body2.filename, 'one-copy-2.md');
 });
 
-test('preview returns a signed JWT URL', skipOpts(), async () => {
+test('the dead draft-preview endpoint is gone', skipOpts(), async () => {
   const res = await fetch(`${baseUrl}/api/posts/one.md/preview`, { method: 'POST' });
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.match(body.url, /\/drafts\/one\/?\?token=/);
-  // Token should have three parts
-  const token = body.url.split('token=')[1];
-  assert.equal(token.split('.').length, 3);
-  // Should verify
-  const { verifyJwtHS256 } = await import('../src/routes/posts.js');
-  const payload = verifyJwtHS256(token, process.env.SITE_SECRET);
-  assert.ok(payload);
-  assert.equal(payload.slug, 'one');
+  assert.equal(res.status, 404);
 });
 
 test('create with past publish_at is rejected', skipOpts(), async () => {

@@ -402,7 +402,6 @@
           body,
           draft: draftEl.value === 'true',
           excerpt: descEl.value || '',
-          series: $('post-series')?.value || '',
           ts: Date.now(),
         }),
       );
@@ -480,57 +479,6 @@
       if (fileFoot) fileFoot.textContent = '';
     }
     if (crumbEditor) crumbEditor.textContent = prettyName(filename) || 'New post';
-  }
-
-  // ── Load series names into <datalist> for autocomplete ────
-  async function loadSeriesSuggestions() {
-    try {
-      const posts = await TE.fetchJSON('/api/posts');
-      const seriesSet = new Set();
-      (posts || []).forEach((p) => {
-        if (p.series) seriesSet.add(p.series);
-      });
-      const seriesDataList = $('series-suggestions');
-      if (seriesDataList) {
-        seriesDataList.innerHTML = Array.from(seriesSet)
-          .sort()
-          .map((s) => `<option value="${TE.escape(s)}">`)
-          .join('');
-      }
-    } catch (_) {
-      /* non-fatal */
-    }
-  }
-
-  // Phase 5e: preview-link button
-  async function generatePreviewLink() {
-    if (!currentFile) {
-      TE.toast('Save the post first.', 'warn');
-      return;
-    }
-    const btn = $('btn-preview-link');
-    const out = $('preview-link-out');
-    if (btn) btn.disabled = true;
-    try {
-      const res = await TE.fetchJSON(`/api/posts/${encodeURIComponent(currentFile)}/preview`, {
-        method: 'POST',
-        body: '{}',
-      });
-      if (out) {
-        out.value = res.url || '';
-        out.select?.();
-      }
-      try {
-        await navigator.clipboard.writeText(res.url || '');
-        TE.toast('Preview link copied.');
-      } catch (_) {
-        TE.toast('Preview link generated.');
-      }
-    } catch (err) {
-      TE.toast(err.message || 'Preview failed.', 'error');
-    } finally {
-      if (btn) btn.disabled = false;
-    }
   }
 
   // Phase 5e: pick a cover image from the media library (simple prompt
@@ -840,13 +788,9 @@
   // for missing DOM refs so tests that mount editor.js against a
   // minimal HTML shell don't break.
   function setExtraFields(data) {
-    const seriesEl = $('post-series');
     const pubAtEl = $('post-publish-at');
     const coverEl = $('post-cover');
     const coverAltEl = $('post-cover-alt');
-    const cssEl = $('post-custom-css');
-    const jsEl = $('post-custom-js');
-    if (seriesEl) seriesEl.value = data.series || '';
     if (pubAtEl) {
       if (data.publish_at) {
         try {
@@ -860,8 +804,6 @@
     }
     if (coverEl) coverEl.value = data.cover || '';
     if (coverAltEl) coverAltEl.value = data.cover_alt || '';
-    if (cssEl) cssEl.value = data.custom_css || '';
-    if (jsEl) jsEl.value = data.custom_js || '';
     updateCoverPreview();
     updatePublishAtBadge();
   }
@@ -928,8 +870,6 @@
     };
     // Phase 5e: scoop optional fields. Empty strings are dropped so
     // the front-matter object stays clean.
-    const series = ($('post-series')?.value || '').trim();
-    if (series) data.series = series;
     const pubAt = $('post-publish-at')?.value || '';
     if (pubAt) {
       try {
@@ -942,10 +882,6 @@
     if (cover) data.cover = cover;
     const coverAlt = ($('post-cover-alt')?.value || '').trim();
     if (coverAlt) data.cover_alt = coverAlt;
-    const customCss = ($('post-custom-css')?.value || '').trim();
-    if (customCss) data.custom_css = customCss;
-    const customJs = ($('post-custom-js')?.value || '').trim();
-    if (customJs) data.custom_js = customJs;
     const content = bodyEl.value || '';
     const url = currentFile ? `/api/posts/${encodeURIComponent(currentFile)}` : '/api/posts';
     const method = currentFile ? 'PUT' : 'POST';
@@ -1123,7 +1059,8 @@
       }
       return;
     }
-    btnPub.disabled = btnPub2.disabled = true;
+    btnPub.disabled = true;
+    if (btnPub2) btnPub2.disabled = true;
     try {
       const result = await TE.fetchJSON('/api/publish', { method: 'POST', body: '{}' });
       if (result && result.changed === false) {
@@ -1137,7 +1074,8 @@
       const msg = (err.data && err.data.message) || err.message || 'Publish failed.';
       TE.toast(msg, 'error');
     } finally {
-      btnPub.disabled = btnPub2.disabled = false;
+      btnPub.disabled = false;
+      if (btnPub2) btnPub2.disabled = false;
     }
   }
 
@@ -1746,12 +1684,9 @@
       setAutoState('idle', 'Ready');
       offerNewDraftRestore();
     }
-    loadSeriesSuggestions();
 
     // Phase 5e wiring — only fires when the corresponding sidebar
     // panels are present in the DOM (editor.html includes them).
-    const btnPreview = $('btn-preview-link');
-    if (btnPreview) btnPreview.addEventListener('click', generatePreviewLink);
     const btnCover = $('btn-pick-cover');
     if (btnCover) btnCover.addEventListener('click', pickCover);
     const coverEl = $('post-cover');
@@ -1773,10 +1708,6 @@
         markDirty();
       });
     if (draftEl) draftEl.addEventListener('change', updatePublishAtBadge);
-    ['post-series', 'post-custom-css', 'post-custom-js'].forEach((id) => {
-      const el = $(id);
-      if (el) el.addEventListener('input', markDirty);
-    });
     // Load a template if ?template=<name> was passed for a new post
     maybeLoadTemplate();
   }

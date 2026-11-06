@@ -127,7 +127,6 @@ body {
 .cmdk-foot,
 .hp-history-kind,
 .te-act-head,
-.te-cm-nav-item,
 .te-cm-live,
 .te-cm-row-head,
 .te-cm-author .badge,
@@ -148,7 +147,6 @@ body {
 .auth-sub,
 .auth-divider,
 .te-dz,
-.te-media-chip,
 .te-media-sub,
 .te-media-status,
 .te-media-drawer-head,
@@ -408,4 +406,229 @@ pre,
 .hp-sec-name .tiny {
   font-size: 12px;
   color: var(--ink-mute);
+}
+
+/* ==========================================================================
+   Spacing system (2026-11). One rhythm for every view:
+     page header  title + sub left, actions right, bottom-aligned
+     controls     36px tall everywhere (inputs, selects, buttons)
+     toolbars     14px 20px padding, 10px gaps, hairline under
+     panels       head 14px 20px · body 20px · 20px between stacked panels
+   ========================================================================== */
+:root {
+  --control-h: 36px;
+  --pad-panel: 20px;
+}
+
+/* Page header: a two-column grid so long subtitles never push the actions
+   onto their own row (Redirects did). */
+.sec-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3) var(--space-6);
+  align-items: end;
+  margin-bottom: var(--space-6);
+}
+.sec-sub {
+  max-width: 72ch;
+  line-height: 1.5;
+}
+.sec-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+/* Header actions are page-level: same size everywhere (System's Refresh
+   and Analytics' range picker were 30px "sm" buttons). */
+.sec-actions .btn,
+.sec-actions .btn.sm {
+  min-height: var(--control-h);
+  padding-inline: 14px;
+  font-size: var(--fs-sm);
+}
+
+/* Panels */
+.panel-head {
+  min-height: 48px;
+  padding: 12px var(--pad-panel);
+}
+.panel-body {
+  padding: var(--pad-panel);
+}
+
+/* Toolbars / filter rows inside panels */
+.posts-toolbar,
+.te-act-filters,
+.te-cm-toolbar,
+.te-media-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 14px var(--pad-panel);
+  border-bottom: 1px solid var(--line-www);
+}
+.te-act-filters select,
+.te-act-filters input[type="search"],
+.te-cm-toolbar input[type="search"],
+.te-cm-toolbar select,
+.te-media-toolbar input[type="search"],
+.te-media-toolbar select,
+.posts-toolbar select {
+  min-height: var(--control-h);
+  padding: 0 12px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong-www);
+  border-radius: var(--radius-sm);
+}
+.te-act-filters input[type="search"],
+.te-cm-toolbar input[type="search"],
+.te-media-toolbar input[type="search"] {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.te-act-filters select:focus-visible,
+.te-act-filters input:focus-visible,
+.te-cm-toolbar input:focus-visible,
+.te-cm-toolbar select:focus-visible,
+.te-media-toolbar input:focus-visible,
+.te-media-toolbar select:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-line);
+  outline-offset: 0;
+}
+
+/* Media: one dashed drop target, not two stacked dashed boxes. */
+.te-media-chips {
+  padding: 14px var(--pad-panel) 0;
+}
+.te-dz {
+  margin: 14px var(--pad-panel);
+}
+#media-empty {
+  margin: 0 var(--pad-panel) var(--pad-panel);
+  padding: 28px 16px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-style: italic;
+  color: var(--ink-mute);
+}
+
+/* Overview: inbox counters are tiles in one row, not cards inside a card. */
+.te-cm-inbox {
+  gap: 0;
+  padding: 0;
+}
+.te-cm-inbox-card {
+  padding: 18px var(--pad-panel);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.te-cm-inbox-card + .te-cm-inbox-card {
+  border-left: 1px solid var(--line-www);
+}
+.te-cm-inbox-card:hover,
+.te-cm-inbox-card:focus-visible {
+  background: var(--surface-2);
+}
+.te-cm-inbox-card .sub {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Top bar on dashboard views: the page title is already the big serif
+   heading, so the crumb's "ADMIN /" eyebrow is noise. */
+.crumb .c-eyebrow {
+  display: none;
+}
+
+/* Sidebar: Redirects + Activity live in the System group now. */
+.side-more {
+  display: none;
+}
+
+@media (width <= 720px) {
+  .sec-head {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .sec-actions {
+    justify-content: flex-start;
+  }
+  .posts-toolbar,
+  .te-act-filters,
+  .te-cm-toolbar,
+  .te-media-toolbar {
+    padding: 12px 14px;
+  }
+  .te-cm-inbox-card + .te-cm-inbox-card {
+    border-left: 0;
+    border-top: 1px solid var(--line-www);
+  }
+}
+
+/* Filter lists and chips read as navigation, not labels: sentence case. */
+.te-cm-nav-item,
+.te-media-chip {
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 520;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Overview stats: compact tiles; no empty spark strip when there's no data. */
+.stat {
+  padding: 16px var(--pad-panel) 14px;
+}
+.stat-spark:empty {
+  display: none;
+}
+@media (width <= 720px) {
+  .stat-row,
+  .stat-row.three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .stat-row.three .stat:last-child {
+    grid-column: 1 / -1;
+  }
+  .stat-val {
+    font-size: 24px;
+  }
+}
+
+/* Editor top bar on phones: one compact row. Word count lives in the
+   sidebar; shortcuts/TOC are keyboard-and-wide-screen features. */
+@media (width <= 720px) {
+  .editor-metrics,
+  #btn-toc-toggle,
+  [data-shortcuts-help] {
+    display: none;
+  }
+  /* The editor head already shows the same save state as a pill. */
+  .topbar .ed-saved {
+    display: none;
+  }
+  .topbar .topbar-actions {
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .topbar .topbar-actions .btn.ghost {
+    min-width: 36px;
+    padding-inline: 8px;
+  }
 }

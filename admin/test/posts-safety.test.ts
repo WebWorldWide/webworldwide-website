@@ -404,7 +404,9 @@ test(
     assert.equal(res.status, 200);
     let raw = readFileSync(join(postsDir, 'sched.md'), 'utf8');
     assert.match(raw, /draft: true/);
-    assert.doesNotMatch(raw, /series:/, 'a field the author cleared stays cleared');
+    // `series` is no longer an editor field, so it is preserved like any other
+    // unmanaged front-matter key; `cover` IS managed, so clearing it sticks.
+    assert.match(raw, /series: old-series/, 'unmanaged keys survive a save');
 
     // Draft + past publish_at → the spent schedule is dropped (no re-promotion).
     res = await api('/api/posts/sched.md', {
