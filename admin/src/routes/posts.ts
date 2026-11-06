@@ -10,6 +10,7 @@
  * called without `await` so a logger hiccup never breaks a save.
  */
 
+import * as remark42 from '../services/remark42.js';
 import { trashPost, listTrash, getTrashed, removeTrashed, TRASH_DAYS } from '../services/trash.js';
 import { Router } from 'express';
 import { readdirSync, readFileSync, unlinkSync, statSync, existsSync } from 'fs';
@@ -656,6 +657,19 @@ router.put('/:filename', (req, res) => {
       // Auto-redirect the old URL + rewrite internal links so the public
       // slug change never 404s. (Best-effort; never fails the save.)
       rename = applySlugRename(oldFilename.replace(/\.md$/, ''), slug);
+      // Comments are keyed by the post URL; move the thread with the post.
+      // Best-effort and async — a Remark42 hiccup must never fail the save.
+      const base = (process.env.PUBLIC_BASE_URL || 'https://webworldwide.online').replace(
+        /\/+$/,
+        '',
+      );
+      const oldSlug = oldFilename.replace(/\.md$/, '');
+      remark42
+        .remapUrls([[`${base}/blog/${oldSlug}/`, `${base}/blog/${slug}/`]])
+        .then(() =>
+          logActivity({ req, action: 'comments.remap', target: slug, meta: { from: oldSlug } }),
+        )
+        .catch((err) => console.warn('[posts] comment remap failed:', err && err.message));
       logActivity({
         req,
         action: 'post.rename',

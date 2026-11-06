@@ -199,6 +199,8 @@ async function call(
     admin?: boolean;
     secret?: boolean;
     accept?: string;
+    /** Send `body` as text/plain instead of JSON (Remark42's remap API). */
+    text?: boolean;
   } = {},
 ) {
   const o = opts || {};
@@ -219,7 +221,7 @@ async function call(
   const headers: Record<string, string> = {
     Accept: o.accept || 'application/json',
   };
-  if (o.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (o.body !== undefined) headers['Content-Type'] = o.text ? 'text/plain' : 'application/json';
   if (o.admin) {
     // Remark42's documented admin auth is HTTP basic `admin:<ADMIN_PASSWD>`
     // (enabled by ADMIN_PASSWD on the remark42 container). The self-minted
@@ -242,7 +244,7 @@ async function call(
     res = await fetchImpl(url.toString(), {
       method: o.method || 'GET',
       headers,
-      body: o.body !== undefined ? JSON.stringify(o.body) : undefined,
+      body: o.body === undefined ? undefined : o.text ? String(o.body) : JSON.stringify(o.body),
       signal: controller.signal,
     });
   } catch (err) {
@@ -555,6 +557,25 @@ export async function verifyUser(userId, verified) {
 /**
  * Cheap health check — `GET /ping`. Returns true on 2xx.
  */
+/**
+ * Move comment threads to new URLs (Remark42 admin remap). Used when a post's
+ * slug changes so its comments follow it instead of being orphaned on the
+ * old URL. Runs asynchronously inside Remark42.
+ *
+ * @param {Array<[string, string]>} pairs [fromUrl, toUrl]
+ */
+export async function remapUrls(pairs: Array<[string, string]>) {
+  const lines = pairs.filter(([a, b]) => a && b && a !== b).map(([a, b]) => `${a} ${b}`);
+  if (!lines.length) return null;
+  return call('/api/v1/admin/remap', {
+    method: 'POST',
+    query: { site: siteId() },
+    body: lines.join('\n'),
+    text: true,
+    admin: true,
+  });
+}
+
 export async function ping() {
   try {
     await call('/ping', { accept: 'text/plain' });
