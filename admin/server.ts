@@ -515,10 +515,34 @@ if (process.env.NODE_ENV !== 'test') {
     process.exit(1);
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const listener = app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
     console.log(`\n  ■ Web World Wide CMS`);
     console.log(`  ├─ Admin: http://localhost:${PORT}`);
     console.log(`  ├─ Site:  ${SITE_DIR}`);
     console.log(`  └─ Ready.\n`);
   });
+
+  // Graceful shutdown. The conversion worker and Remark42 poller register
+  // their own drain handlers on the same signals; this one stops accepting
+  // requests, lets in-flight ones finish, then EXITS — previously nothing
+  // exited, so `docker stop` always waited its 10s grace and SIGKILLed the
+  // process (possibly mid-write). Hard cap below Docker's grace period.
+  let shuttingDown = false;
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[server] ${signal} received; closing…`);
+    const force = setTimeout(() => {
+      console.warn('[server] shutdown timed out; exiting');
+      process.exit(0);
+    }, 8000);
+    force.unref();
+    listener.close(() => {
+      // Give the worker's drain (awaiting in-flight conversions) a moment.
+      setTimeout(() => process.exit(0), 250).unref();
+    });
+    listener.closeIdleConnections?.();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }

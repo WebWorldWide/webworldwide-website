@@ -1377,11 +1377,25 @@
           );
         }
       }
+      // HEIC/HEIF photos (iPhone) don't render in most browsers — insert the
+      // JPEG the conversion worker made instead of the raw original.
+      const isHeic = /\.(heic|heif)$/i.test(String(item.url || item.filename || ''));
+      const heicJpg = item.conversions && item.conversions['heic-converted-jpg'];
+      if (isHeic && !heicJpg) {
+        if (window.TE && TE.toast) {
+          TE.toast(
+            'This HEIC photo is still being converted — insert it from the media library once it’s ready.',
+            'info',
+          );
+        }
+        return;
+      }
+      const src = isHeic ? heicJpg : item.url;
       if (tt && tt.chain) {
-        tt.chain().focus().setImage({ src: item.url, alt }).run();
+        tt.chain().focus().setImage({ src, alt }).run();
       } else {
         // Escape so a `]`/newline in the alt text can't break the markdown.
-        splice(`\n![${mdText(alt)}](${mdUrl(item.url)})\n`);
+        splice(`\n![${mdText(alt)}](${mdUrl(src)})\n`);
       }
       markDirty();
       updateMetrics();
