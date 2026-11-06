@@ -632,3 +632,62 @@ pre,
     padding-inline: 8px;
   }
 }
+
+/* Toast action ("Undo") */
+.toast-action {
+  margin-left: 10px;
+  padding: 2px 10px;
+  font: inherit;
+  font-weight: 650;
+  color: inherit;
+  text-decoration: underline;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Posts → Recently deleted */
+.posts-trash {
+  border-top: 1px solid var(--line-www);
+}
+.posts-trash > summary {
+  padding: 14px var(--pad-panel);
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.posts-trash .count {
+  margin-left: 6px;
+  color: var(--ink-mute);
+}
+.trash-hint {
+  margin: 0;
+  padding: 0 var(--pad-panel) 8px;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+}
+.trash-list {
+  margin: 0;
+  padding: 0 var(--pad-panel) 14px;
+  list-style: none;
+}
+.trash-list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-www);
+}
+.trash-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 540;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trash-when {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+}

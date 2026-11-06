@@ -262,14 +262,18 @@
         const { filename } = pendingDelete;
         btnDelete.disabled = true;
         try {
-          await TE.fetchJSON(`/api/posts/${encodeURIComponent(filename)}`, {
+          const res = await TE.fetchJSON(`/api/posts/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
             body: undefined,
           });
-          TE.toast('Post deleted.');
           TE.closeModal('delete-modal');
           pendingDelete = null;
+          TE.toast('Post moved to trash.', '', {
+            label: 'Undo',
+            onClick: () => restoreFromTrash(res.trashId),
+          });
           await loadPosts();
+          loadTrash();
         } catch (err) {
           TE.toast(err.message || 'Delete failed.', 'error');
         } finally {
@@ -277,6 +281,56 @@
         }
       });
     }
+  }
+
+  // ── Trash (recently deleted, restorable for 30 days) ───────
+  async function restoreFromTrash(id) {
+    if (!id) return;
+    try {
+      const r = await TE.fetchJSON(`/api/posts/trash/${encodeURIComponent(id)}/restore`, {
+        method: 'POST',
+        body: '{}',
+      });
+      TE.toast(`Restored ${r.filename}.`);
+      await loadPosts();
+      loadTrash();
+    } catch (err) {
+      TE.toast((err.data && err.data.message) || err.message || 'Restore failed.', 'error');
+    }
+  }
+
+  async function loadTrash() {
+    const host = $('posts-trash');
+    if (!host) return;
+    let data;
+    try {
+      data = await TE.fetchJSON('/api/posts/trash/list');
+    } catch (_) {
+      host.hidden = true;
+      return;
+    }
+    const items = (data && data.items) || [];
+    host.hidden = items.length === 0;
+    if (!items.length) return;
+    host.innerHTML = `
+      <summary>Recently deleted <span class="count">${items.length}</span></summary>
+      <p class="trash-hint">Deleted posts are kept for ${Number(data.keptDays) || 30} days.</p>
+      <ul class="trash-list">
+        ${items
+          .map(
+            (i) => `<li>
+              <span class="trash-title">${TE.escape(i.title || i.filename)}</span>
+              <span class="trash-when">${TE.escape(new Date(i.deleted_at).toLocaleString())}</span>
+              <button type="button" class="btn sm" data-restore="${TE.escape(i.id)}">Restore</button>
+            </li>`,
+          )
+          .join('')}
+      </ul>`;
+    host
+      .querySelectorAll('[data-restore]')
+      .forEach((btn) =>
+        btn.addEventListener('click', () => restoreFromTrash(btn.getAttribute('data-restore'))),
+      );
   }
 
   // ── Health ────────────────────────────────────────────────
@@ -569,6 +623,7 @@
     $('btn-refresh-health')?.addEventListener('click', loadHealth);
 
     loadPosts();
+    loadTrash();
     loadHealth();
     loadInbox();
     healthTimer = setInterval(loadHealth, 5000);

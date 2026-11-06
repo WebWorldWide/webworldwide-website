@@ -1149,7 +1149,12 @@
   // ── Delete ────────────────────────────────────────────────
   async function deletePost() {
     if (!currentFile) return;
-    if (!confirm(`Delete "${titleEl.value || currentFile}" permanently?`)) return;
+    if (
+      !confirm(
+        `Delete "${titleEl.value || currentFile}"? It can be restored from Posts → Recently deleted for 30 days.`,
+      )
+    )
+      return;
     // Cancel any pending autosave — otherwise its 10s timer could fire during
     // the delete request and re-create the post we just removed.
     clearTimeout(autosaveTimer);
@@ -1159,7 +1164,7 @@
         method: 'DELETE',
         body: undefined,
       });
-      TE.toast('Post deleted.');
+      TE.toast('Post moved to trash.');
       isDirty = false; // the post is gone — don't fire the unsaved-changes prompt
       window.location.href = '/index.html';
     } catch (err) {

@@ -428,3 +428,38 @@ test(
     assert.doesNotMatch(raw, /publish_at/);
   },
 );
+
+test(
+  'deleting a post moves it to the trash; restore brings it back intact',
+  skipOpts(),
+  async () => {
+    writePost(
+      'trashme',
+      { title: 'Trash Me', slug: 'trashme', draft: true, date: '2026-01-01T00:00:00.000Z' },
+      'precious body',
+    );
+    const before = readFileSync(join(postsDir, 'trashme.md'), 'utf8');
+    const del = await api('/api/posts/trashme.md', { method: 'DELETE' });
+    assert.equal(del.status, 200);
+    const { trashId } = await del.json();
+    assert.ok(trashId);
+    assert.throws(() => statSync(join(postsDir, 'trashme.md')), 'file removed from site/');
+
+    const list = await (await api('/api/posts/trash/list')).json();
+    assert.ok(list.items.some((i) => i.id === trashId && i.title === 'Trash Me'));
+
+    // Restoring over a re-created post is refused (never overwrite).
+    writePost('trashme', { title: 'New one', slug: 'trashme', draft: true });
+    assert.equal(
+      (await api(`/api/posts/trash/${trashId}/restore`, { method: 'POST' })).status,
+      409,
+    );
+    rmSync(join(postsDir, 'trashme.md'));
+
+    const res = await api(`/api/posts/trash/${trashId}/restore`, { method: 'POST' });
+    assert.equal(res.status, 200);
+    assert.equal(readFileSync(join(postsDir, 'trashme.md'), 'utf8'), before);
+    const after = await (await api('/api/posts/trash/list')).json();
+    assert.ok(!after.items.some((i) => i.id === trashId), 'restored item leaves the trash');
+  },
+);
