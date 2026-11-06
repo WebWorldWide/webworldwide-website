@@ -158,6 +158,15 @@
             <button
               type="button"
               class="btn ghost"
+              id="btn-history"
+              title="Revision history"
+              aria-label="Revision history"
+            >
+              <span class="ico" aria-hidden="true" data-icon="activity"></span>
+            </button>
+            <button
+              type="button"
+              class="btn ghost"
               id="btn-zen"
               title="Focus mode (hide panels) — Esc to exit"
               aria-pressed="false"
@@ -382,17 +391,6 @@
                       <option value="false">Published</option>
                     </select>
                   </div>
-                  <div class="field">
-                    <label for="post-series">Series</label>
-                    <input
-                      type="text"
-                      id="post-series"
-                      placeholder="e.g. Travel 2026"
-                      autocomplete="off"
-                      list="series-suggestions"
-                    />
-                    <datalist id="series-suggestions"></datalist>
-                  </div>
                 </div>
               </details>
 
@@ -442,57 +440,6 @@
                 </div>
               </details>
 
-              <!-- Phase 5e: Custom CSS / JS — admin-only, see CONTRIBUTING. -->
-              <details class="ed-panel">
-                <summary>
-                  <span>Custom CSS / JS</span><span class="chev" aria-hidden="true">›</span>
-                </summary>
-                <div class="body">
-                  <div class="field">
-                    <label for="post-custom-css">Custom CSS</label>
-                    <textarea
-                      id="post-custom-css"
-                      rows="4"
-                      placeholder="/* scoped to this post only */"
-                    ></textarea>
-                  </div>
-                  <div class="field">
-                    <label for="post-custom-js">Custom JS</label>
-                    <textarea
-                      id="post-custom-js"
-                      rows="4"
-                      placeholder="// runs once on this post"
-                    ></textarea>
-                  </div>
-                  <p style="margin: 4px 0 0; color: var(--fg-mute); font-size: 10.5px">
-                    Trust model: only authenticated admin can set these.
-                  </p>
-                </div>
-              </details>
-
-              <!-- Phase 5e: Preview link -->
-              <details class="ed-panel">
-                <summary>
-                  <span>Draft preview</span><span class="chev" aria-hidden="true">›</span>
-                </summary>
-                <div class="body">
-                  <button
-                    type="button"
-                    class="btn"
-                    id="btn-preview-link"
-                    style="justify-content: center"
-                  >
-                    Generate preview link
-                  </button>
-                  <input
-                    type="text"
-                    id="preview-link-out"
-                    readonly
-                    placeholder="(7-day signed URL appears here)"
-                  />
-                </div>
-              </details>
-
               <details class="ed-panel">
                 <summary>
                   <span>SEO &amp; sharing</span><span class="chev" aria-hidden="true">›</span>
@@ -536,34 +483,6 @@
                 </div>
               </details>
 
-              <details class="ed-panel" open>
-                <summary>
-                  <span>Publish</span><span class="chev" aria-hidden="true">›</span>
-                </summary>
-                <div class="body" style="display: flex; flex-direction: column; gap: 10px">
-                  <button type="button" class="btn" id="btn-save-2" style="justify-content: center">
-                    Save draft
-                  </button>
-                  <button
-                    type="button"
-                    class="btn solid"
-                    id="btn-publish-2"
-                    style="justify-content: center"
-                  >
-                    Save & publish
-                  </button>
-                  <button
-                    type="button"
-                    class="btn ghost"
-                    id="btn-history"
-                    style="justify-content: center"
-                    title="Revision history"
-                  >
-                    <span class="ico" aria-hidden="true" data-icon="activity"></span>
-                    Revision history
-                  </button>
-                </div>
-              </details>
             </aside>
           </div>
         </div>

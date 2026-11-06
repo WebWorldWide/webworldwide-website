@@ -52,14 +52,14 @@ function collectFatalConsoleErrors(page) {
 }
 
 test.describe('editor polish', () => {
-  test('mounts the WYSIWYG surface and keeps 8 side panels', async ({ page }) => {
+  test('mounts the WYSIWYG surface and keeps 5 side panels', async ({ page }) => {
     const errors = collectFatalConsoleErrors(page);
     await page.goto(editorUrl);
     await expect(page.locator('#editor-root .ProseMirror')).toBeVisible();
     await expect(page.locator('#editor-fallback')).toBeHidden();
     // Right-rail frontmatter panels (Frontmatter, Schedule, Cover, Custom
     // CSS/JS, Draft preview, SEO, Media, Publish).
-    await expect(page.locator('.ed-side details')).toHaveCount(8);
+    await expect(page.locator('.ed-side details')).toHaveCount(5);
     expect(errors).toEqual([]);
   });
 

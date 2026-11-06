@@ -160,10 +160,10 @@ test.describe('admin shell', () => {
     // #editor-fallback textarea (which only shows if the bundle fails).
     await expect(page.locator('#editor-root .ProseMirror')).toBeVisible();
     await expect(page.locator('#editor-fallback')).toBeHidden();
-    // Right rail frontmatter panels — Phase 5e expanded the rail to:
-    // Frontmatter, Schedule, Cover image, Custom CSS/JS, Draft preview,
-    // SEO, Media, Publish (8 collapsible <details> panels).
-    await expect(page.locator('.ed-side details')).toHaveCount(8);
+    // Right rail: Post settings, Schedule, Cover image, SEO & sharing, Media.
+    // (Custom CSS/JS, Draft preview and the duplicate Publish panel were
+    // removed in 2026-11 — the site never used the first two.)
+    await expect(page.locator('.ed-side details')).toHaveCount(5);
     expect(errors).toEqual([]);
   });
 });
