@@ -49,9 +49,10 @@ body {
 
 .sec-title,
 .ov-hi {
-  font-size: clamp(38px, 3.4vw, 52px);
   line-height: 0.95;
   letter-spacing: -0.012em;
+
+  font-size: clamp(32px, 2.6vw, 40px);
 }
 .sec-title em,
 .ov-hi em {
@@ -60,9 +61,11 @@ body {
 }
 
 .ed-title {
-  font-size: clamp(40px, 4.2vw, 58px);
   line-height: 0.98;
   letter-spacing: -0.012em;
+
+  font-size: clamp(36px, 3.4vw, 50px);
+  margin-bottom: 6px;
 }
 
 .auth-title {
@@ -258,6 +261,10 @@ pre,
 /* ── Sidebar: lighter, unmistakable selection ────────────────────────────── */
 .side-item {
   font-weight: 500;
+
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 14px;
 }
 .side-item[aria-current="page"],
 .side-item.active {
@@ -427,11 +434,14 @@ pre,
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3) var(--space-6);
   align-items: end;
-  margin-bottom: var(--space-6);
+
+  margin-bottom: 18px;
 }
 .sec-sub {
   max-width: 72ch;
   line-height: 1.5;
+
+  margin-top: 6px;
 }
 .sec-actions {
   display: flex;
@@ -455,8 +465,10 @@ pre,
 
 /* Panels */
 .panel-head {
-  min-height: 48px;
   padding: 12px var(--pad-panel);
+
+  min-height: 44px;
+  padding-block: 8px;
 }
 .panel-body {
   padding: var(--pad-panel);
@@ -595,7 +607,7 @@ pre,
 
 /* Overview stats: compact tiles; no empty spark strip when there's no data. */
 .stat {
-  padding: 16px var(--pad-panel) 14px;
+  padding: 14px 18px 12px;
 }
 .stat-spark:empty {
   display: none;
@@ -785,10 +797,6 @@ body[data-page="editor"] {
 .ed-title-wrap {
   padding-block: 22px 14px;
 }
-.ed-title {
-  font-size: clamp(36px, 3.4vw, 50px);
-  margin-bottom: 6px;
-}
 .ed-body {
   padding-block: 0 32px;
 }
@@ -919,11 +927,6 @@ body[data-page="editor"] {
     padding: 20px 24px 28px;
   }
 }
-.side-item {
-  min-height: 36px;
-  padding: 6px 10px;
-  font-size: 14px;
-}
 .side-group-label {
   margin-top: 14px;
   margin-bottom: 4px;
@@ -932,29 +935,10 @@ body[data-page="editor"] {
   padding: 8px 12px;
 }
 
-/* Large title: HIG ~34pt. */
-.sec-title,
-.ov-hi {
-  font-size: clamp(32px, 2.6vw, 40px);
-}
-.sec-head {
-  margin-bottom: 18px;
-}
-.sec-sub {
-  margin-top: 6px;
-}
-
 /* Tables / lists: 44px rows. */
 .row-grid .r-link {
   min-height: 44px;
   padding-block: 6px;
-}
-.panel-head {
-  min-height: 44px;
-  padding-block: 8px;
-}
-.stat {
-  padding: 14px 18px 12px;
 }
 
 /* Posts: the page title + tab counts already say "Posts · 24"; drop the
