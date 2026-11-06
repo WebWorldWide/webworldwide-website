@@ -51,9 +51,12 @@ const homeAvatar = new URL('/favicon.png', siteConfig.site.url).toString();
     <p class="p-note">{siteConfig.site.description}</p>
   </div>
   <a class="u-bridgy-fed" href="https://fed.brid.gy/" hidden>fediverse</a>
-  {sections.map((key) => {
+  {sections.map((key, i) => {
     const Section = sectionComponents[key];
-    return <Section />;
+    // Numbered eyebrows follow the configured order (the hero is unnumbered),
+    // so reordering sections in the CMS never leaves stale "01/02/03" labels.
+    const num = sections.slice(0, i + 1).filter((k) => k !== 'hero').length;
+    return <Section num={key === 'hero' ? undefined : num} />;
   })}
 </BaseLayout>
 

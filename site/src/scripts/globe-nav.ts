@@ -128,8 +128,30 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
 
   const shouldRun = (): boolean => !reducedMotion && onScreen && !document.hidden;
 
+  // Measure the canvas only when its size actually changes. Calling resize()
+  // (which reads clientWidth) every frame forced a synchronous layout 60×/s.
+  let needsResize = true;
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => (needsResize = true)).observe(canvas);
+  }
+  // A slow wireframe spin is indistinguishable at 30fps; halve the work.
+  const MIN_FRAME_MS = 1000 / 30;
+  let lastDraw = 0;
+
   function tick(now: number): void {
-    resize();
+    if (now - lastDraw < MIN_FRAME_MS - 1) {
+      if (shouldRun()) requestAnimationFrame(tick);
+      else {
+        running = false;
+        last = 0;
+      }
+      return;
+    }
+    lastDraw = now;
+    if (needsResize) {
+      needsResize = false;
+      resize();
+    }
     if (last) rot += speedPerSec * Math.min(0.1, (now - last) / 1000);
     last = now;
     draw(rot);
@@ -163,7 +185,7 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
     });
     start();
   }
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', () => (needsResize = true));
 }
 
 /** Initialize all globes matching a selector. */

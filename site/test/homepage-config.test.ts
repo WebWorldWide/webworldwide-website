@@ -36,7 +36,7 @@ describe('normalizeHomepage', () => {
     const hp = normalizeHomepage(parse(OLD_TOML));
 
     expect(hp).toEqual({
-      section_order: ['hero', 'apps', 'videos', 'socials', 'blog_cta'],
+      section_order: ['hero', 'blog_cta', 'apps', 'videos', 'socials'],
       sections: { hero: true, apps: true, videos: true, socials: true, blog_cta: true },
       hero: { words: ['Web', 'World', 'Wide'], tagline: 'W · W · W', subtitle: '' },
       apps: {
@@ -45,9 +45,9 @@ describe('normalizeHomepage', () => {
             name: 'FileID',
             status: 'live',
             link: 'https://example.com/fileid',
-            icon: '/assets/fileid.png',
+            icon: '/assets/fileid.webp',
           },
-          { name: 'Document Finder', status: 'soon', link: '', icon: '/assets/doc-finder.png' },
+          { name: 'Document Finder', status: 'soon', link: '', icon: '/assets/doc-finder.webp' },
           { name: 'Untitled', status: 'lab', link: '', icon: '' },
           { name: 'Untitled', status: 'lab', link: '', icon: '' },
         ],
@@ -84,7 +84,7 @@ describe('normalizeHomepage', () => {
       name: 'FileID',
       status: 'live',
       link: '', // no legacy [apps] table → no URL to fall back to
-      icon: '/assets/fileid.png',
+      icon: '/assets/fileid.webp',
     });
     expect(hp.sections.blog_cta).toBe(true);
   });
@@ -183,7 +183,7 @@ items = [ { name = "OnlyApp", status = "soon", link = "", icon = "" } ]
     const hp = normalizeHomepage({
       homepage: { section_order: [], hero: { words: [] }, socials: { order: [], hidden: [] } },
     });
-    expect(hp.section_order).toEqual(['hero', 'apps', 'videos', 'socials', 'blog_cta']);
+    expect(hp.section_order).toEqual(['hero', 'blog_cta', 'apps', 'videos', 'socials']);
     expect(hp.hero.words).toEqual(['Web', 'World', 'Wide']);
     expect(hp.socials.order).toHaveLength(8);
   });

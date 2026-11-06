@@ -13,18 +13,35 @@
  * is disabled.
  */
 
-const LAYERS = 22;
+import { isLiteDevice } from './perf.ts';
+
+// Fewer slices on slow devices: the extrusion still reads as solid, at under
+// half the compositor layers (each slice is a 3D-transformed layer).
+const LAYERS = isLiteDevice() ? 9 : 16;
 const DEPTH = 50;
 const halfDepth = DEPTH / 2;
+// Frame budget: 60fps normally, 30fps on lite devices (a slow idle spin
+// looks identical at 30fps and halves the work).
+const MIN_FRAME_MS = isLiteDevice() ? 1000 / 30 : 0;
 
 const reducedMotion = (): boolean =>
   typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Side-slice shading WITHOUT a CSS filter. A per-layer `filter` made the
+ * compositor run 88 filter passes every frame; an inset shadow over the image
+ * is painted once and then just composited.
+ */
+const shade = (darkness: number): string =>
+  darkness > 0 ? `inset 0 0 0 999px rgba(6, 14, 40, ${darkness.toFixed(3)})` : 'none';
 
 function attachSpinner(spinner: HTMLElement): void {
   const icon = spinner.getAttribute('data-icon');
   const fallback = spinner.getAttribute('data-fallback');
   const drift = spinner.closest('.drift') as HTMLElement | null;
 
+  // Build all slices off-DOM and insert once (one layout, not one per slice).
+  const frag = document.createDocumentFragment();
   if (icon) {
     for (let i = 0; i < LAYERS; i++) {
       const t = i / (LAYERS - 1);
@@ -32,15 +49,12 @@ function attachSpinner(spinner: HTMLElement): void {
       const edgeProx = Math.abs(t - 0.5) * 2;
       const isFace = i === 0 || i === LAYERS - 1;
       const brightness = isFace ? 1 : 0.45 + edgeProx * 0.3;
-      const contrast = isFace ? 1 : 1.06;
-      const saturate = isFace ? 1 : 0.88;
       const layer = document.createElement('div');
       layer.className = 'l-layer';
       layer.style.backgroundImage = `url("${icon}")`;
       layer.style.transform = `translateZ(${z.toFixed(2)}px)`;
-      layer.style.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturate})`;
-      if (!isFace) layer.style.opacity = '0.96';
-      spinner.appendChild(layer);
+      layer.style.boxShadow = shade(1 - brightness);
+      frag.appendChild(layer);
     }
   } else if (fallback) {
     try {
@@ -54,20 +68,21 @@ function attachSpinner(spinner: HTMLElement): void {
         const layer = document.createElement('div');
         layer.className = 'l-layer';
         layer.style.transform = `translateZ(${z.toFixed(2)}px)`;
-        layer.style.filter = `brightness(${brightness})`;
         const inner = document.createElement('div');
         inner.className = 'app-placeholder';
         if (cfg.bg) inner.style.background = cfg.bg;
         inner.style.color = cfg.ink ?? 'rgba(58, 24, 16, 0.85)';
         inner.textContent = cfg.label ?? '';
-        if (!isFace) inner.style.opacity = '0.96';
+        inner.style.boxShadow = shade(1 - brightness);
         layer.appendChild(inner);
-        spinner.appendChild(layer);
+        frag.appendChild(layer);
       }
     } catch {
       /* malformed fallback config, skip */
     }
   }
+
+  spinner.appendChild(frag);
 
   if (drift) {
     drift.style.animationDelay = `${-Math.random() * 5.4}s`;
@@ -110,6 +125,11 @@ function attachSpinner(spinner: HTMLElement): void {
   let onScreen = true;
   let running = false;
   function loop(now: number): void {
+    if (MIN_FRAME_MS && now - lastFrame < MIN_FRAME_MS - 1) {
+      if (onScreen && !document.hidden) requestAnimationFrame(loop);
+      else running = false;
+      return;
+    }
     const dt = Math.min(0.06, (now - lastFrame) / 1000);
     lastFrame = now;
     // Ease the hover "pop" every frame, even mid-drag.
@@ -281,7 +301,26 @@ function attachSpinner(spinner: HTMLElement): void {
 }
 
 export function initAppSpinners(selector = '[data-spin]'): void {
-  document.querySelectorAll<HTMLElement>(selector).forEach(attachSpinner);
+  const spinners = [...document.querySelectorAll<HTMLElement>(selector)];
+  if (!spinners.length) return;
+  // Don't build ~60 3D layers during page load for a section below the fold:
+  // wait until it's within a screen of the viewport, then build in idle time.
+  const build = (): void => {
+    const run = (): void => spinners.forEach(attachSpinner);
+    if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 600 });
+    else setTimeout(run, 0);
+  };
+  if (!('IntersectionObserver' in window)) return build();
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        build();
+      }
+    },
+    { rootMargin: '100% 0px' },
+  );
+  io.observe(spinners[0].closest('section') || spinners[0]);
 }
 
 if (typeof document !== 'undefined') {

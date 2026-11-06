@@ -118,7 +118,7 @@ export function getSiteConfig(): SiteConfig {
   return cache;
 }
 
-const DEFAULT_SECTION_ORDER: HomeSectionKey[] = ['hero', 'apps', 'videos', 'socials', 'blog_cta'];
+const DEFAULT_SECTION_ORDER: HomeSectionKey[] = ['hero', 'blog_cta', 'apps', 'videos', 'socials'];
 const DEFAULT_SOCIAL_ORDER = [
   'youtube',
   'github',
@@ -166,13 +166,13 @@ export function normalizeHomepage(cfg: Partial<SiteConfig>): HomepageConfig {
           name: 'FileID',
           status: 'live',
           link: cfg.apps?.fileid ?? '',
-          icon: '/assets/fileid.png',
+          icon: '/assets/fileid.webp',
         },
         {
           name: 'Document Finder',
           status: 'soon',
           link: cfg.apps?.doc_finder ?? '',
-          icon: '/assets/doc-finder.png',
+          icon: '/assets/doc-finder.webp',
         },
         { name: 'Untitled', status: 'lab', link: '', icon: '' },
         { name: 'Untitled', status: 'lab', link: '', icon: '' },

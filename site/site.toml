@@ -22,7 +22,6 @@ masthead_name = "Web World Wide"
 masthead_kicker = "Blog"
 
 [social]
-email = "hello@webworldwide.online"
 youtube = "https://www.youtube.com/@web_world_wide"
 youtube_handle = "@web_world_wide"
 github = "https://github.com/WebWorldWide"
@@ -75,7 +74,7 @@ doc_finder = ""  # Empty = renders as "SOON" tile
 [homepage]
 # Home-page editor (admin CMS). Section visibility + ordering for the
 # landing page. Edited via PATCH /api/settings/homepage.
-section_order = ["hero", "apps", "videos", "socials", "blog_cta"]
+section_order = ["hero", "blog_cta", "apps", "videos", "socials"]
 
 [homepage.sections]
 hero = true
@@ -97,7 +96,7 @@ subtitle = ""
 # the array single-line lets edits round-trip without losing comments.
 # status: "live" (★ live), "soon" (coming soon), "lab" (in the lab).
 # Empty icon = placeholder card; empty link = tile is a no-op.
-items = [{ name = "FileID", status = "live", link = "https://fileid.webworldwide.online/", icon = "/assets/fileid.png" }, { name = "Document Finder", status = "live", link = "https://documentfinder.webworldwide.online/", icon = "/assets/doc-finder.png" }, { name = "Media Shuttle", status = "live", link = "https://github.com/WebWorldWide/media-shuttle", icon = "/images/2026/10/baba2f86-mediashuttle.ico" }, { name = "Untitled", status = "lab", link = "", icon = "" }]
+items = [{ name = "FileID", status = "live", link = "https://fileid.webworldwide.online/", icon = "/assets/fileid.webp" }, { name = "Document Finder", status = "live", link = "https://documentfinder.webworldwide.online/", icon = "/assets/doc-finder.webp" }, { name = "Media Shuttle", status = "live", link = "https://github.com/WebWorldWide/media-shuttle", icon = "/assets/media-shuttle.webp" }, { name = "Untitled", status = "lab", link = "", icon = "" }]
 
 [homepage.videos]
 episode = "EP. 001"

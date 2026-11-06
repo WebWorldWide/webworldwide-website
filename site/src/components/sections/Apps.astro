@@ -34,10 +34,16 @@ const tiles = homepage.apps.items.map((item) => {
     fallback: item.icon ? undefined : FALLBACKS[fallbackIdx++ % FALLBACKS.length],
   };
 });
+
+interface Props {
+  /** Section number shown in the eyebrow (assigned from section_order). */
+  num?: number;
+}
+const label = Astro.props.num ? `${String(Astro.props.num).padStart(2, '0')} — Apps` : 'Apps';
 ---
 <section class="section" id="apps">
   <div class="section-inner">
-    <span class="eyebrow reveal">01 — Apps</span>
+    <span class="eyebrow reveal">{label}</span>
     <h2 class="sr-only">Apps</h2>
 
     <div class="apps-float reveal">

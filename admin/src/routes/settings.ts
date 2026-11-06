@@ -106,7 +106,8 @@ function readSettings() {
  * ------------------------------------------------------------------ */
 
 /** The five home-page sections, in default display order. */
-const SECTION_IDS = ['hero', 'apps', 'videos', 'socials', 'blog_cta'];
+// Also the default order (matches site/src/lib/site-config.ts).
+const SECTION_IDS = ['hero', 'blog_cta', 'apps', 'videos', 'socials'];
 
 /** The nine known social keys (matches site-config.ts `social`). */
 const SOCIAL_KEYS = [

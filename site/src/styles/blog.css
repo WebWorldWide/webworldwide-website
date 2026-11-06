@@ -27,9 +27,9 @@
    CARD — glass paper, chunky ink border, hard pixel shadow
    ============================================================ */
 .card {
-  background: rgb(255, 255, 255, 0.93);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  /* Near-opaque paper. The old backdrop blur behind 93%-white was invisible
+     but forced a full blur pass whenever the clouds behind it moved. */
+  background: #fbfcff;
   border: var(--border-strong);
   box-shadow: 7px 7px 0 var(--ink);
   border-radius: var(--r-card);
@@ -37,55 +37,7 @@
   overflow: hidden;
 }
 
-/* TERMINAL BAR — status box + scanlines + a monospace "filepath".
-   The status dot does NOT blink (per design feedback); only the typing
-   caret blinks. */
-.term-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 16px;
-  border-bottom: var(--border-strong);
-  background: var(--paper-warm);
-}
-.term-dot {
-  width: 14px;
-  height: 12px;
-  flex-shrink: 0;
-  background: var(--sun);
-  box-shadow: inset 0 0 0 1.5px rgb(14, 41, 96, 0.25);
-  image-rendering: pixelated;
-}
-.term-scan {
-  flex-grow: 1;
-  height: 10px;
-  min-width: 20px;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--ink) 0px,
-    var(--ink) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-  opacity: 0.55;
-}
-.term-path {
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  /* 12px is Lighthouse's mobile "legible text" floor — keep it here so the
-     terminal path label never trips the font-size best-practices audit. */
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  max-width: 52%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.term-path b {
-  color: var(--cherry-strong);
-  font-weight: 700;
-}
+/* TERMINAL BAR: styles live in components/TermBar.astro (shared with the homepage). */
 
 /* ============================================================
    TYPED TITLE — monospace, with blinking underscore caret
