@@ -9,25 +9,20 @@ services:
     command: tunnel run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
-    # Cloudflared routes to Caddy
+    # Cloudflared routes to Caddy (tunnel ingress: http://caddy:80) over the
+    # dedicated `edge` network — it can reach nothing else in the stack.
+    networks: [edge]
+    mem_limit: 128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
 
-  # 1b. Read-only Docker socket proxy for the CMS health dashboard.
-  # Exposes ONLY GET /containers/* (CONTAINERS=1; every other API group
-  # defaults to 0/denied — no POST, no EXEC, no IMAGES, no NETWORKS). cms
-  # talks to this over the compose network instead of a raw bind mount of
-  # /var/run/docker.sock, so a compromise of cms (the most attack-exposed
-  # service — it processes untrusted uploads via sharp/ffmpeg/poppler-utils)
-  # can list containers but cannot use the Engine API to escape to the host.
-  docker-socket-proxy:
-    image: tecnativa/docker-socket-proxy:latest
-    container_name: docker-socket-proxy
-    restart: unless-stopped
-    mem_limit: 64m
-    environment:
-      - CONTAINERS=1
-      - POST=0
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+  # (1b. The docker-socket-proxy was removed in 2026-11. Even GET-only it
+  # exposed every host container's environment — tunnel token, DB passwords —
+  # and filesystem to anything on the network. The CMS dashboard now reads
+  # container status from docker/health/containers.json, written by the host's
+  # system-health cron.)
 
   # 2. Caddy Reverse Proxy (Internal routing to services)
   caddy:
@@ -57,8 +52,17 @@ services:
       - DOMAIN_ANALYTICS=${DOMAIN_ANALYTICS}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Host-local extra sites (e.g. homelab routes reached via the host's own
+      # cloudflared on 127.0.0.1:80). Git-ignored; see caddy-sites.d/README.md.
+      - ./caddy-sites.d:/etc/caddy/sites.d:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks: [edge, app, immich-edge]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
 
   # 3. Web World Wide CMS (Node.js Admin Panel)
   cms:
@@ -89,7 +93,11 @@ services:
     user: "1000:1000"
     depends_on:
       - languagetool
-      - docker-socket-proxy
+    networks: [app, lt]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
     environment:
       - PORT=3000
       - NODE_ENV=production
@@ -99,8 +107,6 @@ services:
       - SITE_DIR=/app/site
       - TE_HEALTH_DIR=/app/health
       - TE_STATE_DIR=/app/health
-      - DOCKER_PROXY_HOST=docker-socket-proxy
-      - DOCKER_PROXY_PORT=2375
       # Git push auth — the repo's credential helper (.git/config, which
       # is bind-mounted below) reads this. The token never appears in a
       # remote URL.
@@ -115,6 +121,15 @@ services:
       # the poller silently skips and moderation shows nothing.
       - REMARK42_URL=${REMARK42_INTERNAL_URL:-http://remark42:8080}
       - REMARK42_SITE_ID=${REMARK42_SITE_ID:-webworldwide}
+      # Admin credentials for moderation writes (pin/delete/spam/reply).
+      - REMARK42_SECRET=${REMARK42_SECRET}
+      - REMARK42_ADMIN_PASSWD=${REMARK42_ADMIN_PASSWD:-}
+      - REMARK42_ADMIN_ID=${REMARK42_ADMIN_ID:-}
+      # Auth policy. Password sign-in turns off once a passkey exists; set
+      # ALLOW_PASSWORD_LOGIN=1 only as a temporary break-glass. SETUP_TOKEN is
+      # required for first-run account creation in production.
+      - ALLOW_PASSWORD_LOGIN=${ALLOW_PASSWORD_LOGIN:-}
+      - SETUP_TOKEN=${SETUP_TOKEN:-}
       # Umami proxy for the admin Analytics view (server-side only).
       - UMAMI_API_URL=${UMAMI_INTERNAL_URL:-http://umami:3000}
       - UMAMI_ADMIN_USER=${UMAMI_ADMIN_USER:-}
@@ -138,6 +153,11 @@ services:
     volumes:
       - ../site:/app/site          # So it can read/write site files
       - ../.git:/app/.git          # So it can commit/push
+      # …but never rewrite the host's git config or hooks: host cron runs git
+      # in this checkout as adam (docker group ≈ root), so a writable
+      # core.sshCommand / hook would be a container→host escape.
+      - ../.git/config:/app/.git/config:ro
+      - ../.git/hooks:/app/.git/hooks:ro
       - cms_data:/app/data         # SQLite DB for auth
       - /sys/class/thermal:/sys/class/thermal:ro     # Host thermal sensors
       - ./health:/app/health:ro                      # SD/system-health marker (scripts/system-health.sh)
@@ -157,6 +177,11 @@ services:
     # cms/postgres/umami. If it exceeds this Docker
     # kills it and restart:unless-stopped brings it back.
     mem_limit: 768m
+    cpus: 1
+    networks: [lt]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
     environment:
       - Java_Xms=256m
       - Java_Xmx=512m
@@ -181,8 +206,22 @@ services:
       - READONLY_AGE=90
       - LOW_SCORE=-3
       - CRITICAL_SCORE=-7
+      # Only Caddy (on the app network) may set forwarding headers — otherwise
+      # any client can spoof its IP past rate limits and vote dedup.
+      - TRUSTED_PROXY=172.30.2.0/24
+      # Only our site may embed the widget (CSP frame-ancestors).
+      - ALLOWED_HOSTS='self',https://${SITE_DOMAIN:-webworldwide.online}
+      # Anonymous commenters can upload images: keep them small.
+      - IMAGE_MAX_SIZE=500000
+      # Basic-auth admin used by the CMS moderation view (empty = disabled).
+      - ADMIN_PASSWD=${REMARK42_ADMIN_PASSWD:-}
     volumes:
       - remark_data:/srv/var
+    networks: [app]
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
 
   # 5. Umami (Analytics)
   umami:
@@ -196,6 +235,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks: [app, db]
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
 
   # 6. PostgreSQL (for Umami)
   postgres:
@@ -208,11 +252,38 @@ services:
       - POSTGRES_PASSWORD=${UMAMI_DB_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
+    networks: [db]
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U umami"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+# Segmented networks: each service reaches only what it needs. `internal`
+# networks have no route out of the host.
+networks:
+  edge: # cloudflared ↔ caddy
+    ipam:
+      config: [{ subnet: 172.30.1.0/24 }]
+  app: # caddy ↔ cms / remark42 / umami (needs egress: GitHub, Bluesky, …)
+    ipam:
+      config: [{ subnet: 172.30.2.0/24 }]
+  db: # umami ↔ postgres
+    internal: true
+    ipam:
+      config: [{ subnet: 172.30.3.0/24 }]
+  lt: # cms ↔ languagetool
+    internal: true
+    ipam:
+      config: [{ subnet: 172.30.4.0/24 }]
+  immich-edge: # caddy ↔ immich_server (separate stack; joins as external)
+    name: wwwide-immich-edge
+    ipam:
+      config: [{ subnet: 172.30.5.0/24 }]
 
 volumes:
   caddy_data:

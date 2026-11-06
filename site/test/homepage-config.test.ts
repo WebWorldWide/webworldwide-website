@@ -187,4 +187,25 @@ items = [ { name = "OnlyApp", status = "soon", link = "", icon = "" } ]
     expect(hp.hero.words).toEqual(['Web', 'World', 'Wide']);
     expect(hp.socials.order).toHaveLength(8);
   });
+
+  it('keeps intentionally-cleared text fields empty (matches the CMS preview)', () => {
+    const hp = normalizeHomepage({
+      homepage: {
+        hero: { tagline: '' },
+        videos: { episode: '', film_title: '' },
+        blog_cta: { kicker: '', title: '', url: '' },
+      },
+    } as Partial<SiteConfig>);
+    expect(hp.hero.tagline).toBe('');
+    expect(hp.videos.episode).toBe('');
+    expect(hp.videos.film_title).toBe('');
+    expect(hp.blog_cta.kicker).toBe('');
+    expect(hp.blog_cta.title).toBe('');
+    expect(hp.blog_cta.url).toBe('/blog/'); // never a dead link
+  });
+
+  it('an explicit empty apps list renders no tiles (no legacy resurrection)', () => {
+    const hp = normalizeHomepage({ homepage: { apps: { items: [] } } } as Partial<SiteConfig>);
+    expect(hp.apps.items).toEqual([]);
+  });
 });

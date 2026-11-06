@@ -1,19 +1,17 @@
 // @ts-check
 /**
  * system.js — the System view's tab strip (Health / Containers /
- * Backups / Terminal).
+ * Backups).
  *
  * The data inside the panes is filled by dashboard.js's health poller
  * (metric bars, docker list, backup status — all wired by element id,
- * so they update regardless of which view is visible) and terminal.js
- * (the terminal form). This module only owns switching the panes and
- * the roving-tabindex keyboard pattern, mirroring the posts tablist.
- *
- * Deep link: #terminal routes here (router maps it to view-system) and
- * pre-selects the Terminal tab.
+ * so they update regardless of which view is visible). This module only
+ * owns switching the panes and the roving-tabindex keyboard pattern,
+ * mirroring the posts tablist. (The legacy #terminal deep link still routes
+ * to this view; the web terminal itself was removed in 2026-11.)
  */
 (function () {
-  const PANES = ['health', 'containers', 'backups', 'terminal'];
+  const PANES = ['health', 'containers', 'backups'];
 
   function $(id) {
     return document.getElementById(id);
@@ -32,16 +30,6 @@
       tab.setAttribute('aria-selected', String(active));
       tab.setAttribute('tabindex', active ? '0' : '-1');
     });
-    if (name === 'terminal') {
-      const input = $('terminal-input');
-      if (input) {
-        try {
-          input.focus();
-        } catch (_) {
-          /* focus can fail in sandboxed iframes */
-        }
-      }
-    }
   }
 
   function init() {

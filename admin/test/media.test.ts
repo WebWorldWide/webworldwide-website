@@ -180,7 +180,7 @@ test('upload rejection: .exe → 415', skipOpts(), async () => {
 
 test('upload too large: 11 KB body against 10 KB cap → 413', skipOpts(), async () => {
   const big = Buffer.alloc(11 * 1024, 0xff);
-  const res = await upload('big.bin', big, 'application/octet-stream');
+  const res = await upload('big.zip', big, 'application/zip');
   assert.equal(res.status, 413);
   const data = await res.json();
   assert.equal(data.error, 'File too large');

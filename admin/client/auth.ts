@@ -13,14 +13,13 @@
  * Auth flow:
  *   - On /login.html  : runs status check, flips between setup/login panels,
  *                        wires forms + passkey button + password show/hide.
- *   - On other pages  : redirects to /login.html if not authenticated;
- *                        hides #security-panel if user already has a passkey.
+ *   - On other pages  : redirects to /login.html if not authenticated.
+ *                        (Passkey management: account.js.)
  */
 (function () {
-  let startRegistration, startAuthentication;
+  let startAuthentication;
   try {
     if (typeof SimpleWebAuthnBrowser !== 'undefined') {
-      startRegistration = SimpleWebAuthnBrowser.startRegistration;
       startAuthentication = SimpleWebAuthnBrowser.startAuthentication;
     }
   } catch (_) {
@@ -71,6 +70,13 @@
         return;
       }
       showPanel(data.setupComplete ? 'login-panel' : 'setup-panel');
+      // Passkeys enforced → don't offer a password form that will be refused.
+      if (data.setupComplete && data.passwordLogin === false) {
+        const disclosure = document.getElementById('toggle-password-form');
+        const form = document.getElementById('login-form');
+        if (disclosure) disclosure.hidden = true;
+        if (form) form.hidden = true;
+      }
       return;
     }
 
@@ -79,14 +85,7 @@
       window.location.href = '/login.html';
       return;
     }
-    // Hide the "register passkey" CTA if user already has one.
-    if (data.hasPasskey) {
-      const sec = document.getElementById('security-panel');
-      if (sec) sec.style.display = 'none';
-    } else {
-      const status = document.getElementById('passkey-status');
-      if (status) status.textContent = 'No passkey on this device';
-    }
+    // Passkey list / registration lives in account.js (Settings → Account security).
   }
 
   // ── Setup form (first-time admin) ─────────────────────────
@@ -99,11 +98,13 @@
       const username = document.getElementById('setup-user').value.trim();
       const password = document.getElementById('setup-pass').value;
       if (username.length < 2) return showAuthError('Username must be at least 2 characters.');
-      if (password.length < 8) return showAuthError('Password must be at least 8 characters.');
+      if (password.length < 12) return showAuthError('Password must be at least 12 characters.');
+      const tokenEl = /** @type {HTMLInputElement | null} */ document.getElementById('setup-token');
+      const setupToken = tokenEl ? tokenEl.value : '';
       try {
         await TE.fetchJSON('/auth/setup', {
           method: 'POST',
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username, password, setupToken }),
         });
         window.location.href = '/index.html';
       } catch (err) {
@@ -129,7 +130,7 @@
         });
         window.location.href = '/index.html';
       } catch (err) {
-        showAuthError(err.message);
+        showAuthError((err.data && err.data.message) || err.message);
       }
     });
   }
@@ -151,7 +152,7 @@
         });
         let assertion;
         try {
-          assertion = await startAuthentication(start.options);
+          assertion = await startAuthentication({ optionsJSON: start.options });
         } catch (err) {
           if (err.name === 'NotAllowedError') return; // user cancelled
           throw err;
@@ -164,41 +165,6 @@
       } catch (err) {
         console.error(err);
         showAuthError(err.message || 'Passkey login failed. Try password.');
-      }
-    });
-  }
-
-  // ── Passkey registration (dashboard "register passkey") ───
-  function wirePasskeyRegister() {
-    const btn = document.getElementById('btn-register-passkey');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      if (!startRegistration) {
-        TE.toast('Passkey library blocked. Disable ad-blocker.', 'error');
-        return;
-      }
-      try {
-        const start = await TE.fetchJSON('/auth/passkey/register/start', {
-          method: 'POST',
-          body: '{}',
-        });
-        let credential;
-        try {
-          credential = await startRegistration(start.options);
-        } catch (err) {
-          if (err.name === 'NotAllowedError') return;
-          throw err;
-        }
-        await TE.fetchJSON('/auth/passkey/register/finish', {
-          method: 'POST',
-          body: JSON.stringify({ challengeId: start.challengeId, credential }),
-        });
-        TE.toast('Passkey registered. You can now sign in with it.');
-        const sec = document.getElementById('security-panel');
-        if (sec) sec.style.display = 'none';
-      } catch (err) {
-        console.error(err);
-        TE.toast(err.message || 'Passkey registration failed.', 'error');
       }
     });
   }
@@ -265,7 +231,6 @@
       checkStatus();
     } else {
       wireLogout();
-      wirePasskeyRegister();
       checkStatus();
     }
   }

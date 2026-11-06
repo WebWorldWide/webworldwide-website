@@ -749,7 +749,45 @@
       save.classList.toggle('primary', dirty);
     }
     const hint = document.getElementById('hp-hint');
-    if (hint) hint.hidden = !savedNotLive;
+    if (hint) {
+      const text = deployMsg
+        ? deployMsg
+        : serverWarning
+          ? serverWarning
+          : savedNotLive
+            ? 'Saved to server · not yet live — Publish pushes the site.'
+            : '';
+      hint.textContent = text;
+      hint.hidden = !text;
+      hint.classList.toggle('warn', Boolean(serverWarning) && !deployMsg);
+    }
+  }
+
+  /** Progress text for the most recent publish (null when idle). */
+  let deployMsg = null;
+  /** Server-side publishing problem (e.g. checkout not on main), if any. */
+  let serverWarning = null;
+
+  /**
+   * Ask the server what a Publish would ship, so "saved but not live" survives
+   * a page reload and a misconfigured server is visible before publishing.
+   */
+  async function refreshPublishState() {
+    try {
+      const st = await TE.fetchJSON('/api/publish/state');
+      const pending = Array.isArray(st.pending) ? st.pending : [];
+      savedNotLive = pending.some(
+        (p) => p.path === 'site/site.toml' || String(p.path).startsWith('site/public/'),
+      );
+      serverWarning = st.error
+        ? `Publishing is blocked on the server: ${st.error}`
+        : st.onMain === false
+          ? `Server checkout is on "${st.branch}", not main — publishes may be refused until it is realigned.`
+          : null;
+    } catch (_) {
+      /* non-fatal: keep local state */
+    }
+    renderDirty();
   }
 
   /** Re-render after a structural change (add/remove/reorder/toggle). */
@@ -836,14 +874,48 @@
       }
       const res = await TE.fetchJSON('/api/publish', { method: 'POST' });
       savedNotLive = false;
+      if (!res || !res.changed) {
+        renderAll();
+        TE.toast((res && res.message) || 'Nothing to publish — the live site is up to date.');
+        return;
+      }
+      deployMsg = 'Published to GitHub · building the live site…';
       renderAll();
-      // The published site just changed — drop the cached iframe so the
-      // Live tab reflects it instead of the previous publish.
-      refreshLiveFrame();
-      TE.toast((res && res.message) || 'Published.');
+      TE.toast('Published. The live site is rebuilding (usually 1–3 minutes).');
+      // Don't reload the Live preview until the deploy has actually finished —
+      // reloading immediately showed the OLD site and looked like a failure.
+      void (async () => {
+        const st = await TE.watchDeploy(res.commitHash, (st) => {
+          const msgs = {
+            queued: 'Published to GitHub · deploy queued…',
+            building: 'Published to GitHub · building the live site…',
+          };
+          if (msgs[st.phase]) {
+            deployMsg = msgs[st.phase];
+            renderDirty();
+          }
+        });
+        deployMsg = null;
+        if (st.phase === 'live' || st.phase === 'superseded') {
+          refreshLiveFrame();
+          TE.toast('Your homepage changes are live.');
+        } else if (st.phase === 'failed') {
+          TE.toast(
+            'The site build failed on GitHub — your changes are saved but not live.',
+            'error',
+          );
+        } else if (st.phase === 'not_pushed') {
+          TE.toast("The publish didn't reach GitHub's main branch. Try publishing again.", 'error');
+        } else if (st.phase === 'timeout') {
+          TE.toast('The site is still building — check the live site in a few minutes.', 'info');
+        }
+        refreshPublishState();
+      })();
     } catch (err) {
       renderAll();
-      TE.toast(/** @type {Error} */ err.message || 'Publish failed', 'error');
+      const e = /** @type {Error & {data?: {message?: string}}} */ err;
+      TE.toast((e.data && e.data.message) || e.message || 'Publish failed', 'error');
+      refreshPublishState();
     } finally {
       hpBusy = false;
       setHpBusy(false);
@@ -1361,10 +1433,12 @@
     selected = 'hero';
     open = 'hero';
     savedNotLive = false;
+    deployMsg = null;
     introActive = true;
     renderShell();
     wire();
     renderAll();
+    refreshPublishState();
     // Let the one-shot entrance animation play, then drop the class so
     // later re-renders (every keystroke) don't replay it.
     setTimeout(() => {

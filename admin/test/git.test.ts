@@ -14,7 +14,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, cpSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, cpSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -184,29 +184,27 @@ test('extractChangedPostsFromDiff parses add/modify/rename and ignores deletes',
   assert.deepEqual(extractChangedPostsFromDiff(null), []);
 });
 
-test('publishChanges recovers an orphaned commit a prior push failed to send', async () => {
+test('publishChanges refuses (never guesses) when the checkout diverged from the last publish', async () => {
   const { publishChanges } = await import('../src/utils/git.js');
 
-  // Simulate the aftermath of a transient push failure: a real commit
-  // exists locally on top of origin/main but was never pushed. Scope to
-  // site/ exactly as the publish flow does, so the dirty container layout
-  // (admin/ "deleted") doesn't sneak phantom deletions into the commit.
+  // A stranded local commit (like the 2026-10 outage) on top of an old base:
+  // the disk could derive from either line of history, so a merge base can't
+  // be chosen safely. The publish must refuse loudly and push nothing.
   writeFileSync(join(containerDir, 'site/content/posts/orphan.md'), 'recovered post\n');
   git(containerDir, 'add', 'site');
   git(containerDir, 'commit', '-m', 'orphaned by a failed push');
 
   const originBefore = git(originDir, 'rev-parse', 'main').trim();
-  const headLocal = git(containerDir, 'rev-parse', 'HEAD').trim();
-  assert.notEqual(originBefore, headLocal, 'precondition: local is ahead of origin');
+  await assert.rejects(publishChanges(), (err) => err.code === 'checkout_diverged');
+  assert.equal(git(originDir, 'rev-parse', 'main').trim(), originBefore, 'nothing pushed');
 
-  // Nothing NEW is staged, yet publishChanges must still get the orphan's
-  // CONTENT onto origin. (It re-bases onto the latest origin/main rather than
-  // pushing the orphan SHA verbatim, so the resulting commit may differ — what
-  // matters is the content ships and origin advances.)
+  // Realign (what the host does): local main → origin/main, index to match;
+  // the orphan's content is still on disk and ships on the next publish.
+  git(containerDir, 'fetch', 'origin', 'main');
+  git(containerDir, 'update-ref', 'refs/heads/main', 'origin/main');
+  git(containerDir, 'read-tree', 'origin/main');
   const result = await publishChanges();
-  assert.equal(result.success, true);
-  const originAfter = git(originDir, 'rev-parse', 'main').trim();
-  assert.notEqual(originAfter, originBefore, 'origin advanced (orphan content shipped)');
+  assert.equal(result.changed, true);
   assert.ok(originTree().includes('site/content/posts/orphan.md'), 'orphan post shipped');
 });
 
@@ -260,4 +258,138 @@ test('getPostHistory + getPostAtCommit surface a post’s git revisions', async 
   // Guards: a bogus hash and a traversal filename both return null/[].
   assert.equal(await getPostAtCommit('existing.md', 'zzz; rm -rf /'), null);
   assert.deepEqual(await getPostHistory('../../../etc/passwd'), []);
+});
+
+// ── 2026-11 publish hardening ────────────────────────────────────────────────
+
+/** Sync the seed clone to origin and push a change made by `edit`. */
+const pushFromSeed = (message, edit) => {
+  git(seedDir, 'fetch', 'origin', 'main');
+  git(seedDir, 'reset', '--hard', 'origin/main');
+  edit(seedDir);
+  git(seedDir, 'add', '-A');
+  git(seedDir, 'commit', '-m', message);
+  git(seedDir, 'push', 'origin', 'main');
+};
+
+test('publish preserves upstream site/ edits the disk never pulled (no silent revert)', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+  // Someone edits site.toml on GitHub (e.g. the contact-email commit) while
+  // the server's disk still has the old file.
+  const toml = (email, b) =>
+    `[social]\na = 1\n${email}\n[site]\nx = 1\ny = 1\nz = 1\n\n[apps]\nb = ${b}\n`;
+  writeFileSync(join(containerDir, 'site/site.toml'), toml('', 1));
+  await publishChanges();
+  pushFromSeed('upstream toml edit', (d) =>
+    writeFileSync(join(d, 'site/site.toml'), toml('email = "hi"', 1)),
+  );
+  // CMS edits a different section of the same file.
+  writeFileSync(join(containerDir, 'site/site.toml'), toml('', 2));
+  const result = await publishChanges();
+  assert.equal(result.changed, true);
+  const shipped = git(originDir, 'show', 'main:site/site.toml');
+  assert.match(shipped, /email = "hi"/, 'upstream edit survived');
+  assert.match(shipped, /b = 2/, 'CMS edit shipped');
+  // …and the merged result was written back to disk so the host's next
+  // fast-forward sees a consistent worktree.
+  assert.equal(readFileSync(join(containerDir, 'site/site.toml'), 'utf8'), shipped);
+});
+
+test('publish surfaces a real conflict instead of clobbering upstream', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+  pushFromSeed('upstream rewrite', (d) =>
+    writeFileSync(
+      join(d, 'site/site.toml'),
+      `[social]\na = 1\nemail = "hi"\n[site]\nx = 1\ny = 1\nz = 1\n\n[apps]\nb = UPSTREAM\n`,
+    ),
+  );
+  writeFileSync(
+    join(containerDir, 'site/site.toml'),
+    `[social]\na = 1\nemail = "hi"\n[site]\nx = 1\ny = 1\nz = 1\n\n[apps]\nb = CMS\n`,
+  );
+  const before_ = git(originDir, 'rev-parse', 'main').trim();
+  await assert.rejects(publishChanges(), (err) => err.code === 'merge_conflict');
+  assert.equal(git(originDir, 'rev-parse', 'main').trim(), before_, 'nothing was pushed');
+  // Resolve: take upstream.
+  writeFileSync(
+    join(containerDir, 'site/site.toml'),
+    git(originDir, 'show', 'main:site/site.toml'),
+  );
+});
+
+test('publish refuses build/dependency output even without ignore rules', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+  mkdirSync(join(containerDir, 'site/node_modules/pkg'), { recursive: true });
+  writeFileSync(join(containerDir, 'site/node_modules/pkg/index.js'), 'x\n');
+  try {
+    await assert.rejects(publishChanges(), (err) => err.code === 'forbidden_paths');
+  } finally {
+    rmSync(join(containerDir, 'site/node_modules'), { recursive: true, force: true });
+  }
+});
+
+test('publish works when the checkout is on a feature branch (the 2026-10 outage)', async () => {
+  const { publishChanges, getPublishState } = await import('../src/utils/git.js');
+  git(containerDir, 'checkout', '-q', '-b', 'codex/some-feature');
+  try {
+    writeFileSync(join(containerDir, 'site/content/posts/from-branch.md'), 'shipped\n');
+    const state = await getPublishState();
+    assert.equal(state.onMain, false);
+    assert.ok(state.pending.some((p) => p.path === 'site/content/posts/from-branch.md'));
+
+    const result = await publishChanges();
+    assert.equal(result.changed, true);
+    assert.equal(
+      git(originDir, 'rev-parse', 'main').trim(),
+      result.commitHash,
+      'origin/main is the published commit',
+    );
+    assert.ok(originTree().includes('site/content/posts/from-branch.md'));
+    assert.equal(
+      git(containerDir, 'symbolic-ref', '--short', 'HEAD').trim(),
+      'codex/some-feature',
+      'HEAD/branch untouched',
+    );
+    const after_ = await getPublishState();
+    assert.deepEqual(after_.pending, [], 'nothing left to publish');
+  } finally {
+    git(containerDir, 'checkout', '-q', 'main');
+  }
+});
+
+test('publish refuses when local HEAD carries code commits origin lacks', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+  git(containerDir, 'checkout', '-q', '-b', 'wip-code');
+  try {
+    // Commit a non-site change via plumbing (the container has no admin/ dir).
+    const blob = execFileSync('git', ['hash-object', '-w', '--stdin'], {
+      cwd: containerDir,
+      input: 'wip code\n',
+      encoding: 'utf8',
+    }).trim();
+    git(containerDir, 'update-index', '--add', '--cacheinfo', `100644,${blob},admin/wip.js`);
+    git(containerDir, 'commit', '-q', '-m', 'wip code');
+    writeFileSync(join(containerDir, 'site/content/posts/blocked.md'), 'x\n');
+    await assert.rejects(publishChanges(), (err) =>
+      ['non_site_changes', 'checkout_diverged'].includes(err.code),
+    );
+    assert.ok(!originTree().includes('admin/wip.js'));
+  } finally {
+    rmSync(join(containerDir, 'site/content/posts/blocked.md'), { force: true });
+    git(containerDir, 'checkout', '-q', '-f', 'main');
+  }
+});
+
+test('scoped publish (scheduler) ships only the given paths', async () => {
+  const { publishChanges } = await import('../src/utils/git.js');
+  writeFileSync(join(containerDir, 'site/content/posts/scheduled.md'), 'go live\n');
+  writeFileSync(join(containerDir, 'site/site.toml'), 'half-finished homepage edit\n');
+  const result = await publishChanges({ paths: ['site/content/posts/scheduled.md'] });
+  assert.equal(result.changed, true);
+  assert.ok(originTree().includes('site/content/posts/scheduled.md'));
+  assert.doesNotMatch(git(originDir, 'show', 'main:site/site.toml'), /half-finished/);
+  writeFileSync(
+    join(containerDir, 'site/site.toml'),
+    git(originDir, 'show', 'main:site/site.toml'),
+  );
 });

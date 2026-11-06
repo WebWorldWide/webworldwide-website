@@ -31,6 +31,39 @@ import { readRedirects, writeRedirects, upsertRedirect } from '../services/redir
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 const router = Router();
+
+/** Front-matter keys the post editor owns (absent = cleared by the author). */
+const EDITOR_MANAGED_KEYS = new Set([
+  'title',
+  'slug',
+  'draft',
+  'date',
+  'excerpt',
+  'series',
+  'publish_at',
+  'cover',
+  'cover_alt',
+  'custom_css',
+  'custom_js',
+]);
+
+/**
+ * Make draft/publish_at consistent:
+ *  - a FUTURE publish_at means "scheduled": the post stays a draft until the
+ *    scheduler promotes it (otherwise the build hides it while syndication
+ *    announces a 404 immediately);
+ *  - a PAST publish_at is spent: drop it, or flipping the post back to draft
+ *    later would get it silently re-published by the scheduler.
+ *
+ * @param {Record<string, any>} data
+ */
+function normalizeSchedule(data) {
+  if (!data.publish_at) return;
+  const ts = new Date(data.publish_at).getTime();
+  if (Number.isNaN(ts)) return;
+  if (ts > Date.now()) data.draft = true;
+  else delete data.publish_at;
+}
 const postsDir = join(SITE_DIR, 'content', 'posts');
 
 // Short-lived cache for the list scan. Opening the admin fires GET
@@ -165,6 +198,8 @@ router.post('/bulk', (req, res) => {
 
         if (action === 'publish') {
           data.draft = false;
+          // Publishing now supersedes any pending schedule.
+          delete data.publish_at;
           // Validate against the shared schema before flipping live.
           const check = validateForPublish(data);
           if (!check.ok) {
@@ -177,6 +212,9 @@ router.post('/bulk', (req, res) => {
           }
         } else if (action === 'unpublish') {
           data.draft = true;
+          // A leftover past publish_at would make the scheduler re-publish
+          // this post on its next 5-minute tick.
+          delete data.publish_at;
         }
 
         writeFileAtomic(filePath, serializePost(data, content || ''));
@@ -505,6 +543,7 @@ router.post('/', (req, res) => {
         return res.status(400).json({ error: 'publish_at must be a future ISO timestamp' });
       }
     }
+    normalizeSchedule(data);
 
     // Single-source-of-truth schema check (shared with Astro build).
     // Drafts pass unconditionally; non-drafts must satisfy the Zod schema
@@ -605,6 +644,20 @@ router.put('/:filename', (req, res) => {
     // blocked just because that moment is now behind us.
     if (data.publish_at && Number.isNaN(new Date(data.publish_at).getTime())) {
       return res.status(400).json({ error: 'publish_at must be a valid ISO timestamp' });
+    }
+    normalizeSchedule(data);
+
+    // Keep front-matter keys the editor doesn't manage (bluesky_uri,
+    // mastodon_uri, canonical_url, hand-added keys…). The editor sends only
+    // the fields it edits; writing that object verbatim used to erase the
+    // rest — losing syndication URIs and causing duplicate cross-posts.
+    try {
+      const { data: onDisk } = parsePost(readFileSync(oldPath, 'utf8'));
+      for (const [k, v] of Object.entries(onDisk || {})) {
+        if (!EDITOR_MANAGED_KEYS.has(k) && !(k in data)) data[k] = v;
+      }
+    } catch {
+      /* new file or unreadable — nothing to preserve */
     }
 
     // Single-source-of-truth schema check (shared with Astro build).

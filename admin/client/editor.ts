@@ -1148,36 +1148,28 @@
   function watchDeploy(sha) {
     const el = document.getElementById('deploy-status');
     if (!el) return;
-    clearTimeout(deployTimer);
     el.hidden = false;
     el.className = 'ed-deploy building';
     el.textContent = 'Building…';
     el.removeAttribute('href');
-    let tries = 0;
-    const tick = async () => {
-      tries += 1;
-      let d;
-      try {
-        d = await TE.fetchJSON(`/api/publish/deploy/${encodeURIComponent(sha)}`);
-      } catch (_) {
-        d = { status: 'unknown' };
-      }
-      if (d && d.url) el.href = d.url;
-      if (d && d.status === 'not_pushed') {
-        el.className = 'ed-deploy fail';
-        el.textContent = 'Publish failed';
-        TE.toast(
-          "The publish didn't reach GitHub — check your internet connection and try again.",
-          'error',
-        );
-        return;
-      }
-      if (d && d.status === 'completed') {
-        const ok = d.conclusion === 'success';
-        const slug = (slugEl?.value || '').trim();
-        const isPublished = draftEl?.value === 'false';
-        el.className = ok ? 'ed-deploy ok' : 'ed-deploy fail';
-        if (ok) {
+    const token = (deployTimer = {});
+    TE.watchDeploy(sha, (st) => {
+      if (deployTimer !== token) return; // a newer publish took over the pill
+      if (st.url) el.href = st.url;
+      switch (st.phase) {
+        case 'queued':
+          el.className = 'ed-deploy building';
+          el.textContent = 'Queued…';
+          break;
+        case 'building':
+          el.className = 'ed-deploy building';
+          el.textContent = 'Building…';
+          break;
+        case 'live':
+        case 'superseded': {
+          const slug = (slugEl?.value || '').trim();
+          const isPublished = draftEl?.value === 'false';
+          el.className = 'ed-deploy ok';
           // For a published post, point the badge at the live page.
           // A draft built fine but stays hidden — say "Site updated", not "Live".
           if (isPublished && slug) {
@@ -1188,27 +1180,32 @@
             el.textContent = 'Site updated ✓';
             TE.toast("Site updated. (This post is a draft, so it won't appear publicly yet.)");
           }
-        } else {
-          el.textContent = 'Build failed';
+          break;
         }
-        return; // terminal — stop polling
+        case 'failed':
+          el.className = 'ed-deploy fail';
+          el.textContent = 'Build failed';
+          TE.toast('The site build failed on GitHub — open the badge for the log.', 'error');
+          break;
+        case 'not_pushed':
+          el.className = 'ed-deploy fail';
+          el.textContent = 'Publish failed';
+          TE.toast("The publish didn't reach GitHub's main branch. Try publishing again.", 'error');
+          break;
+        case 'unknown':
+          el.className = 'ed-deploy';
+          el.textContent = 'Deploy status unavailable';
+          break;
+        case 'timeout':
+          el.className = 'ed-deploy';
+          el.textContent = 'Still building — check back soon';
+          TE.toast(
+            'The site is taking longer than usual to build. Open the badge to watch it on GitHub.',
+            'info',
+          );
+          break;
       }
-      el.textContent = d && d.status === 'in_progress' ? 'Building…' : 'Queued…';
-      // Builds on a small server can queue for several minutes; poll up to ~10
-      // min, then tell the writer where to check rather than freeze the badge.
-      if (tries < 120) {
-        deployTimer = setTimeout(tick, 5000);
-      } else {
-        el.className = 'ed-deploy';
-        el.textContent = 'Still building — check back soon';
-        TE.toast(
-          'The site is taking longer than usual. It will finish on its own — ' +
-            'refresh the live site in a few minutes.',
-          'info',
-        );
-      }
-    };
-    deployTimer = setTimeout(tick, 4000);
+    });
   }
 
   // ── Delete ────────────────────────────────────────────────

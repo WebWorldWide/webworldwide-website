@@ -1,11 +1,13 @@
 declare global {
   namespace Express {
     interface Request {
+      /** Set by the /api session gate (see routes/auth.ts resolveSession). */
       user?: {
-        id?: string | number;
-        username?: string;
-        expires?: number;
-        [key: string]: unknown;
+        userId: string;
+        username: string;
+        sessionId: string;
+        method: string;
+        createdAt: number;
       };
     }
   }

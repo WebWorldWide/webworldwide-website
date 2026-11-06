@@ -64,7 +64,7 @@ test('GET /auth/status is NOT metered by the brute-force limiter', async () => {
     for (let i = 0; i < 25; i++) {
       const res = await fetch(`http://127.0.0.1:${port}/auth/login/password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000' },
         body: JSON.stringify({ username: 'nope', password: 'wrong-password' }),
       });
       if (res.status === 429) {

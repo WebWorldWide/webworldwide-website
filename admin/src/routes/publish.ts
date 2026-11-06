@@ -10,7 +10,13 @@
  */
 
 import { Router } from 'express';
-import { publishChanges, getGitStatus, commitAndPush } from '../utils/git.js';
+import {
+  publishChanges,
+  getGitStatus,
+  commitAndPush,
+  getPublishState,
+  PublishError,
+} from '../utils/git.js';
 import { crossPostChangedPosts } from '../services/bluesky-crosspost.js';
 import { crossPostChangedPosts as mastodonCrossPost } from '../services/mastodon-crosspost.js';
 import * as bluesky from '../services/bluesky.js';
@@ -28,7 +34,32 @@ const router = Router();
  * @param {unknown} err
  * @returns {{ code: string, message: string }}
  */
+const PUBLISH_ERROR_MESSAGES: Record<string, string> = {
+  merge_conflict:
+    'Your changes conflict with newer changes on GitHub. Reload the editor to see the latest version, then re-apply your edit.',
+  non_site_changes:
+    'The server checkout has code changes that are not on main, so publishing was stopped to avoid shipping them. The server needs to be realigned with main.',
+  forbidden_paths:
+    'Publishing was stopped because build or dependency files were about to be committed. This is a server setup issue (site/.gitignore).',
+  checkout_diverged:
+    "The server's copy of the site is on a different branch or has its own commits, so publishing was stopped to avoid losing edits. The server checkout needs to be realigned with main.",
+  push_unverified:
+    'GitHub did not confirm the update, so the site was NOT published. Try again; if it repeats, check the server logs.',
+};
+
 function classifyPublishError(err) {
+  if (err instanceof PublishError) {
+    return {
+      code: err.code,
+      message:
+        PUBLISH_ERROR_MESSAGES[err.code] ||
+        (err.code === 'network_error'
+          ? "Couldn't reach GitHub — check the server's internet connection and try again."
+          : err.code === 'push_rejected'
+            ? 'GitHub kept changing while publishing. Try again in a moment.'
+            : err.message),
+    };
+  }
   const e = /** @type {any} */ err;
   const raw = `${(e && e.message) || ''} ${(e && e.cause && e.cause.message) || ''}`;
   const m = raw.toLowerCase();
@@ -101,6 +132,14 @@ function classifyPublishError(err) {
 router.post('/', async (req, res) => {
   try {
     const result = await publishChanges();
+    logActivity({
+      req,
+      action: result.changed ? 'site.publish' : 'site.publish_noop',
+      target: result.commitHash ? result.commitHash.slice(0, 12) : null,
+      meta: result.changed
+        ? { files: (result.files || []).slice(0, 50).map((f) => `${f.status} ${f.path}`) }
+        : undefined,
+    });
 
     // Phase 9: Bluesky cross-post hook. Best-effort; logs but never
     // throws. The publish response still reflects the git outcome —
@@ -124,6 +163,7 @@ router.post('/', async (req, res) => {
           if (blueskyReport.posted.length > 0) {
             const followup = await commitAndPush(
               `Update Bluesky URIs (${blueskyReport.posted.length} post${blueskyReport.posted.length === 1 ? '' : 's'})`,
+              result.changedPosts.map((f) => `site/content/posts/${f}`),
             );
             if (!followup.success) {
               console.warn('[publish] Bluesky followup commit failed:', followup.message);
@@ -159,6 +199,7 @@ router.post('/', async (req, res) => {
           if (mastodonReport.posted.length > 0) {
             const followup = await commitAndPush(
               `Update Mastodon URIs (${mastodonReport.posted.length} post${mastodonReport.posted.length === 1 ? '' : 's'})`,
+              result.changedPosts.map((f) => `site/content/posts/${f}`),
             );
             if (!followup.success) {
               console.warn('[publish] Mastodon followup commit failed:', followup.message);
@@ -182,7 +223,8 @@ router.post('/', async (req, res) => {
     // so the editor can tell the user what actually went wrong.
     console.error('[publish] publish failed:', err);
     const { code, message } = classifyPublishError(err);
-    res.status(500).json({ error: code, message });
+    logActivity({ req, action: 'site.publish_failed', meta: { code } });
+    res.status(code === 'merge_conflict' ? 409 : 500).json({ error: code, message });
   }
 });
 
@@ -204,37 +246,51 @@ router.get('/deploy/:sha', async (req, res) => {
   };
   if (process.env.GH_TOKEN) headers.Authorization = `Bearer ${process.env.GH_TOKEN}`;
   try {
+    // 1. Is the commit actually ON main? `/commits/:sha` alone returns 200 for
+    //    a commit on any pushed branch, which made a stranded feature-branch
+    //    commit look "pending" forever.
+    const cmp = await fetch(`https://api.github.com/repos/${repo}/compare/main...${sha}`, {
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (cmp.status === 404) return res.json({ status: 'not_pushed' });
+    if (!cmp.ok) return res.json({ status: 'error', reason: `github_${cmp.status}` });
+    const cmpData = await cmp.json();
+    if (cmpData.status !== 'identical' && cmpData.status !== 'behind') {
+      return res.json({ status: 'not_on_main' });
+    }
+
+    // 2. Find the Pages deploy run for this exact commit — matched by workflow
+    //    FILE, never by falling back to whatever ran first (a green Quality run
+    //    used to show up as "Live").
     const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return res.json({ status: 'unknown' });
+    if (!r.ok) return res.json({ status: 'error', reason: `github_${r.status}` });
     const data = await r.json();
     const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
-    if (!runs.length) {
-      // "No runs" could mean the workflow hasn't fired yet (commit just
-      // pushed, GitHub needs a moment) OR the commit never reached GitHub
-      // (silent push failure). Verify the commit exists before promising
-      // "pending" so the badge doesn't spin forever on a commit that's
-      // only local.
-      try {
-        const commitUrl = `https://api.github.com/repos/${repo}/commits/${sha}`;
-        const cr = await fetch(commitUrl, { headers, signal: AbortSignal.timeout(8000) });
-        if (!cr.ok) return res.json({ status: 'not_pushed' });
-      } catch (_) {
-        // Can't verify — assume it exists and keep polling.
-      }
-      return res.json({ status: 'pending' });
+    const deploy = runs.find((x) => String(x.path || '').endsWith('.github/workflows/deploy.yml'));
+    if (!deploy) {
+      // On main, but newer pushes can supersede (cancel-in-progress: false
+      // still means a later run covers this content).
+      return res.json({ status: cmpData.status === 'behind' ? 'superseded' : 'pending' });
     }
-    // Prefer the Pages deploy workflow; fall back to the newest run.
-    const deploy = runs.find((x) => /deploy|pages/i.test(x.name || '')) || runs[0];
     res.json({
       status: deploy.status, // queued | in_progress | completed
-      conclusion: deploy.conclusion, // success | failure | null
+      conclusion: deploy.conclusion, // success | failure | cancelled | null
       url: deploy.html_url,
       name: deploy.name,
     });
   } catch (err) {
     console.warn('[publish] deploy-status failed:', err.message);
-    res.json({ status: 'unknown' });
+    res.json({ status: 'error', reason: 'network' });
   }
+});
+
+/**
+ * What would be published right now + whether the server checkout is healthy
+ * (on main). Drives the "unpublished changes" badge in every editor view.
+ */
+router.get('/state', async (_req, res) => {
+  res.json(await getPublishState());
 });
 
 // Get publish status (uncommitted changes, etc.)

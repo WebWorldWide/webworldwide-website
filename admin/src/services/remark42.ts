@@ -220,7 +220,20 @@ async function call(
     Accept: o.accept || 'application/json',
   };
   if (o.body !== undefined) headers['Content-Type'] = 'application/json';
-  if (o.admin) headers.Authorization = `Bearer ${adminJwt()}`;
+  if (o.admin) {
+    // Remark42's documented admin auth is HTTP basic `admin:<ADMIN_PASSWD>`
+    // (enabled by ADMIN_PASSWD on the remark42 container). The self-minted
+    // JWT is kept only as a fallback for setups without it: go-pkgz/auth reads
+    // tokens from X-JWT, so send it there as well as Authorization.
+    const pw = process.env.REMARK42_ADMIN_PASSWD;
+    if (pw) {
+      headers.Authorization = `Basic ${Buffer.from(`admin:${pw}`).toString('base64')}`;
+    } else {
+      const jwt = adminJwt();
+      headers.Authorization = `Bearer ${jwt}`;
+      headers['X-JWT'] = jwt;
+    }
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);

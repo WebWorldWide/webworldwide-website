@@ -339,3 +339,90 @@ function statSyncSafe(p) {
     return false;
   }
 }
+
+test('PUT preserves front-matter keys the editor does not manage', skipOpts(), async () => {
+  writePost('keepers', {
+    title: 'Keepers',
+    slug: 'keepers',
+    draft: false,
+    date: '2026-01-01T00:00:00.000Z',
+    excerpt: 'x',
+    bluesky_uri: 'at://did:plc:abc/app.bsky.feed.post/123',
+    mastodon_uri: 'https://mastodon.example/@me/1',
+    canonical_url: 'https://elsewhere.example/keepers',
+  });
+  const res = await api('/api/posts/keepers.md', {
+    method: 'PUT',
+    body: JSON.stringify({
+      data: {
+        title: 'Keepers v2',
+        slug: 'keepers',
+        draft: false,
+        date: '2026-01-01T00:00:00.000Z',
+        excerpt: 'x',
+      },
+      content: 'new body',
+    }),
+  });
+  assert.equal(res.status, 200);
+  const raw = readFileSync(join(postsDir, 'keepers.md'), 'utf8');
+  assert.match(raw, /bluesky_uri:/);
+  assert.match(raw, /mastodon_uri:/);
+  assert.match(raw, /canonical_url:/);
+  assert.match(raw, /title: Keepers v2/);
+});
+
+test(
+  'PUT: clearing an editor field removes it; schedule state is normalized',
+  skipOpts(),
+  async () => {
+    writePost('sched', {
+      title: 'Sched',
+      slug: 'sched',
+      draft: true,
+      date: '2026-01-01T00:00:00.000Z',
+      excerpt: 'x',
+      series: 'old-series',
+      publish_at: '2020-01-01T00:00:00.000Z',
+    });
+    const future = new Date(Date.now() + 86400000).toISOString();
+    // Published + future publish_at → kept as a scheduled draft.
+    let res = await api('/api/posts/sched.md', {
+      method: 'PUT',
+      body: JSON.stringify({
+        data: {
+          title: 'Sched',
+          slug: 'sched',
+          draft: false,
+          date: '2026-01-01T00:00:00.000Z',
+          excerpt: 'x',
+          publish_at: future,
+        },
+        content: 'b',
+      }),
+    });
+    assert.equal(res.status, 200);
+    let raw = readFileSync(join(postsDir, 'sched.md'), 'utf8');
+    assert.match(raw, /draft: true/);
+    assert.doesNotMatch(raw, /series:/, 'a field the author cleared stays cleared');
+
+    // Draft + past publish_at → the spent schedule is dropped (no re-promotion).
+    res = await api('/api/posts/sched.md', {
+      method: 'PUT',
+      body: JSON.stringify({
+        data: {
+          title: 'Sched',
+          slug: 'sched',
+          draft: true,
+          date: '2026-01-01T00:00:00.000Z',
+          excerpt: 'x',
+          publish_at: '2020-01-01T00:00:00.000Z',
+        },
+        content: 'b',
+      }),
+    });
+    assert.equal(res.status, 200);
+    raw = readFileSync(join(postsDir, 'sched.md'), 'utf8');
+    assert.doesNotMatch(raw, /publish_at/);
+  },
+);

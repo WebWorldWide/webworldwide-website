@@ -37,7 +37,21 @@ const yamlEngine = {
   parse: (/** @type {string} */ str) => jsYaml.load(str),
   stringify: (/** @type {any} */ obj) => jsYaml.dump(obj, { lineWidth: -1 }),
 };
-const matterOpts: any = { engines: { yaml: yamlEngine }, language: 'yaml' };
+// gray-matter MERGES `engines` into its defaults, and the default `js` /
+// `javascript` engines `eval()` the front matter — so a post starting with
+// `---js` would run arbitrary code in the CMS. Override them to refuse.
+const refuseEngine = {
+  parse: () => {
+    throw new Error('Executable (js) front matter is not allowed — use YAML.');
+  },
+  stringify: () => {
+    throw new Error('Executable (js) front matter is not allowed — use YAML.');
+  },
+};
+const matterOpts: any = {
+  engines: { yaml: yamlEngine, js: refuseEngine, javascript: refuseEngine, coffee: refuseEngine },
+  language: 'yaml',
+};
 
 /**
  * Parse frontmatter and content from a markdown string.

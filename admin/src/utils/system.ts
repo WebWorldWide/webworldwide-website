@@ -2,7 +2,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import http from 'http';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, statSync } from 'fs';
 import { join } from 'path';
 
 const execAsync = promisify(exec);
@@ -129,28 +129,49 @@ function fetchDockerAPI(path) {
   });
 }
 
+/**
+ * Container status written by the host's system-health cron
+ * (scripts/system-health.sh → docker/health/containers.json, mounted read-only
+ * at /app/health). This replaced the docker-socket proxy in 2026-11: even a
+ * GET-only proxy exposed every container's environment (tunnel token, DB
+ * passwords) and filesystem to anything on the compose network.
+ */
+function readContainerStatusFile() {
+  const dir = process.env.TE_HEALTH_DIR || '/app/health';
+  const file = process.env.DOCKER_STATUS_FILE || join(dir, 'containers.json');
+  if (!existsSync(file)) return null;
+  const ageMs = Date.now() - statSync(file).mtimeMs;
+  const list = JSON.parse(readFileSync(file, 'utf-8'));
+  return { list: Array.isArray(list) ? list : [], stale: ageMs > 15 * 60 * 1000, ageMs };
+}
+
 // Get Docker containers status
 export async function getDockerStats() {
   try {
-    const containers = await fetchDockerAPI('/containers/json?all=1');
+    const fromFile = readContainerStatusFile();
+    const containers = fromFile ? fromFile.list : await fetchDockerAPI('/containers/json?all=1');
     if (!Array.isArray(containers)) return [];
 
     return containers.map((c) => {
-      const name = c.Names[0].replace('/', '');
+      const name = String((Array.isArray(c.Names) ? c.Names[0] : c.Names) || '').replace(/^\//, '');
       const state = c.State;
-      const status = c.Status;
+      const status = fromFile?.stale
+        ? `${c.Status} (status ${Math.round(fromFile.ageMs / 60000)} min old)`
+        : c.Status;
 
       return {
-        id: c.Id.substring(0, 12),
+        id: String(c.Id || c.ID || '').substring(0, 12),
         name,
         state,
         status,
-        healthy: state === 'running',
+        healthy: state === 'running' && !/unhealthy/i.test(String(c.Status || '')),
         image: c.Image,
       };
     });
   } catch (_err) {
-    return { error: 'Docker socket not available or permission denied' };
+    return {
+      error: 'Container status unavailable (host health cron not writing containers.json?)',
+    };
   }
 }
 

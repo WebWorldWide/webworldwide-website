@@ -189,6 +189,56 @@ jq -n \
 # Persist reading for the next run (epoch, sectors, status).
 printf '%s %s %s\n' "$now_epoch" "${sectors:-0}" "$overall" >"$STATE_FILE"
 
+# ── Container status for the CMS dashboard ──────────────────────────────────
+# The CMS reads this file (mounted read-only) instead of talking to the Docker
+# API, so no container needs any access to the Docker socket.
+if command -v docker >/dev/null 2>&1; then
+  if docker ps -a --format '{{json .}}' 2>/dev/null |
+    jq -s '[.[] | {Id: .ID, Names: [.Names], State: .State, Status: .Status, Image: .Image}]' \
+      >"$OUT_DIR/containers.json.tmp" 2>/dev/null; then
+    mv "$OUT_DIR/containers.json.tmp" "$OUT_DIR/containers.json"
+  else
+    rm -f "$OUT_DIR/containers.json.tmp"
+  fi
+fi
+
+# ── Operational drift checks (alert once per 6h while the condition holds) ─
+SCRIPT_DIR_HC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR_HC/_notify.sh" ]; then
+  # shellcheck source=scripts/_notify.sh
+  . "$SCRIPT_DIR_HC/_notify.sh"
+  WWWIDE_APP_DIR="$APP_DIR"
+  export WWWIDE_APP_DIR
+
+  # Uncommitted changes to the deployed stack config (docker/) are how Caddy
+  # ended up published on 0.0.0.0 in 2026-10 without anyone noticing.
+  if [ -d "$APP_DIR/.git" ]; then
+    dirty="$(wwwide_git -C "$APP_DIR" status --porcelain -- docker scripts 2>/dev/null | grep -v '^?? ' | head -5 || true)"
+    if [ -n "$dirty" ]; then
+      wwwide_notify drift-docker 21600 "Uncommitted changes to deployed config on $(hostname): $(echo "$dirty" | tr '\n' ' ')"
+    else
+      wwwide_notify_clear drift-docker
+    fi
+  fi
+
+  # Backups older than 26h.
+  backup_marker="${WWWIDE_STATE_DIR:-$OUT_DIR}/.last_backup"
+  [ -f "$backup_marker" ] || backup_marker="$OUT_DIR/.last_backup"
+  if [ -f "$backup_marker" ]; then
+    age_h=$(( ($(date +%s) - $(stat -c %Y "$backup_marker")) / 3600 ))
+    if [ "$age_h" -ge 26 ]; then
+      wwwide_notify backup-stale 21600 "Last successful backup was ${age_h}h ago."
+    else
+      wwwide_notify_clear backup-stale
+    fi
+  fi
+
+  # Disk usage.
+  if [ "${disk_pct:-0}" != "null" ] && [ "${disk_pct%.*}" -ge 90 ] 2>/dev/null; then
+    wwwide_notify disk-full 21600 "Disk at ${disk_pct}% on $(hostname)."
+  fi
+fi
+
 # ── Alert on state change only (avoid every-5-min spam) ─────────────────────
 if [ "$overall" != "ok" ] && [ "$prev_status" != "$overall" ]; then
   webhook=""

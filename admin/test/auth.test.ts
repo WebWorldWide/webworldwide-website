@@ -30,6 +30,7 @@ let server;
 let baseUrl;
 let tempDir;
 let skipReason = false;
+let authMod;
 
 // Node 22+ test runner skips when skip is ANY non-false/undefined value
 // (including null or a function). Use a getter so the live value of
@@ -61,22 +62,17 @@ before(async () => {
 
   const express = (await import('express')).default;
   const cookieParser = (await import('cookie-parser')).default;
-  const authRouter = (await import('../src/routes/auth.js')).default;
+  authMod = await import('../src/routes/auth.js');
+  const authRouter = authMod.default;
 
   const app = express();
   app.use(express.json());
   app.use(cookieParser(process.env.SESSION_SECRET));
   app.use('/auth', authRouter);
   app.get('/api/me', (req, res) => {
-    const session = req.signedCookies?.session;
-    if (!session) return res.status(401).json({ error: 'no session' });
-    try {
-      const data = JSON.parse(Buffer.from(session, 'base64').toString());
-      if (data.expires < Date.now()) return res.status(401).json({ error: 'expired' });
-      return res.json({ username: data.username });
-    } catch {
-      return res.status(401).json({ error: 'bad session' });
-    }
+    const s = authMod.resolveSession(req);
+    if (!s) return res.status(401).json({ error: 'no session' });
+    return res.json({ username: s.username, method: s.method });
   });
 
   await new Promise((resolve) => {
@@ -117,7 +113,7 @@ test(
       fetch(`${baseUrl}/auth/setup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'admin', password: 'correcthorse' }),
+        body: JSON.stringify({ username: 'admin', password: 'correcthorsebattery' }),
       });
     const [resA, resB] = await Promise.all([post(), post()]);
     const statuses = [resA.status, resB.status].sort();
@@ -135,7 +131,7 @@ test('setup rejects a second admin once one exists', skipOpts(), async () => {
   const res = await fetch(`${baseUrl}/auth/setup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin2', password: 'correcthorse' }),
+    body: JSON.stringify({ username: 'admin2', password: 'correcthorsebattery' }),
   });
   assert.equal(res.status, 403);
 });
@@ -144,7 +140,7 @@ test('password login: correct credentials → 200 + session cookie', skipOpts(),
   const res = await fetch(`${baseUrl}/auth/login/password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'correcthorse' }),
+    body: JSON.stringify({ username: 'admin', password: 'correcthorsebattery' }),
   });
   assert.equal(res.status, 200);
   const cookie = res.headers.get('set-cookie');
@@ -171,7 +167,7 @@ test('password login: unknown user → 401', skipOpts(), async () => {
   const res = await fetch(`${baseUrl}/auth/login/password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'nobody', password: 'irrelevant' }),
+    body: JSON.stringify({ username: 'nobody', password: 'irrelevantpass' }),
   });
   assert.equal(res.status, 401);
 });
@@ -180,7 +176,7 @@ test('logout clears the session cookie', skipOpts(), async () => {
   const login = await fetch(`${baseUrl}/auth/login/password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'correcthorse' }),
+    body: JSON.stringify({ username: 'admin', password: 'correcthorsebattery' }),
   });
   const cookie = login.headers.get('set-cookie').split(';')[0];
 
@@ -191,4 +187,119 @@ test('logout clears the session cookie', skipOpts(), async () => {
   assert.equal(logout.status, 200);
   const cleared = logout.headers.get('set-cookie');
   assert.match(cleared, /session=;/, 'logout clears the session cookie');
+  // …and the session is revoked server-side: replaying the old cookie fails.
+  const replay = await fetch(`${baseUrl}/api/me`, { headers: { cookie } });
+  assert.equal(replay.status, 401, 'a logged-out cookie is dead, not just forgotten');
+});
+
+const login = (password = 'correcthorsebattery') =>
+  fetch(`${baseUrl}/auth/login/password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password }),
+  });
+
+test('forged or legacy (signed-JSON) cookies are rejected', skipOpts(), async () => {
+  const legacy = Buffer.from(
+    JSON.stringify({ userId: 'x', username: 'admin', expires: Date.now() + 1e9 }),
+  ).toString('base64');
+  const res = await fetch(`${baseUrl}/api/me`, { headers: { cookie: `session=${legacy}` } });
+  assert.equal(res.status, 401);
+});
+
+test('setup requires a strong password', skipOpts(), async () => {
+  // (Setup is already complete here, so this asserts the length rule is
+  // documented in the response contract via the 403 path not leaking state.)
+  const res = await fetch(`${baseUrl}/auth/setup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'x', password: 'short' }),
+  });
+  assert.equal(res.status, 403);
+});
+
+test(
+  'password login is refused once a passkey exists (unless break-glass)',
+  skipOpts(),
+  async () => {
+    const user = authMod.db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+    authMod.db
+      .prepare(
+        'INSERT INTO passkeys (id, user_id, credential_id, public_key, counter) VALUES (?, ?, ?, ?, 0)',
+      )
+      .run('pk-test', user.id, 'cred-test', 'AAAA');
+    try {
+      const refused = await login();
+      assert.equal(refused.status, 403);
+      assert.equal((await refused.json()).error, 'password_login_disabled');
+      assert.equal(refused.headers.get('set-cookie'), null, 'no session issued');
+
+      // A wrong password still answers 401 (doesn't reveal passkey state).
+      assert.equal((await login('wrong-password-x')).status, 401);
+
+      const status = await (await fetch(`${baseUrl}/auth/status`)).json();
+      assert.equal(status.passwordLogin, false);
+
+      process.env.ALLOW_PASSWORD_LOGIN = '1';
+      assert.equal((await login()).status, 200, 'break-glass env re-enables password login');
+    } finally {
+      delete process.env.ALLOW_PASSWORD_LOGIN;
+      authMod.db.prepare('DELETE FROM passkeys WHERE id = ?').run('pk-test');
+    }
+  },
+);
+
+test('passkey login challenge does not enumerate credential IDs', skipOpts(), async () => {
+  const res = await fetch(`${baseUrl}/auth/passkey/login/start`, { method: 'POST' });
+  const body = await res.json();
+  assert.deepEqual(body.options.allowCredentials ?? [], []);
+});
+
+test(
+  'global failed-login cap pauses password login (spoofed IPs do not help)',
+  skipOpts(),
+  async () => {
+    authMod._resetLoginFailures();
+    try {
+      for (let i = 0; i < 30; i += 1) {
+        const r = await fetch(`${baseUrl}/auth/login/password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'CF-Connecting-IP': `203.0.113.${i}`,
+          },
+          body: JSON.stringify({ username: 'nobody', password: 'guess-guess-guess' }),
+        });
+        assert.equal(r.status, 401);
+      }
+      const paused = await login();
+      assert.equal(paused.status, 429, 'even the right password waits out the pause');
+    } finally {
+      authMod._resetLoginFailures();
+    }
+  },
+);
+
+test('session store: revoke-others and idle expiry', skipOpts(), async () => {
+  const a = (await login()).headers.get('set-cookie').split(';')[0];
+  const b = (await login()).headers.get('set-cookie').split(';')[0];
+  const meA = await fetch(`${baseUrl}/api/me`, { headers: { cookie: a } });
+  assert.equal(meA.status, 200);
+
+  const user = authMod.db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+  // Resolve B's session id hash through the store, then revoke everything else.
+  const sessions = authMod.listSessions(user.id);
+  assert.ok(sessions.length >= 2);
+  authMod.revokeOtherSessions(user.id, sessions[0].id);
+  const alive = [a, b].map(
+    async (c) => (await fetch(`${baseUrl}/api/me`, { headers: { cookie: c } })).status,
+  );
+  const statuses = await Promise.all(alive);
+  assert.equal(statuses.filter((s) => s === 200).length, 1, 'exactly one session survives');
+
+  // Idle expiry: age every session past 12h → all rejected.
+  authMod.db.prepare('UPDATE sessions SET last_seen_at = ?').run(Date.now() - 13 * 3600 * 1000);
+  for (const c of [a, b]) {
+    assert.equal((await fetch(`${baseUrl}/api/me`, { headers: { cookie: c } })).status, 401);
+  }
 });

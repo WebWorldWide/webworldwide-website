@@ -17,7 +17,9 @@ import { readFileSync } from 'fs';
 import { versionizeHtml } from './src/utils/assets.js';
 
 // Route modules
-import authRoutes from './src/routes/auth.js';
+import authRoutes, { resolveSession, SESSION_COOKIE } from './src/routes/auth.js';
+import accountRoutes from './src/routes/account.js';
+import { getClientIp } from './src/utils/clientIp.js';
 import postsRoutes from './src/routes/posts.js';
 import mediaRoutes from './src/routes/media.js';
 import publishRoutes from './src/routes/publish.js';
@@ -204,20 +206,14 @@ if (!SESSION_SECRET) {
   );
 }
 
-// Middleware. Body caps are deliberately small: file uploads go through
-// Multer (multipart) on /api/media, not these parsers; everything else
-// is JSON/form data measured in kilobytes. The webmention endpoint
-// mounts its own 8kb parser below, so skip it here.
-const urlencodedParser = express.urlencoded({ extended: true, limit: '2mb' });
-const jsonParser = express.json({ limit: '2mb' });
-// Skip BOTH global body parsers for /webmention: the receiver mounts its
-// own 8kb urlencoded parser at the route, and letting the 2mb JSON parser
-// run here would let a JSON-typed ping bypass that 8kb cap — memory/DoS
-// amplification on the one unauthenticated endpoint.
-app.use((req, res, next) => {
-  if (req.path.startsWith('/webmention')) return next();
-  return jsonParser(req, res, (err) => (err ? next(err) : urlencodedParser(req, res, next)));
-});
+// Body parsers. Nothing is parsed globally: unauthenticated requests only
+// ever reach the small /auth parser (16 KB) or the webmention receiver's own
+// 8 KB parser, and the 2 MB API parsers run AFTER the session gate — so an
+// anonymous client can't make the server buffer/parse megabytes.
+// File uploads go through Multer (multipart) on /api/media, not these.
+const authJsonParser = express.json({ limit: '16kb' });
+const apiJsonParser = express.json({ limit: '2mb' });
+const apiUrlencodedParser = express.urlencoded({ extended: false, limit: '2mb' });
 app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 
 // Rate limiting.
@@ -234,15 +230,8 @@ app.use(cookieParser(SESSION_SECRET || randomBytes(32).toString('hex')));
 // loopback, now that cms + caddy are separate containers), so every client
 // collapsed into Caddy's single IP — one global bucket = a trivial login-lockout
 // DoS. ipKeyGenerator normalizes IPv6 to a subnet (required since v8).
-const clientIpKey = (/** @type {import('express').Request} */ req) => {
-  const fwd =
-    req.headers['cf-connecting-ip'] ||
-    String(req.headers['x-forwarded-for'] || '')
-      .split(',')[0]
-      .trim();
-  const key = fwd || req.socket?.remoteAddress || '';
-  return ipKeyGenerator(String(key || ''));
-};
+const clientIpKey = (/** @type {import('express').Request} */ req) =>
+  ipKeyGenerator(getClientIp(req) || 'unknown');
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -334,10 +323,19 @@ app.use(
 // SVG/HTML render inline as active content: nosniff everything, and force a
 // download for script-capable types. (Such uploads are also blocked at the door
 // — see mediaTypes DENYLIST_EXTENSIONS.)
-const RISKY_INLINE_MEDIA = /\.(svg|svgz|html?|xhtml|xml|js|mjs|wasm)$/i;
+// Only plain media renders inline; everything else downloads. Every media
+// response also carries a sandboxing CSP: it doesn't affect <img>/<video>
+// embedding, but a file opened directly can never run script on this origin
+// (defence in depth behind the upload allowlist).
+const INLINE_SAFE_MEDIA =
+  /\.(jpe?g|png|gif|webp|avif|ico|bmp|mp4|m4v|webm|mov|mp3|m4a|aac|wav|flac|ogg|oga|opus|pdf)$/i;
 const mediaStaticHeaders = (/** @type {any} */ res, /** @type {string} */ filePath) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (RISKY_INLINE_MEDIA.test(filePath)) res.setHeader('Content-Disposition', 'attachment');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
+  );
+  if (!INLINE_SAFE_MEDIA.test(filePath)) res.setHeader('Content-Disposition', 'attachment');
 };
 
 // Mounting `images` and `files` as separate roots so we never expose the
@@ -371,6 +369,41 @@ app.use(
   }),
 );
 
+// CSRF / cross-origin defense for state-changing /api requests. The session
+// cookie is SameSite=Lax + host-only, which does NOT isolate same-site SIBLING
+// subdomains — comments. (third-party Remark42 UGC), analytics., and the no-CSP
+// public apex all share the registrable domain, so one of them could otherwise
+// issue a no-preflight form POST that rides the cookie to a mutating route (incl.
+// account settings). Browsers always send Origin on non-GET requests;
+// require it to be the admin origin (fall back to the Referer origin if absent).
+const ADMIN_ORIGINS = new Set(
+  [
+    process.env.ADMIN_ORIGIN,
+    // The cms env sets ORIGIN=https://<DOMAIN_ADMIN> (the WebAuthn RP origin) —
+    // this is the admin's real origin. DOMAIN_ADMIN itself is NOT in the cms env.
+    process.env.ORIGIN,
+    process.env.DOMAIN_ADMIN ? `https://${process.env.DOMAIN_ADMIN}` : null,
+    ...(process.env.NODE_ENV === 'production'
+      ? []
+      : ['http://localhost:3000', 'http://127.0.0.1:3000']),
+  ].filter(Boolean),
+);
+/** Reject state-changing requests that don't come from the admin origin. */
+const requireAdminOrigin = (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  const origin = req.headers.origin;
+  if (origin) {
+    if (ADMIN_ORIGINS.has(origin)) return next();
+  } else if (req.headers.referer) {
+    try {
+      if (ADMIN_ORIGINS.has(new URL(req.headers.referer).origin)) return next();
+    } catch {
+      /* malformed Referer → fall through to reject */
+    }
+  }
+  return res.status(403).json({ error: 'cross-origin request blocked' });
+};
+
 // Auth routes. The brute-force limiter must cover credential attempts
 // (every sensitive /auth endpoint is a POST) but NOT GET /auth/status —
 // the SPA pings status on every page load, and metering it locks a
@@ -378,6 +411,8 @@ app.use(
 app.use(
   '/auth',
   (req, res, next) => (req.method === 'POST' ? authLimiter(req, res, next) : next()),
+  requireAdminOrigin,
+  authJsonParser,
   authRoutes,
 );
 
@@ -394,70 +429,21 @@ app.use(
   webmentionPublicRoutes,
 );
 
-// Auth middleware for API routes
+// Auth middleware for API routes: server-side session lookup (revocable,
+// idle + absolute expiry). See routes/auth.ts.
 app.use('/api', (req, res, next) => {
-  const session = req.signedCookies?.session;
+  const session = resolveSession(req);
   if (!session) {
+    res.clearCookie(SESSION_COOKIE, { path: '/' });
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  try {
-    const sessionData = JSON.parse(Buffer.from(session, 'base64').toString('utf-8'));
-    // Reject malformed-but-parseable payloads (e.g. `null`, a string, or a
-    // missing/!numeric expiry) so we never attach junk to req.user.
-    if (
-      !sessionData ||
-      typeof sessionData !== 'object' ||
-      typeof sessionData.expires !== 'number'
-    ) {
-      res.clearCookie('session');
-      return res.status(401).json({ error: 'Invalid session' });
-    }
-    if (sessionData.expires < Date.now()) {
-      res.clearCookie('session');
-      return res.status(401).json({ error: 'Session expired' });
-    }
-    req.user = sessionData;
-    next();
-  } catch {
-    res.clearCookie('session');
-    return res.status(401).json({ error: 'Invalid session' });
-  }
+  req.user = session;
+  next();
 });
-
-// CSRF / cross-origin defense for state-changing /api requests. The session
-// cookie is SameSite=Lax + host-only, which does NOT isolate same-site SIBLING
-// subdomains — comments. (third-party Remark42 UGC), analytics., and the no-CSP
-// public apex all share the registrable domain, so one of them could otherwise
-// issue a no-preflight form POST that rides the cookie to a mutating route (incl.
-// the /api/health terminal). Browsers always send Origin on non-GET requests;
-// require it to be the admin origin (fall back to the Referer origin if absent).
-const ADMIN_ORIGINS = new Set(
-  [
-    process.env.ADMIN_ORIGIN,
-    // The cms env sets ORIGIN=https://<DOMAIN_ADMIN> (the WebAuthn RP origin) —
-    // this is the admin's real origin. DOMAIN_ADMIN itself is NOT in the cms env.
-    process.env.ORIGIN,
-    process.env.DOMAIN_ADMIN ? `https://${process.env.DOMAIN_ADMIN}` : null,
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-  ].filter(Boolean),
-);
-app.use('/api', (req, res, next) => {
-  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
-  const origin = req.headers.origin;
-  if (origin) {
-    if (ADMIN_ORIGINS.has(origin)) return next();
-  } else if (req.headers.referer) {
-    try {
-      if (ADMIN_ORIGINS.has(new URL(req.headers.referer).origin)) return next();
-    } catch {
-      /* malformed Referer → fall through to reject */
-    }
-  }
-  return res.status(403).json({ error: 'cross-origin request blocked' });
-});
+app.use('/api', requireAdminOrigin, apiJsonParser, apiUrlencodedParser);
 
 // API routes
+app.use('/api/account', accountRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/publish', publishRoutes);

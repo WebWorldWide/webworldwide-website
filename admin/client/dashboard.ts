@@ -27,9 +27,10 @@
 
   function postStatus(post) {
     const now = Date.now();
-    const date = post.date ? new Date(post.date).getTime() : 0;
+    const publishAt = post.publish_at ? new Date(post.publish_at).getTime() : 0;
+    // Scheduled = waiting for the scheduler to flip it live at publish_at.
+    if (publishAt > now) return 'scheduled';
     if (post.draft) return 'draft';
-    if (date > now + 60 * 1000) return 'scheduled'; // 1 min cushion
     return 'published';
   }
 
@@ -460,41 +461,39 @@
           btn.disabled = true;
           const sha = data && data.commitHash;
           if (sha) {
-            let tries = 0;
-            const poll = async () => {
-              tries += 1;
-              let d;
-              try {
-                d = await TE.fetchJSON(`/api/publish/deploy/${encodeURIComponent(sha)}`);
-              } catch (_) {
-                d = { status: 'unknown' };
-              }
-              if (d && d.status === 'completed') {
-                const ok = d.conclusion === 'success';
-                btn.textContent = ok ? 'Site is live ✓' : 'Build failed';
-                btn.disabled = false;
-                if (ok) {
-                  TE.toast('Site rebuilt — your published posts are now live.');
-                } else {
-                  TE.toast('Build failed. Check GitHub Actions for details.', 'error');
-                }
-                setTimeout(() => {
-                  btn.textContent = orig;
-                }, 6000);
-                return;
-              }
-              if (tries < 120) {
-                setTimeout(poll, 5000);
-              } else {
+            void (async () => {
+              const st = await TE.watchDeploy(sha, (st) => {
+                if (st.phase === 'building') btn.textContent = 'Building…';
+                if (st.phase === 'queued') btn.textContent = 'Queued…';
+              });
+              btn.disabled = false;
+              const results = {
+                live: ['Site is live ✓', 'Site rebuilt — your published posts are now live.', ''],
+                superseded: [
+                  'Site is live ✓',
+                  'Site rebuilt — your published posts are now live.',
+                  '',
+                ],
+                failed: [
+                  'Build failed',
+                  'The site build failed on GitHub — check the Actions log.',
+                  'error',
+                ],
+                not_pushed: [
+                  'Publish failed',
+                  "The publish didn't reach GitHub's main branch. Try again.",
+                  'error',
+                ],
+                timeout: [orig, 'Still building — check the live site in a few minutes.', 'info'],
+                unknown: [orig, "Couldn't read the deploy status from GitHub.", 'info'],
+              };
+              const [label, msg, kind] = results[st.phase] || results.unknown;
+              btn.textContent = label;
+              TE.toast(msg, kind || undefined);
+              setTimeout(() => {
                 btn.textContent = orig;
-                btn.disabled = false;
-                TE.toast(
-                  'Site is rebuilding — it will finish on its own. Refresh in a few minutes.',
-                  'info',
-                );
-              }
-            };
-            setTimeout(poll, 4000);
+              }, 6000);
+            })();
           } else {
             TE.toast('Site publish triggered — refreshes in about 1–2 minutes.');
             btn.textContent = orig;

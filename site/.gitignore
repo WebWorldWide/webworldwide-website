@@ -1,0 +1,31 @@
+# site/-local ignore rules.
+#
+# The CMS container bind-mounts ONLY site/ and .git (not the repo root), so the
+# root .gitignore is invisible to its publish step. Without this file a 2026-10
+# publish committed 26k site/node_modules files plus dist/ and .astro/. Keep
+# these in sync with the site/ entries in the root .gitignore.
+# (Paths are relative to site/.)
+
+# Dependencies — no trailing slash so a symlinked node_modules is ignored too.
+node_modules
+
+# Astro / Vite build output and caches
+/dist/
+/.astro/
+/.vite/
+/.legacy/
+
+# Generated at build/publish time
+/public/sw.js
+/public/.well-known/webfinger
+/scripts/legacy-redirects.json
+/content/media.json
+
+# Transient media upload staging
+/.media-staging/
+
+# Local noise
+*.log
+.DS_Store
+.env
+.env.*

@@ -9,43 +9,14 @@ import {
 } from '../utils/system.js';
 import { readdirSync } from 'fs';
 import { join } from 'path';
-import { exec } from 'child_process';
-import util from 'util';
-const execAsync = util.promisify(exec);
 
 const SITE_DIR = process.env.SITE_DIR || join(process.cwd(), '..', 'site');
 
 const router = Router();
 
-// Terminal endpoint — full shell access for the authenticated admin.
-// Runs through `/bin/sh -c` (child_process.exec's default) so pipes,
-// redirects, env vars and operators all work. This is an admin-only,
-// auth-gated surface on the operator's own box, so it intentionally does
-// NOT restrict which commands may run. It's bounded only by a timeout and
-// an output cap so a runaway command can't hang the box or exhaust memory.
-router.post('/terminal', async (req, res) => {
-  try {
-    const { command } = req.body;
-    if (!command || typeof command !== 'string') {
-      return res.status(400).json({ error: 'Command required' });
-    }
-    const { stdout, stderr } = await execAsync(command, {
-      timeout: 60000,
-      maxBuffer: 8 * 1024 * 1024,
-    });
-    res.json({ output: stdout + (stderr ? '\n[stderr]\n' + stderr : '') });
-  } catch (err) {
-    // Non-zero exit, timeout, or spawn error — surface whatever we got so
-    // the operator can see the real failure rather than a generic message.
-    const parts = [];
-    if (err.stdout) parts.push(err.stdout);
-    if (err.stderr) parts.push('[stderr]\n' + err.stderr);
-    if (err.killed) parts.push('[timed out after 60s]');
-    else if (typeof err.code === 'number') parts.push('[exit ' + err.code + ']');
-    if (!parts.length) parts.push('[error] ' + err.message);
-    res.json({ output: parts.join('\n') });
-  }
-});
+// The former POST /terminal endpoint (arbitrary /bin/sh as the CMS user,
+// with every container secret in its environment) was removed 2026-11: one
+// stolen session became host root. Use SSH/Tailscale for shell access.
 
 // Central health endpoint that gathers all data
 router.get('/', async (req, res) => {

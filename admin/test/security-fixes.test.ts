@@ -37,3 +37,39 @@ test('sanitizeEmbedHtml strips script vectors but keeps the iframe/blockquote em
   assert.ok(!/javascript:/i.test(out2), 'drops javascript: URL');
   assert.ok(!/data:/i.test(out2), 'drops data: URL');
 });
+
+test('front matter: ---js blocks are refused, never eval()ed', async () => {
+  const { parsePost } = await import('../src/utils/frontmatter.js');
+  globalThis.__fmPwned = false;
+  assert.throws(
+    () => parsePost('---js\n{ title: (globalThis.__fmPwned = true, "x") }\n---\nbody'),
+    /not allowed/,
+  );
+  assert.equal(globalThis.__fmPwned, false);
+  const ok = parsePost('---\ntitle: Hello\n---\nbody');
+  assert.equal(ok.data.title, 'Hello');
+});
+
+test('upload allowlist: script-capable and unknown types are refused', () => {
+  for (const bad of [
+    'page.shtml',
+    'x.mjs',
+    'x.xsl',
+    'x.htc',
+    'x.xht',
+    'noext',
+    'x.unknownext',
+    'evil.svg',
+  ])
+    assert.equal(isDeniedExtension(bad), true, bad);
+  for (const ok of [
+    'photo.JPG',
+    'clip.mp4',
+    'song.mp3',
+    'doc.pdf',
+    'notes.md',
+    'icon.ico',
+    'code.py',
+  ])
+    assert.equal(isDeniedExtension(ok), false, ok);
+});
