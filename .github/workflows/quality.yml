@@ -157,6 +157,7 @@ jobs:
   test-admin:
     name: Test (admin / node --test)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -174,9 +175,16 @@ jobs:
         # pdftoppm. The fluent-ffmpeg availability probe misreports when
         # the binaries are missing, so the tests can crash with ENOENT
         # instead of self-skipping — install upfront here.
+        # --no-install-recommends trims ffmpeg's dependency tree (most of the
+        # download), and the retry/timeout options stop a slow mirror from
+        # stalling the job for many minutes.
+        timeout-minutes: 12
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y ffmpeg poppler-utils
+          APT_OPTS="-o Acquire::Retries=3 -o Acquire::http::Timeout=30"
+          sudo apt-get $APT_OPTS update -y
+          sudo apt-get $APT_OPTS install -y --no-install-recommends ffmpeg poppler-utils
 
       - name: Install root dependencies
         run: npm ci
