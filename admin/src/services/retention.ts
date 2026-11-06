@@ -13,6 +13,7 @@
  * missing table (fresh install / a test that didn't run migrations) is
  * ignored, never fatal.
  */
+import { pruneTrash } from './trash.js';
 import Database from 'better-sqlite3';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,7 +42,7 @@ function db() {
  * Run one retention sweep.
  *
  * @param {number} [now] epoch ms (injectable for tests)
- * @returns {{ activity: number, embeds: number, webmentions: number }} rows pruned per table
+ * @returns {{ activity: number, embeds: number, webmentions: number, trash: number }} rows pruned per table
  */
 export function runRetention(now = Date.now()) {
   const d = db();
@@ -68,7 +69,13 @@ export function runRetention(now = Date.now()) {
   } catch {
     /* webmentions may not exist yet */
   }
-  return { activity, embeds, webmentions };
+  let trash = 0;
+  try {
+    trash = pruneTrash(now);
+  } catch {
+    /* trash table may not exist yet */
+  }
+  return { activity, embeds, webmentions, trash };
 }
 
 /** @type {NodeJS.Timeout | null} */

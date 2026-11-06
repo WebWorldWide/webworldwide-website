@@ -70,13 +70,29 @@
     // surrounding region is aria-live="polite" so info/warn just announce.
     if (kind === 'error') el.setAttribute('role', 'alert');
     el.textContent = String(message === null || message === undefined ? '' : message);
+    // Optional action button (e.g. "Undo"): TE.toast(msg, kind, { label, onClick }).
+    const action = arguments[2];
+    if (action && action.label && typeof action.onClick === 'function') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'toast-action';
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => {
+        el.remove();
+        action.onClick();
+      });
+      el.append(' ', btn);
+    }
     root.appendChild(el);
-    setTimeout(() => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(8px)';
-      el.style.transition = 'opacity 180ms, transform 180ms';
-      setTimeout(() => el.remove(), 220);
-    }, 3200);
+    setTimeout(
+      () => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(8px)';
+        el.style.transition = 'opacity 180ms, transform 180ms';
+        setTimeout(() => el.remove(), 220);
+      },
+      action ? 8000 : 3200,
+    );
   };
 
   // ── Misc helpers ───────────────────────────────────────────

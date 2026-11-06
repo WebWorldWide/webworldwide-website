@@ -10,8 +10,9 @@
  * called without `await` so a logger hiccup never breaks a save.
  */
 
+import { trashPost, listTrash, getTrashed, removeTrashed, TRASH_DAYS } from '../services/trash.js';
 import { Router } from 'express';
-import { readdirSync, readFileSync, unlinkSync, statSync } from 'fs';
+import { readdirSync, readFileSync, unlinkSync, statSync, existsSync } from 'fs';
 import path, { join } from 'path';
 import { parsePost, serializePost, validateForPublish } from '../utils/frontmatter.js';
 import { writeFileAtomic } from '../utils/atomicWrite.js';
@@ -23,7 +24,6 @@ import {
   listSnapshots,
   getSnapshot,
   renameSnapshots,
-  deleteSnapshots,
 } from '../services/snapshots.js';
 import { readRedirects, writeRedirects, upsertRedirect } from '../services/redirects-store.js';
 
@@ -182,8 +182,7 @@ router.post('/bulk', (req, res) => {
 
       try {
         if (action === 'delete') {
-          unlinkSync(filePath);
-          deleteSnapshots(filename);
+          moveToTrash(req, filename, filePath);
           ok.push(filename);
           continue;
         }
@@ -688,16 +687,60 @@ router.put('/:filename', (req, res) => {
 router.delete('/:filename', (req, res) => {
   try {
     const safeFilename = path.basename(req.params.filename);
-    unlinkSync(join(postsDir, safeFilename));
-    deleteSnapshots(safeFilename);
+    const trashId = moveToTrash(req, safeFilename, join(postsDir, safeFilename));
     invalidatePostRefs();
     invalidatePostsCache();
-    logActivity({ req, action: 'post.delete', target: safeFilename });
-    res.json({ success: true });
+    logActivity({ req, action: 'post.delete', target: safeFilename, meta: { trashId } });
+    res.json({ success: true, trashId, keptDays: TRASH_DAYS });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete post' });
   }
 });
+
+/** GET /api/posts/trash/list — recently deleted posts (restorable). */
+router.get('/trash/list', (_req, res) => {
+  res.json({ items: listTrash(), keptDays: TRASH_DAYS });
+});
+
+/**
+ * POST /api/posts/trash/:id/restore — put a deleted post back. Refuses if a
+ * post with that filename exists again (never overwrites).
+ */
+router.post('/trash/:id/restore', (req, res) => {
+  const item = getTrashed(String(req.params.id));
+  if (!item) return res.status(404).json({ error: 'not_found' });
+  const safe = path.basename(item.filename);
+  const dest = join(postsDir, safe);
+  if (existsSync(dest)) {
+    return res.status(409).json({
+      error: 'exists',
+      message: `A post named ${safe} exists again — rename it first, then restore.`,
+    });
+  }
+  writeFileAtomic(dest, item.raw);
+  removeTrashed(item.id);
+  invalidatePostRefs();
+  invalidatePostsCache();
+  logActivity({ req, action: 'post.restore', target: safe });
+  res.json({ success: true, filename: safe });
+});
+
+/**
+ * Move a post file into the trash (keeps its revision snapshots).
+ * @returns {string} trash id
+ */
+function moveToTrash(req, filename, filePath) {
+  const raw = readFileSync(filePath, 'utf-8');
+  let title = null;
+  try {
+    title = String(parsePost(raw).data.title || '') || null;
+  } catch {
+    /* unparseable front matter — still trash the bytes */
+  }
+  const id = trashPost(filename, raw, title, req.user?.username || null);
+  unlinkSync(filePath);
+  return id;
+}
 
 export default router;
