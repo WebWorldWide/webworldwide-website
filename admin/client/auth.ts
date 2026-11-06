@@ -17,14 +17,15 @@
  *                        (Passkey management: account.js.)
  */
 (function () {
-  let startAuthentication;
-  try {
-    if (typeof SimpleWebAuthnBrowser !== 'undefined') {
-      startAuthentication = SimpleWebAuthnBrowser.startAuthentication;
-    }
-  } catch (_) {
-    /* CDN blocked — handled at use site */
-  }
+  // Resolve the WebAuthn library at CLICK time, not at script start: the
+  // vendor bundle is loaded with `defer`, which executes AFTER this
+  // (non-deferred, end-of-body) script — so reading it at startup always saw
+  // `undefined` and passkey sign-in reported a bogus "library blocked".
+  const webauthn = () =>
+    /** @type {any} */ window.SimpleWebAuthnBrowser &&
+    /** @type {any} */ window.SimpleWebAuthnBrowser.startAuthentication
+      ? /** @type {any} */ window.SimpleWebAuthnBrowser
+      : null;
 
   const onLogin =
     window.location.pathname === '/login.html' || window.location.pathname === '/login';
@@ -141,8 +142,11 @@
     if (!btn) return;
     btn.addEventListener('click', async () => {
       clearAuthError();
-      if (!startAuthentication) {
-        showAuthError('Passkey library blocked. Disable ad-blocker, or use password.');
+      const lib = webauthn();
+      if (!lib) {
+        showAuthError(
+          'The passkey component did not load. Reload the page; if it persists, a content blocker may be stopping /vendor/simplewebauthn-browser.umd.min.js.',
+        );
         return;
       }
       try {
@@ -152,7 +156,7 @@
         });
         let assertion;
         try {
-          assertion = await startAuthentication({ optionsJSON: start.options });
+          assertion = await lib.startAuthentication({ optionsJSON: start.options });
         } catch (err) {
           if (err.name === 'NotAllowedError') return; // user cancelled
           throw err;
