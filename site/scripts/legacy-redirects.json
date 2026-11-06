@@ -126,13 +126,13 @@
     "code": 301
   },
   {
-    "from": "/blog/stop-trying-to-make-ai-sexy",
-    "to": "/blog/stop-the-slop",
+    "from": "/blog/stop-trying-to-make-ai-sexy/",
+    "to": "/blog/stop-the-slop/",
     "code": 301
   },
   {
-    "from": "/stop-trying-to-make-ai-sexy",
-    "to": "/blog/stop-the-slop",
+    "from": "/stop-trying-to-make-ai-sexy/",
+    "to": "/blog/stop-the-slop/",
     "code": 301
   }
 ]
