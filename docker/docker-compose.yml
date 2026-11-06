@@ -1,9 +1,14 @@
 name: web-world-wide
 
+# Images are pinned to tested digests (tag@sha256) so a rebuild can never
+# silently pick up a different upstream image. scripts/check-image-updates.sh
+# (monthly) alerts when a newer image is published for a tag; to update, run
+# `docker pull <tag>`, test, and replace the digest here.
+
 services:
   # 1. Cloudflare Tunnel (Inbound traffic without port forwarding)
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:latest@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel run
@@ -26,7 +31,7 @@ services:
 
   # 2. Caddy Reverse Proxy (Internal routing to services)
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2-alpine@sha256:78bd35025c7ba85961dd149ae670315129954e77abe2383ac47c89106b35ade9
     container_name: caddy
     restart: unless-stopped
     mem_limit: 128m
@@ -168,7 +173,7 @@ services:
   # data is multi-GB), keeping the footprint near 0.5 GB heap.
   # The /api/proofread route degrades gracefully while this is starting/down.
   languagetool:
-    image: erikvl87/languagetool:latest
+    image: erikvl87/languagetool:latest@sha256:ef8fa12cbd485166c9ceeb7139d76d56d07707a624da6bb1fc1fbb5411750527
     container_name: languagetool
     restart: unless-stopped
     expose:
@@ -189,7 +194,7 @@ services:
 
   # 4. Remark42 (Comments)
   remark42:
-    image: umputun/remark42:latest
+    image: umputun/remark42:latest@sha256:aa61f7d97e0a2cbadf07ed06e0f3384c6b6f8ab5b8782f052eff56a3a72cd98e
     container_name: remark42
     restart: unless-stopped
     environment:
@@ -225,7 +230,7 @@ services:
 
   # 5. Umami (Analytics)
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-latest
+    image: ghcr.io/umami-software/umami:postgresql-latest@sha256:e69d1a7932e9dab0fc523edc7be1f3a53f3c261f57856fc2167ae74a8fc022e8
     container_name: umami
     restart: unless-stopped
     environment:
@@ -243,7 +248,7 @@ services:
 
   # 6. PostgreSQL (for Umami)
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:aae6554de426ae1990f1a939ff183a0299146cf7142a6f4c379c3357af9cc2d8
     container_name: postgres
     restart: unless-stopped
     environment:

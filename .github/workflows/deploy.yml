@@ -11,10 +11,10 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+# Least privilege: the build job (which runs third-party npm code) gets
+# read-only access; only the deploy job can write to Pages / mint OIDC tokens.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -79,6 +79,9 @@ jobs:
 
   deploy:
     name: Deploy
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
