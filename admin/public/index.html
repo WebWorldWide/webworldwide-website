@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Web World Wide // Admin</title>
     <link rel="icon" type="image/png" href="/logo.png" />
+    <link
+      rel="preload"
+      href="/fonts/archivo-variable-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/instrument-serif-400-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/tokens.css" />
     <link rel="stylesheet" href="/css/base.css" />
@@ -16,6 +30,7 @@
     <link rel="stylesheet" href="/css/redirects.css" />
     <link rel="stylesheet" href="/css/activity.css" />
     <link rel="stylesheet" href="/css/comments.css" />
+    <link rel="stylesheet" href="/css/design.css" />
     <!-- WebAuthn browser library (self-hosted vendor copy — passkey
        registration). Wrapped in try/catch in auth.js so a load failure
        doesn't crash the page. `defer` so it parses in parallel with
@@ -632,25 +647,45 @@
                   </ul>
                   <div class="account-row">
                     <label for="passkey-name" class="sr-only">New passkey name</label>
-                    <input type="text" id="passkey-name" maxlength="60" placeholder="Name, e.g. MacBook Touch ID" />
-                    <button type="button" class="btn primary" id="btn-register-passkey">Add passkey</button>
+                    <input
+                      type="text"
+                      id="passkey-name"
+                      maxlength="60"
+                      placeholder="Name, e.g. MacBook Touch ID"
+                    />
+                    <button type="button" class="btn primary" id="btn-register-passkey">
+                      Add passkey
+                    </button>
                   </div>
                   <p class="account-hint">
-                    Once a passkey is added, password sign-in is switched off. Adding or removing a passkey
-                    needs a sign-in from the last 15 minutes.
+                    Once a passkey is added, password sign-in is switched off. Adding or removing a
+                    passkey needs a sign-in from the last 15 minutes.
                   </p>
 
                   <h4 class="health-section-label">Signed-in sessions</h4>
                   <ul id="session-list" class="account-list" aria-live="polite"></ul>
-                  <button type="button" class="btn" id="btn-revoke-others">Sign out all other sessions</button>
+                  <button type="button" class="btn" id="btn-revoke-others">
+                    Sign out all other sessions
+                  </button>
 
                   <h4 class="health-section-label">Change password</h4>
                   <form id="password-form" class="account-form" autocomplete="on">
                     <input type="text" name="username" autocomplete="username" hidden />
                     <label for="pw-current">Current password</label>
-                    <input type="password" id="pw-current" autocomplete="current-password" required />
+                    <input
+                      type="password"
+                      id="pw-current"
+                      autocomplete="current-password"
+                      required
+                    />
                     <label for="pw-next">New password (min 12 characters)</label>
-                    <input type="password" id="pw-next" autocomplete="new-password" minlength="12" required />
+                    <input
+                      type="password"
+                      id="pw-next"
+                      autocomplete="new-password"
+                      minlength="12"
+                      required
+                    />
                     <button type="submit" class="btn">Change password</button>
                   </form>
                 </div>
@@ -868,9 +903,7 @@
             <div class="sec-head">
               <div>
                 <h1 class="sec-title">System</h1>
-                <div class="sec-sub">
-                  Health · Containers · Backups — the server at a glance.
-                </div>
+                <div class="sec-sub">Health · Containers · Backups — the server at a glance.</div>
               </div>
               <div class="sec-actions">
                 <button type="button" class="btn-mini" id="btn-refresh-health">Refresh</button>

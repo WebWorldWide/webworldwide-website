@@ -13,41 +13,61 @@
                         editor live preview)
    ============================================================ */
 
+/* ── House pairing (design-ui skill): Archivo + Instrument Serif ─────────
+   Archivo: variable grotesque, wght 100–900, wdth 62–125 (font-stretch).
+   Instrument Serif: display only, 400 roman + italic — never fake-bolded.
+   Both SIL OFL 1.1, self-hosted (latin subset). JetBrains Mono: code only. */
 @font-face {
-  font-family: "Hanken Grotesk";
+  font-family: Archivo;
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("/fonts/archivo-variable-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: Archivo;
+  font-style: italic;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("/fonts/archivo-variable-italic-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/hanken-grotesk-400.woff2") format("woff2");
+  src: url("/fonts/instrument-serif-400-latin.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Hanken Grotesk";
+  font-family: "Instrument Serif";
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/hanken-grotesk-400-italic.woff2") format("woff2");
+  src: url("/fonts/instrument-serif-400-italic-latin.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Hanken Grotesk";
+  font-family: "JetBrains Mono";
   font-style: normal;
-  font-weight: 500;
+  font-weight: 100 800;
   font-display: swap;
-  src: url("/fonts/hanken-grotesk-500.woff2") format("woff2");
+  src: url("/fonts/JetBrainsMono-Variable-Latin.woff2") format("woff2");
+}
+/* Metric-matched fallbacks so headlines don't reflow when the webfont lands. */
+@font-face {
+  font-family: "Instrument Serif Fallback";
+  src: local("Times New Roman"), local("Times"), local("Liberation Serif");
+  size-adjust: 86%;
+  ascent-override: 102%;
 }
 @font-face {
-  font-family: "Hanken Grotesk";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("/fonts/hanken-grotesk-600.woff2") format("woff2");
+  font-family: "Archivo Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  size-adjust: 101%;
+  ascent-override: 88%;
 }
-@font-face {
-  font-family: "Hanken Grotesk";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("/fonts/hanken-grotesk-700.woff2") format("woff2");
-}
+
 @font-face {
   font-family: Newsreader;
   font-style: normal;

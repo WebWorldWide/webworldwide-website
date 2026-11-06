@@ -780,7 +780,8 @@
         (p) => p.path === 'site/site.toml' || String(p.path).startsWith('site/public/'),
       );
       serverWarning = st.error
-        ? `Publishing is blocked on the server: ${st.error}`
+        ? // Raw git output is for the server log, not the editor.
+          'Publishing is unavailable right now — the server could not read its site repository. Your changes are saved; check the System view or server log.'
         : st.onMain === false
           ? `Server checkout is on "${st.branch}", not main — publishes may be refused until it is realigned.`
           : null;
