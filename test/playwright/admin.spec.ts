@@ -120,16 +120,19 @@ test.describe('admin shell', () => {
     expect(errors).toEqual([]);
   });
 
-  test('index.html#system shows the health metrics + terminal tabs', async ({ page }) => {
+  test('index.html#system shows the health metrics (no web terminal)', async ({ page }) => {
     const errors = collectFatalConsoleErrors(page);
     await page.goto(`${indexUrl}#system`);
     await expect(page.locator('#view-system')).toBeVisible();
     await expect(page.locator('#systab-health')).toBeVisible();
     await expect(page.locator('#metric-cpu')).toBeVisible();
-    // Terminal tab swaps panes without leaving the view.
-    await page.locator('[data-systab="terminal"]').click();
-    await expect(page.locator('#terminal-form')).toBeVisible();
+    // Tabs swap panes without leaving the view.
+    await page.locator('[data-systab="containers"]').click();
+    await expect(page.locator('#systab-containers')).toBeVisible();
     await expect(page.locator('#systab-health')).toBeHidden();
+    // The web terminal was removed (it was a host-root shell behind one login).
+    await expect(page.locator('[data-systab="terminal"]')).toHaveCount(0);
+    await expect(page.locator('#terminal-form')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 
