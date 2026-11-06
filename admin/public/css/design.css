@@ -49,9 +49,10 @@ body {
 
 .sec-title,
 .ov-hi {
-  font-size: clamp(38px, 3.4vw, 52px);
   line-height: 0.95;
   letter-spacing: -0.012em;
+
+  font-size: clamp(32px, 2.6vw, 40px);
 }
 .sec-title em,
 .ov-hi em {
@@ -60,9 +61,11 @@ body {
 }
 
 .ed-title {
-  font-size: clamp(40px, 4.2vw, 58px);
   line-height: 0.98;
   letter-spacing: -0.012em;
+
+  font-size: clamp(36px, 3.4vw, 50px);
+  margin-bottom: 6px;
 }
 
 .auth-title {
@@ -258,6 +261,10 @@ pre,
 /* ── Sidebar: lighter, unmistakable selection ────────────────────────────── */
 .side-item {
   font-weight: 500;
+
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 14px;
 }
 .side-item[aria-current="page"],
 .side-item.active {
@@ -427,17 +434,24 @@ pre,
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3) var(--space-6);
   align-items: end;
-  margin-bottom: var(--space-6);
+
+  margin-bottom: 18px;
 }
 .sec-sub {
   max-width: 72ch;
   line-height: 1.5;
+
+  margin-top: 6px;
 }
 .sec-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+/* Page-header actions sit at the trailing edge; in-form action rows stay
+   next to the fields they act on. */
+.sec-head > .sec-actions {
   justify-content: flex-end;
 }
 /* Header actions are page-level: same size everywhere (System's Refresh
@@ -451,8 +465,10 @@ pre,
 
 /* Panels */
 .panel-head {
-  min-height: 48px;
   padding: 12px var(--pad-panel);
+
+  min-height: 44px;
+  padding-block: 8px;
 }
 .panel-body {
   padding: var(--pad-panel);
@@ -591,7 +607,7 @@ pre,
 
 /* Overview stats: compact tiles; no empty spark strip when there's no data. */
 .stat {
-  padding: 16px var(--pad-panel) 14px;
+  padding: 14px 18px 12px;
 }
 .stat-spark:empty {
   display: none;
@@ -690,4 +706,272 @@ pre,
 .trash-when {
   font-size: 12.5px;
   color: var(--ink-mute);
+}
+
+/* ==========================================================================
+   Editor density (Apple HIG: sidebar · content · inspector)
+   - Navigation collapses to an icon rail while writing; full nav is one
+     click away. Content gets the width.
+   - The document is a readable, centred column (HIG "readable content
+     width"); chrome (status, toolbar) aligns to that column.
+   - One compact toolbar row; the mode switch is a segmented control in it.
+   - The inspector is a single grouped list, not a stack of floating cards.
+   Desktop controls are 32px (HIG macOS regular); touch keeps 44px below.
+   ========================================================================== */
+@media (width > 800px) {
+  body[data-page="editor"] .shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  body[data-page="editor"] .sidebar {
+    overflow: visible;
+  }
+  body[data-page="editor"] .side-brand {
+    justify-content: center;
+    padding: 14px 0 12px;
+  }
+  body[data-page="editor"] .side-group-label,
+  body[data-page="editor"] .side-foot,
+  body[data-page="editor"] .side-item .badge {
+    display: none;
+  }
+  /* Rail labels are hidden VISUALLY only, so links keep accessible names. */
+  body[data-page="editor"] .side-brand .name,
+  body[data-page="editor"] .side-item > span:not(.ico) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  body[data-page="editor"] .side-item {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: 2px auto;
+    padding: 0;
+  }
+  body[data-page="editor"] .side-item[aria-current="page"],
+  body[data-page="editor"] .side-item.active {
+    box-shadow: none;
+  }
+
+  body[data-page="editor"] .stage {
+    padding: 16px 20px 24px;
+  }
+  body[data-page="editor"] .editor-layout,
+  body[data-page="editor"] .editor-layout[data-toc-open="false"][data-seo-open="false"] {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+  }
+  body[data-page="editor"] .editor-layout:not([data-toc-open="false"][data-seo-open="false"]) {
+    grid-template-columns: minmax(0, 1fr) 240px 300px;
+  }
+}
+
+/* Document column */
+/* Readable column that grows with the window up to a ~75-character measure
+   at the (also slightly larger) wide-screen type size. */
+body[data-page="editor"] {
+  --doc-measure: clamp(680px, 58vw, 960px);
+}
+@media (width >= 1600px) {
+  .ProseMirror {
+    font-size: 21px;
+  }
+}
+.editor-head,
+.ed-title-wrap,
+.ed-body {
+  padding-inline: max(24px, calc((100% - var(--doc-measure)) / 2));
+}
+.editor-head {
+  min-height: 48px;
+  padding-block: 8px;
+  gap: 10px;
+}
+.editor-head .btn {
+  min-height: 32px;
+  padding: 4px 12px;
+}
+.ed-title-wrap {
+  padding-block: 22px 14px;
+}
+.ed-body {
+  padding-block: 0 32px;
+}
+.te-editor {
+  gap: 16px;
+}
+
+/* One toolbar row: formatting first, mode switch trailing. Overflow scrolls
+   horizontally instead of wrapping into a second row. */
+.te-editor-toolbar {
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+/* (The mode toggle is moved into .editor-head-r by editor.ts.) */
+.editor-head .te-editor-mode-toggle {
+  flex: 0 0 auto;
+}
+.editor-head .te-editor-mode-btn {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+.te-editor-toolbar-spacer {
+  display: none;
+}
+.te-editor-toolbar-rich {
+  /* Wraps only when the column genuinely can't fit every control (never
+     hides actions off-screen). */
+  flex-wrap: wrap;
+  padding: 2px 4px;
+  gap: 2px 0;
+  border-radius: var(--radius-sm);
+}
+@media (width > 800px) {
+  .te-tb-btn {
+    min-width: 28px;
+    height: 32px;
+    padding: 0 4px;
+  }
+  .te-tb-divider {
+    height: 18px;
+    margin: 0 3px;
+  }
+}
+.te-editor-mode-btn {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+/* Inspector: one grouped list with hairline dividers. */
+.ed-side {
+  gap: 0;
+  align-self: start;
+  position: sticky;
+  top: 0;
+  max-height: calc(100dvh - 56px - 32px);
+  background: var(--surface);
+  border: 1px solid var(--line-www);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card-sm);
+}
+.ed-side .ed-panel {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ed-side .ed-panel + .ed-panel {
+  border-top: 1px solid var(--line-www);
+}
+.ed-side .ed-panel summary {
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 620;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+.ed-side .ed-panel[open] summary {
+  border-bottom-color: transparent;
+}
+.ed-side .ed-panel .body {
+  padding: 0 16px 16px;
+}
+.ed-side .field {
+  margin-bottom: 12px;
+}
+.ed-side .field:last-child {
+  margin-bottom: 0;
+}
+.ed-side .field input,
+.ed-side .field textarea,
+.ed-side .field select {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+/* Phone: the formatting bar is ONE horizontally-scrolling row above the
+   keyboard (like Notes), keeping 44pt touch targets — not four stacked rows. */
+@media (width <= 800px) {
+  .te-editor-toolbar-rich {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .te-editor-toolbar-rich::-webkit-scrollbar {
+    display: none;
+  }
+  .te-editor-toolbar-rich > * {
+    flex: 0 0 auto;
+  }
+}
+
+/* ==========================================================================
+   App-wide density (Apple HIG proportions for a productivity app)
+   ========================================================================== */
+@media (width > 800px) {
+  .shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  .stage {
+    padding: 20px 24px 28px;
+  }
+}
+.side-group-label {
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+.btn-new {
+  padding: 8px 12px;
+}
+
+/* Tables / lists: 44px rows. */
+.row-grid .r-link {
+  min-height: 44px;
+  padding-block: 6px;
+}
+
+/* Posts: the page title + tab counts already say "Posts · 24"; drop the
+   redundant panel header (HIG: avoid repeating the window title). */
+#posts-panel > .panel-head {
+  display: none;
+}
+/* Compact empty states: one line, not a 150px box. */
+.empty {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 16px;
+}
+.empty .e-mark {
+  font-size: 18px;
+  line-height: 1;
+}
+.empty .e-text {
+  font-size: 19px;
+}
+
+/* Forms: constrained width (HIG — a form reads as one column, controls sized
+   to their content, actions beside the fields they act on). */
+#view-settings .te-field,
+#view-settings .synd-block > p,
+#settings-form .te-form-group,
+.account-form {
+  max-width: 600px;
+}
+#view-settings .te-field input,
+#view-settings .te-field textarea,
+#view-settings .te-field select {
+  width: 100%;
 }

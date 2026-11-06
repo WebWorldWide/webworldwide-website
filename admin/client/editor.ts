@@ -1199,6 +1199,12 @@
           placeholder: 'Start writing… (type "/" for headings, images, links and more)',
         });
         labelEditorSurface();
+        // Rich/Markdown is a document-level view switch, not formatting: put
+        // the segmented control in the status row so the formatting toolbar
+        // gets the whole column (Apple HIG: toolbar items are actions).
+        const modeToggle = editorRoot.querySelector('.te-editor-mode-toggle');
+        const headRight = document.querySelector('.editor-head-r');
+        if (modeToggle && headRight) headRight.prepend(modeToggle);
         // The façade is the new bodyEl. It exposes .value, .selectionStart,
         // .selectionEnd, addEventListener('input'), .focus(), .setMode().
         bodyEl = instance;
