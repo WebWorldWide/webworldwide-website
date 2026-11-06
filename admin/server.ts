@@ -246,6 +246,16 @@ const authLimiter = rateLimit({
 // per-IP to absorb spam without dropping Bridgy Fed's legitimate
 // bursts (Mastodon fans-out one ping per follower-mentioning-us —
 // but each fan-out arrives from Bridgy's IPs at a modest rate).
+// Global ceiling across ALL senders: a botnet with many IPs (each under the
+// per-IP limit) still can't turn the receiver into a fetch amplifier.
+const webmentionGlobalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: 'Webmention receiver is busy. Try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: () => 'global',
+});
 const webmentionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10,
@@ -424,6 +434,7 @@ app.use(
 // A webmention is two URLs in a form body — 8kb is generous.
 app.use(
   '/webmention',
+  (req, res, next) => (req.method === 'POST' ? webmentionGlobalLimiter(req, res, next) : next()),
   webmentionLimiter,
   express.urlencoded({ extended: false, limit: '8kb' }),
   webmentionPublicRoutes,

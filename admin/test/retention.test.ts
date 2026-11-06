@@ -104,7 +104,7 @@ test(
     try {
       const mod = await import('../src/services/retention.js?bare=1');
       const result = mod.runRetention(1_700_000_000_000);
-      assert.deepEqual(result, { activity: 0, embeds: 0 });
+      assert.deepEqual(result, { activity: 0, embeds: 0, webmentions: 0 });
       mod.__closeForTest?.();
     } finally {
       process.env.AUTH_DB_PATH = prev;

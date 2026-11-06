@@ -5,6 +5,7 @@
  *
  *   - activity_log: audit rows older than ACTIVITY_RETENTION_DAYS (90).
  *   - embed_cache:  rows past their own `expires_at`.
+ *   - webmentions:  rejected/spam rows older than 30 days.
  *
  * Both tables are indexed on the swept column (idx_activity_ts /
  * idx_embed_cache_expires) so each DELETE is a cheap ranged scan. A
@@ -40,12 +41,13 @@ function db() {
  * Run one retention sweep.
  *
  * @param {number} [now] epoch ms (injectable for tests)
- * @returns {{ activity: number, embeds: number }} rows pruned per table
+ * @returns {{ activity: number, embeds: number, webmentions: number }} rows pruned per table
  */
 export function runRetention(now = Date.now()) {
   const d = db();
   let activity = 0;
   let embeds = 0;
+  let webmentions = 0;
   try {
     const cutoff = now - ACTIVITY_RETENTION_DAYS * DAY_MS;
     activity = d.prepare('DELETE FROM activity_log WHERE ts < ?').run(cutoff).changes;
@@ -57,7 +59,16 @@ export function runRetention(now = Date.now()) {
   } catch {
     /* embed_cache may not exist yet */
   }
-  return { activity, embeds };
+  try {
+    // Rejected / spam webmentions are dead weight on a public, unauthenticated
+    // endpoint — keep 30 days for review, then drop them.
+    webmentions = d
+      .prepare("DELETE FROM webmentions WHERE status IN ('rejected', 'spam') AND received_at < ?")
+      .run(now - 30 * DAY_MS).changes;
+  } catch {
+    /* webmentions may not exist yet */
+  }
+  return { activity, embeds, webmentions };
 }
 
 /** @type {NodeJS.Timeout | null} */

@@ -20,6 +20,7 @@
  * Test seam: setFetchImpl(fn) swaps fetch so CI never hits the network.
  */
 
+import { screenedFetch } from '../utils/ssrf.js';
 import { getSecret } from './app-secrets.js';
 
 // Mastodon's default status limit is 500 chars; leave headroom for the
@@ -27,15 +28,22 @@ import { getSecret } from './app-secrets.js';
 const MAX_STATUS_CHARS = 500;
 const LINK_RESERVE = 30;
 
+// The instance URL is admin-configurable, so route it through the SSRF guard:
+// an instance of `http://cms:3000` or `http://169.254.169.254` must not turn
+// "Test connection" into an internal-network probe. (Mastodon's API never
+// redirects these endpoints, so redirects are refused outright.)
+const guardedFetch = (input, init) =>
+  screenedFetch(String(input), { init, maxRedirects: 0 }) as Promise<Response>;
+
 /** @type {typeof globalThis.fetch} */
-let fetchImpl = (input, init) => globalThis.fetch(input, init);
+let fetchImpl: any = guardedFetch;
 
 /**
  * Swap the fetch used by every call below. Pass `null` to reset.
  * @param {typeof globalThis.fetch | null | undefined} fn
  */
 export function setFetchImpl(fn) {
-  fetchImpl = fn || ((input, init) => globalThis.fetch(input, init));
+  fetchImpl = fn || guardedFetch;
 }
 
 /**

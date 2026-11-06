@@ -126,3 +126,73 @@ test('screenedFetch caps redirect chains', async () => {
     /too many redirects/,
   );
 });
+
+test('2026-11 hardening: CGNAT, NAT64, hex-mapped, 6to4, Teredo, numeric hosts are refused', () => {
+  for (const ip of [
+    '100.84.141.1', // Tailscale / CGNAT
+    '198.18.0.1',
+    '192.0.0.8',
+    '192.0.2.1',
+    '::ffff:7f00:1', // hex form of ::ffff:127.0.0.1
+    '64:ff9b::a9fe:a9fe', // NAT64 → 169.254.169.254
+    '2002:7f00:1::1', // 6to4 embedding 127.0.0.1
+    '2001:0:4136:e378::1', // Teredo
+    '::127.0.0.1', // IPv4-compatible
+    'ff02::1',
+    'fe80::1%eth0',
+    'not-an-ip',
+  ]) {
+    assert.equal(ipIsPrivate(ip), true, `expected private: ${ip}`);
+  }
+  for (const ip of ['8.8.8.8', '2606:4700:4700::1111', '::ffff:1.1.1.1']) {
+    assert.equal(ipIsPrivate(ip), false, `expected public: ${ip}`);
+  }
+  for (const h of [
+    '2130706433',
+    '0x7f.1',
+    '127.1',
+    'cms',
+    'remark42',
+    'router.lan',
+    'x.home.arpa',
+    '[::ffff:7f00:1]',
+  ]) {
+    assert.equal(isPrivateHost(h), true, `expected private host: ${h}`);
+  }
+  for (const h of ['0xfeed.example.com', 'a.b.example']) {
+    assert.equal(isPrivateHost(h), false, `expected public host: ${h}`);
+  }
+});
+
+test('screenedFetch refuses https→http downgrade redirects and credentialed URLs', async () => {
+  const redirectTo = (location) => async () =>
+    new Response(null, { status: 301, headers: { location } });
+  await assert.rejects(
+    () =>
+      screenedFetch('https://a.example/', {
+        screenDns: false,
+        fetchImpl: redirectTo('http://b.example/'),
+      }),
+    /downgrade/,
+  );
+  await assert.rejects(
+    () =>
+      screenedFetch('https://user:pw@a.example/', {
+        screenDns: false,
+        fetchImpl: async () => new Response('x'),
+      }),
+    /credentials/,
+  );
+});
+
+test('pinnedFetch refuses to connect when DNS answers a private address (rebinding)', async () => {
+  const { pinnedFetch } = await import('../src/utils/ssrf.js');
+  // localhost.example.invalid won't resolve; use a name that resolves to loopback.
+  await assert.rejects(
+    () => pinnedFetch('http://localhost/'),
+    (err) => {
+      const msg = String(err?.cause?.message || err?.message || err);
+      return /private|ESSRF/i.test(msg) || err?.cause?.code === 'ESSRF';
+    },
+  );
+});

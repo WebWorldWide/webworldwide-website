@@ -44,13 +44,13 @@
  *   3. status='pending' → admin moderation queue until approved.
  */
 
+import { isPrivateHost, screenedFetch } from '../utils/ssrf.js';
 import { Router } from 'express';
 import Database from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdirSync } from 'fs';
-import { promises as dnsPromises } from 'node:dns';
 
 import { parseSource, normaliseUrl } from '../services/microformats.js';
 import { logActivity } from '../services/activity.js';
@@ -181,87 +181,6 @@ export function validatePair(sourceRaw, targetRaw) {
 }
 
 /**
- * True if a hostname is loopback/link-local/private/non-public — the kind
- * of host an SSRF probe would target. Conservative: matches localhost,
- * .local, *.internal, and IPv4/IPv6 literals in private/reserved ranges.
- *
- * @param {string} hostname
- * @returns {boolean}
- */
-export function isPrivateHost(hostname) {
-  const h = String(hostname || '')
-    .toLowerCase()
-    .replace(/^\[|\]$/g, '');
-  if (!h || h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return true;
-  // IPv6 loopback / unique-local / link-local.
-  if (h === '::1' || /^f[cd][0-9a-f]{2}:/.test(h) || /^fe80:/.test(h)) return true;
-  // IPv4 dotted-quad in a private/reserved range.
-  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
-  if (m) {
-    const [a, b] = [Number(m[1]), Number(m[2])];
-    if (a === 10 || a === 127 || a === 0) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 169 && b === 254) return true; // link-local
-    if (a >= 224) return true; // multicast / reserved
-  }
-  return false;
-}
-
-/**
- * Is a RESOLVED IP address (v4 or v6, incl. IPv4-mapped) private/reserved?
- * @param {string} ip
- * @returns {boolean}
- */
-export function ipIsPrivate(ip) {
-  const h = String(ip || '')
-    .toLowerCase()
-    .replace(/^\[|\]$/g, '');
-  const mapped = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(h);
-  const v4 = mapped ? mapped[1] : h;
-  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(v4);
-  if (m) {
-    const [a, b] = [Number(m[1]), Number(m[2])];
-    if (a === 10 || a === 127 || a === 0) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 169 && b === 254) return true;
-    if (a >= 224) return true;
-    return false;
-  }
-  // IPv6: loopback / unspecified / unique-local (fc00::/7) / link-local (fe80::/10).
-  if (h === '::1' || h === '::') return true;
-  if (/^f[cd][0-9a-f]{2}:/.test(h)) return true;
-  if (/^fe[89ab][0-9a-f]:/.test(h)) return true;
-  return false;
-}
-
-/**
- * Resolve `hostname` and reject if ANY A/AAAA record is private/reserved.
- * Closes the DNS-rebinding gap the string-only isPrivateHost can't catch
- * (a public name pointing at an internal IP). Best-effort pre-connect
- * check: a narrow TOCTOU window remains vs the runtime's own resolve, but
- * this removes the trivial public-name → private-IP bypass.
- * @param {string} hostname
- */
-async function assertPublicHost(hostname) {
-  // u.hostname keeps the brackets for an IPv6 literal (e.g. "[::1]"), but
-  // dns.lookup() rejects a bracketed literal outright (ENOTFOUND) — without
-  // stripping them here, every IPv6-literal target (public or private) fails
-  // this check, not just private ones. Kept in sync with utils/ssrf.js.
-  const target = String(hostname || '').replace(/^\[|\]$/g, '');
-  let addrs;
-  try {
-    addrs = await dnsPromises.lookup(target, { all: true });
-  } catch {
-    throw new Error('refusing fetch: host did not resolve');
-  }
-  if (!addrs.length || addrs.some((a) => ipIsPrivate(a.address))) {
-    throw new Error('refusing fetch to a private/non-public host');
-  }
-}
-
-/**
  * Fetch the source URL with a hard timeout + size cap. Returns the
  * decoded body, or throws. Used by the background validator.
  *
@@ -277,35 +196,21 @@ async function fetchSource(url) {
     // an internal address (LAN, loopback, link-local) and turn this public,
     // unauthenticated endpoint into an SSRF/port-scan probe. Re-validate the
     // protocol + host of the start URL and of each Location before fetching.
-    let current = url;
-    let res;
-    for (let hop = 0; ; hop++) {
-      const u = new URL(current);
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-        throw new Error(`refusing non-http(s) URL: ${u.protocol}`);
-      }
-      if (isPrivateHost(u.hostname)) {
-        throw new Error('refusing fetch to a private/non-public host');
-      }
-      // Also resolve + screen the actual A/AAAA records (DNS-rebinding).
-      if (screenDns) await assertPublicHost(u.hostname);
-      res = await fetchImpl(current, {
+    // The shared guard re-screens every redirect hop, refuses non-public
+    // addresses (incl. CGNAT/Tailscale, NAT64, mapped IPv6) and — with the
+    // default pinned fetch — screens the address the socket actually uses.
+    const res = await screenedFetch(url, {
+      fetchImpl: screenDns ? undefined : fetchImpl,
+      screenDns,
+      maxRedirects: MAX_REDIRECTS,
+      init: {
         headers: {
           'User-Agent': 'WebWorldWide-Webmention/1.0 (+https://webworldwide.online)',
           Accept: 'text/html, application/xhtml+xml',
         },
-        redirect: 'manual',
         signal: controller.signal,
-      });
-      const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
-      if (!location) break;
-      if (hop >= MAX_REDIRECTS) throw new Error('too many redirects');
-      try {
-        current = new URL(location, current).href;
-      } catch {
-        throw new Error('invalid redirect location');
-      }
-    }
+      },
+    });
     if (!res.ok) {
       throw new Error(`fetch returned ${res.status}`);
     }
@@ -650,3 +555,6 @@ export const __test = {
 };
 
 export default publicRouter;
+
+// Re-exported for callers/tests that imported it from this route.
+export { isPrivateHost };
