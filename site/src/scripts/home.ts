@@ -9,12 +9,14 @@
  * All respect `prefers-reduced-motion`.
  */
 
+import { isLiteDevice } from './perf.ts';
+
 const reducedMotion = (): boolean =>
   typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function mouseParallax(stageId = 'wordmarkStage'): void {
   const stage = document.getElementById(stageId);
-  if (!stage || reducedMotion()) return;
+  if (!stage || reducedMotion() || isLiteDevice()) return;
   let mx = 0,
     my = 0,
     tx = 0,
@@ -27,12 +29,27 @@ export function mouseParallax(stageId = 'wordmarkStage'): void {
     },
     { passive: true },
   );
-  (function tick() {
+  // Animate only while the eased position is still catching up with the
+  // cursor — the old loop ran at 60fps forever, even with the mouse idle or
+  // the hero scrolled away.
+  let running = false;
+  const tick = (): void => {
     tx += (mx - tx) * 0.06;
     ty += (my - ty) * 0.06;
     stage.style.transform = `translate(${(tx * 10).toFixed(1)}px, ${(ty * 5).toFixed(1)}px)`;
-    requestAnimationFrame(tick);
-  })();
+    if (Math.abs(mx - tx) > 0.002 || Math.abs(my - ty) > 0.002) requestAnimationFrame(tick);
+    else running = false;
+  };
+  window.addEventListener(
+    'mousemove',
+    () => {
+      if (!running && window.scrollY < window.innerHeight) {
+        running = true;
+        requestAnimationFrame(tick);
+      }
+    },
+    { passive: true },
+  );
 }
 
 export function sectionTitleCascade(): void {
@@ -141,6 +158,8 @@ export function filmClouds(): void {
 }
 
 export function initHome(): void {
+  // Slow device / connection: CSS drops decorative loops (see .lite rules).
+  if (isLiteDevice()) document.documentElement.classList.add('lite');
   scrollReveal();
   sectionTitleCascade();
   smoothAnchor();

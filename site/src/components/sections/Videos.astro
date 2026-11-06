@@ -7,10 +7,16 @@
 import { siteConfig, homepage } from '@/lib/site-config';
 const { youtube, youtube_handle } = siteConfig.social;
 const { episode, film_title } = homepage.videos;
+
+interface Props {
+  /** Section number shown in the eyebrow (assigned from section_order). */
+  num?: number;
+}
+const label = Astro.props.num ? `${String(Astro.props.num).padStart(2, '0')} — Videos` : 'Videos';
 ---
 <section class="section" id="videos">
   <div class="section-inner">
-    <span class="eyebrow reveal">02 — Videos</span>
+    <span class="eyebrow reveal">{label}</span>
     <h2 class="sr-only">Videos</h2>
 
     <div class="yt-wrap reveal">

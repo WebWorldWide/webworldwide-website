@@ -1,86 +1,202 @@
 ---
 /**
- * Blog CTA — end-of-page card so the blog is reachable from the home scroll.
- * Copy + destination come from site.toml ([homepage.blog_cta]): `kicker` is
- * the pixel label, `title` + italic `title_accent` form the headline.
+ * Blog section — the latest posts as terminal-window cards (the same visual
+ * language as /blog/), headed by the shared section eyebrow. Copy + the
+ * "all posts" destination come from site.toml [homepage.blog_cta]
+ * (editable in the CMS homepage editor): `title` + `title_accent` head the
+ * index card, `description` is its blurb, `url` is where "All posts" goes.
+ *
+ * Static HTML only: no client JS, no images, no backdrop blur.
  */
 import { homepage } from '@/lib/site-config';
+import { getPosts } from '@/lib/posts';
+import { postSlug, postUrl, fmtDate, deriveExcerpt } from '@/lib/post-utils';
+import TermBar from '@components/TermBar.astro';
 
+interface Props {
+  /** Section number shown in the eyebrow (assigned from section_order). */
+  num?: number;
+}
+const { num } = Astro.props;
 const { kicker, title, title_accent, url, description } = homepage.blog_cta;
+
+const latest = getPosts()
+  .slice(0, 3)
+  .map((p) => ({
+    title: p.data.title,
+    url: postUrl(p),
+    slug: postSlug(p),
+    date: fmtDate(p.data.date),
+    excerpt: p.data.excerpt || deriveExcerpt(p.body ?? ''),
+  }));
+const label = num ? `${String(num).padStart(2, '0')} — Blog` : 'Blog';
 ---
-<a class="blog-cta" href={url}>
-  <div>
-    <div class="blog-cta-label">{kicker}</div>
-    <div class="blog-cta-title">{title_accent ? <>{`${title} `}<em>{title_accent}</em></> : title}</div>
-    {description && <div class="blog-cta-desc">{description}</div>}
+<section class="section" id="blog">
+  <div class="section-inner">
+    <span class="eyebrow reveal">{label}</span>
+    <h2 class="sr-only">Blog</h2>
+
+    <div class="hb reveal">
+      {latest.map((p) => (
+        <a class="hb-card hb-post" href={p.url} data-umami-event="home: blog post">
+          <TermBar path={`posts/${p.slug}.md`} />
+          <div class="hb-body">
+            <h3 class="hb-title">{p.title}</h3>
+            {p.excerpt && <p class="hb-excerpt">{p.excerpt}</p>}
+            <div class="hb-foot"><span>{p.date}</span><span class="go">Open →</span></div>
+          </div>
+        </a>
+      ))}
+
+      <a class="hb-card hb-all" href={url} data-umami-event="home: blog index">
+        <TermBar path="blog" />
+        <div class="hb-body hb-all-body">
+          <div>
+            {kicker && <div class="hb-kicker">{kicker}</div>}
+            <div class="hb-all-title">
+              {title_accent ? <>{`${title} `}<em>{title_accent}</em></> : title}
+            </div>
+            {description && <p class="hb-desc">{description}</p>}
+          </div>
+          <span class="hb-arrow" aria-hidden="true">All posts →</span>
+        </div>
+      </a>
+    </div>
   </div>
-  <span class="blog-cta-arrow" aria-hidden="true">→</span>
-</a>
+</section>
 
 <style>
-  .blog-cta {
+  .hb {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+  }
+  .hb-card {
     display: flex;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--ink);
+    /* Opaque paper: a backdrop blur behind a 93%-white card was invisible
+       but cost a full-screen blur pass on every frame the clouds moved. */
+    background: #fbfcff;
+    border: var(--border-strong);
+    border-radius: var(--r-card);
+    box-shadow: 7px 7px 0 var(--ink);
+    overflow: hidden;
+    transition:
+      transform 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+  .hb-card:hover,
+  .hb-card:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 var(--ink);
+  }
+  .hb-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 22px 20px;
+  }
+  .hb-title {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: clamp(18px, 1.7vw, 22px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+  .hb-card:hover .hb-title,
+  .hb-card:focus-visible .hb-title {
+    color: var(--cherry-strong);
+  }
+  .hb-excerpt {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 17px;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hb-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .hb-foot .go {
+    color: var(--cherry-strong);
+  }
+
+  /* Full-width index card under the three latest posts. */
+  .hb-all {
+    grid-column: 1 / -1;
+  }
+  .hb-all-body {
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
     flex-wrap: wrap;
-    max-width: 1080px;
-    margin: 8px auto 72px;
-    padding: 28px 34px;
-    background: rgba(255, 255, 255, 0.93);
-    backdrop-filter: blur(10px) saturate(150%);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
-    border: var(--border-strong);
-    box-shadow: var(--shadow-card);
-    border-radius: var(--r-card);
-    color: var(--ink);
-    transition: transform 0.14s ease, box-shadow 0.14s ease;
+    padding: 22px 28px;
   }
-  .blog-cta:hover,
-  .blog-cta:focus-visible {
-    transform: translate(-2px, -2px);
-    box-shadow: 10px 10px 0 var(--ink);
-  }
-  .blog-cta-label {
+  .hb-kicker {
     font-family: var(--font-pixel);
-    font-size: 16px;
-    letter-spacing: 0.2em;
+    font-size: 18px;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--ink-soft);
-    margin-bottom: 6px;
   }
-  .blog-cta-title {
+  .hb-all-title {
     font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: clamp(26px, 4vw, 40px);
+    font-size: clamp(28px, 3.2vw, 42px);
+    font-weight: 600;
     line-height: 1.05;
   }
-  .blog-cta-title em {
-    font-style: italic;
+  .hb-all-title em {
     color: var(--cherry-strong);
   }
-  .blog-cta-desc {
-    max-width: 60ch;
-    margin-top: 8px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    line-height: 1.5;
+  .hb-desc {
+    margin: 6px 0 0;
+    font-family: var(--font-serif);
+    font-size: 18px;
     color: var(--ink-soft);
   }
-  .blog-cta-arrow {
+  .hb-arrow {
     font-family: var(--font-mono);
-    font-size: 34px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--cherry-strong);
-    transition: transform 0.16s ease;
+    white-space: nowrap;
   }
-  .blog-cta:hover .blog-cta-arrow,
-  .blog-cta:focus-visible .blog-cta-arrow {
-    transform: translateX(8px);
+
+  @media (max-width: 900px) {
+    .hb {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    /* On phones show two latest posts + the index card. */
+    .hb-post:nth-of-type(3) {
+      display: none;
+    }
   }
-  @media (max-width: 760px) {
-    .blog-cta {
-      margin: 8px 16px 56px;
-      padding: 22px 22px;
+  @media (prefers-reduced-motion: reduce) {
+    .hb-card {
+      transition: none;
     }
   }
 </style>

@@ -21,7 +21,7 @@
     apps: 'Apps',
     videos: 'Videos',
     socials: 'Socials',
-    blog_cta: 'Blog CTA',
+    blog_cta: 'Blog',
   };
 
   const STATUS_LABEL = { live: '★ live', soon: 'coming soon', lab: 'in the lab' };
@@ -30,7 +30,21 @@
    * The site renders fixed eyebrow numbers per section (Apps.astro etc.)
    * regardless of section_order — mirror them verbatim for fidelity.
    */
-  const EYEBROW = { apps: '01 — Apps', videos: '02 — Videos', socials: '03 — Socials' };
+  const EYEBROW_LABEL = { apps: 'Apps', videos: 'Videos', socials: 'Socials', blog_cta: 'Blog' };
+  /**
+   * Numbered eyebrow for a section, following the visible section order (the
+   * hero is unnumbered) — mirrors site/src/pages/index.astro.
+   * @param {string} id
+   */
+  function eyebrow(id) {
+    const visible = (draft ? draft.section_order : []).filter(
+      (/** @type {string} */ k) => k !== 'hero' && draft.sections[k] !== false,
+    );
+    const n = visible.indexOf(id) + 1;
+    // eslint-disable-next-line security/detect-object-injection -- fixed key map
+    const label = EYEBROW_LABEL[id] || id;
+    return n > 0 ? `${String(n).padStart(2, '0')} — ${label}` : label;
+  }
 
   /**
    * Official brand glyph (Simple Icons, white fill) — matches Socials.astro.
@@ -509,7 +523,7 @@
         return `${shownCount} of ${all.length} shown`;
       }
       case 'blog_cta':
-        return 'blog handoff';
+        return 'latest posts + link to all';
       default:
         return '';
     }
@@ -583,13 +597,13 @@
     if (!items.length) {
       return `
       <div class="pv-sec">
-        <div class="pv-eyebrow">${EYEBROW.apps}</div>
+        <div class="pv-eyebrow">${eyebrow('apps')}</div>
         <div class="pv-empty">No apps yet — add one with the editor panel on the left.</div>
       </div>`;
     }
     return `
       <div class="pv-sec">
-        <div class="pv-eyebrow">${EYEBROW.apps}</div>
+        <div class="pv-eyebrow">${eyebrow('apps')}</div>
         <div class="pv-apps">
           ${items
             .map((/** @type {any} */ a, /** @type {number} */ i) => {
@@ -624,7 +638,7 @@
     const handle = esc(siteYoutubeHandle);
     return `
       <div class="pv-sec">
-        <div class="pv-eyebrow">${EYEBROW.videos}</div>
+        <div class="pv-eyebrow">${eyebrow('videos')}</div>
         <div class="pv-film">
           <div class="pv-film-bg" aria-hidden="true"></div>
           <div class="pv-film-clouds" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -646,7 +660,7 @@
     );
     return `
       <div class="pv-sec">
-        <div class="pv-eyebrow">${EYEBROW.socials}</div>
+        <div class="pv-eyebrow">${eyebrow('socials')}</div>
         <div class="pv-socials">
           ${shown
             .map((/** @type {string} */ key) => {
@@ -673,6 +687,7 @@
   function pvBlogCta() {
     return `
       <div class="pv-footer">
+        <div class="pv-eyebrow">${eyebrow('blog_cta')}</div>
         <div class="pv-footer-kicker">${esc(draft.blog_cta.kicker)}</div>
         <div class="pv-footer-card">
           <div class="pv-footer-text">

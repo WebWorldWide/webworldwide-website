@@ -57,3 +57,9 @@
 body[data-cloud-dim] .sky-puffs {
   opacity: 0.55;
 }
+
+/* Lite mode: the clouds stay, they just don't drift. */
+.lite .puff,
+.lite .puff-bob {
+  animation: none !important;
+}

@@ -192,7 +192,7 @@ const DEFAULT_MODEL = {
     description: '',
   },
   sections: { hero: true, apps: true, videos: true, socials: true, blog_cta: true },
-  section_order: ['hero', 'apps', 'videos', 'socials', 'blog_cta'],
+  section_order: ['hero', 'blog_cta', 'apps', 'videos', 'socials'],
 };
 
 // Fully-populated fixture with non-default values + a canary comment that

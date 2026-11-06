@@ -111,6 +111,7 @@
   animation: fadeUp 0.8s ease-out 0.85s forwards;
 }
 .tagline .sep {
+  position: relative;
   display: inline-block;
   width: 10px;
   height: 10px;
@@ -121,9 +122,24 @@
   box-shadow: 2px 2px 0 var(--ink);
   animation: sepPulse 1.8s ease-in-out infinite;
 }
-.tagline .sep:nth-child(2) {
+/* The cherry→sun colour swap is an opacity cross-fade of a sun-coloured
+   overlay, so the whole pulse runs on the compositor (animating
+   `background` repainted these every frame). */
+.tagline .sep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--sun);
+  opacity: 0;
+  animation: sepGlow 1.8s ease-in-out infinite;
+}
+.tagline .sep:nth-child(2),
+.tagline .sep:nth-child(2)::after {
   animation-delay: 0.2s;
   animation-duration: 1.6s;
+}
+.lite .tagline .sep::after {
+  animation: none;
 }
 .tagline .sep:nth-child(4) {
   animation-delay: 0.4s;
@@ -132,12 +148,19 @@
 @keyframes sepPulse {
   0%,
   100% {
-    background: var(--cherry);
     transform: scale(1);
   }
   50% {
-    background: var(--sun);
     transform: scale(1.3);
+  }
+}
+@keyframes sepGlow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
   }
 }
 @keyframes fadeUp {
@@ -905,4 +928,21 @@
     font-size: 20px;
     letter-spacing: 0.32em;
   }
+}
+
+/* ==========================================================================
+   Lite mode (slow CPU / low memory / slow or metered connection / reduced
+   data). Set by scripts/perf.ts. Content is identical; only decorative
+   infinite loops and blur passes are dropped.
+   ========================================================================== */
+.lite .drift,
+.lite .film-cloud,
+.lite .tagline .sep,
+.lite .floating-app {
+  animation: none !important;
+}
+.lite .film-play {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgb(255, 255, 255, 0.32);
 }
