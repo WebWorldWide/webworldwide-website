@@ -47,6 +47,15 @@ jobs:
         working-directory: site
         run: npm ci --ignore-scripts
 
+      # The admin specs serve admin/public statically, so the browser bundles
+      # (admin/public/js/*, generated from admin/client/*.ts) must exist. The
+      # root `prepare` hook tries to build them but swallows the failure when
+      # admin deps are missing — which left every admin/editor test failing.
+      - name: Install admin dependencies and build browser bundles
+        run: |
+          npm --prefix admin ci --ignore-scripts
+          npm --prefix admin run build:client
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v6
