@@ -78,7 +78,7 @@ export async function waitForDeploy(
     if (st.status === 'completed') return st.conclusion === 'success';
     if (st.status === 'superseded') return true;
     if (st.status === 'not_pushed' || st.status === 'not_on_main') return false;
-    await new Promise((r) => setTimeout(r, intervalMs));
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   return false;
 }
