@@ -24,7 +24,9 @@ const { kicker, title, title_accent, url, description } = homepage.blog_cta;
     justify-content: space-between;
     gap: 18px;
     flex-wrap: wrap;
-    max-width: 1080px;
+    /* Same measure as the sections above so its edges line up with the
+       socials grid (it was 160px narrower and visibly off-axis). */
+    max-width: 1240px;
     margin: 8px auto 72px;
     padding: 28px 34px;
     background: rgba(255, 255, 255, 0.93);

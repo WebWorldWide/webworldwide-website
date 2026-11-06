@@ -115,7 +115,6 @@ const remarkUrl =
           <div class="end-actions">
             <button class="end-action" type="button" data-copy-link data-umami-event="blog: copy link">↗ Copy link</button>
             <a class="end-action" href="/blog/">← All posts</a>
-            {next && <a class="end-action" href={postUrl(next)} data-umami-event="blog: next post">Next post →</a>}
           </div>
           {next && (
             <a class="next-post" href={postUrl(next)} data-umami-event="blog: next post card">

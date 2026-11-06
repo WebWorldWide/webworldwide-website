@@ -280,9 +280,15 @@
   }
 }
 @media (max-width: 520px) {
+  /* Two per row: one full-width icon per row made the section ~2,000px tall.
+     The glow halo is wider than a half-width column, so clip it horizontally
+     (clip, not hidden: no scroll container, the 3D spin is unaffected). */
+  #apps {
+    overflow-x: clip;
+  }
   .apps-float {
-    grid-template-columns: 1fr;
-    gap: 64px 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px 12px;
     padding-top: 8px;
   }
 }
@@ -713,14 +719,23 @@
 
 /* Socials: header stays left-aligned (like the other sections); only the tile
    rows center, so a short last row sits centered instead of hugging the left. */
+/* Socials: a balanced grid. Nine tiles (eight networks + email) wrapped as
+   4 + 4 + 1 left Email stranded alone on its own row; three columns gives a
+   clean 3 × 3, two on tablets, one on phones. */
 #socials .elsewhere-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
-#socials .elsewhere-tile {
-  flex: 1 1 280px;
-  max-width: 360px;
+@media (max-width: 860px) {
+  #socials .elsewhere-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  #socials .elsewhere-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* App icons spin via a custom pointer gesture — block the browser's native

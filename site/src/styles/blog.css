@@ -642,7 +642,8 @@ a.pager-btn:focus-visible {
 }
 .end-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Two actions; "Next post" is the card below (it was duplicated here). */
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 30px;
 }
