@@ -440,14 +440,16 @@ router.post('/blocks', async (req, res) => {
   const reason = req.body?.reason ? String(req.body.reason) : 'blocked from admin';
   const ttl = req.body?.ttl ? String(req.body.ttl) : ''; // '' = permanent
 
+  // Remark42 enforces the block; a local row alone does nothing. Report the
+  // real outcome instead of a success that silently didn't happen.
   try {
     await remark42.blockUser(userId, { block: true, ttl });
   } catch (err) {
-    if (err.status && err.status !== 0) {
-      // Couldn't reach upstream; still record locally so the admin sees
-      // their intent. A future reconcile call will eventually push it.
-      console.warn('[comments] blockUser upstream failed:', err.message);
-    }
+    console.warn('[comments] blockUser upstream failed:', err.message);
+    return res.status(502).json({
+      error: 'upstream_failed',
+      message: 'Remark42 did not accept the block, so the user is NOT blocked. Try again.',
+    });
   }
 
   const id = nanoid();
@@ -484,6 +486,11 @@ router.delete('/blocks/:id', async (req, res) => {
     await remark42.blockUser(row.user_id, { block: false });
   } catch (err) {
     console.warn('[comments] unblock upstream failed:', err.message);
+    // Keep the local row: the user is still blocked upstream.
+    return res.status(502).json({
+      error: 'upstream_failed',
+      message: 'Remark42 did not accept the unblock, so the user is still blocked. Try again.',
+    });
   }
   db().prepare(`DELETE FROM blocks WHERE id = ?`).run(id);
   logActivity({ req, action: 'comment.unblock', target: row.user_id });

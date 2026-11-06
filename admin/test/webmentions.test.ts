@@ -482,3 +482,81 @@ test('slugFromTarget strips the /blog/ permalink prefix', skipOpts(), () => {
   assert.equal(slugFromTarget('https://webworldwide.online/blog/hello-world'), 'hello-world');
   assert.equal(slugFromTarget('https://webworldwide.online/blog/'), '__home__');
 });
+
+test(
+  'an admin approval made while validation is in flight is not overwritten',
+  skipOpts(),
+  async () => {
+    const target = 'https://webworldwide.online/hello-world/';
+    const source = 'https://race.example/post';
+    resetFetch();
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    registerFetch(source, async () => {
+      await gate; // hold the fetch open while the admin approves
+      return new Response(
+        `<article class="h-entry"><a class="u-in-reply-to" href="${target}">re</a><div class="e-content">hi</div></article>`,
+        { status: 200, headers: { 'Content-Type': 'text/html' } },
+      );
+    });
+    const res = await fetch(`${publicUrl}/webmention`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ source, target }).toString(),
+    });
+    const { id } = await res.json();
+    const validating = validateMention(id);
+    await fetch(`${adminUrl}/api/webmentions/${id}/approve`, { method: 'POST' });
+    release();
+    await validating;
+    const row = await (await fetch(`${publicUrl}/webmention/${id}`)).json();
+    assert.equal(row.status, 'approved');
+  },
+);
+
+test(
+  'a system auto-rejection is re-validated on re-delivery; an admin rejection sticks',
+  skipOpts(),
+  async () => {
+    const target = 'https://webworldwide.online/hello-world/';
+    const source = 'https://flaky.example/post';
+    const post = () =>
+      fetch(`${publicUrl}/webmention`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ source, target }).toString(),
+      }).then((r) => r.json());
+    resetFetch(); // unregistered → 404 → fetch_failed
+    const first = await post();
+    await validateMention(first.id);
+    assert.equal(
+      (await (await fetch(`${publicUrl}/webmention/${first.id}`)).json()).status,
+      'rejected',
+    );
+
+    // The source comes back; Bridgy re-delivers → fresh check, now pending.
+    registerFetch(
+      source,
+      () =>
+        new Response(`<a class="u-in-reply-to" href="${target}">re</a>`, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    );
+    const second = await post();
+    assert.equal(second.id, first.id);
+    await validateMention(second.id);
+    assert.equal(
+      (await (await fetch(`${publicUrl}/webmention/${second.id}`)).json()).status,
+      'pending',
+    );
+
+    // Admin rejects → a later re-delivery keeps the rejection.
+    await fetch(`${adminUrl}/api/webmentions/${second.id}/reject`, { method: 'POST' });
+    await post();
+    assert.equal(
+      (await (await fetch(`${publicUrl}/webmention/${second.id}`)).json()).status,
+      'rejected',
+    );
+  },
+);
