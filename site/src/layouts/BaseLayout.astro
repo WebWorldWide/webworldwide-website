@@ -202,10 +202,15 @@ const dataAttrs = Object.fromEntries(
     <slot name="after-main" />
     <Analytics />
 
-    <script is:inline>
+    <script>
       // Register service worker for offline + asset caching. Only in
-      // production (dev server reloads aggressively).
-      if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      // production (dev server reloads aggressively). A processed (bundled)
+      // script rather than is:inline so it is covered by the CSP.
+      if (
+        'serviceWorker' in navigator &&
+        location.hostname !== 'localhost' &&
+        location.hostname !== '127.0.0.1'
+      ) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').catch(() => {});
         });

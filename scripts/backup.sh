@@ -120,17 +120,34 @@ else
     echo "WARNING: $BACKUP_REPO_DIR/public.key not found. Not backing up .env"
 fi
 
-# 6. Commit and push to GitHub. Identity is passed inline — the cron
-# runs as root, whose global git config has none (a fresh clone
-# otherwise dies at "unable to auto-detect email" right here).
-echo "Pushing to GitHub..."
+# 6. Encrypt the data set, then commit + push ONLY ciphertext to GitHub.
+# The plaintext dumps (analytics DB, comments, CMS auth DB with password hashes
+# and passkeys) stay on this disk, git-ignored; GitHub only ever receives
+# snapshot.tar.age, decryptable solely with the offline age private key.
 cd "$BACKUP_REPO_DIR"
-git add .
+PLAINTEXT=(umami_backup.sql.gz remark42_var cms_auth_backup.db cms_auth_backup.db-wal cms_auth_backup.db-shm)
+for f in "${PLAINTEXT[@]}"; do
+    grep -qxF "/$f" .gitignore 2>/dev/null || echo "/$f" >> .gitignore
+done
+if [ ! -f public.key ]; then
+    echo "ERROR: $BACKUP_REPO_DIR/public.key missing — refusing to push an unencrypted backup."
+    exit 1
+fi
+present=()
+for f in "${PLAINTEXT[@]}"; do [ -e "$f" ] && present+=("$f"); done
+tar -cf - "${present[@]}" | age -R public.key -o snapshot.tar.age.tmp
+mv snapshot.tar.age.tmp snapshot.tar.age
+# Stop tracking any plaintext a previous version of this script committed.
+git rm -r -q --cached --ignore-unmatch -- "${PLAINTEXT[@]}" >/dev/null
+
+# Identity is passed inline — the cron may run as a user with no git identity.
+echo "Pushing encrypted snapshot to GitHub..."
+git add -A
 if git diff --cached --quiet; then
     echo "Nothing new to back up."
 else
     git -c user.name="Web World Wide Backup" -c user.email="backups@webworldwide.online" \
-        commit -m "Automated backup: $TIMESTAMP"
+        commit -q -m "Automated backup: $TIMESTAMP"
     git push origin main
 fi
 

@@ -12,7 +12,19 @@ import TOML from '@iarna/toml';
 const here = dirname(fileURLToPath(import.meta.url));
 const siteToml = TOML.parse(readFileSync(join(here, 'site.toml'), 'utf-8')) as unknown as {
   site: { url: string };
+  comments?: { url?: string };
+  analytics?: { url?: string };
 };
+const originOf = (u?: string) => {
+  try {
+    return u ? new URL(u).origin : '';
+  } catch {
+    return '';
+  }
+};
+const COMMENTS_ORIGIN = originOf(siteToml.comments?.url);
+const ANALYTICS_ORIGIN = originOf(siteToml.analytics?.url);
+const thirdParty = [ANALYTICS_ORIGIN, COMMENTS_ORIGIN].filter(Boolean);
 
 // Build the redirects map from old Hugo `/<slug>/` URLs to new `/blog/<slug>/`.
 // Astro emits meta-refresh + canonical-link HTML files at the old paths so
@@ -36,6 +48,35 @@ export default defineConfig({
   ),
 
   integrations: [react(), sitemap({ changefreq: 'weekly', priority: 0.7 })],
+  // Content-Security-Policy (emitted as a <meta> tag — GitHub Pages can't set
+  // headers). Astro hashes every inline script it emits, so only our own
+  // bundles, Umami, and the Remark42 embed can execute; a compromised CMS
+  // can't inject script into posts. Styles stay permissive (inline style
+  // attributes are used throughout and carry no script risk).
+  security: {
+    csp: {
+      algorithm: 'SHA-256',
+      directives: [
+        "default-src 'self'",
+        "img-src 'self' data: https:",
+        "media-src 'self' https:",
+        "font-src 'self' data:",
+        `connect-src 'self' ${thirdParty.join(' ')}`,
+        `frame-src ${COMMENTS_ORIGIN} https://www.youtube.com https://www.youtube-nocookie.com`,
+        "object-src 'none'",
+        "base-uri 'self'",
+        `form-action 'self' ${COMMENTS_ORIGIN}`,
+        "manifest-src 'self'",
+        "worker-src 'self'",
+      ],
+      scriptDirective: {
+        resources: ["'self'", ...thirdParty],
+      },
+      styleDirective: {
+        resources: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  },
 
   image: {
     service: { entrypoint: 'astro/assets/services/sharp' },
