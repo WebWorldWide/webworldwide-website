@@ -56,4 +56,7 @@ fi
 log "apt autoremove…"
 sudo apt-get autoremove -y >/dev/null 2>&1 || log "apt autoremove failed (continuing)"
 
+log "checking for newer pinned container images…"
+"$SCRIPT_DIR/check-image-updates.sh" || log "image update check failed (continuing)"
+
 log "complete"
