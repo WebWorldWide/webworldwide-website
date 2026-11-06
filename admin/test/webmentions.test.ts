@@ -491,7 +491,7 @@ test(
     const source = 'https://race.example/post';
     resetFetch();
     let release;
-    const gate = new Promise((r) => (release = r));
+    const gate = new Promise((resolve) => (release = resolve));
     registerFetch(source, async () => {
       await gate; // hold the fetch open while the admin approves
       return new Response(
