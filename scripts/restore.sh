@@ -4,8 +4,9 @@
 
 set -euo pipefail
 
-APP_DIR="/opt/web-world-wide"
-BACKUP_REPO_DIR="/opt/www-blog-backups"
+# Same overrides as backup.sh / auto-update.sh (Adlon sets these in crontab).
+APP_DIR="${WWWIDE_APP_DIR:-/opt/web-world-wide}"
+BACKUP_REPO_DIR="${WWWIDE_BACKUP_DIR:-/opt/www-blog-backups}"
 SCRIPT_DIR="$APP_DIR/scripts"
 
 # Restore is destructive and stops the full stack, so it must never overlap a
@@ -19,6 +20,17 @@ echo -e "\n  ■ TERMINAL EIGHTY // RESTORE\n"
 if [ ! -d "$BACKUP_REPO_DIR" ]; then
     echo "ERROR: Backup directory not found at $BACKUP_REPO_DIR"
     exit 1
+fi
+
+# Backups are pushed as an age-encrypted snapshot (see backup.sh). On a fresh
+# clone the plaintext files are absent: decrypt them first.
+if [ -f "$BACKUP_REPO_DIR/snapshot.tar.age" ] && [ ! -f "$BACKUP_REPO_DIR/cms_auth_backup.db" ]; then
+    if [ -z "${AGE_IDENTITY:-}" ]; then
+        echo "ERROR: encrypted snapshot found. Re-run with AGE_IDENTITY=/path/to/private.key"
+        exit 1
+    fi
+    echo ">> Decrypting snapshot.tar.age..."
+    (umask 077; age -d -i "$AGE_IDENTITY" "$BACKUP_REPO_DIR/snapshot.tar.age" | tar -xf - -C "$BACKUP_REPO_DIR")
 fi
 
 cd "$APP_DIR/docker"
@@ -62,7 +74,7 @@ fi
 # 3. Restore CMS (auth.db + its WAL sidecars — see backup.sh for why).
 if [ -f "$BACKUP_REPO_DIR/cms_auth_backup.db" ]; then
     echo ">> Restoring CMS Auth Database (incl. WAL sidecars)..."
-    CMS_DATA=/var/lib/docker/volumes/web-world-wide_cms_data/_data
+    CMS_DATA="$(docker volume inspect -f '{{.Mountpoint}}' web-world-wide_cms_data)"
     sudo cp "$BACKUP_REPO_DIR/cms_auth_backup.db" "$CMS_DATA/auth.db"
     # Restore the WAL sidecars so SQLite replays everything written since
     # the last checkpoint. If the backup has none, REMOVE any stale
@@ -82,7 +94,7 @@ fi
 # 4. Restore Environment variables (Optional - requires private key)
 if [ -f "$BACKUP_REPO_DIR/env_backup.enc" ]; then
     echo ">> Encrypted .env found. To restore it, run:"
-    echo "   age -d -i private.key $BACKUP_REPO_DIR/env_backup.enc > $APP_DIR/docker/.env"
+    echo "   (umask 077; age -d -i private.key $BACKUP_REPO_DIR/env_backup.enc > $APP_DIR/docker/.env)"
 fi
 
 echo ">> Starting services..."
