@@ -5,11 +5,26 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Sign in — Web World Wide // Admin</title>
     <link rel="icon" type="image/png" href="/logo.png" />
+    <link
+      rel="preload"
+      href="/fonts/archivo-variable-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/instrument-serif-400-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/tokens.css" />
     <link rel="stylesheet" href="/css/base.css" />
     <link rel="stylesheet" href="/css/components.css" />
     <link rel="stylesheet" href="/css/login.css" />
+    <link rel="stylesheet" href="/css/design.css" />
     <!-- WebAuthn library — defer so it doesn't block the login form's
          first paint. The passkey CTA is interactive within ~50ms of
          first render either way; defer is purely a latency win. -->
@@ -63,7 +78,9 @@
           <div class="field">
             <label for="setup-token">
               Setup token
-              <span style="text-transform: none; color: var(--ink-soft)">(SETUP_TOKEN in the server env; production only)</span>
+              <span style="text-transform: none; color: var(--ink-soft)"
+                >(SETUP_TOKEN in the server env; production only)</span
+              >
             </label>
             <input type="password" id="setup-token" autocomplete="off" />
           </div>

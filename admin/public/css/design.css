@@ -1,0 +1,411 @@
+/* ==========================================================================
+   design.css — house design layer (design-ui skill), loaded LAST.
+
+   Direction: precision software. The CMS is a repeated task, so the taste
+   is expressed through proportion, typography, quiet chrome and clear
+   selection — not marketing drama. Layouts and the sky-blue brand palette
+   are unchanged; this layer re-assigns type roles and calms the chrome.
+
+   Type roles
+     display / signature  Instrument Serif 400 (+ italic) — page titles, post
+                          title, brand, empty states. Never bold, never small.
+     interface / reading  Archivo, wdth 100, 450–600
+     utility labels       Archivo condensed (wdth ≈ 82), 600, +0.07em, caps
+     data                 Archivo tabular figures (no monospace)
+     code                 JetBrains Mono (markdown source, CSS/JS, kbd)
+   ========================================================================== */
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  /* Archivo's word space is narrow (~0.21em); at UI sizes it reads as run-on
+     words, so open it slightly. Display serif resets this below. */
+  word-spacing: 0.06em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prose surfaces keep proportional figures. */
+.ProseMirror,
+.ed-title {
+  font-variant-numeric: proportional-nums;
+}
+
+/* ── Display: Instrument Serif ───────────────────────────────────────────── */
+.sec-title,
+.ov-hi,
+.auth-title,
+.ed-title,
+.hp-rail-head .hr-title,
+.modal-head h3,
+.side-brand .name,
+.auth-brand .name {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  text-wrap: balance;
+  word-spacing: 0;
+}
+
+.sec-title,
+.ov-hi {
+  font-size: clamp(38px, 3.4vw, 52px);
+  line-height: 0.95;
+  letter-spacing: -0.012em;
+}
+.sec-title em,
+.ov-hi em {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.ed-title {
+  font-size: clamp(40px, 4.2vw, 58px);
+  line-height: 0.98;
+  letter-spacing: -0.012em;
+}
+
+.auth-title {
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.hp-rail-head .hr-title {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.modal-head h3 {
+  font-size: 26px;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Brand lock-up: serif wordmark, condensed utility sub-label. */
+.side-brand .name,
+.auth-brand .name {
+  font-size: 23px;
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+}
+.side-brand .name b,
+.auth-brand .name b {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Empty / loading states are calm signature moments. */
+.empty .e-text,
+.posts-empty,
+.te-cm-empty,
+.account-empty {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--ink-mute);
+  font-synthesis: none;
+}
+
+/* ── Utility labels: condensed Archivo caps ──────────────────────────────── */
+.side-brand .name span,
+.auth-brand .name span,
+.side-group-label,
+.crumb .c-eyebrow,
+.kbd-group h4,
+.panel-title,
+.row-grid.head,
+.r-pill,
+.stat-label,
+.metric-label,
+.health-section-label,
+.cmdk-list .cmdk-r,
+.cmdk-foot,
+.hp-history-kind,
+.te-act-head,
+.te-cm-nav-item,
+.te-cm-live,
+.te-cm-row-head,
+.te-cm-author .badge,
+.te-cm-status,
+.te-cm-drawer-head,
+.te-cm-inbox-card .label,
+.ed-pill,
+.ed-panel summary,
+.social-preview .domain,
+.recent-media .thumb .badge,
+.te-slash-group,
+.ed-aux-head,
+.ed-seo-meta li,
+.ed-publish-badge,
+.te-history-kind,
+.te-pr-kind,
+.hp-preview-bar .pb-label,
+.auth-sub,
+.auth-divider,
+.te-dz,
+.te-media-chip,
+.te-media-sub,
+.te-media-status,
+.te-media-drawer-head,
+.te-drawer-meta dt,
+.te-drawer-alt-label,
+.side-dropzone,
+.te-redir-head,
+.posts-selectall,
+.te-form-group h3 {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-feature-settings: "case", "kern";
+}
+
+/* Section heads inside panels read as headings, slightly larger. */
+.panel-title,
+.ed-panel summary,
+.te-form-group h3 {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+/* ── Interface text: buttons + form labels in sentence case ──────────────── */
+.auth-card .btn-primary,
+.auth-toggle,
+.pw-toggle,
+.te-editor-mode-btn,
+.hp-seg button,
+.hp-add,
+.te-link-foot button,
+.te-media-used-filter button,
+.te-media-retry,
+.te-tb-btn {
+  font-family: var(--font-ui);
+  font-weight: 550;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.field label,
+.ed-side .field label,
+.auth-card .field label,
+.hp-field > label,
+.te-field > span,
+.te-link-field label,
+.te-redir-form .te-field > span {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 560;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+
+.auth-foot,
+.te-cm-reply .row .hint {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 450;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+}
+
+/* Metadata lines under titles: quiet Archivo, not tracked monospace. */
+.sec-sub,
+.ov-date,
+.side-foot,
+.r-date,
+.r-status {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--ink-mute);
+}
+.sec-sub,
+.ov-date {
+  margin-top: var(--space-3);
+}
+
+/* ── Code surfaces keep a real monospace ─────────────────────────────────── */
+code,
+kbd,
+pre,
+.kbd,
+.cm-editor .cm-content,
+.cm-editor .cm-scroller,
+#post-custom-css,
+#post-custom-js,
+.te-cm-detail-content code {
+  font-family: var(--font-code);
+  font-variant-ligatures: none;
+}
+
+/* ── Top bar: the page title lives in the page, so the crumb stays quiet ── */
+.crumb .c-title,
+.crumb b {
+  font-size: 15px;
+  font-weight: 560;
+  letter-spacing: 0;
+}
+
+/* ── Sidebar: lighter, unmistakable selection ────────────────────────────── */
+.side-item {
+  font-weight: 500;
+}
+.side-item[aria-current="page"],
+.side-item.active {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: transparent;
+  box-shadow: inset 3px 0 0 var(--accent);
+  font-weight: 620;
+}
+.side-item[aria-current="page"] .ico,
+.side-item.active .ico {
+  color: var(--accent);
+}
+.side-item[aria-current="page"] .badge,
+.side-item.active .badge {
+  color: var(--accent-on);
+  background: var(--accent);
+}
+
+/* ── Posts list: titles lead, status and destructive actions recede ─────── */
+.r-title {
+  font-size: 15.5px;
+  font-weight: 560;
+  letter-spacing: -0.005em;
+}
+.r-pill.pub {
+  color: var(--ok-strong);
+  background: transparent;
+  border-color: transparent;
+  padding-inline: 0;
+}
+.row-grid .r-actions .btn-mini.bad {
+  color: var(--ink-faint);
+  background: transparent;
+  border-color: transparent;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.row-grid:hover .r-actions .btn-mini.bad,
+.row-grid:focus-within .r-actions .btn-mini.bad {
+  opacity: 1;
+  color: var(--danger);
+}
+.row-grid .r-actions .btn-mini.bad:hover,
+.row-grid .r-actions .btn-mini.bad:focus-visible {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Large numbers: Archivo, tabular, a little condensed for presence. */
+.stat-val,
+.te-cm-inbox-card .val {
+  font-family: var(--font-ui);
+  font-weight: 640;
+  font-stretch: 92%;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* Status warnings in the homepage rail: readable sentence text. */
+.hp-hint {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  line-height: 1.45;
+  /* Amber text on the amber tint failed WCAG AA; ink text + an amber rule
+     keeps the warning legible and still clearly a warning. */
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+
+/* ── Motion: honour reduced-motion for everything this layer touches ────── */
+@media (prefers-reduced-motion: reduce) {
+  .row-grid .r-actions .btn-mini.bad {
+    transition: none;
+  }
+}
+
+/* ── Small screens ───────────────────────────────────────────────────────── */
+@media (width <= 720px) {
+  .sec-title,
+  .ov-hi {
+    font-size: 36px;
+  }
+  .ed-title {
+    font-size: 36px;
+  }
+  /* Touch has no hover: keep delete visible but quiet. */
+  .row-grid .r-actions .btn-mini.bad {
+    opacity: 0.8;
+  }
+}
+
+/* ── Quiet chrome: one place per global action ───────────────────────────
+   With the sidebar visible it already offers "New post", and the top bar
+   offers "Publish site" on every view — so drop the duplicates. On phones
+   the sidebar is a drawer, so the top-bar "New Post" comes back. */
+@media (width > 800px) {
+  #btn-new-post {
+    display: none;
+  }
+}
+#view-dashboard #btn-publish-2 {
+  display: none;
+}
+
+/* Sidebar status footer: utility caps, not body text. */
+.side-foot {
+  font-size: 11px;
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.06em;
+}
+
+/* ── Off-canvas drawers ──────────────────────────────────────────────────
+   Closed drawers sat just off-screen but still cast their shadow into the
+   page (a grey fade on the right edge of every view) and stayed in the tab
+   order. Hide them fully when closed; the visibility flip waits for the
+   slide-out to finish. */
+.te-cm-drawer:not(.open),
+.te-media-drawer:not(.open) {
+  visibility: hidden;
+  box-shadow: none;
+  transition:
+    transform 180ms ease,
+    visibility 0s linear 180ms,
+    box-shadow 0s linear 180ms;
+}
+.te-cm-drawer.open,
+.te-media-drawer.open {
+  visibility: visible;
+}
+.te-media-drawer {
+  font-family: var(--font-ui);
+}
+
+/* Homepage rail meta: Archivo, not hard-coded Space Mono. */
+.hp-dirty,
+.hp-sec-name .tiny {
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+}
+.hp-sec-name .tiny {
+  font-size: 12px;
+  color: var(--ink-mute);
+}

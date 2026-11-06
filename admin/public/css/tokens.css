@@ -84,10 +84,20 @@
   --danger-glow: rgb(217 74 58 / 0.3);
 
   /* ---- Typography — stacks (self-hosted, see fonts.css) ---- */
-  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* House pairing (design-ui): Archivo carries interface, reading UI,
+     utility labels, and data (tabular figures); Instrument Serif is the
+     display/signature voice. --font-read stays a text serif for the post
+     canvas, which previews the published article. */
+  --font-ui:
+    "Archivo", "Archivo Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "Instrument Serif", "Instrument Serif Fallback", "Iowan Old Style", "Times New Roman", serif;
+  --font-code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-read: "Newsreader", "Iowan Old Style", Georgia, serif;
   --font-site: "Cormorant Garamond", "Apple Garamond", Garamond, Georgia, serif;
-  --font-data: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Data/meta now uses Archivo with tabular figures (monospace is reserved
+     for actual code via --font-code). */
+  --font-data: var(--font-ui);
   /* font-pixel kill-switch: VT323's old role (tracked uppercase labels)
      is now refined uppercase Hanken. Re-pointing this one var converts
      every chrome var(--font-pixel) reference to clean type at once. The
