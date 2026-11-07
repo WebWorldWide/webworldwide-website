@@ -89,6 +89,7 @@
     "undici": "^7.28.0",
     "gray-matter": {
       "js-yaml": "^4.2.0"
-    }
+    },
+    "zod": "$zod"
   }
 }
