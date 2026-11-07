@@ -103,23 +103,33 @@ const LAYERS: CloudLayer[] = [
   },
 ];
 
-function shapeToSVG(shape: string[], scale: number, outlineHex: string): string {
+// One SVG per (shape, outline colour) — scale comes from the element box
+// (background-size: 100% 100%), so it isn't baked into the image. Pixels are
+// merged into horizontal runs. Each distinct image is emitted ONCE as a CSS
+// class instead of inline on every puff (that was ~70KB of HTML).
+function shapeToSVG(shape: string[], outlineHex: string): string {
   const h = shape.length;
   const w = shape[0].length;
-  let body = '';
-  let outline = '';
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const ch = shape[y][x];
-      if (ch === '1') body += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
-      else if (ch === '2') outline += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
+  const runs = (ch: string): string => {
+    let out = '';
+    for (let y = 0; y < h; y++) {
+      let x = 0;
+      while (x < w) {
+        if (shape[y][x] !== ch) {
+          x++;
+          continue;
+        }
+        const x0 = x;
+        while (x < w && shape[y][x] === ch) x++;
+        out += `<rect x='${x0}' y='${y}' width='${x - x0}' height='1'/>`;
+      }
     }
-  }
+    return out;
+  };
   const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' width='${w * scale}' height='${h * scale}' ` +
-    `viewBox='0 0 ${w} ${h}' shape-rendering='crispEdges'>` +
-    `<g fill='%23ffffff'>${body}</g>` +
-    `<g fill='${outlineHex}'>${outline}</g></svg>`;
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' preserveAspectRatio='none' shape-rendering='crispEdges'>` +
+    `<g fill='%23ffffff'>${runs('1')}</g>` +
+    `<g fill='${outlineHex}'>${runs('2')}</g></svg>`;
   return `url("data:image/svg+xml;utf8,${svg}")`;
 }
 
@@ -151,6 +161,19 @@ type Puff = {
   bobDelay: string;
 };
 
+const puffImages = new Map<string, { cls: string; url: string }>();
+function puffClass(shape: string[], outline: string): string {
+  const key = `${SHAPES.indexOf(shape)}-${outline}`;
+  let hit = puffImages.get(key);
+  if (!hit) {
+    hit = { cls: `pf${puffImages.size}`, url: shapeToSVG(shape, outline) };
+    puffImages.set(key, hit);
+  }
+  return hit.cls;
+}
+const puffCss = (): string =>
+  [...puffImages.values()].map((p) => `.puff-bob.${p.cls}{background-image:${p.url}}`).join('');
+
 const puffs: Puff[] = [];
 for (const L of LAYERS) {
   for (let i = 0; i < L.count; i++) {
@@ -164,7 +187,7 @@ for (const L of LAYERS) {
       opacity: rand(L.opMin, L.opMax).toFixed(2),
       driftDur: `${dur.toFixed(1)}s`,
       driftDelay: `${(-rng() * dur).toFixed(1)}s`,
-      bg: shapeToSVG(shape, scale, L.outline),
+      bg: puffClass(shape, L.outline),
       bobDur: `${(4 + rng() * 4).toFixed(2)}s`,
       bobDelay: `${(-rng() * 4).toFixed(2)}s`,
     });
@@ -172,6 +195,7 @@ for (const L of LAYERS) {
 }
 ---
 
+<style is:inline set:html={puffCss()} />
 <div class="sky" aria-hidden="true"></div>
 <div class="sky-puffs" id="skyPuffs" aria-hidden="true">
   {
@@ -181,8 +205,8 @@ for (const L of LAYERS) {
         style={`--w:${p.width}px;width:${p.width}px;height:${p.height}px;top:${p.top};left:0;opacity:${p.opacity};animation-duration:${p.driftDur};animation-delay:${p.driftDelay}`}
       >
         <div
-          class="puff-bob"
-          style={`background-image:${p.bg};animation-duration:${p.bobDur};animation-delay:${p.bobDelay}`}
+          class={`puff-bob ${p.bg}`}
+          style={`animation-duration:${p.bobDur};animation-delay:${p.bobDelay}`}
         />
       </div>
     ))

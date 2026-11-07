@@ -84,9 +84,10 @@ export default defineConfig({
 
   build: {
     format: 'directory',
-    // Inline small (<4KB) stylesheets so the first paint never blocks on a
-    // separate CSS request. Larger sheets stay external for caching.
-    inlineStylesheets: 'auto',
+    // Inline every stylesheet: the whole site's CSS is ~7KB gzipped, so
+    // shipping it in the HTML beats two render-blocking requests on the
+    // critical path (first paint no longer waits on a CSS round trip).
+    inlineStylesheets: 'always',
     assets: '_assets',
   },
 });

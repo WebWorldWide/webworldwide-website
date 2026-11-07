@@ -119,73 +119,82 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
     ctx.stroke();
   }
 
-  // Pause the loop while the canvas is off-screen OR the tab is hidden —
-  // a long-running loop on a backgrounded page is wasted battery.
-  let onScreen = true;
-  let running = false;
-  let rot = 0;
-  let last = 0;
-
-  const shouldRun = (): boolean => !reducedMotion && onScreen && !document.hidden;
-
-  // Measure the canvas only when its size actually changes. Calling resize()
-  // (which reads clientWidth) every frame forced a synchronous layout 60×/s.
-  let needsResize = true;
-  if ('ResizeObserver' in window) {
-    new ResizeObserver(() => (needsResize = true)).observe(canvas);
-  }
-  // A slow wireframe spin is indistinguishable at 30fps; halve the work.
-  const MIN_FRAME_MS = 1000 / 30;
-  let lastDraw = 0;
-
-  function tick(now: number): void {
-    if (now - lastDraw < MIN_FRAME_MS - 1) {
-      if (shouldRun()) requestAnimationFrame(tick);
-      else {
-        running = false;
-        last = 0;
-      }
-      return;
-    }
-    lastDraw = now;
-    if (needsResize) {
-      needsResize = false;
-      resize();
-    }
-    if (last) rot += speedPerSec * Math.min(0.1, (now - last) / 1000);
-    last = now;
-    draw(rot);
-    if (shouldRun()) {
-      requestAnimationFrame(tick);
-    } else {
-      running = false;
-      last = 0;
-    }
-  }
-  function start(): void {
-    if (running || !shouldRun()) return;
-    running = true;
-    last = 0;
-    requestAnimationFrame(tick);
-  }
-
   resize();
-  if (reducedMotion) {
+  if (reducedMotion || speedPerSec === 0) {
     draw(0.6); // single static frame
-  } else {
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver((entries) => {
-        onScreen = entries[0]?.isIntersecting ?? true;
-        if (onScreen) start();
-      });
-      io.observe(canvas);
-    }
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) start();
-    });
-    start();
+    return;
   }
-  window.addEventListener('resize', () => (needsResize = true));
+
+  // Baked spin, played by the compositor. The wireframe repeats every
+  // meridian step (2π / meridians), so one step's worth of frames is drawn
+  // ONCE into a vertical strip and a steps() transform animation flips
+  // through them. Nothing runs on the main thread per frame — the old rAF
+  // loop forced a full style/layout pass every vsync (and with it every CSS
+  // animation on the page), capped at 30fps.
+  const period = (Math.PI * 2) / meridians / speedPerSec; // seconds per step
+  const FRAMES = Math.max(24, Math.min(120, Math.round(period * 120))); // 120fps
+  const fw = canvas.width;
+  const fh = canvas.height;
+  draw(0); // the canvas shows the first frame while the strip is drawn
+
+  // The strip canvas IS the animated reel: no image encoding, no URL.
+  const reel = document.createElement('canvas');
+  reel.className = 'globe-strip-reel';
+  reel.width = fw;
+  reel.height = fh * FRAMES;
+  reel.style.height = `${FRAMES * 100}%`;
+  const rctx = reel.getContext('2d');
+  if (!rctx) return;
+  const step = (Math.PI * 2) / meridians;
+
+  // Draw the frames in small batches during idle time so page load never
+  // sees a long task (all at once cost ~190ms of main thread on a slow phone).
+  const idle = (cb: () => void): void => {
+    if ('requestIdleCallback' in window) requestIdleCallback(cb, { timeout: 200 });
+    else setTimeout(cb, 16);
+  };
+  await new Promise<void>((done) => {
+    let k = 0;
+    const batch = (): void => {
+      const end = Math.min(FRAMES, k + 6);
+      for (; k < end; k++) {
+        draw((k / FRAMES) * step);
+        rctx.drawImage(canvas, 0, k * fh);
+      }
+      if (k < FRAMES) idle(batch);
+      else done();
+    };
+    idle(batch);
+  });
+  draw(0);
+
+  const host = canvas.parentElement;
+  if (!host) return;
+  const viewport = document.createElement('div');
+  viewport.className = 'globe-strip';
+  viewport.setAttribute('aria-hidden', 'true');
+  viewport.appendChild(reel);
+  host.insertBefore(viewport, canvas.nextSibling);
+
+  const anim = reel.animate(
+    [{ transform: 'translate3d(0, 0, 0)' }, { transform: 'translate3d(0, -100%, 0)' }],
+    { duration: period * 1000, iterations: Infinity, easing: `steps(${FRAMES}, jump-end)` },
+  );
+  canvas.style.visibility = 'hidden';
+
+  // Stop the (already cheap) compositor animation when it can't be seen.
+  const sync = (visible: boolean): void => {
+    if (visible && !document.hidden) anim.play();
+    else anim.pause();
+  };
+  let onScreen = true;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      onScreen = entries[0]?.isIntersecting ?? true;
+      sync(onScreen);
+    }).observe(viewport);
+  }
+  document.addEventListener('visibilitychange', () => sync(onScreen));
 }
 
 /** Initialize all globes matching a selector. */
