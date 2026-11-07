@@ -83,7 +83,7 @@
     "esbuild": "^0.28.1",
     "katex": "^0.17.0",
     "tsx": "^4.23.15",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "undici": "^7.28.0",
