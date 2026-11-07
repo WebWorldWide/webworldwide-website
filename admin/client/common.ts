@@ -585,14 +585,26 @@
     const input = /** @type {HTMLInputElement | null} */ document.getElementById('cmdk-input');
     if (!list || !input) return;
     const q = input.value.trim().toLowerCase();
-    cmdkVisible = TE.paletteCommands.filter(
-      (c) =>
-        !q ||
-        String(c.label).toLowerCase().includes(q) ||
-        String(c.hint || '')
-          .toLowerCase()
-          .includes(q),
-    );
+    // Rank: label starts with the query, then a word in the label starts
+    // with it, then the label contains it, then only the hint matches.
+    // Stable within each tier, so the curated command order is kept.
+    const rank = (/** @type {any} */ c) => {
+      if (!q) return 0;
+      const label = String(c.label).toLowerCase();
+      if (label.startsWith(q)) return 0;
+      if (label.split(/[^a-z0-9]+/).some((w) => w.startsWith(q))) return 1;
+      if (label.includes(q)) return 2;
+      return String(c.hint || '')
+        .toLowerCase()
+        .includes(q)
+        ? 3
+        : -1;
+    };
+    cmdkVisible = TE.paletteCommands
+      .map((c, i) => ({ c, i, r: rank(c) }))
+      .filter((x) => x.r >= 0)
+      .sort((a, b) => a.r - b.r || a.i - b.i)
+      .map((x) => x.c);
     if (!cmdkVisible.length) {
       list.innerHTML = `<li class="cmdk-empty">No matches.</li>`;
       cmdkIndex = -1;

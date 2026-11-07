@@ -658,6 +658,69 @@ body[data-page="login"] .auth-card {
   }
 }
 
+/* Homepage rail actions: four buttons must fit the narrowest rail
+   (300px at tablet widths) — Publish was being clipped. Buttons may shrink,
+   and the secondary icons drop out when the rail is tight. */
+.hp-rail {
+  container: hp-rail / inline-size;
+}
+.hp-rail-actions {
+  gap: 6px;
+}
+.hp-rail-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 8px;
+}
+.hp-rail-actions .hp-history-btn {
+  flex: 0 0 auto;
+}
+.hp-rail-actions .btn svg {
+  flex-shrink: 0;
+}
+@container hp-rail (width < 360px) {
+  #hp-discard svg,
+  #hp-save svg,
+  #hp-publish svg {
+    display: none;
+  }
+}
+
+/* Selected rows are tinted; the green "Published" label needs a darker
+   green there to keep 4.5:1. */
+.row-grid:has(input[type="checkbox"]:checked) .r-pill.pub {
+  color: #11573b;
+}
+
+/* Bulk-action bars float, so they take the floating radius (no pills). */
+.te-media-bulk-bar {
+  border-radius: var(--radius-lg);
+}
+
+/* Editor inspector: several open panels must scroll as a list, not each
+   get squeezed (Status, "Pick from library" and the social preview were
+   being clipped). */
+.ed-side > .ed-panel {
+  flex-shrink: 0;
+}
+
+/* The sticky formatting bar sat 16px below the top of the scroller (the
+   stage's top padding), so a sliver of text showed above it while
+   scrolling. Pin it to the very top instead. */
+@media (width > 800px) {
+  body[data-page="editor"] .te-editor-toolbar {
+    top: -16px;
+  }
+}
+
+/* Tablet portrait: keep the editor's top bar on one row. */
+@media (width <= 900px) {
+  body[data-page="editor"] .editor-metrics,
+  body[data-page="editor"] .topbar .ed-saved {
+    display: none;
+  }
+}
+
 /* Forced colors: marks drawn with borders/backgrounds must stay visible. */
 @media (forced-colors: active) {
   .side-item[aria-current="page"]::before {
