@@ -902,6 +902,7 @@ body[data-page="editor"] {
    keyboard (like Notes), keeping 44pt touch targets — not four stacked rows. */
 @media (width <= 800px) {
   .te-editor-toolbar-rich {
+    /* stylelint-disable-next-line declaration-no-important -- beats the editor component styles on phones */
     flex-wrap: nowrap !important;
     overflow-x: auto;
     overscroll-behavior-x: contain;

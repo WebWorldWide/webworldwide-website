@@ -31,13 +31,17 @@ const loadedLangs = {};
  */
 export async function getHighlighter(lang, theme) {
   if (!Object.prototype.hasOwnProperty.call(cache, theme)) {
+    // eslint-disable-next-line security/detect-object-injection -- theme is an own key (hasOwnProperty-guarded) of a module-private cache
     cache[/** @type {string} */ theme] = createHighlighter({
       themes: [theme],
       langs: [lang],
     });
+    // eslint-disable-next-line security/detect-object-injection -- theme is an own key (hasOwnProperty-guarded) of a module-private cache
     loadedLangs[/** @type {string} */ theme] = new Set([lang]);
   }
+  // eslint-disable-next-line security/detect-object-injection -- theme is an own key (hasOwnProperty-guarded) of a module-private cache
   const highlighter = await cache[/** @type {string} */ theme];
+  // eslint-disable-next-line security/detect-object-injection -- theme is an own key (hasOwnProperty-guarded) of a module-private cache
   const seen = loadedLangs[/** @type {string} */ theme];
   if (!seen.has(lang)) {
     try {

@@ -110,7 +110,9 @@ router.put('/:id', (req, res) => {
   const rows = read();
   const idx = rows.findIndex((r) => r.id === id);
   if (idx === -1) return res.status(404).json({ error: 'not_found' });
+  // eslint-disable-next-line security/detect-object-injection -- idx is a numeric index from findIndex
   const from = normPath(req.body?.from || rows[idx].from);
+  // eslint-disable-next-line security/detect-object-injection -- idx is a numeric index from findIndex
   const to = normPath(req.body?.to || rows[idx].to);
   const code = 301;
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
@@ -138,6 +140,7 @@ router.put('/:id', (req, res) => {
   rows[idx] = { id, from, to, code };
   write(rows);
   logActivity({ req, action: 'redirect.update', target: from, meta: { to, code } });
+  // eslint-disable-next-line security/detect-object-injection -- idx is a numeric index from findIndex
   res.json(rows[idx]);
 });
 

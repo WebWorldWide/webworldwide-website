@@ -62,7 +62,10 @@ function encrypt(plain) {
   return Buffer.concat([iv, tag, ct]).toString('base64');
 }
 
-/** @param {string} stored @returns {string|null} */
+/**
+ * @param {string} stored
+ * @returns {string|null}
+ */
 function decrypt(stored) {
   try {
     const buf = Buffer.from(String(stored), 'base64');

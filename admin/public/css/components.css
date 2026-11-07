@@ -1894,6 +1894,7 @@ body[data-page="login"] {
   .sidebar,
   .topbar,
   .topbar-search {
+    /* stylelint-disable-next-line declaration-no-important -- reduced transparency needs solid surfaces */
     background-color: var(--surface) !important;
   }
 }
@@ -1901,8 +1902,11 @@ body[data-page="login"] {
   .panel,
   .sidebar,
   .topbar {
+    /* stylelint-disable-next-line declaration-no-important -- system high-contrast colours must win */
     color: CanvasText !important;
+    /* stylelint-disable-next-line declaration-no-important -- system high-contrast colours must win */
     background-color: Canvas !important;
+    /* stylelint-disable-next-line declaration-no-important -- system high-contrast colours must win */
     border-color: CanvasText !important;
   }
 }
@@ -1910,7 +1914,9 @@ body[data-page="login"] {
   .side-foot .pip,
   .btn-new,
   .btn {
+    /* stylelint-disable-next-line declaration-no-important -- reduced motion must override every animation */
     transition: none !important;
+    /* stylelint-disable-next-line declaration-no-important -- reduced motion must override every animation */
     animation: none !important;
   }
 }

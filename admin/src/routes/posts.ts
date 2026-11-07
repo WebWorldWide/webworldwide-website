@@ -635,7 +635,10 @@ router.put('/:filename', (req, res) => {
     try {
       const { data: onDisk } = parsePost(readFileSync(oldPath, 'utf8'));
       for (const [k, v] of Object.entries(onDisk || {})) {
-        if (!EDITOR_MANAGED_KEYS.has(k) && !(k in data)) data[k] = v;
+        // Never copy prototype-shaped keys from a hand-edited file.
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+        // eslint-disable-next-line security/detect-object-injection -- k is an own front-matter key, prototype keys skipped above
+        if (!EDITOR_MANAGED_KEYS.has(k) && !Object.hasOwn(data, k)) data[k] = v;
       }
     } catch {
       /* new file or unreadable — nothing to preserve */

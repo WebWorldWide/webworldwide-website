@@ -454,11 +454,13 @@ router.post('/upload', (req, res, next) => {
       return upload.single('file')(req, res, (legacyErr) => {
         if (legacyErr) return handleMulterError(legacyErr, res);
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-        finalizeUploads([req.file], res).catch(next);
+        // eslint-disable-next-line promise/no-promise-in-callback, promise/no-callback-in-promise -- multer's callback API: async errors go to Express's error handler
+        void finalizeUploads([req.file], res).catch((err) => next(err));
       });
     }
     const files = /** @type {any[]} */ req.files || (req.file ? [req.file] : []);
-    finalizeUploads(files, res).catch(next);
+    // eslint-disable-next-line promise/no-promise-in-callback, promise/no-callback-in-promise -- multer's callback API: async errors go to Express's error handler
+    void finalizeUploads(files, res).catch((err) => next(err));
   });
 });
 

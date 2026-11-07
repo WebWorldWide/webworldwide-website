@@ -185,13 +185,16 @@ function pdfInfo(pdfPath) {
  * @param {string} text
  */
 function parsePdfInfo(text) {
+  // Null prototype: keys come from pdfinfo output, which includes metadata
+  // from the uploaded file (a crafted title could inject a "__proto__:" line).
   /** @type {Record<string, string>} */
-  const map = {};
+  const map = Object.create(null);
   for (const line of text.split('\n')) {
     const idx = line.indexOf(':');
     if (idx < 0) continue;
     const key = line.slice(0, idx).trim();
     const val = line.slice(idx + 1).trim();
+    // eslint-disable-next-line security/detect-object-injection -- map has a null prototype (see above)
     if (key) map[key] = val;
   }
   const pages = parseInt(map.Pages || '0', 10) || 0;

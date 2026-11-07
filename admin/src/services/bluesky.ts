@@ -88,7 +88,7 @@ let agentFactory = async () => {
 
 /**
  * Swap the agent factory used by every call below. Pass `null` to reset
- * to the real @atproto/api constructor.
+ * to the real `@atproto/api` constructor.
  *
  * @param {(() => Promise<any>) | null | undefined} fn
  */

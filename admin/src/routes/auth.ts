@@ -200,6 +200,7 @@ function createSession(
  * idle-expired, or absolute-expired sessions. Used by the /api gate.
  */
 export function resolveSession(req: Request): SessionUser | null {
+  // eslint-disable-next-line security/detect-object-injection -- SESSION_COOKIE is a module constant
   const raw = req.signedCookies?.[SESSION_COOKIE];
   if (!raw || typeof raw !== 'string' || raw.length > 128) return null;
   const idHash = hashId(raw);

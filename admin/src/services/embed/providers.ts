@@ -212,8 +212,8 @@ export const PROVIDERS = [
     name: 'youtube',
     match: matchYoutube,
     /**
-     * @param {URL} url @param {{ id: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ id: string }} m
      */
     async resolve(url, m) {
       const oembed = await fetchOEmbed(
@@ -230,8 +230,8 @@ export const PROVIDERS = [
     name: 'vimeo',
     match: matchVimeo,
     /**
-     * @param {URL} url @param {{ id: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ id: string }} m
      */
     async resolve(url, m) {
       const oembed = await fetchOEmbed(
@@ -248,8 +248,8 @@ export const PROVIDERS = [
     name: 'bluesky',
     match: matchBluesky,
     /**
-     * @param {URL} url @param {{ handle: string, rkey: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ handle: string, rkey: string }} m
      */
     async resolve(url, m) {
       const oembed = await fetchOEmbed(
@@ -267,8 +267,8 @@ export const PROVIDERS = [
     name: 'mastodon',
     match: matchMastodon,
     /**
-     * @param {URL} url @param {{ host: string, user: string, statusId: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ host: string, user: string, statusId: string }} m
      */
     async resolve(url, m) {
       // Per-instance oEmbed endpoint — the path is identical, but the
@@ -305,8 +305,8 @@ export const PROVIDERS = [
     name: 'gist',
     match: matchGist,
     /**
-     * @param {URL} url @param {{ owner: string, id: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ owner: string, id: string }} m
      */
     async resolve(url, m) {
       // Gist doesn't ship oEmbed. We synthesise a record so the cache
@@ -329,8 +329,8 @@ export const PROVIDERS = [
     name: 'codepen',
     match: matchCodepen,
     /**
-     * @param {URL} url @param {{ user: string, id: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ user: string, id: string }} m
      */
     async resolve(url, m) {
       const oembed = await fetchOEmbed(
@@ -361,8 +361,8 @@ export const PROVIDERS = [
     name: 'spotify',
     match: matchSpotify,
     /**
-     * @param {URL} url @param {{ kind: string, id: string }} m
-     * @param m
+     * @param {URL} url
+     * @param {{ kind: string, id: string }} m
      */
     async resolve(url, m) {
       const oembed = await fetchOEmbed(

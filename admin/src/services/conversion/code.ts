@@ -44,8 +44,9 @@ export const MAX_HIGHLIGHT_BYTES = 1 * 1024 * 1024;
  * Read at most `maxBytes` from the start of a file (UTF-8) without loading
  * the whole thing into memory — used for the truncated preview of an
  * oversize upload.
- * @param {string} path @param {number} maxBytes @returns {string}
- * @param maxBytes
+ * @param {string} path
+ * @param {number} maxBytes
+ * @returns {string}
  */
 function readPrefix(path, maxBytes) {
   const fd = openSync(path, 'r');
@@ -121,7 +122,8 @@ export async function processCode(ctx) {
   const size = safeSize(diskPath);
   const ext = extname(diskPath).toLowerCase();
   const language = Object.prototype.hasOwnProperty.call(EXT_TO_LANG, ext)
-    ? EXT_TO_LANG[/** @type {keyof typeof EXT_TO_LANG} */ ext]
+    ? // eslint-disable-next-line security/detect-object-injection -- ext is checked against EXT_TO_LANG keys
+      EXT_TO_LANG[/** @type {keyof typeof EXT_TO_LANG} */ ext]
     : 'text';
 
   const baseName = stripExt(basename(diskPath));

@@ -40,6 +40,8 @@ export default [
       'site/**',
       'admin/data/**',
       'admin/uploads/**',
+      // Byte-exact input for the code-preview test, not project source.
+      'admin/test/fixtures/**',
       // Browser output is generated from admin/client TypeScript.
       'admin/public/js/**',
       // Vendored third-party assets (self-hosted CDN replacements).
@@ -268,5 +270,31 @@ export default [
       'jsdoc/require-jsdoc': 'off',
       'jsdoc/tag-lines': 'off',
     },
+  },
+
+  // Every source file is TypeScript: tsc checks parameter and return types,
+  // so the JSDoc rules that demand type annotations (written for plain JS)
+  // only duplicate the type system. Keep the JSDoc *syntax* checks.
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
+      'jsdoc/require-param': 'off',
+      'jsdoc/require-param-type': 'off',
+      'jsdoc/require-param-description': 'off',
+      'jsdoc/require-returns': 'off',
+      'jsdoc/require-returns-type': 'off',
+      'jsdoc/require-returns-description': 'off',
+      'jsdoc/require-property-description': 'off',
+      'jsdoc/reject-any-type': 'off',
+      'jsdoc/no-undefined-types': 'off',
+    },
+  },
+
+  // Browser UI: object-injection is a server-side concern (attacker-chosen
+  // keys reaching objects). In the admin's own UI every key is a fixed map
+  // entry or a numeric index, so the rule is pure noise there.
+  {
+    files: ['admin/client/**/*.ts', 'scripts/dev/**/*.ts'],
+    rules: { 'security/detect-object-injection': 'off' },
   },
 ];

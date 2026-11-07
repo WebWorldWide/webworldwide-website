@@ -121,7 +121,7 @@
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.min(Math.floor(Math.log(n) / Math.log(k)), sizes.length - 1);
-    // eslint-disable-next-line security/detect-object-injection -- `i` is a bounded number from Math.min above.
+
     const unit = sizes[i];
     return `${parseFloat((n / Math.pow(k, i)).toFixed(dm))} ${unit}`;
   };
@@ -664,7 +664,7 @@
 
   function runActive() {
     if (cmdkIndex < 0 || cmdkIndex >= cmdkVisible.length) return;
-    // eslint-disable-next-line security/detect-object-injection -- cmdkIndex is bounded above.
+
     const cmd = cmdkVisible[cmdkIndex];
     if (!cmd) return;
     closePalette();
