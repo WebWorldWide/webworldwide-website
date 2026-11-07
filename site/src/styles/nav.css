@@ -119,8 +119,9 @@
   contain: strict;
 }
 .globe-strip-reel {
-  display: block;
-  width: 100%;
+  position: absolute;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   will-change: transform;
 }
 .wordmark-globe .globe-strip-reel {
