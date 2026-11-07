@@ -14,7 +14,7 @@ import type { PostEntry } from '@/lib/post-utils';
 import { siteConfig } from '@/lib/site-config';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import TermBar from '@components/TermBar.astro';
-import CommentForm from '@components/islands/CommentForm';
+import Comments from '@components/Comments.astro';
 
 import '@styles/blog.css';
 import '@styles/comments.css';
@@ -134,9 +134,7 @@ const remarkUrl =
               <span class="pip" aria-hidden="true"></span>Comments
             </h2>
           </div>
-          <CommentForm
-            client:visible
-            threadId={slug}
+           <Comments threadId={slug}
             remarkUrl={remarkUrl}
             remarkSiteId={siteConfig.comments.site_id}
           />

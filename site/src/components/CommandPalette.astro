@@ -1,0 +1,19 @@
+---
+/**
+ * Search palette for the blog index — no framework. The post list is
+ * embedded as JSON (title, url, slug, excerpt) and filtered in memory; the
+ * dialog markup is built only when the search pill is first clicked.
+ * See scripts/command-palette.ts for the keyboard + a11y behaviour.
+ */
+import type { PostSummary } from '@/lib/post-utils';
+
+interface Props {
+  posts: PostSummary[];
+}
+const { posts } = Astro.props;
+const data = posts.map((p) => ({ title: p.title, url: p.url, slug: p.slug, excerpt: p.excerpt }));
+---
+<script type="application/json" id="cmdk-data" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />
+<script>
+  import '../scripts/command-palette.ts';
+</script>

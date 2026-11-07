@@ -4,7 +4,6 @@
  *
  * Covers:
  *   - .astro pages, layouts, components
- *   - .tsx React islands
  *   - .ts content schema + endpoint code
  *   - .ts build scripts
  *   - vitest tests under src/__tests__ and test/
@@ -13,7 +12,6 @@
  *   - jsx-a11y — accessibility (every interactive element needs labels,
  *     no missing alt, role correctness, keyboard equivalents). Critical
  *     for the project's WCAG 2.2 AA gate.
- *   - react-hooks — exhaustive-deps and rules-of-hooks.
  *   - typescript-eslint recommended.
  */
 
@@ -24,8 +22,6 @@ import astroPlugin from 'eslint-plugin-astro';
 import * as astroParser from 'astro-eslint-parser';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import globals from 'globals';
 
@@ -84,50 +80,9 @@ export default [
     },
   },
 
-  // TSX (React islands)
-  {
-    files: ['src/components/islands/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-      react,
-      'react-hooks': reactHooks,
-      'jsx-a11y': jsxA11y,
-    },
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: { ecmaVersion: 2024, sourceType: 'module', ecmaFeatures: { jsx: true } },
-      globals: { ...globals.browser },
-    },
-    settings: { react: { version: '18.3' } },
-    rules: {
-      ...sharedRules,
-      ...tsPlugin.configs.recommended.rules,
-      ...react.configs.recommended.rules,
-      ...reactHooks.configs.recommended.rules,
-      ...a11yRules,
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
-      // New in eslint-plugin-react-hooks v7. It flags setState in effects as a
-      // perf smell, but the islands use it deliberately and correctly (reset
-      // state when the ⌘K palette closes; clamp the active index when the
-      // result list shrinks). These are tested by the e2e/a11y suite. Off
-      // rather than refactor working, covered components for an opinionated rule.
-      'react-hooks/set-state-in-effect': 'off',
-      // TypeScript itself resolves identifiers/types; `no-undef` only yields
-      // false positives here (e.g. the `JSX`/`React` type namespaces).
-      'no-undef': 'off',
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
-      ],
-    },
-  },
-
   // TS endpoints, content config, scripts
   {
     files: ['src/**/*.ts', 'scripts/**/*.ts', '*.ts'],
-    ignores: ['src/components/islands/**/*.{ts,tsx}', 'src/components/**/*.tsx'],
     plugins: { '@typescript-eslint': tsPlugin },
     languageOptions: {
       parser: tsParser,
@@ -152,8 +107,6 @@ export default [
     files: ['src/__tests__/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.{ts,tsx}'],
     plugins: {
       '@typescript-eslint': tsPlugin,
-      react,
-      'react-hooks': reactHooks,
       'jsx-a11y': jsxA11y,
     },
     languageOptions: {
@@ -163,7 +116,6 @@ export default [
     },
     rules: {
       ...sharedRules,
-      'react/react-in-jsx-scope': 'off',
       'jsx-a11y/click-events-have-key-events': 'off',
       'jsx-a11y/no-static-element-interactions': 'off',
     },

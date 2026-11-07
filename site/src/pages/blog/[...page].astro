@@ -15,7 +15,7 @@ import type { PostEntry, PostSummary } from '@/lib/post-utils';
 import { siteConfig } from '@/lib/site-config';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import TermBar from '@components/TermBar.astro';
-import CommandPalette from '@components/islands/CommandPalette';
+import CommandPalette from '@components/CommandPalette.astro';
 
 import '@styles/blog.css';
 import '@styles/cmdk.css';
@@ -58,7 +58,7 @@ const cards = page.data.map((p) => ({
 const pageTitle = page.currentPage === 1 ? 'Blog' : `Blog · Page ${page.currentPage}`;
 ---
 
-<BaseLayout title={pageTitle} description={metaDescription}>
+<BaseLayout title={pageTitle} description={metaDescription} preloadFonts={['mono700']}>
   <div class="frame">
     <!-- MASTHEAD -->
     <header class="card masthead">
@@ -134,7 +134,7 @@ const pageTitle = page.currentPage === 1 ? 'Blog' : `Blog · Page ${page.current
     }
   </div>
 
-  <CommandPalette posts={summaries} client:idle />
+  <CommandPalette posts={summaries} />
 </BaseLayout>
 
 <script>
