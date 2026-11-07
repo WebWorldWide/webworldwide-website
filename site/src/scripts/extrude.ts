@@ -45,7 +45,7 @@ export interface Fallback {
   ink?: string;
 }
 
-const GRID = 160; // trace resolution (px); walls are resolution-independent
+const GRID = 320; // trace resolution (px); walls are resolution-independent
 
 // 8-neighbourhood, clockwise on screen (y down), starting East.
 const DIRS: ReadonlyArray<readonly [number, number]> = [
@@ -209,7 +209,27 @@ function simplify(pts: Array<[number, number]>, eps: number): Array<[number, num
 function wallsFrom(data: ImageData, maxWalls: number): Wall[] {
   const contour = traceContour(data);
   if (contour.length < 8) return [];
-  const poly = simplify(contour, 0.9);
+  // The traced boundary steps pixel by pixel; average it along the loop
+  // first so curves come out as smooth arcs, not staircases.
+  const n = contour.length;
+  const R = 3;
+  const smooth: Array<[number, number]> = contour.map((_, i) => {
+    let sx = 0;
+    let sy = 0;
+    for (let k = -R; k <= R; k++) {
+      const q = contour[(i + k + n) % n];
+      sx += q[0];
+      sy += q[1];
+    }
+    return [sx / (2 * R + 1), sy / (2 * R + 1)];
+  });
+  // Finest outline that fits the wall budget (rounded corners stay round).
+  let eps = 0.12;
+  let poly = simplify(smooth, eps);
+  while (poly.length > maxWalls * 0.85 && eps < 8) {
+    eps *= 1.35;
+    poly = simplify(smooth, eps);
+  }
   const W = data.width;
   const px = data.data;
   const alphaAt = (x: number, y: number): number => {
@@ -224,7 +244,7 @@ function wallsFrom(data: ImageData, maxWalls: number): Wall[] {
     let g = 0;
     let b = 0;
     let n = 0;
-    for (const t of [1.5, 2.5, 3.5]) {
+    for (const t of [2, 3.5, 5]) {
       const ix = Math.round(x + inx * t);
       const iy = Math.round(y + iny * t);
       if (ix < 0 || iy < 0 || ix >= W || iy >= data.height) continue;
@@ -320,7 +340,7 @@ function wallsFrom(data: ImageData, maxWalls: number): Wall[] {
     return out;
   };
 
-  let tol = 60;
+  let tol = 48;
   let walls = build(tol);
   while (walls.length > maxWalls && tol < 800) {
     tol *= 1.5;

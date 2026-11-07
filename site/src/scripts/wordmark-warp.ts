@@ -9,11 +9,11 @@
  */
 import { makeGlobe } from './globe-nav.ts';
 
-const ENTRANCE_BASE = 400;
-const ENTRANCE_STAGGER = 70;
-const ENTRANCE_DUR = 900;
-const WARP_STAGGER = 70;
-const DWELL = 1100;
+const ENTRANCE_BASE = 120;
+const ENTRANCE_STAGGER = 38;
+const ENTRANCE_DUR = 700;
+const WARP_STAGGER = 40;
+const DWELL = 450;
 
 export function initWordmarkWarp(): void {
   const wm = document.querySelector<HTMLElement>('.wordmark');
@@ -109,7 +109,7 @@ export function initWordmarkWarp(): void {
   spans.forEach((s, i) => {
     setTimeout(
       () => {
-        s.style.transition = 'transform .9s cubic-bezier(.2, 1.2, .3, 1), opacity .6s ease-out';
+        s.style.transition = 'transform .7s cubic-bezier(.2, 1.2, .3, 1), opacity .45s ease-out';
         s.style.opacity = '1';
         s.style.transform = `translate(-50%, -50%) translate(${linearXs[i]}px, 0px) rotate(0deg)`;
       },
@@ -127,7 +127,8 @@ export function initWordmarkWarp(): void {
       const ty = R * Math.sin(theta);
       const rotDeg = ((theta + Math.PI / 2) * 180) / Math.PI;
       setTimeout(() => {
-        s.style.transition = 'transform 1.4s cubic-bezier(.55, .0, .2, 1.04), opacity .6s ease-out';
+        s.style.transition =
+          'transform 1.1s cubic-bezier(.55, .0, .2, 1.04), opacity .45s ease-out';
         s.style.opacity = '1';
         s.style.transform = `translate(-50%, -50%) translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) rotate(${rotDeg.toFixed(2)}deg)`;
       }, j * WARP_STAGGER);
@@ -144,7 +145,7 @@ export function initWordmarkWarp(): void {
       if (globe) globe.classList.add('on');
       const canvas = document.getElementById('wordmark-globe-canvas') as HTMLCanvasElement | null;
       if (canvas) makeGlobe(canvas, { speed: 0.012, chunkyPx: 80 }).catch(() => {});
-    }, 600);
+    }, 450);
   }, WARP_DELAY);
 
   // Re-place on resize once the warp is done.

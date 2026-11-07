@@ -2,171 +2,219 @@
  * Extruded 3D app icons — drag-to-spin with idle auto-spin.
  *
  * Each .spinner becomes a solid object (extrude.ts): front + back faces and
- * side walls that follow the icon's own silhouette and edge colours, shaded
- * as it turns. Pointer events drag, with click-vs-drag detection
- * (move > 6px = swallow click).
+ * side walls that follow the icon's own silhouette and edge colours.
  *
- * Keyboard equivalents (a11y):
- *   - Focus + Space toggles idle auto-spin
- *   - Arrow keys nudge rotation
+ * Smoothness: the idle spin (rotation + gentle nod) is a Web Animation on
+ * `transform`, so the compositor plays it at the display's refresh rate
+ * (120Hz included) with no main-thread work per frame. JavaScript only runs
+ * while the icon is being dragged or flung. Wall lighting is baked once into
+ * the object (light from the upper left of the icon), so it turns with it.
  *
- * Respects prefers-reduced-motion: drag still works but idle auto-spin
- * is disabled.
+ * Pointer events drag, with click-vs-drag detection (move > 6px = swallow
+ * click). Keyboard: Space toggles the spin, arrow keys nudge it.
+ * prefers-reduced-motion: no idle spin; drag still works.
  */
 
 import { isLiteDevice } from './perf.ts';
-import { buildSolid, renderSolid, shadeSolid, type Rendered } from './extrude.ts';
+import { buildSolid, renderSolid, shadeSolid } from './extrude.ts';
 
-// Fewer wall pieces on slow devices (each is a small 3D-transformed layer).
-const MAX_WALLS = isLiteDevice() ? 36 : 84;
+// Silhouette detail. Each wall is a small composited quad; rasterised once,
+// then only moved by the GPU, so high counts are cheap after the first paint.
+const MAX_WALLS = isLiteDevice() ? 96 : 260;
 const DEPTH = 44;
 const SIZE = 200; // .drift box (px); 172 on narrow screens — read at build
-// Frame budget: 60fps normally, 30fps on lite devices (a slow idle spin
-// looks identical at 30fps and halves the work).
-const MIN_FRAME_MS = isLiteDevice() ? 1000 / 30 : 0;
+const NOD_CYCLES = 2; // nods per revolution — keeps the loop seamless
 
 const reducedMotion = (): boolean =>
   typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+type Fallback = { label?: string; bg?: string; ink?: string };
+
 function attachSpinner(spinner: HTMLElement): void {
   const icon = spinner.getAttribute('data-icon');
-  const fallback = spinner.getAttribute('data-fallback');
+  const fallbackAttr = spinner.getAttribute('data-fallback');
   const drift = spinner.closest('.drift') as HTMLElement | null;
 
-  let parsedFallback: { label?: string; bg?: string; ink?: string } | null = null;
+  let fallback: Fallback | null = null;
   try {
-    parsedFallback = fallback ? JSON.parse(fallback) : null;
+    fallback = fallbackAttr ? JSON.parse(fallbackAttr) : null;
   } catch {
     /* malformed fallback config: plain placeholder */
   }
-  let rendered: Rendered | null = null;
+
+  // Per-icon idle character, so the four don't tumble in lockstep.
+  const spinBase = 18 + Math.random() * 14; // deg/s
+  const nodAmp = 10 + Math.random() * 8; // deg
+  const nodBase = -6;
+  const nodPhase = Math.random() * Math.PI * 2;
+  const revMs = (360 / spinBase) * 1000;
+
+  let rotX = nodBase + Math.sin(nodPhase) * nodAmp;
+  let rotY = Math.random() * 360;
+  let anim: Animation | null = null;
+  let animRy0 = rotY;
+  let spinning = !reducedMotion();
+  let onScreen = false;
+
   const size = (): number => spinner.clientWidth || SIZE;
-  const mount = (icn: string | null): Promise<void> =>
-    buildSolid(icn, parsedFallback || { label: '?' }, MAX_WALLS).then((solid) => {
-      rendered = renderSolid(spinner, solid, size(), DEPTH * (size() / SIZE));
-      shadeSolid(rendered, rotX, rotY);
-    });
+  const transformFor = (rx: number, ry: number): string =>
+    `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+  const nodAt = (t: number): number =>
+    nodBase + Math.sin(nodPhase + t * Math.PI * 2 * NOD_CYCLES) * nodAmp;
+
+  /** Current angles: from the running animation if there is one. */
+  function currentAngles(): [number, number] {
+    if (anim && anim.currentTime !== null) {
+      const ms = Number(anim.currentTime);
+      const t = (ms % revMs) / revMs;
+      return [nodAt(t), animRy0 + t * 360];
+    }
+    return [rotX, rotY];
+  }
+
+  /** (Re)start the compositor spin from the current pose. */
+  function startSpin(): void {
+    stopSpin();
+    if (!spinning || reducedMotion()) {
+      spinner.style.transform = transformFor(rotX, rotY);
+      return;
+    }
+    // Start the loop where the pose is now (no jump after a drag): pick the
+    // point in the nod cycle matching the current tilt, then offset the
+    // yaw so the keyframes pass through the current heading at that time.
+    const phase = Math.asin(Math.max(-1, Math.min(1, (rotX - nodBase) / nodAmp))) - nodPhase;
+    const t0 = (((phase / (Math.PI * 2 * NOD_CYCLES)) % 1) + 1) % 1;
+    animRy0 = rotY - t0 * 360;
+    const K = 48;
+    const frames: Keyframe[] = [];
+    for (let k = 0; k <= K; k++) {
+      const t = k / K;
+      frames.push({ transform: transformFor(nodAt(t), animRy0 + t * 360) });
+    }
+    spinner.style.transform = '';
+    anim = spinner.animate(frames, { duration: revMs, iterations: Infinity, easing: 'linear' });
+    anim.currentTime = t0 * revMs;
+    if (!onScreen || document.hidden) anim.pause();
+  }
+
+  function stopSpin(): void {
+    if (anim) {
+      [rotX, rotY] = currentAngles();
+      anim.cancel();
+      anim = null;
+    }
+    spinner.style.transform = transformFor(rotX, rotY);
+  }
+
+  function syncTimers(): void {
+    if (!anim) return;
+    if (onScreen && !document.hidden) anim.play();
+    else anim.pause();
+  }
+
+  const mount = async (src: string | null): Promise<void> => {
+    const solid = await buildSolid(src, fallback || { label: '?' }, MAX_WALLS);
+    const rendered = renderSolid(spinner, solid, size(), DEPTH * (size() / SIZE));
+    // Baked lighting: shade once for the icon's front-on pose.
+    shadeSolid(rendered, -8, -24);
+  };
+  void (async () => {
+    try {
+      await mount(icon);
+    } catch {
+      // An icon that fails to load degrades to the drawn placeholder tile.
+      await mount(null).catch(() => undefined);
+    }
+  })();
 
   if (drift) {
     drift.style.animationDelay = `${-Math.random() * 5.4}s`;
     drift.style.animationDuration = `${4.8 + Math.random() * 2.4}s`;
   }
 
-  // Spinning is a custom pointer gesture — suppress the browser's native drag
-  // (the "dragging a PNG" ghost + no-drop cursor) on the icon and its layers.
+  // Spinning is a custom pointer gesture — suppress the browser's native drag.
   spinner.setAttribute('draggable', 'false');
   spinner.addEventListener('dragstart', (e) => e.preventDefault());
 
-  let rotX = -8 + (Math.random() - 0.5) * 6;
-  let rotY = Math.random() * 360;
-  let velY = reducedMotion() ? 0 : 16 + Math.random() * 10;
-  let velX = 0;
+  startSpin();
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      onScreen = entries[0]?.isIntersecting ?? true;
+      syncTimers();
+    }).observe(spinner);
+  } else {
+    onScreen = true;
+  }
+  syncTimers();
+  document.addEventListener('visibilitychange', syncTimers);
+
+  // Hover (mouse/pen): spin faster and pop (scale is its own transform
+  // property, so it composes with the animation; CSS transitions it).
+  spinner.addEventListener('pointerenter', (e) => {
+    if (e.pointerType === 'touch') return;
+    spinner.classList.add('is-hover');
+    if (anim) anim.updatePlaybackRate(2.4);
+  });
+  spinner.addEventListener('pointerleave', () => {
+    spinner.classList.remove('is-hover');
+    if (anim) anim.updatePlaybackRate(1);
+  });
+
+  // Drag: the pose follows the pointer; a fling coasts, then the idle spin
+  // resumes from wherever it came to rest.
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
   let lastT = 0;
+  let velX = 0;
+  let velY = 0;
   let moveSum = 0;
-  let touched = false;
-  let touchedAt = 0;
-  let hovering = false;
-  let scale = 1;
+  let coastRaf = 0;
 
-  // Per-icon idle character, so the four don't tumble in lockstep.
-  const spinBase = 18 + Math.random() * 14; // idle Y-spin speed (deg/s)
-  const wobbleFreq = 0.5 + Math.random() * 0.5; // X-nod frequency
-  const wobblePhase = Math.random() * Math.PI * 2; // X-nod desync
-  const wobbleAmp = 10 + Math.random() * 8; // X-nod amplitude (deg)
-
-  function apply(): void {
-    if (rotX > 72) rotX = 72;
-    if (rotX < -72) rotX = -72;
-    spinner.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${scale.toFixed(3)})`;
-    if (rendered) shadeSolid(rendered, rotX, rotY);
+  const clampX = (): void => {
+    rotX = Math.max(-72, Math.min(72, rotX));
+  };
+  function pose(): void {
+    clampX();
+    spinner.style.transform = transformFor(rotX, rotY);
   }
-  apply();
-  // An unreachable icon degrades to the drawn placeholder tile.
-  mount(icon).catch(() => mount(null).catch(() => undefined));
 
-  let lastFrame = performance.now();
-  let onScreen = true;
-  let running = false;
-  function loop(now: number): void {
-    if (MIN_FRAME_MS && now - lastFrame < MIN_FRAME_MS - 1) {
-      if (onScreen && !document.hidden) requestAnimationFrame(loop);
-      else running = false;
-      return;
-    }
-    const dt = Math.min(0.06, (now - lastFrame) / 1000);
-    lastFrame = now;
-    // Ease the hover "pop" every frame, even mid-drag.
-    const targetScale = hovering && !reducedMotion() ? 1.07 : 1;
-    scale += (targetScale - scale) * Math.min(1, dt * 8);
-    if (!dragging) {
-      const drag = Math.pow(0.99, dt * 60); // gentle — flings keep spinning longer
+  function coast(): void {
+    cancelAnimationFrame(coastRaf);
+    let last = performance.now();
+    const step = (now: number): void => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const drag = Math.pow(0.94, dt * 60);
       velY *= drag;
       velX *= drag;
       rotY += velY * dt;
       rotX += velX * dt;
-      const idle = !touched || performance.now() - touchedAt > 1500;
-      if (idle && !reducedMotion()) {
-        const t = now / 1000;
-        const target = hovering ? spinBase * 2.6 : spinBase;
-        velY += (target - velY) * Math.min(1, dt * 0.8);
-        // Gentle multi-axis nod instead of resting at a fixed tilt.
-        const amp = hovering ? wobbleAmp * 1.6 : wobbleAmp;
-        const targetX = -6 + Math.sin(t * wobbleFreq + wobblePhase) * amp;
-        rotX += (targetX - rotX) * Math.min(1, dt * 1.1);
-        velX *= 0.9; // let the wobble own the X axis once settled
+      pose();
+      if (Math.abs(velY) > spinBase * 1.2 || Math.abs(velX) > 20) {
+        coastRaf = requestAnimationFrame(step);
+      } else {
+        coastRaf = 0;
+        startSpin();
+        syncTimers();
       }
-    }
-    apply();
-    if (onScreen && !document.hidden) requestAnimationFrame(loop);
-    else running = false;
+    };
+    coastRaf = requestAnimationFrame(step);
   }
-  function startLoop(): void {
-    if (running || !onScreen || document.hidden) return;
-    running = true;
-    lastFrame = performance.now();
-    requestAnimationFrame(loop);
-  }
-  startLoop();
-  // Pause this icon's spin loop while it's scrolled off-screen or the tab is
-  // hidden (the apps section sits mid-page; four 60fps loops are wasteful —
-  // and a drain — when unseen).
-  if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries) => {
-      onScreen = entries[0]?.isIntersecting ?? true;
-      if (onScreen) startLoop();
-    });
-    io.observe(spinner);
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) startLoop();
-  });
-
-  // Hover (mouse/pen): perk up — spin faster + pop in scale.
-  spinner.addEventListener('pointerenter', (e) => {
-    if (e.pointerType === 'touch') return;
-    hovering = true;
-    touched = true;
-    touchedAt = 0; // engage the lively idle immediately
-    if (!reducedMotion() && Math.abs(velY) < spinBase) velY += 36;
-  });
-  spinner.addEventListener('pointerleave', () => {
-    hovering = false;
-  });
 
   spinner.addEventListener('pointerdown', (e) => {
     dragging = true;
-    touched = true;
-    touchedAt = performance.now();
+    cancelAnimationFrame(coastRaf);
+    stopSpin();
+    syncTimers();
     spinner.setPointerCapture(e.pointerId);
     lastX = e.clientX;
     lastY = e.clientY;
     lastT = performance.now();
     moveSum = 0;
-    velY = 0;
     velX = 0;
+    velY = 0;
   });
   spinner.addEventListener('pointermove', (e) => {
     if (!dragging) return;
@@ -176,15 +224,13 @@ function attachSpinner(spinner: HTMLElement): void {
     const dy = e.clientY - lastY;
     rotY += dx * 0.5;
     rotX -= dy * 0.35;
-    velY = (dx * 0.5) / (dt / 1000);
-    velX = -(dy * 0.35) / (dt / 1000);
-    velY = Math.max(-2400, Math.min(2400, velY));
-    velX = Math.max(-1400, Math.min(1400, velX));
+    velY = Math.max(-2400, Math.min(2400, (dx * 0.5) / (dt / 1000)));
+    velX = Math.max(-1400, Math.min(1400, -(dy * 0.35) / (dt / 1000)));
     moveSum += Math.abs(dx) + Math.abs(dy);
     lastX = e.clientX;
     lastY = e.clientY;
     lastT = now;
-    apply();
+    pose();
   });
   const end = (e: PointerEvent): void => {
     if (!dragging) return;
@@ -194,43 +240,56 @@ function attachSpinner(spinner: HTMLElement): void {
     } catch {
       /* already released */
     }
+    // A stale velocity (pointer held still before release) shouldn't fling.
+    if (performance.now() - lastT > 80) {
+      velX = 0;
+      velY = 0;
+    }
+    coast();
   };
   spinner.addEventListener('pointerup', end);
   spinner.addEventListener('pointercancel', end);
   spinner.addEventListener('lostpointercapture', () => {
-    dragging = false;
+    if (dragging) {
+      dragging = false;
+      coast();
+    }
   });
 
   // a11y: keyboard equivalents
   spinner.setAttribute('tabindex', '0');
   spinner.addEventListener('keydown', (e) => {
     let handled = true;
+    const nudge = (fn: () => void): void => {
+      stopSpin();
+      fn();
+      pose();
+      if (spinning) startSpin();
+      syncTimers();
+    };
     switch (e.key) {
       case ' ':
-        // toggle auto-spin
-        velY = velY === 0 ? 24 : 0;
-        touched = true;
-        touchedAt = performance.now();
+        spinning = !spinning;
+        if (spinning) startSpin();
+        else stopSpin();
+        syncTimers();
         break;
       case 'ArrowLeft':
-        rotY -= 10;
+        nudge(() => (rotY -= 10));
         break;
       case 'ArrowRight':
-        rotY += 10;
+        nudge(() => (rotY += 10));
         break;
       case 'ArrowUp':
-        rotX -= 6;
+        nudge(() => (rotX -= 6));
         break;
       case 'ArrowDown':
-        rotX += 6;
+        nudge(() => (rotX += 6));
         break;
       default:
         handled = false;
     }
-    if (handled) {
-      e.preventDefault();
-      apply();
-    }
+    if (handled) e.preventDefault();
   });
 
   // Click handling on the parent <a>:
@@ -241,7 +300,6 @@ function attachSpinner(spinner: HTMLElement): void {
   //    fallback. Tiles with no destination ("coming soon") just no-op.
   const link = spinner.closest('a');
   if (link) {
-    // Stop the anchor itself from starting a native link-drag while spinning.
     link.setAttribute('draggable', 'false');
     link.addEventListener('dragstart', (e) => e.preventDefault());
     link.addEventListener(
@@ -269,12 +327,22 @@ function attachSpinner(spinner: HTMLElement): void {
 export function initAppSpinners(selector = '[data-spin]'): void {
   const spinners = [...document.querySelectorAll<HTMLElement>(selector)];
   if (!spinners.length) return;
-  // Don't trace + build the solids during page load for a section below the fold:
-  // wait until it's within a screen of the viewport, then build in idle time.
+  // Don't trace + build the solids during page load for a section below the
+  // fold: wait until it's within a screen of the viewport, then build in
+  // idle time.
   const build = (): void => {
-    const run = (): void => spinners.forEach(attachSpinner);
-    if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 600 });
-    else setTimeout(run, 0);
+    // One icon per idle slot, so tracing + building never lands as a single
+    // long task while the visitor is scrolling toward the section.
+    const queue = [...spinners];
+    const next = (): void => {
+      const el = queue.shift();
+      if (!el) return;
+      attachSpinner(el);
+      if ('requestIdleCallback' in window) requestIdleCallback(next, { timeout: 400 });
+      else setTimeout(next, 16);
+    };
+    if ('requestIdleCallback' in window) requestIdleCallback(next, { timeout: 400 });
+    else setTimeout(next, 0);
   };
   if (!('IntersectionObserver' in window)) return build();
   const io = new IntersectionObserver(

@@ -107,3 +107,23 @@
     height: 44px;
   }
 }
+
+/* Baked globe spin (scripts/globe-nav.ts): a strip of pre-drawn frames
+   flipped by a steps() transform animation on the compositor. */
+.globe-strip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+  contain: strict;
+}
+.globe-strip-reel {
+  display: block;
+  width: 100%;
+  will-change: transform;
+}
+.wordmark-globe .globe-strip-reel {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
