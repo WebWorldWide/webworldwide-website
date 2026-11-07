@@ -135,15 +135,34 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
   const FRAMES = Math.max(24, Math.min(120, Math.round(period * 120))); // 120fps
   const fw = canvas.width;
   const fh = canvas.height;
-  draw(0); // the canvas shows the first frame while the strip is drawn
+  draw(0); // the canvas shows the first frame while the sheet is drawn
 
-  // The strip canvas IS the animated reel: no image encoding, no URL.
-  const reel = document.createElement('canvas');
+  // Frames go in a compact square-ish SHEET (not a tall strip): a strip of
+  // 75 frames was ~7,500px tall, which the compositor rasterises only near
+  // the visible window — jumping to an unrastered part showed blank
+  // (white) for a frame or two, about twice a second. A ~900px sheet is
+  // rastered whole, once. Each cell has a transparent gutter so sub-pixel
+  // positioning can never bleed a neighbouring frame into the edges.
+  const G = 2; // gutter, device px
+  const cols = Math.ceil(Math.sqrt(FRAMES));
+  const rows = Math.ceil(FRAMES / cols);
+  const cw = fw + 2 * G;
+  const ch = fh + 2 * G;
+  const sheet = document.createElement('canvas');
+  sheet.width = cw * cols;
+  sheet.height = ch * rows;
+  // The animated layer is a plain image of the sheet, not a live canvas:
+  // a canvas used as an animated layer can drop its backing store for a
+  // frame (seen as the nav globe blanking), an image layer cannot.
+  const reel = document.createElement('div');
   reel.className = 'globe-strip-reel';
-  reel.width = fw;
-  reel.height = fh * FRAMES;
-  reel.style.height = `${FRAMES * 100}%`;
-  const rctx = reel.getContext('2d');
+  // Sized in % of the viewport so it tracks CSS size changes; offset by one
+  // gutter so the viewport shows exactly one frame.
+  reel.style.width = `${(cw * cols * 100) / fw}%`;
+  reel.style.height = `${(ch * rows * 100) / fh}%`;
+  reel.style.left = `${(-G * 100) / fw}%`;
+  reel.style.top = `${(-G * 100) / fh}%`;
+  const rctx = sheet.getContext('2d');
   if (!rctx) return;
   const step = (Math.PI * 2) / meridians;
 
@@ -159,7 +178,7 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
       const end = Math.min(FRAMES, k + 6);
       for (; k < end; k++) {
         draw((k / FRAMES) * step);
-        rctx.drawImage(canvas, 0, k * fh);
+        rctx.drawImage(canvas, (k % cols) * cw + G, Math.floor(k / cols) * ch + G);
       }
       if (k < FRAMES) idle(batch);
       else done();
@@ -167,6 +186,24 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
     idle(batch);
   });
   draw(0);
+
+  // Encode off the main thread (toBlob), then hand it over as a data: URL
+  // (the site CSP allows data: images, not blob:).
+  const url = await new Promise<string | null>((resolve) => {
+    sheet.toBlob((blob) => {
+      if (!blob) return resolve(null);
+      const fr = new FileReader();
+      fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : null);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    }, 'image/png');
+  });
+  if (!url) return;
+  // Decode before it goes on screen, so the first frame never shows empty.
+  const img = new Image();
+  img.src = url;
+  await img.decode().catch(() => undefined);
+  reel.style.backgroundImage = `url("${url}")`;
 
   const host = canvas.parentElement;
   if (!host) return;
@@ -176,10 +213,20 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
   viewport.appendChild(reel);
   host.insertBefore(viewport, canvas.nextSibling);
 
-  const anim = reel.animate(
-    [{ transform: 'translate3d(0, 0, 0)' }, { transform: 'translate3d(0, -100%, 0)' }],
-    { duration: period * 1000, iterations: Infinity, easing: `steps(${FRAMES}, jump-end)` },
-  );
+  // One keyframe per frame, each held (step-end) until the next: a single
+  // compositor animation walks the sheet cell by cell, wrap included.
+  const keyframes: Keyframe[] = [];
+  for (let k = 0; k <= FRAMES; k++) {
+    const f = k % FRAMES;
+    const x = ((f % cols) * 100) / cols;
+    const y = (Math.floor(f / cols) * 100) / rows;
+    keyframes.push({
+      offset: k / FRAMES,
+      easing: 'step-end',
+      transform: `translate3d(-${x}%, -${y}%, 0)`,
+    });
+  }
+  const anim = reel.animate(keyframes, { duration: period * 1000, iterations: Infinity });
   canvas.style.visibility = 'hidden';
 
   // Stop the (already cheap) compositor animation when it can't be seen.
