@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Proof that CMS-authored image alignment survives the live markdown
  * pipeline. The admin editor serialises an aligned image as a single-line

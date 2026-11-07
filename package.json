@@ -2,7 +2,7 @@
   "name": "webworldwide-website",
   "version": "1.0.0",
   "private": true,
-  "description": "Web World Wide — Astro static site + Node admin CMS. This root package orchestrates lint, test, and CI across the monorepo (site/, admin/, migrate/).",
+  "description": "Web World Wide \u2014 Astro static site + Node admin CMS. This root package orchestrates lint, test, and CI across the monorepo (site/, admin/, migrate/).",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -19,7 +19,7 @@
     "lint:types": "tsc --noEmit -p tsconfig.json && npm --prefix admin run typecheck",
     "lint:html-admin": "htmlhint --config .htmlhintrc \"admin/public/*.html\"",
     "lint:html-site": "htmlhint --config .htmlhintrc.site \"site/dist/**/*.html\"",
-    "lint:shell": "shellcheck scripts/*.sh || echo 'shellcheck not installed locally — runs in CI'",
+    "lint:shell": "shellcheck scripts/*.sh || echo 'shellcheck not installed locally \u2014 runs in CI'",
     "lint:site": "npm --prefix site run lint",
     "fix": "npm-run-all --sequential lint:prettier:fix lint:js:fix lint:css:fix",
     "test": "npm-run-all --continue-on-error --sequential test:site test:admin",
@@ -49,34 +49,34 @@
     "prepare": "husky || true && npm --prefix admin run build:client --silent || true"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.63.0",
-    "@types/node": "^26.6.2",
-    "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^10.11.0",
-    "eslint-plugin-jsdoc": "^63.3.3",
-    "eslint-plugin-n": "^18.3.0",
-    "eslint-plugin-promise": "^7.1.0",
-    "eslint-plugin-security": "^4.0.1",
-    "globals": "^17.12.0",
-    "htmlhint": "^1.1.4",
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-jsdoc": "^65.4.5",
+    "eslint-plugin-n": "^18.5.0",
+    "eslint-plugin-promise": "^7.3.0",
+    "eslint-plugin-security": "^4.2.1",
+    "globals": "^17.14.0",
+    "htmlhint": "^1.9.2",
     "husky": "^9.1.7",
-    "jiti": "^2.6.1",
-    "jsdom": "^30.1.3",
-    "lighthouse": "^13.5.0",
-    "lint-staged": "^17.5.1",
+    "jiti": "^2.7.0",
+    "jsdom": "^31.0.0",
+    "lighthouse": "^13.6.0",
+    "lint-staged": "^17.6.0",
     "markdownlint-cli2": "^0.24.0",
-    "npm-run-all2": "^9.0.2",
-    "prettier": "^3.9.9",
-    "stylelint": "^17.15.0",
-    "stylelint-config-standard": "^40.0.0",
+    "npm-run-all2": "^9.0.4",
+    "prettier": "^3.9.10",
+    "stylelint": "^18.0.0",
+    "stylelint-config-standard": "^41.0.0",
     "stylelint-no-unsupported-browser-features": "^8.1.2",
-    "stylelint-order": "^8.1.1",
+    "stylelint-order": "^8.1.3",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1",
-    "vitest": "^4.1.9"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
   },
   "lint-staged": {
     "*.{ts,tsx,astro}": [
@@ -102,6 +102,12 @@
     "undici": "^7.28.0",
     "ws": "^8.21.0",
     "markdown-it": "^14.2.0",
-    "js-yaml": "^4.2.0"
+    "js-yaml": "^4.2.0",
+    "minimatch@>=7 <11.0.1": "^11.0.1",
+    "katex": "^0.19.1",
+    "re2js": "^2.9.1",
+    "htmlhint": {
+      "glob": "^14.0.2"
+    }
   }
 }

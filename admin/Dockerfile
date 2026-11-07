@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 
 # Native modules compile here when a prebuilt binary is unavailable. The
 # compiler toolchain never reaches the production image.
@@ -20,7 +20,7 @@ COPY admin/scripts/ ./scripts/
 COPY site/src/scripts/extrude.ts ../site/src/scripts/extrude.ts
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 
 # Runtime-only tools used by publishing, health checks, and media conversion.
 RUN apt-get update && apt-get install -y --no-install-recommends \
