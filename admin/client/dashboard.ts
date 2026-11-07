@@ -165,7 +165,7 @@
         // invalid HTML and several browsers flatten it.
         return `
         <div class="row-grid" data-filename="${fn}">
-          <a class="r-link" href="${href}" aria-label="Edit ${title}">
+          <a class="r-link" href="${href}">
             <span class="r-title-wrap">
               <span class="r-pill ${pillCls}">${pillLabel}</span>
               <span class="r-title">${title}</span>
