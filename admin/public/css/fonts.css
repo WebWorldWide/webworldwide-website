@@ -145,3 +145,19 @@
   font-display: swap;
   src: url("/fonts/cormorant-garamond-600.woff2") format("woff2");
 }
+/* Homepage preview: the public wordmark is Cormorant 700 and the blog
+   excerpts are italic 500+ (OFL, from @fontsource/cormorant-garamond). */
+@font-face {
+  font-family: "Cormorant Garamond";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/cormorant-garamond-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  font-style: italic;
+  font-weight: 500 600;
+  font-display: swap;
+  src: url("/fonts/cormorant-garamond-500-italic.woff2") format("woff2");
+}

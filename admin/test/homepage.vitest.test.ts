@@ -186,11 +186,11 @@ describe('structural edits', () => {
   it('adds an app item to the rail and the preview', async () => {
     await boot();
     openSection('apps');
-    expect(document.querySelectorAll('#hp-canvas [data-pv="apps"] .pv-app').length).toBe(2);
+    expect(document.querySelectorAll('#hp-canvas [data-pv="apps"] .pvx-app').length).toBe(2);
 
     document.querySelector('[data-act="app-add"]').click();
 
-    expect(document.querySelectorAll('#hp-canvas [data-pv="apps"] .pv-app').length).toBe(3);
+    expect(document.querySelectorAll('#hp-canvas [data-pv="apps"] .pvx-app').length).toBe(3);
     expect(document.querySelectorAll('.hp-sec[data-id="apps"] .hp-item').length).toBe(3);
     expect(document.getElementById('hp-dirty').classList.contains('unsaved')).toBe(true);
   });
@@ -199,11 +199,11 @@ describe('structural edits', () => {
     await boot();
     openSection('socials');
     // MODEL hides only `threads`, so 7 of the 8 ordered tiles show.
-    expect(document.querySelectorAll('#hp-canvas [data-pv="socials"] .pv-social').length).toBe(7);
+    expect(document.querySelectorAll('#hp-canvas [data-pv="socials"] .pvx-tile').length).toBe(7);
 
     document.querySelector('[data-act="soc-toggle"][data-key="youtube"]').click();
 
-    expect(document.querySelectorAll('#hp-canvas [data-pv="socials"] .pv-social').length).toBe(6);
+    expect(document.querySelectorAll('#hp-canvas [data-pv="socials"] .pvx-tile').length).toBe(6);
     // Saving now sends youtube in socials.hidden.
     document.getElementById('hp-save').click();
     await flush();
@@ -243,15 +243,15 @@ describe('live preview', () => {
 
   it('re-renders the edited hero word without rebuilding the rail', async () => {
     await boot();
-    expect(document.querySelector('#hp-canvas .pv-word').textContent).toBe('Web');
+    expect(document.querySelector('#hp-canvas .pvx-wordmark').textContent).toMatch(/^Web •/);
 
     const input = type('hero.words.0', 'Wob');
 
     // The preview rebuild trails typing by ~180ms (debounced — a full
     // innerHTML rebuild per keystroke is too heavy on a Pi).
-    expect(document.querySelector('#hp-canvas .pv-word').textContent).toBe('Web');
+    expect(document.querySelector('#hp-canvas .pvx-wordmark').textContent).toMatch(/^Web •/);
     await new Promise((r) => setTimeout(r, 250));
-    expect(document.querySelector('#hp-canvas .pv-word').textContent).toBe('Wob');
+    expect(document.querySelector('#hp-canvas .pvx-wordmark').textContent).toMatch(/^Wob •/);
     // The input was not re-rendered out from under the typist.
     expect(document.querySelector('[data-path="hero.words.0"]')).toBe(input);
   });

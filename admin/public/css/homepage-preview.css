@@ -1,0 +1,941 @@
+/* ==========================================================================
+   Homepage draft preview — a replica of the public homepage.
+
+   The page is laid out at a real viewport width (.pvx-desktop 1280px,
+   .pvx-phone 390px) with values ported from site/src/styles/{home,nav,sky}.css
+   and the BlogCta/TermBar components, then zoomed to the pane by
+   homepage.ts (fitPreview). Keep these in step with the site when its
+   homepage design changes.
+   ========================================================================== */
+
+.hp-canvas {
+  --pv-ink: #0e2960;
+  --pv-ink-soft: #2a4a90;
+  --pv-sky: #1e68f0;
+  --pv-sky-deep: #1450c8;
+  --pv-cherry: #ec5a2b;
+  --pv-cherry-strong: #b04708;
+  --pv-sun: #28b083;
+  --pv-sun-strong: #1e6d50;
+  --pv-paper-warm: #eef3fb;
+  --pv-serif: "Cormorant Garamond", "Apple Garamond", Garamond, serif;
+  --pv-mono: "Space Mono", ui-monospace, Menlo, monospace;
+  --pv-pixel: "VT323", ui-monospace, monospace;
+
+  width: auto;
+  max-width: none;
+  /* clip (not hidden) so the sticky sky + nav inside still stick to the
+     preview scroller. */
+  overflow: clip;
+  background: var(--pv-sky);
+}
+
+.pvx {
+  --pvw: 1280px;
+
+  position: relative;
+  width: var(--pvw);
+  color: var(--pv-ink);
+  background: #2e7af2;
+  -webkit-font-smoothing: antialiased;
+}
+.pvx-phone {
+  --pvw: 390px;
+}
+
+/* ── Sky: sticks to the preview viewport like the site's fixed sky ───────── */
+.pvx-sky {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: var(--pvh, 800px);
+  margin-bottom: calc(-1 * var(--pvh, 800px));
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--pv-sky-deep) 0%, var(--pv-sky) 38%, #2e7af2 100%);
+}
+.pvx-sky-puffs {
+  position: absolute;
+  inset: 0;
+  opacity: 0.72;
+}
+.pvx-puff {
+  position: absolute;
+  left: 0;
+  image-rendering: pixelated;
+  animation: pvx-drift linear infinite;
+}
+.pvx-puff-bob {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: pvx-bob ease-in-out infinite;
+}
+@keyframes pvx-drift {
+  from {
+    transform: translate3d(calc(-1 * var(--w, 200px) - 100px), 0, 0);
+  }
+  to {
+    transform: translate3d(calc(var(--pvw) + 100px), 0, 0);
+  }
+}
+@keyframes pvx-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ── Nav pill (nav.css) ─────────────────────────────────────────────────── */
+.pvx-navwrap {
+  position: sticky;
+  top: 14px;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  height: 0;
+  pointer-events: none;
+}
+.pvx-nav {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: max-content;
+  padding: 5px 10px 5px 5px;
+  background: #fff;
+  border: 3px solid var(--pv-ink);
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--pv-ink);
+}
+.pvx-navglobe {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  background: #fff url("/logo.png") center / 82% no-repeat;
+  border: 2px solid var(--pv-ink);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    2px 2px 0 var(--pv-ink);
+}
+.pvx-navlink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  font-family: var(--pv-pixel);
+  font-size: 18px;
+  color: var(--pv-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.pvx-nav i {
+  width: 2px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--pv-ink);
+}
+.pvx-phone .pvx-navlink {
+  padding: 8px 10px;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+}
+.pvx-phone .pvx-nav i {
+  display: none;
+}
+
+/* ── Blocks: selection + edit tag stay legible at any zoom ───────────────── */
+.pvx .pv-block {
+  z-index: 1;
+}
+.pvx .pv-block:hover::after {
+  box-shadow: inset 0 0 0 calc(2px / var(--pvz, 1)) rgb(255 255 255 / 60%);
+}
+.pvx .pv-block.sel::after {
+  box-shadow: inset 0 0 0 calc(3px / var(--pvz, 1)) #fff;
+}
+.pvx .pv-tag {
+  top: calc(10px / var(--pvz, 1));
+  right: calc(10px / var(--pvz, 1));
+  padding: calc(2px / var(--pvz, 1)) calc(8px / var(--pvz, 1));
+  font-family: var(--font-ui);
+  font-size: calc(11px / var(--pvz, 1));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: calc(4px / var(--pvz, 1));
+}
+.pvx .pv-block:focus-visible {
+  outline: calc(3px / var(--pvz, 1)) solid #fff;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.pvx-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 600px;
+  padding: 84px 20px 36px;
+  text-align: center;
+}
+.pvx-wordarea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 432px;
+  height: 432px;
+}
+.pvx-wordmark {
+  font-family: var(--pv-serif);
+  font-size: 58px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow:
+    2px 0 0 var(--pv-ink),
+    0 2px 0 var(--pv-ink),
+    2px 2px 0 var(--pv-ink),
+    4px 4px 0 rgb(14 41 96 / 45%);
+}
+.pvx-tagline {
+  margin-top: 16px;
+  font-family: var(--pv-pixel);
+  font-size: 26px;
+  color: #fff;
+  letter-spacing: 0.42em;
+  text-shadow: 2px 2px 0 var(--pv-ink);
+}
+.pvx-tagline .sep {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 14px 4px;
+  vertical-align: middle;
+  background: var(--pv-cherry);
+  box-shadow: 2px 2px 0 var(--pv-ink);
+}
+.pvx-tagline .sep::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--pv-sun);
+  opacity: 0;
+  animation: pvx-sep 1.8s ease-in-out infinite;
+}
+.pvx-tagline .sep:nth-child(2)::after {
+  animation-duration: 1.6s;
+  animation-delay: 0.2s;
+}
+@keyframes pvx-sep {
+  50% {
+    opacity: 1;
+  }
+}
+.pvx-subtitle {
+  max-width: 46ch;
+  margin: 18px auto 0;
+  font-family: var(--pv-serif);
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--pv-ink-soft);
+}
+.pvx-phone .pvx-hero {
+  min-height: 560px;
+  padding: 100px 14px 70px;
+}
+.pvx-phone .pvx-wordarea {
+  width: 240px;
+  height: 240px;
+}
+.pvx-phone .pvx-wordmark {
+  font-size: 34px;
+}
+
+/* ── Sections + eyebrow ──────────────────────────────────────────────────── */
+.pvx-section {
+  position: relative;
+  padding: 64px 22px 84px;
+}
+.pvx-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.pvx-eyebrow {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  width: fit-content;
+  margin: 0 0 34px;
+  font-family: var(--pv-pixel);
+  font-size: 38px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-shadow: 3px 3px 0 var(--pv-ink);
+}
+.pvx-eyebrow::before {
+  width: 34px;
+  height: 9px;
+  content: "";
+  background: var(--pv-cherry);
+  box-shadow: 3px 3px 0 var(--pv-ink);
+}
+.pvx-eyebrow::after {
+  position: absolute;
+  bottom: -12px;
+  left: 0;
+  width: 120px;
+  height: 4px;
+  content: "";
+  background: var(--pv-sun);
+  box-shadow: 3px 3px 0 var(--pv-ink);
+}
+.pvx-phone .pvx-section {
+  padding: 80px 16px 100px;
+}
+.pvx-phone .pvx-eyebrow {
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+.pvx-empty {
+  font-family: var(--pv-serif);
+  font-size: 22px;
+  font-style: italic;
+  color: #fff;
+  text-shadow: 2px 2px 0 var(--pv-ink);
+}
+
+/* ── Blog (BlogCta.astro + TermBar.astro) ────────────────────────────────── */
+.pvx-blog {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.pvx-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--pv-ink);
+  background: #fbfcff;
+  border: 3px solid var(--pv-ink);
+  border-radius: 6px;
+  box-shadow: 7px 7px 0 var(--pv-ink);
+}
+.pvx-term {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 16px;
+  background: var(--pv-paper-warm);
+  border-bottom: 3px solid var(--pv-ink);
+}
+.pvx-term .dot {
+  flex-shrink: 0;
+  width: 14px;
+  height: 12px;
+  background: var(--pv-sun);
+  box-shadow: inset 0 0 0 1.5px rgb(14 41 96 / 25%);
+}
+.pvx-term .scan {
+  flex-grow: 1;
+  min-width: 20px;
+  height: 10px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--pv-ink) 0,
+    var(--pv-ink) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  opacity: 0.55;
+}
+.pvx-term .path {
+  flex-shrink: 0;
+  max-width: 52%;
+  overflow: hidden;
+  font-family: var(--pv-mono);
+  font-size: 12px;
+  color: var(--pv-ink-soft);
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.pvx-term .path b {
+  font-weight: 700;
+  color: var(--pv-cherry-strong);
+}
+.pvx-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 22px 20px;
+}
+.pvx-post-title {
+  font-family: var(--pv-mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.pvx-post-excerpt {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--pv-serif);
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--pv-ink-soft);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.pvx-post-foot {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 6px;
+  margin-top: auto;
+  font-family: var(--pv-mono);
+  font-size: 12px;
+  color: var(--pv-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pvx-post-foot .go,
+.pvx-arrow,
+.pvx-all-title em {
+  color: var(--pv-cherry-strong);
+}
+.pvx-all {
+  grid-column: 1 / -1;
+}
+.pvx-all-body {
+  flex-flow: row wrap;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 28px;
+}
+.pvx-kicker {
+  font-family: var(--pv-pixel);
+  font-size: 18px;
+  color: var(--pv-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.pvx-all-title {
+  font-family: var(--pv-serif);
+  font-size: 41px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+.pvx-desc {
+  margin: 6px 0 0;
+  font-family: var(--pv-serif);
+  font-size: 18px;
+  color: var(--pv-ink-soft);
+}
+.pvx-arrow {
+  font-family: var(--pv-mono);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.pvx-skel .pvx-card-body span {
+  display: block;
+  height: 14px;
+  background: rgb(14 41 96 / 8%);
+  border-radius: 3px;
+}
+.pvx-skel .pvx-card-body span:first-child {
+  width: 70%;
+  height: 22px;
+}
+.pvx-skel .pvx-card-body span:last-child {
+  width: 45%;
+  margin-top: 18px;
+}
+.pvx-phone .pvx-blog {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.pvx-phone .pvx-post:nth-child(3) {
+  display: none;
+}
+.pvx-phone .pvx-post-title {
+  font-size: 18px;
+}
+.pvx-phone .pvx-all-title {
+  font-size: 28px;
+}
+
+/* ── Apps (home.css "APPS") with solid spinning icons ────────────────────── */
+.pvx-apps {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 48px 24px;
+  padding-top: 12px;
+  perspective: 1600px;
+}
+.pvx-app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  align-items: center;
+  text-align: center;
+  animation: pvx-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -1.6s);
+}
+.pvx-drift {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  animation: pvx-hover 5.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -1.3s);
+}
+.pvx-spinner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  transform-style: preserve-3d;
+}
+.pvx-spinner .x-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  backface-visibility: hidden;
+}
+.pvx-spinner .x-wall {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  backface-visibility: visible;
+}
+.pvx-halo {
+  position: absolute;
+  inset: -44px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 216 58 / 55%) 0%,
+    rgb(255 157 42 / 28%) 38%,
+    rgb(255 77 109 / 10%) 62%,
+    transparent 78%
+  );
+  filter: blur(20px);
+  border-radius: 50%;
+}
+.pvx-shadow {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  z-index: -1;
+  width: 160px;
+  height: 24px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(14 41 96 / 55%) 0%,
+    rgb(14 41 96 / 28%) 45%,
+    transparent 72%
+  );
+  filter: blur(8px);
+  transform: translateX(-50%);
+}
+.pvx-cap {
+  font-family: var(--pv-serif);
+  font-size: 26px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 2px 2px 0 var(--pv-ink);
+}
+.pvx-cap .st {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--pv-pixel);
+  font-size: 16px;
+  font-style: normal;
+  color: var(--pv-sun-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-shadow: 2px 2px 0 var(--pv-ink);
+}
+.pvx-app.soon .pvx-cap .st {
+  color: #ffd2a8;
+}
+@keyframes pvx-float {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  25% {
+    transform: translate(7px, -11px) rotate(1.4deg);
+  }
+  50% {
+    transform: translate(0, -17px) rotate(-1.6deg);
+  }
+  75% {
+    transform: translate(-7px, -8px) rotate(0.9deg);
+  }
+}
+@keyframes pvx-hover {
+  0%,
+  100% {
+    transform: translateY(-8px);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+.pvx-phone .pvx-apps {
+  grid-template-columns: 1fr;
+  gap: 64px 0;
+  padding-top: 8px;
+}
+.pvx-phone .pvx-drift {
+  width: 172px;
+  height: 172px;
+}
+
+/* ── Videos (home.css "YOUTUBE") ─────────────────────────────────────────── */
+.pvx-yt {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  align-items: center;
+}
+.pvx-film {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--pv-ink);
+  border: 3px solid var(--pv-ink);
+  border-radius: 6px;
+  box-shadow: 8px 8px 0 var(--pv-ink);
+}
+.pvx-film-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--pv-sky);
+}
+.pvx-film-clouds {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.pvx-film-cloud {
+  position: absolute;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: pvx-film-drift 60s linear infinite;
+}
+@keyframes pvx-film-drift {
+  from {
+    transform: translateX(-300px);
+  }
+  to {
+    transform: translateX(calc(var(--pvw) + 300px));
+  }
+}
+.pvx-film::before,
+.pvx-film::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: 34px;
+  content: "";
+  background: rgb(20 12 32 / 92%);
+}
+.pvx-film::before {
+  top: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+}
+.pvx-film::after {
+  bottom: 0;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+}
+.pvx-film-handle,
+.pvx-film-meta {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  height: 34px;
+  font-family: var(--pv-mono);
+  font-size: 11px;
+  color: rgb(255 255 255 / 92%);
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+}
+.pvx-film-handle {
+  top: 0;
+  left: 22px;
+}
+.pvx-film-meta {
+  right: 22px;
+  bottom: 0;
+  gap: 14px;
+}
+.pvx-film-handle .rec {
+  width: 8px;
+  height: 8px;
+  background: #ff4d57;
+  box-shadow: 0 0 10px rgb(255 77 87 / 80%);
+}
+.pvx-film-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pvx-play {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168px;
+  aspect-ratio: 1;
+  background: linear-gradient(180deg, rgb(255 255 255 / 45%), rgb(255 255 255 / 15%));
+  border: 1.5px solid rgb(255 255 255 / 70%);
+  border-radius: 50%;
+  box-shadow:
+    0 30px 60px rgb(40 20 50 / 45%),
+    inset 0 2px 0 rgb(255 255 255 / 85%),
+    inset 0 -2px 0 rgb(0 0 0 / 18%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+.pvx-play::before {
+  position: absolute;
+  inset: -10px;
+  content: "";
+  border: 1.5px solid rgb(255 255 255 / 60%);
+  border-radius: 50%;
+  animation: pvx-ring 2.4s ease-out infinite;
+}
+@keyframes pvx-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  25% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+.pvx-play .tri {
+  width: 0;
+  height: 0;
+  margin-left: 8px;
+  border-top: 18px solid transparent;
+  border-bottom: 18px solid transparent;
+  border-left: 28px solid #fff;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 45%));
+}
+.pvx-film-title {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  z-index: 2;
+  font-family: var(--pv-serif);
+  font-size: 26px;
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(255 255 255 / 92%);
+  white-space: nowrap;
+  text-shadow: 0 2px 14px rgb(20 12 32 / 70%);
+  transform: translateX(-50%);
+}
+.pvx-yt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: center;
+  justify-content: center;
+}
+.pvx-subscribe {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 24px 13px;
+  font-family: var(--pv-serif);
+  font-size: 24px;
+  color: #fff;
+  background: var(--pv-cherry);
+  border: 3px solid var(--pv-ink);
+  border-radius: 6px;
+  box-shadow: 5px 5px 0 var(--pv-ink);
+}
+.pvx-subscribe .g {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 20px;
+  background: #fff;
+  border-radius: 6px;
+}
+.pvx-subscribe .g::after {
+  position: absolute;
+  top: 5px;
+  left: 11px;
+  content: "";
+  border: 5px solid transparent;
+  border-left: 8px solid #d72238;
+}
+.pvx-yt-handle {
+  font-family: var(--pv-pixel);
+  font-size: 16px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  text-shadow: 2px 2px 0 var(--pv-ink);
+}
+.pvx-phone .pvx-film-handle,
+.pvx-phone .pvx-film-meta {
+  height: 28px;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+}
+.pvx-phone .pvx-film::before,
+.pvx-phone .pvx-film::after {
+  height: 28px;
+}
+.pvx-phone .pvx-film-title {
+  bottom: 38px;
+  font-size: 18px;
+}
+.pvx-phone .pvx-play {
+  width: 110px;
+}
+
+/* ── Socials (home.css "SOCIALS") ────────────────────────────────────────── */
+.pvx-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: center;
+}
+.pvx-tile {
+  position: relative;
+  display: flex;
+  flex: 1 1 280px;
+  gap: 18px;
+  align-items: center;
+  max-width: 360px;
+  min-height: 108px;
+  padding: 22px 22px 20px;
+  overflow: hidden;
+  color: var(--pv-ink);
+  background: #fff;
+  border: 3px solid var(--pv-ink);
+  border-radius: 6px;
+  box-shadow:
+    6px 6px 0 var(--pv-ink),
+    0 0 0 2px #fff inset;
+}
+.pvx-tile::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 8px;
+  content: "";
+  background: var(--brand, var(--pv-cherry));
+}
+.pvx-tile .icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  color: #fff;
+  background: var(--brand, var(--pv-cherry));
+  border: 2px solid var(--pv-ink);
+  border-radius: 4px;
+  box-shadow: 3px 3px 0 var(--pv-ink);
+}
+.pvx-tile .icon svg {
+  width: 34px;
+  height: 34px;
+}
+.pvx-tile .text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pvx-tile .name,
+.pvx-tile .handle {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvx-tile .name {
+  font-family: var(--pv-serif);
+  font-size: 30px;
+  line-height: 1;
+}
+.pvx-tile .handle {
+  font-family: var(--pv-pixel);
+  font-size: 15px;
+  color: var(--pv-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.pvx-tile .arrow {
+  margin-left: 6px;
+  font-family: var(--pv-pixel);
+  font-size: 22px;
+  color: var(--pv-cherry-strong);
+}
+
+/* Motion is decoration: honour reduced motion (puffs keep their spread). */
+@media (prefers-reduced-motion: reduce) {
+  .pvx-puff,
+  .pvx-puff-bob,
+  .pvx-film-cloud {
+    animation-play-state: paused;
+  }
+  .pvx-app,
+  .pvx-drift,
+  .pvx-play::before,
+  .pvx-tagline .sep::after {
+    animation: none;
+  }
+}

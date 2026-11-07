@@ -396,15 +396,23 @@
 .spinner:active {
   cursor: grabbing;
 }
-.l-layer {
+/* Solid extrusion (scripts/extrude.ts): two faces + silhouette walls. */
+.spinner .x-face {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  border-radius: 38px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.spinner .x-wall {
+  position: absolute;
+  display: block;
   backface-visibility: visible;
-  transform-style: preserve-3d;
+  pointer-events: none;
 }
 .app-halo {
   position: absolute;
@@ -750,7 +758,7 @@
    element/image drag so click-and-hold never shows the "dragging a PNG" ghost. */
 .floating-app,
 .floating-app .spinner,
-.floating-app .l-layer {
+.floating-app .x-face {
   -webkit-user-drag: none;
   user-select: none;
 }

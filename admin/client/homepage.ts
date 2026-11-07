@@ -269,22 +269,6 @@
   }
 
   /**
-   * Placeholder node for an app tile with no icon (or a broken one): a
-   * colourful gradient chip with the app's first initial. Presentation
-   * only — never written back into the model.
-   * @param {string} letter
-   * @param {string} grad
-   * @returns {HTMLElement}
-   */
-  function buildAppPh(letter, grad) {
-    const span = document.createElement('span');
-    span.className = 'ph';
-    if (grad) span.style.setProperty('--ph-bg', grad);
-    span.textContent = letter || '№';
-    return span;
-  }
-
-  /**
    * Small gradient chip for the rail icon thumbnail when its icon is
    * empty or fails to load.
    * @param {string} letter
@@ -572,86 +556,294 @@
     else build();
   }
 
-  // ── Preview blocks ──────────────────────────────────────────
-  function pvHero() {
-    const words = draft.hero.words;
-    const globeAfter = Math.floor((words.length - 1) / 2);
+  // ── Preview: a scaled replica of the public homepage ────────
+  // The draft preview lays the page out at a real viewport width (1280px
+  // desktop / 390px phone) using values ported from site/src/styles/
+  // {home,nav,sky}.css + BlogCta/TermBar, then CSS-zooms it to fit the pane —
+  // so proportions, wrapping and type match the live site instead of a
+  // squeezed approximation.
+  const PV_WIDTH = { desktop: 1280, phone: 390 };
+
+  /** Latest published posts for the Blog section (title/slug/date/excerpt). */
+  /** @type {Array<{title: string, slug: string, date: string, excerpt: string}> | null} */
+  let latestPosts = null;
+
+  // Pixel-cloud sky — same shapes, layers and seed as SkyBackdrop.astro, so
+  // the preview sky is the live sky.
+  const CLOUD_SHAPES = [
+    [
+      '0002220002220000022000',
+      '0022112202211220222110',
+      '0211111211111111111112',
+      '2111111111111111111112',
+      '2111111111111111111112',
+      '0222222222222222222220',
+    ],
+    ['00022200002200', '00211122022112', '02111111111112', '02111111111112', '02222222222220'],
+    [
+      '00022000022000022000022000',
+      '02211220221122022112202112',
+      '21111111111111111111111111',
+      '02222222222222222222222220',
+    ],
+    [
+      '0002220000',
+      '0022112200',
+      '0211111120',
+      '2111111112',
+      '2111111112',
+      '0211111120',
+      '0022222200',
+    ],
+  ];
+  const CLOUD_LAYERS = [
+    {
+      count: 4,
+      sMin: 3,
+      sMax: 5,
+      dMin: 280,
+      dMax: 360,
+      oMin: 0.3,
+      oMax: 0.5,
+      line: '%23d4dff0',
+      tMin: 0,
+      tMax: 30,
+    },
+    {
+      count: 6,
+      sMin: 5,
+      sMax: 9,
+      dMin: 220,
+      dMax: 300,
+      oMin: 0.5,
+      oMax: 0.7,
+      line: '%23c0d0ec',
+      tMin: 2,
+      tMax: 65,
+    },
+    {
+      count: 6,
+      sMin: 9,
+      sMax: 13,
+      dMin: 150,
+      dMax: 220,
+      oMin: 0.7,
+      oMax: 0.85,
+      line: '%23a8c8f0',
+      tMin: 6,
+      tMax: 88,
+    },
+    {
+      count: 3,
+      sMin: 14,
+      sMax: 20,
+      dMin: 100,
+      dMax: 160,
+      oMin: 0.85,
+      oMax: 0.95,
+      line: '%2388b4e8',
+      tMin: 14,
+      tMax: 96,
+    },
+  ];
+  /** @param {string[]} shape @param {number} scale @param {string} line */
+  function cloudSvg(shape, scale, line) {
+    let body = '';
+    let edge = '';
+    shape.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        if (row[x] === '1') body += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
+        else if (row[x] === '2') edge += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
+      }
+    });
+    const w = shape[0].length;
+    const h = shape.length;
+    return (
+      // &quot; — this lands inside a double-quoted style="" attribute.
+      `url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='${w * scale}' height='${h * scale}' ` +
+      `viewBox='0 0 ${w} ${h}' shape-rendering='crispEdges'><g fill='%23ffffff'>${body}</g><g fill='${line}'>${edge}</g></svg>&quot;)`
+    );
+  }
+  /** @type {string | null} */
+  let skyHtml = null;
+  function pvSky() {
+    if (skyHtml) return skyHtml;
+    let a = 0x80808080 >>> 0;
+    const rng = () => {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const rand = (/** @type {number} */ lo, /** @type {number} */ hi) => lo + rng() * (hi - lo);
+    let puffs = '';
+    for (const L of CLOUD_LAYERS) {
+      for (let i = 0; i < L.count; i++) {
+        const shape = CLOUD_SHAPES[Math.floor(rng() * CLOUD_SHAPES.length)];
+        const scale = L.sMin + Math.floor(rng() * (L.sMax - L.sMin + 1));
+        const dur = rand(L.dMin, L.dMax);
+        const w = shape[0].length * scale;
+        const top = rand(L.tMin, L.tMax).toFixed(2);
+        const op = rand(L.oMin, L.oMax).toFixed(2);
+        const delay = (-rng() * dur).toFixed(1);
+        const bg = cloudSvg(shape, scale, L.line);
+        const bob = (4 + rng() * 4).toFixed(2);
+        const bobDelay = (-rng() * 4).toFixed(2);
+        puffs +=
+          `<div class="pvx-puff" style="--w:${w}px;width:${w}px;height:${shape.length * scale}px;top:${top}%;opacity:${op};animation-duration:${dur.toFixed(1)}s;animation-delay:${delay}s">` +
+          `<div class="pvx-puff-bob" style="background-image:${bg};animation-duration:${bob}s;animation-delay:${bobDelay}s"></div></div>`;
+      }
+    }
+    skyHtml = `<div class="pvx-sky" aria-hidden="true"><div class="pvx-sky-puffs">${puffs}</div></div>`;
+    return skyHtml;
+  }
+
+  function pvNav() {
     return `
-      <div class="pv-hero">
-        <div class="pv-words">
-          ${words
-            .map(
-              (/** @type {string} */ w, /** @type {number} */ i) =>
-                `<span class="pv-word">${esc(w)}</span>` +
-                (i === globeAfter ? `<span class="pv-globe">${IC.globe}</span>` : ''),
-            )
-            .join('')}
+      <div class="pvx-navwrap" aria-hidden="true">
+        <div class="pvx-nav">
+          <span class="pvx-navglobe"></span>
+          <span class="pvx-navlink">Apps</span><i></i>
+          <span class="pvx-navlink">Videos</span><i></i>
+          <span class="pvx-navlink">Socials</span><i></i>
+          <span class="pvx-navlink">Blog</span>
         </div>
-        <div class="pv-tagline">${esc(draft.hero.tagline)}</div>
-        ${draft.hero.subtitle ? `<div class="pv-subtitle">${esc(draft.hero.subtitle)}</div>` : ''}
       </div>`;
   }
 
+  /** @param {string} id */
+  const pvEyebrow = (id) => `<div class="pvx-eyebrow">${esc(eyebrow(id))}</div>`;
+
+  function pvHero() {
+    const words = (draft.hero.words || []).filter(Boolean);
+    const tagline = String(draft.hero.tagline || '')
+      .split(/\s*[·•]\s*/)
+      .filter(Boolean)
+      .map((/** @type {string} */ t) => esc(t))
+      .join('<span class="sep"></span>');
+    return `
+      <div class="pvx-hero">
+        <div class="pvx-wordarea"><div class="pvx-wordmark">${words.map((/** @type {string} */ w) => esc(w)).join(' • ')}</div></div>
+        <div class="pvx-tagline">${tagline}</div>
+        ${draft.hero.subtitle ? `<p class="pvx-subtitle">${esc(draft.hero.subtitle)}</p>` : ''}
+      </div>`;
+  }
+
+  /** @param {string} iso */
+  const fmtPostDate = (iso) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+      ? ''
+      : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  /** @param {string} path */
+  const pvTermBar = (path) => `
+    <div class="pvx-term"><span class="dot"></span><span class="scan"></span><span class="path"><b>~</b>/${esc(path)}</span></div>`;
+
+  function pvBlog() {
+    const c = draft.blog_cta;
+    const posts = latestPosts === null ? [0, 1, 2].map(() => null) : latestPosts.slice(0, 3);
+    const cards = posts
+      .map((p) =>
+        p
+          ? `
+        <div class="pvx-card pvx-post">
+          ${pvTermBar(`posts/${p.slug}.md`)}
+          <div class="pvx-card-body">
+            <div class="pvx-post-title">${esc(p.title)}</div>
+            ${p.excerpt ? `<p class="pvx-post-excerpt">${esc(p.excerpt)}</p>` : ''}
+            <div class="pvx-post-foot"><span>${esc(fmtPostDate(p.date))}</span><span class="go">Open →</span></div>
+          </div>
+        </div>`
+          : `<div class="pvx-card pvx-post pvx-skel">${pvTermBar('posts/…')}<div class="pvx-card-body"><span></span><span></span><span></span></div></div>`,
+      )
+      .join('');
+    return `
+      <div class="pvx-section"><div class="pvx-inner">
+        ${pvEyebrow('blog_cta')}
+        <div class="pvx-blog">
+          ${cards}
+          <div class="pvx-card pvx-all">
+            ${pvTermBar('blog')}
+            <div class="pvx-card-body pvx-all-body">
+              <div>
+                ${c.kicker ? `<div class="pvx-kicker">${esc(c.kicker)}</div>` : ''}
+                <div class="pvx-all-title">${esc(c.title)}${c.title_accent ? ` <em>${esc(c.title_accent)}</em>` : ''}</div>
+                ${c.description ? `<p class="pvx-desc">${esc(c.description)}</p>` : ''}
+              </div>
+              <span class="pvx-arrow">All posts →</span>
+            </div>
+          </div>
+        </div>
+      </div></div>`;
+  }
+
+  /** Placeholder configs for icon-less tiles — Apps.astro FALLBACKS. */
+  const APP_FALLBACKS = [
+    { label: '?', bg: 'linear-gradient(135deg,#ffd58b,#ff8a3d)', ink: '#0e2960' },
+    { label: '!', bg: 'linear-gradient(135deg,#a0e8c8,#3ec25d)', ink: '#0e2960' },
+  ];
+
   function pvApps() {
     const items = draft.apps.items || [];
-    if (!items.length) {
-      return `
-      <div class="pv-sec">
-        <div class="pv-eyebrow">${eyebrow('apps')}</div>
-        <div class="pv-empty">No apps yet — add one with the editor panel on the left.</div>
-      </div>`;
-    }
+    let fb = 0;
+    const tiles = items
+      .map((/** @type {any} */ a, /** @type {number} */ i) => {
+        const status = ['live', 'soon', 'lab'].includes(a.status) ? a.status : 'soon';
+        const fallback = a.icon ? null : APP_FALLBACKS[fb++ % APP_FALLBACKS.length];
+        return `
+        <div class="pvx-app${status === 'live' ? '' : ' soon'}" style="--i:${i}">
+          <div class="pvx-drift">
+            <div class="pvx-halo"></div>
+            <div class="pvx-spinner" data-i="${i}" data-icon="${esc(a.icon || '')}" data-fallback="${esc(fallback ? JSON.stringify(fallback) : '')}"></div>
+            <div class="pvx-shadow"></div>
+          </div>
+          <div class="pvx-cap">${esc(a.name)}<span class="st">${
+            // eslint-disable-next-line security/detect-object-injection -- status normalized above
+            STATUS_LABEL[status]
+          }</span></div>
+        </div>`;
+      })
+      .join('');
     return `
-      <div class="pv-sec">
-        <div class="pv-eyebrow">${eyebrow('apps')}</div>
-        <div class="pv-apps">
-          ${items
-            .map((/** @type {any} */ a, /** @type {number} */ i) => {
-              const status = ['live', 'soon', 'lab'].includes(a.status) ? a.status : 'soon';
-              const grad = APP_PH_GRADS[i % APP_PH_GRADS.length];
-              const letter = initialOf(a.name);
-              // Real icons load off /assets|/images (admin serves both); a
-              // missing one is swapped for the gradient chip after render
-              // (TE.imgFallback) so the tile never shows a broken glyph.
-              const inner = a.icon
-                ? `<img class="pv-app-img" src="${esc(a.icon)}" alt="" data-letter="${esc(letter)}" data-grad="${esc(grad)}" />`
-                : `<span class="ph" style="--ph-bg:${esc(grad)}">${esc(letter)}</span>`;
-              return `
-              <div class="pv-app">
-                <div class="pv-app-stage" style="--i:${i}">
-                  <span class="pv-app-halo" aria-hidden="true"></span>
-                  <div class="pv-app-ico">${inner}</div>
-                  <span class="pv-app-shadow" aria-hidden="true"></span>
-                </div>
-                <div class="pv-app-cap">${esc(a.name)}<span class="pv-app-status ${status}">${
-                  // eslint-disable-next-line security/detect-object-injection -- status normalized above
-                  STATUS_LABEL[status]
-                }</span></div>
-              </div>`;
-            })
-            .join('')}
-        </div>
-      </div>`;
+      <div class="pvx-section"><div class="pvx-inner">
+        ${pvEyebrow('apps')}
+        ${items.length ? `<div class="pvx-apps">${tiles}</div>` : '<div class="pvx-empty">No apps yet — add one in the panel on the left.</div>'}
+      </div></div>`;
   }
 
   function pvVideos() {
     const handle = esc(siteYoutubeHandle);
+    const film = [
+      [0, 1, 18, 9, 0.9],
+      [2, 3, 46, 26, 0.75],
+      [1, 2, 64, 14, 0.85],
+    ]
+      .map(
+        ([shape, , left, top, op], k) =>
+          `<span class="pvx-film-cloud" style="left:${left}%;top:${top}%;opacity:${op};width:${CLOUD_SHAPES[shape][0].length * 6}px;height:${CLOUD_SHAPES[shape].length * 6}px;background-image:${cloudSvg(CLOUD_SHAPES[shape], 6, '%23c0d0ec')};animation-delay:${-k * 9}s"></span>`,
+      )
+      .join('');
     return `
-      <div class="pv-sec">
-        <div class="pv-eyebrow">${eyebrow('videos')}</div>
-        <div class="pv-film">
-          <div class="pv-film-bg" aria-hidden="true"></div>
-          <div class="pv-film-clouds" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div class="pv-film-handle"><span class="rec"></span>${handle}</div>
-          <div class="pv-film-meta"><span>${esc(draft.videos.episode)}</span><span>00:00</span></div>
-          <div class="pv-play"><span class="tri"></span></div>
-          <div class="pv-film-title">${esc(draft.videos.film_title)}</div>
+      <div class="pvx-section"><div class="pvx-inner">
+        ${pvEyebrow('videos')}
+        <div class="pvx-yt">
+          <div class="pvx-film">
+            <div class="pvx-film-bg"></div>
+            <div class="pvx-film-clouds">${film}</div>
+            <div class="pvx-film-handle"><span class="rec"></span> ${handle}</div>
+            <div class="pvx-film-meta"><span>${esc(draft.videos.episode)}</span><span>00:00 / —:——</span></div>
+            <div class="pvx-film-content"><span class="pvx-play"><span class="tri"></span></span></div>
+            <div class="pvx-film-title">${esc(draft.videos.film_title)}</div>
+          </div>
+          <div class="pvx-yt-row">
+            <span class="pvx-subscribe"><span class="g"></span>Subscribe</span>
+            <span class="pvx-yt-handle">${handle}</span>
+          </div>
         </div>
-        <div class="pv-sub-row">
-          <span class="pv-sub"><span class="g"></span> Subscribe</span>
-          <span class="pv-yt-handle">${handle}</span>
-        </div>
-      </div>`;
+      </div></div>`;
   }
 
   function pvSocials() {
@@ -659,9 +851,9 @@
       (/** @type {string} */ k) => !draft.socials.hidden.includes(k),
     );
     return `
-      <div class="pv-sec">
-        <div class="pv-eyebrow">${eyebrow('socials')}</div>
-        <div class="pv-socials">
+      <div class="pvx-section"><div class="pvx-inner">
+        ${pvEyebrow('socials')}
+        <div class="pvx-socials">
           ${shown
             .map((/** @type {string} */ key) => {
               const meta = Object.prototype.hasOwnProperty.call(SOCIAL_META, key)
@@ -670,42 +862,102 @@
                 : { name: key, brand: '', handle: '', glyph: '' };
               const handle = meta.handle || '@' + meta.name.toLowerCase();
               return `
-              <div class="pv-social"${meta.brand ? ` style="--brand:${esc(meta.brand)}"` : ''}>
-                <div class="pv-social-ico" aria-hidden="true">${meta.glyph || esc(meta.name.charAt(0))}</div>
-                <div class="pv-social-txt">
-                  <div class="pv-social-name">${esc(meta.name)}</div>
-                  <div class="pv-social-handle">${esc(handle)}</div>
-                </div>
-                <span class="pv-social-arrow" aria-hidden="true">→</span>
+              <div class="pvx-tile"${meta.brand ? ` style="--brand:${esc(meta.brand)}"` : ''}>
+                <span class="icon">${meta.glyph || esc(meta.name.charAt(0))}</span>
+                <span class="text"><span class="name">${esc(meta.name)}</span><span class="handle">${esc(handle)}</span></span>
+                <span class="arrow">→</span>
               </div>`;
             })
             .join('')}
         </div>
-      </div>`;
+      </div></div>`;
   }
 
-  function pvBlogCta() {
-    return `
-      <div class="pv-footer">
-        <div class="pv-eyebrow">${eyebrow('blog_cta')}</div>
-        <div class="pv-footer-kicker">${esc(draft.blog_cta.kicker)}</div>
-        <div class="pv-footer-card">
-          <div class="pv-footer-text">
-            <div class="pv-footer-label">${esc(draft.blog_cta.title)}${
-              draft.blog_cta.title_accent
-                ? ` <span class="accent">${esc(draft.blog_cta.title_accent)}</span>`
-                : ''
-            }</div>
-            ${
-              draft.blog_cta.description
-                ? `<div class="pv-footer-desc">${esc(draft.blog_cta.description)}</div>`
-                : ''
-            }
-          </div>
-          <div class="pv-footer-arrow">→</div>
-        </div>
-      </div>`;
+  // ── Solid spinning app icons (shared with the site: js/extrude.js) ──
+  /** @type {Array<{el: HTMLElement, r: any, phase: number, speed: number}>} */
+  let spinners = [];
+  let spinRaf = 0;
+  const reduceMotion = () =>
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** @param {HTMLElement} canvas */
+  function hydrateSpinners(canvas) {
+    const X = /** @type {any} */ window.WWWExtrude;
+    spinners = [];
+    canvas.querySelectorAll('.pvx-spinner').forEach((node) => {
+      const el = /** @type {HTMLElement} */ node;
+      const i = Number(el.getAttribute('data-i')) || 0;
+      const entry = {
+        el,
+        r: /** @type {any} */ null,
+        phase: i * 97 + 20,
+        speed: 20 + ((i * 7) % 11),
+      };
+      spinners.push(entry);
+      const icon = el.getAttribute('data-icon') || null;
+      let fallback = null;
+      try {
+        fallback = JSON.parse(el.getAttribute('data-fallback') || 'null');
+      } catch {
+        fallback = null;
+      }
+      if (!X) {
+        if (icon) el.style.backgroundImage = `url("${icon}")`;
+        return;
+      }
+      const mount = async (/** @type {string | null} */ src) => {
+        const solid = await X.buildSolid(src, fallback || APP_FALLBACKS[0], 84);
+        if (!el.isConnected) return;
+        const size = device === 'phone' ? 172 : 200;
+        entry.r = X.renderSolid(el, solid, size, (44 * size) / 200);
+      };
+      mount(icon).catch(() => mount(null).catch(() => undefined));
+    });
+    if (!spinRaf) spinRaf = requestAnimationFrame(spinFrame);
   }
+
+  /** @param {number} now */
+  function spinFrame(now) {
+    spinRaf = 0;
+    const X = /** @type {any} */ window.WWWExtrude;
+    const live = spinners.filter((s) => s.el.isConnected);
+    if (!live.length) return;
+    const still = reduceMotion();
+    const t = now / 1000;
+    for (const s of live) {
+      const ry = still ? -28 : (s.phase + t * s.speed) % 360;
+      const rx = still ? -8 : -6 + Math.sin(t * 0.7 + s.phase) * 10;
+      s.el.style.transform = `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+      if (s.r && X) X.shadeSolid(s.r, rx, ry);
+    }
+    if (!still && viewMode === 'draft') spinRaf = requestAnimationFrame(spinFrame);
+  }
+
+  /** Zoom the replica page to the pane width (and size the sticky sky). */
+  function fitPreview() {
+    const canvas = document.getElementById('hp-canvas');
+    const scroll = canvas && /** @type {HTMLElement | null} */ canvas.parentElement;
+    const page = canvas && /** @type {HTMLElement | null} */ canvas.querySelector('.pvx');
+    if (!canvas || !scroll || !page) return;
+    const w = PV_WIDTH[device];
+    const cs = getComputedStyle(scroll);
+    const avail =
+      scroll.clientWidth -
+      parseFloat(cs.paddingLeft) -
+      parseFloat(cs.paddingRight) -
+      (device === 'phone' ? 18 : 0);
+    const z = Math.max(0.2, Math.min(1, avail / w));
+    page.style.zoom = String(z);
+    canvas.style.setProperty('--pvz', String(z));
+    const viewH = Math.min(scroll.clientHeight || 800, window.innerHeight || 800);
+    page.style.setProperty(
+      '--pvh',
+      `${Math.round((device === 'phone' ? Math.min(viewH, 844 * z) : viewH) / z)}px`,
+    );
+  }
+  /** @type {ResizeObserver | null} */
+  let fitObserver = null;
 
   function renderPreview() {
     const canvas = document.getElementById('hp-canvas');
@@ -715,36 +967,55 @@
       // eslint-disable-next-line security/detect-object-injection -- id from the model's own order
       (/** @type {string} */ id) => draft.sections[id] !== false,
     );
-    // Drifting sky puffs behind the sections so the canvas isn't flat blue.
-    const sky =
-      '<div class="pv-sky" aria-hidden="true"><span></span><span></span><span></span></div>';
-    canvas.innerHTML =
-      sky +
-      visible
-        .map((/** @type {string} */ id) => {
-          let inner = '';
-          if (id === 'hero') inner = pvHero();
-          else if (id === 'apps') inner = pvApps();
-          else if (id === 'videos') inner = pvVideos();
-          else if (id === 'socials') inner = pvSocials();
-          else if (id === 'blog_cta') inner = pvBlogCta();
-          // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
-          const label = SECTION_LABELS[id] || id;
-          // role=button + tabindex so the block is a keyboard-operable
-          // shortcut to its rail card (global Enter/Space handler clicks it).
-          return `
+    const blocks = visible
+      .map((/** @type {string} */ id) => {
+        let inner = '';
+        if (id === 'hero') inner = pvHero();
+        else if (id === 'apps') inner = pvApps();
+        else if (id === 'videos') inner = pvVideos();
+        else if (id === 'socials') inner = pvSocials();
+        else if (id === 'blog_cta') inner = pvBlog();
+        // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
+        const label = SECTION_LABELS[id] || id;
+        // role=button + tabindex so the block is a keyboard-operable
+        // shortcut to its rail card (global Enter/Space handler clicks it).
+        return `
         <div class="pv-block${selected === id ? ' sel' : ''}" data-pv="${esc(id)}" role="button" tabindex="0" aria-label="Edit ${esc(label)} section">
-          <span class="pv-tag" aria-hidden="true">edit ${esc(label)}</span>
+          <span class="pv-tag" aria-hidden="true">Edit ${esc(label)}</span>
           ${inner}
         </div>`;
-        })
-        .join('');
-    // Swap any broken/missing app icon for its gradient placeholder.
-    if (window.TE && TE.wireImgFallbacks) {
-      TE.wireImgFallbacks(canvas, '.pv-app-img', (img) =>
-        buildAppPh(img.getAttribute('data-letter') || '', img.getAttribute('data-grad') || ''),
-      );
+      })
+      .join('');
+    canvas.innerHTML = `<div class="pvx pvx-${device}">${pvSky()}${pvNav()}${blocks}</div>`;
+    fitPreview();
+    hydrateSpinners(canvas);
+    if (!fitObserver && 'ResizeObserver' in window && canvas.parentElement) {
+      fitObserver = new ResizeObserver(() => fitPreview());
+      fitObserver.observe(canvas.parentElement);
     }
+  }
+
+  /** Best-effort: the three latest published posts for the Blog section. */
+  async function loadLatestPosts() {
+    try {
+      const posts = await TE.fetchJSON('/api/posts');
+      const now = Date.now();
+      latestPosts = (Array.isArray(posts) ? posts : [])
+        .filter(
+          (/** @type {any} */ p) =>
+            !p.draft && (!p.publish_at || new Date(p.publish_at).getTime() <= now),
+        )
+        .slice(0, 3)
+        .map((/** @type {any} */ p) => ({
+          title: p.title || 'Untitled',
+          slug: p.slug || String(p.filename || '').replace(/\.md$/, ''),
+          date: p.date,
+          excerpt: p.excerpt || '',
+        }));
+    } catch {
+      latestPosts = [];
+    }
+    renderPreview();
   }
 
   // ── Dirty / action-row state ────────────────────────────────
@@ -1455,6 +1726,7 @@
     wire();
     renderAll();
     refreshPublishState();
+    loadLatestPosts();
     // Let the one-shot entrance animation play, then drop the class so
     // later re-renders (every keystroke) don't replay it.
     setTimeout(() => {

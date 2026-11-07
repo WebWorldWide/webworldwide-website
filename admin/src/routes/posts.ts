@@ -91,6 +91,34 @@ function slugify(s) {
     .replace(/(^-|-$)+/g, '');
 }
 
+/**
+ * First-paragraph excerpt, matching the public site's deriveExcerpt()
+ * (site/src/lib/post-utils.ts) so the homepage preview shows the same text.
+ *
+ * @param {string} body
+ * @returns {string}
+ */
+export function deriveExcerpt(body: string): string {
+  const cleaned = String(body || '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[`*_>#]/g, '')
+    .trim();
+  const para = (cleaned.split(/\n\n+/).find((p) => p.trim()) ?? '').replace(/\s+/g, ' ').trim();
+  if (!para) return '';
+  const LIMIT = 180;
+  if (para.length <= LIMIT) return para;
+  const head = para.slice(0, LIMIT);
+  const sentenceEnd = Math.max(
+    head.lastIndexOf('. '),
+    head.lastIndexOf('! '),
+    head.lastIndexOf('? '),
+  );
+  if (sentenceEnd >= 80) return head.slice(0, sentenceEnd + 1);
+  const wordEnd = head.lastIndexOf(' ');
+  return (wordEnd > 0 ? head.slice(0, wordEnd) : head).trimEnd() + '…';
+}
+
 function getAllPosts() {
   if (postsListCache && Date.now() - postsListCache.at < POSTS_LIST_TTL_MS) {
     return postsListCache.list;
@@ -111,6 +139,8 @@ function getAllPosts() {
         publish_at: data.publish_at || null,
         series: data.series || null,
         cover: data.cover || null,
+        excerpt:
+          typeof data.excerpt === 'string' && data.excerpt ? data.excerpt : deriveExcerpt(body),
         word_count: String(body || '')
           .split(/\s+/)
           .filter(Boolean).length,
