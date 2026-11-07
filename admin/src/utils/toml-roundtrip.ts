@@ -9,7 +9,7 @@
  *
  * Strategy:
  *
- *   1. `parse(src)`  — uses @iarna/toml to produce a fully-typed plain
+ *   1. `parse(src)`  — uses `@iarna/toml` to produce a fully-typed plain
  *      object. Comments are lost in the object but the original `src`
  *      stays available to `apply`. The parser also gives us field-typed
  *      values (numbers stay numbers, dates stay dates, etc.).

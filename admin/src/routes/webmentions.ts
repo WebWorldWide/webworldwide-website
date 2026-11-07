@@ -482,6 +482,7 @@ publicRouter.get('/feed', (req, res) => {
       mention: 'mentions',
     };
     const bucket = bucketMap[r.type] || 'mentions';
+    // eslint-disable-next-line security/detect-object-injection -- bucket is one of the predefined keys above
     if (Array.isArray(out[bucket])) {
       // eslint-disable-next-line security/detect-object-injection -- bucket is one of the predefined keys above
       out[bucket].push(shaped);

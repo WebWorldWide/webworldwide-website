@@ -28,7 +28,11 @@ const SWEEP_INTERVAL_MS = DAY_MS;
 /** @type {Database.Database | null} */
 let dbHandle = null;
 
-/** Lazily open (so tests can set AUTH_DB_PATH first). @returns {Database.Database} */
+/**
+ * Lazily open (so tests can set AUTH_DB_PATH first).
+ *
+ * @returns {Database.Database}
+ */
 function db() {
   if (dbHandle) return dbHandle;
   const dbPath = process.env.AUTH_DB_PATH || join(__dirname, '..', '..', 'data', 'auth.db');

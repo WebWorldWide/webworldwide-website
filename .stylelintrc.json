@@ -3,11 +3,16 @@
   "plugins": ["stylelint-order", "stylelint-no-unsupported-browser-features"],
   "rules": {
     "color-no-invalid-hex": true,
-    "declaration-no-important": [true, { "severity": "warning" }],
-    "selector-class-pattern": [
-      "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
+    "declaration-no-important": [
+      true,
       {
-        "message": "Class names must be kebab-case (BEM-friendly)",
+        "severity": "warning"
+      }
+    ],
+    "selector-class-pattern": [
+      "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?|ProseMirror(?:-[a-z]+)*|cm-[A-Za-z]+|hljs-[a-z_]+|selectedCell)$",
+      {
+        "message": "Class names must be kebab-case (BEM-friendly); third-party editor classes (ProseMirror, CodeMirror cm-*, highlight.js hljs-*, TipTap selectedCell) are allowed",
         "severity": "warning"
       }
     ],

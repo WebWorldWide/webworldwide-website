@@ -206,6 +206,7 @@ export function markDone(jobId, conversions, opts) {
       );
       if (cols.length) {
         const setSql = cols.map((c) => `${c} = ?`).join(', ');
+        // eslint-disable-next-line security/detect-object-injection -- c is filtered to an allowlist of column names above
         const args = cols.map((c) => patch[c]);
         args.push(job.media_id);
         db.prepare(`UPDATE media SET ${setSql} WHERE id = ?`).run(...args);

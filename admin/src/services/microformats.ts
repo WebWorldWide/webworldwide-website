@@ -84,6 +84,7 @@ export function parseSource(html, sourceUrl, targetUrl) {
 
   for (const entry of entries) {
     for (const [prop, t] of TYPE_PROPS) {
+      // eslint-disable-next-line security/detect-object-injection -- prop iterates a fixed list of microformat property names
       const urls = collectUrls(entry.properties?.[prop]);
       if (urls.some((u) => normaliseUrl(u) === normalisedTarget)) {
         type = t;

@@ -19,6 +19,7 @@
    show-path in the codebase clears the attribute via `el.hidden = false`, so
    this is a safe global net. */
 [hidden] {
+  /* stylelint-disable-next-line declaration-no-important -- hidden must always hide */
   display: none !important;
 }
 
@@ -166,9 +167,13 @@ img {
   *,
   *::before,
   *::after {
+    /* stylelint-disable-next-line declaration-no-important -- reduced motion must override every animation */
     scroll-behavior: auto !important;
+    /* stylelint-disable-next-line declaration-no-important -- reduced motion must override every animation */
     transition-duration: 0.001ms !important;
+    /* stylelint-disable-next-line declaration-no-important -- reduced motion must override every animation */
     animation-duration: 0.001ms !important;
+    /* stylelint-disable-next-line declaration-no-important -- reduced motion must override every animation */
     animation-iteration-count: 1 !important;
   }
   .te-spinner {

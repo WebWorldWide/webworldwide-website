@@ -52,13 +52,11 @@ const purify = createDOMPurify(/** @type {any} */ SVG_WINDOW);
 /**
  * Drive the image pipeline for one media row.
  *
- * @param {{
- *   row: Record<string, any>,
- *   diskPath: string,                       // absolute path to the original
- *   urlBase: string,                        // url prefix ('/images/yyyy/mm')
- *   diskDir: string,                        // dir on disk ('/site/static/images/yyyy/mm')
- *   enqueueFollowupJob?: (mediaId: string, type: string) => void,
- * }} ctx
+ * `ctx.diskPath` is the absolute path to the original, `ctx.urlBase` the
+ * URL prefix ('/images/yyyy/mm') and `ctx.diskDir` the directory on disk
+ * ('/site/static/images/yyyy/mm').
+ *
+ * @param {{ row: Record<string, any>, diskPath: string, urlBase: string, diskDir: string, enqueueFollowupJob?: (mediaId: string, type: string) => void }} ctx
  * @returns {Promise<{ conversions: Record<string, string>, mediaPatch: Record<string, any> }>}
  */
 export async function processImage(ctx) {

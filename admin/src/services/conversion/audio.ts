@@ -255,6 +255,7 @@ function applyEarlyMetadata(mediaId, patch) {
   if (!cols.length) return;
   const db = queueInternal.getDb();
   const setSql = cols.map((c) => `${c} = ?`).join(', ');
+  // eslint-disable-next-line security/detect-object-injection -- c is filtered to an allowlist of column names above
   const args = cols.map((c) => patch[c]);
   args.push(mediaId);
   db.prepare(`UPDATE media SET ${setSql} WHERE id = ?`).run(...args);

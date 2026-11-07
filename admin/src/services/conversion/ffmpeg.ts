@@ -41,18 +41,12 @@ const TIMEOUT_MULTIPLIER = 10;
  * the video/audio/gif handlers.
  *
  * @param {string} filePath absolute path to the source
- * @returns {Promise<{
- *   duration: number,            // seconds (0 if unknown)
- *   width: number,               // 0 if no video stream
- *   height: number,              // 0 if no video stream
- *   videoCodec: string|null,
- *   audioCodec: string|null,
- *   hasAudio: boolean,
- *   hasVideo: boolean,
- *   bitrate: number,             // bits/sec (0 if unknown)
- *   format: string,              // container, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'
- *   nbFrames: number,            // for GIFs / single-stream sources
- * }>}
+ * Resolves with: duration (seconds, 0 if unknown); width / height (0 with
+ * no video stream); video and audio codec names (null if absent); hasAudio;
+ * hasVideo; bitrate (bits/sec, 0 if unknown); format (container, e.g.
+ * 'mov,mp4,m4a,3gp,3g2,mj2'); nbFrames (for GIFs / single-stream sources).
+ *
+ * @returns {Promise<{ duration: number, width: number, height: number, videoCodec: string|null, audioCodec: string|null, hasAudio: boolean, hasVideo: boolean, bitrate: number, format: string, nbFrames: number }>}
  */
 export function ffprobe(filePath) {
   return new Promise((resolve, reject) => {

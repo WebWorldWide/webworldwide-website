@@ -69,6 +69,7 @@ const EXT_MIME = {
  */
 function mimeFor(file) {
   const ext = extname(file).slice(1).toLowerCase();
+  // eslint-disable-next-line security/detect-object-injection -- ext is a lowercased file extension looked up in a fixed table
   return EXT_MIME[ext] || 'application/octet-stream';
 }
 

@@ -119,6 +119,7 @@ export function upsertRedirect(rows, fromRaw, toRaw, code = 301) {
 
   // The target is now a live page — it must not also be a redirect source.
   for (let i = rows.length - 1; i >= 0; i -= 1) {
+    // eslint-disable-next-line security/detect-object-injection -- i is a numeric loop index
     if (rows[i].from === to) rows.splice(i, 1);
   }
   // Collapse chains that pointed at the old location.
@@ -128,6 +129,7 @@ export function upsertRedirect(rows, fromRaw, toRaw, code = 301) {
   // Collapsing can produce a self-redirect (e.g. A→B then add B→A turns the
   // A→B row into A→A). Drop any row that now points at itself.
   for (let i = rows.length - 1; i >= 0; i -= 1) {
+    // eslint-disable-next-line security/detect-object-injection -- i is a numeric loop index
     if (rows[i].from === rows[i].to) rows.splice(i, 1);
   }
   // Upsert the from→to row.

@@ -129,7 +129,9 @@ export function groupBySlug(rows) {
       mention: 'mentions',
     };
     const key = bucketMap[r.type] || 'mentions';
+    // eslint-disable-next-line security/detect-object-injection -- key is one of the predefined bucket names above
     if (Array.isArray(bucket[key])) {
+      // eslint-disable-next-line security/detect-object-injection -- key is one of the predefined bucket names above
       bucket[key].push(shaped);
     } else {
       bucket.mentions.push(shaped);

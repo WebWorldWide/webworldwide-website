@@ -51,6 +51,7 @@ body[data-page="editor"] {
    (the global :focus-visible rule would otherwise add one inside). */
 .editor-pane .ProseMirror:focus-visible,
 .editor-pane .cm-content:focus-visible {
+  /* stylelint-disable-next-line declaration-no-important -- overrides inline styles set by the editor library */
   outline: none !important;
 }
 
@@ -257,6 +258,7 @@ body[data-page="editor"] {
    contributes scroll-height. */
 #editor-fallback[hidden],
 #editor-root .te-editor #editor-fallback {
+  /* stylelint-disable-next-line declaration-no-important -- hidden must always hide */
   display: none !important;
 }
 
@@ -560,11 +562,13 @@ body[data-page="editor"] {
 }
 .cm-editor .cm-selectionBackground,
 .cm-editor.cm-focused .cm-selectionBackground {
+  /* stylelint-disable-next-line declaration-no-important -- overrides inline styles set by the editor library */
   background: var(--accent-soft) !important;
 }
 /* Light-theme tweak: CM6's default selection is hard to see on light. */
 [data-theme="light"] .cm-editor .cm-selectionBackground,
 [data-theme="light"] .cm-editor.cm-focused .cm-selectionBackground {
+  /* stylelint-disable-next-line declaration-no-important -- overrides inline styles set by the editor library */
   background: color-mix(in srgb, var(--accent) 20%, transparent) !important;
 }
 
@@ -1145,6 +1149,7 @@ body[data-page="editor"] {
   background: color-mix(in srgb, var(--surface-2) 50%, transparent);
 }
 .ProseMirror table .selectedCell {
+  /* stylelint-disable-next-line declaration-no-important -- overrides inline styles set by the editor library */
   background: var(--accent-soft) !important;
 }
 /* The table/code/image/video toolbar groups only render in their context. */
@@ -2030,7 +2035,9 @@ body[data-page="editor"] {
 /* Drop-cursor line shown while dragging */
 .prosemirror-dropcursor-block,
 .ProseMirror-dropcursor {
+  /* stylelint-disable-next-line declaration-no-important -- overrides inline styles set by the editor library */
   background: var(--accent-bg) !important;
+  /* stylelint-disable-next-line declaration-no-important -- overrides inline styles set by the editor library */
   height: 2px !important;
   border-radius: 1px;
 }
@@ -2400,6 +2407,7 @@ body.distraction-free .sidebar,
 body.distraction-free .ed-aux,
 body.distraction-free .ed-side,
 body.distraction-free .editor-metrics {
+  /* stylelint-disable-next-line declaration-no-important -- distraction-free mode must hide every panel */
   display: none !important;
 }
 body.distraction-free .editor-layout {

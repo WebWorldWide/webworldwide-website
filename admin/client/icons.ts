@@ -109,7 +109,6 @@
    * @returns {string}
    */
   TE.icon = function (name) {
-    // eslint-disable-next-line security/detect-object-injection -- name indexes a fixed internal registry.
     return ICONS[name] || '';
   };
 
@@ -123,7 +122,7 @@
     const scope = root && /** @type {any} */ root.querySelectorAll ? root : document;
     scope.querySelectorAll('[data-icon]').forEach((el) => {
       const name = el.getAttribute('data-icon');
-      // eslint-disable-next-line security/detect-object-injection -- name indexes a fixed internal registry.
+
       if (name && ICONS[name] && !el.firstElementChild) el.innerHTML = ICONS[name];
     });
   };

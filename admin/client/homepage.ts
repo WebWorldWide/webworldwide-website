@@ -41,7 +41,7 @@
       (/** @type {string} */ k) => k !== 'hero' && draft.sections[k] !== false,
     );
     const n = visible.indexOf(id) + 1;
-    // eslint-disable-next-line security/detect-object-injection -- fixed key map
+
     const label = EYEBROW_LABEL[id] || id;
     return n > 0 ? `${String(n).padStart(2, '0')} — ${label}` : label;
   }
@@ -155,7 +155,7 @@
     'threads',
   ];
 
-  /** YouTube @handle for the Videos preview — filled from site config on init. */
+  /** YouTube `@handle` for the Videos preview — filled from site config on init. */
   let siteYoutubeHandle = SOCIAL_META.youtube.handle;
 
   // ── Inline icons (stroke = currentColor, same Lucide style as icons.js) ──
@@ -246,7 +246,6 @@
     const parts = path.split('.');
     let t = draft;
     for (let i = 0; i < parts.length - 1; i++) {
-      // eslint-disable-next-line security/detect-object-injection -- path comes from our own data-path attributes
       t = t[parts[i]];
       if (t === null || typeof t !== 'object') return;
     }
@@ -263,7 +262,7 @@
   function swap(arr, i, d) {
     const j = i + d;
     if (j < 0 || j >= arr.length) return false;
-    // eslint-disable-next-line security/detect-object-injection -- bounds-checked indices
+
     [arr[i], arr[j]] = [arr[j], arr[i]];
     return true;
   }
@@ -377,7 +376,6 @@
                 ${['live', 'soon', 'lab']
                   .map(
                     (s) =>
-                      // eslint-disable-next-line security/detect-object-injection -- s from a constant list
                       `<option value="${s}" ${a.status === s ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`,
                   )
                   .join('')}
@@ -426,8 +424,7 @@
     return order
       .map((/** @type {string} */ key, /** @type {number} */ i) => {
         const meta = Object.prototype.hasOwnProperty.call(SOCIAL_META, key)
-          ? // eslint-disable-next-line security/detect-object-injection -- key checked via hasOwnProperty
-            SOCIAL_META[key]
+          ? SOCIAL_META[key]
           : { name: key, brand: '' };
         const shown = !hidden.includes(key);
         return `
@@ -519,9 +516,8 @@
     const build = () => {
       scroll.innerHTML = draft.section_order
         .map((/** @type {string} */ id, /** @type {number} */ i) => {
-          // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
           const label = SECTION_LABELS[id] || id;
-          // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
+
           const on = draft.sections[id] !== false;
           const isOpen = open === id;
           const bodyId = `hp-secbody-${esc(id)}`;
@@ -646,7 +642,11 @@
       tMax: 96,
     },
   ];
-  /** @param {string[]} shape @param {number} scale @param {string} line */
+  /**
+   * @param {string[]} shape
+   * @param {number} scale
+   * @param {string} line
+   */
   function cloudSvg(shape, scale, line) {
     let body = '';
     let edge = '';
@@ -800,10 +800,7 @@
             <div class="pvx-spinner" data-i="${i}" data-icon="${esc(a.icon || '')}" data-fallback="${esc(fallback ? JSON.stringify(fallback) : '')}"></div>
             <div class="pvx-shadow"></div>
           </div>
-          <div class="pvx-cap">${esc(a.name)}<span class="st">${
-            // eslint-disable-next-line security/detect-object-injection -- status normalized above
-            STATUS_LABEL[status]
-          }</span></div>
+          <div class="pvx-cap">${esc(a.name)}<span class="st">${STATUS_LABEL[status]}</span></div>
         </div>`;
       })
       .join('');
@@ -857,8 +854,7 @@
           ${shown
             .map((/** @type {string} */ key) => {
               const meta = Object.prototype.hasOwnProperty.call(SOCIAL_META, key)
-                ? // eslint-disable-next-line security/detect-object-injection -- key checked via hasOwnProperty
-                  SOCIAL_META[key]
+                ? SOCIAL_META[key]
                 : { name: key, brand: '', handle: '', glyph: '' };
               const handle = meta.handle || '@' + meta.name.toLowerCase();
               return `
@@ -912,7 +908,14 @@
         const size = device === 'phone' ? 172 : 200;
         entry.r = X.renderSolid(el, solid, size, (44 * size) / 200);
       };
-      mount(icon).catch(() => mount(null).catch(() => undefined));
+      // An icon that fails to load degrades to the drawn placeholder tile.
+      void (async () => {
+        try {
+          await mount(icon);
+        } catch {
+          await mount(null).catch(() => undefined);
+        }
+      })();
     });
     if (!spinRaf) spinRaf = requestAnimationFrame(spinFrame);
   }
@@ -964,7 +967,6 @@
     if (!canvas || !draft) return;
     canvas.className = `hp-canvas${device === 'phone' ? ' phone' : ''}${introActive ? ' intro' : ''}`;
     const visible = draft.section_order.filter(
-      // eslint-disable-next-line security/detect-object-injection -- id from the model's own order
       (/** @type {string} */ id) => draft.sections[id] !== false,
     );
     const blocks = visible
@@ -975,7 +977,7 @@
         else if (id === 'videos') inner = pvVideos();
         else if (id === 'socials') inner = pvSocials();
         else if (id === 'blog_cta') inner = pvBlog();
-        // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
+
         const label = SECTION_LABELS[id] || id;
         // Clicking anywhere on a block selects its rail card (mouse); the
         // keyboard/speech path is the real "Edit <section>" button, whose
@@ -1453,7 +1455,7 @@
         break;
       case 'sec-toggle': {
         const id = el.getAttribute('data-id') || '';
-        // eslint-disable-next-line security/detect-object-injection -- id rendered from the model's own order
+
         draft.sections[id] = draft.sections[id] === false;
         break;
       }
@@ -1483,7 +1485,6 @@
       case 'app-icon-pick':
         if (window.TE && typeof window.TE.pickImage === 'function') {
           window.TE.pickImage((m) => {
-            // eslint-disable-next-line security/detect-object-injection -- bounds-checked row index
             if (draft.apps.items[i]) draft.apps.items[i].icon = (m && m.url) || '';
             renderAll();
           });
