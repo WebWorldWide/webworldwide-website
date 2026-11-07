@@ -1,0 +1,29 @@
+name: Server alert
+
+# The home server's health scripts (scripts/_notify.sh) dispatch this when
+# something needs attention and no webhook is configured. The run fails on
+# purpose so GitHub emails the repo owner. Only a short alert key is passed —
+# details stay in the server's own logs (this repo is public).
+on:
+  workflow_dispatch:
+    inputs:
+      key:
+        description: Alert key (e.g. backup, disk, drift)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Raise alert
+        env:
+          KEY: ${{ inputs.key }}
+        run: |
+          key=$(printf '%s' "$KEY" | tr -c 'A-Za-z0-9_.-' '_' | cut -c1-60)
+          echo "::error title=Server alert::$key — check the server logs (~/.local/state/webworldwide)"
+          exit 1

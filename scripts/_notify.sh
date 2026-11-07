@@ -42,7 +42,15 @@ wwwide_notify() {
 
   env_file="${WWWIDE_APP_DIR:-/opt/web-world-wide}/docker/.env"
   webhook="${HEALTHCHECK_WEBHOOK_URL:-$(grep -m1 '^HEALTHCHECK_WEBHOOK_URL=' "$env_file" 2>/dev/null | cut -d= -f2- || true)}"
-  [ -n "$webhook" ] || return 0
+  if [ -z "$webhook" ]; then
+    # No webhook configured: raise it through GitHub instead (a failed
+    # "Server alert" run emails the repo owner). Only the key leaves the box.
+    if command -v gh >/dev/null 2>&1; then
+      gh workflow run server-alert.yml -R WebWorldWide/webworldwide-website \
+        -f key="$(printf '%s' "$key" | tr -c 'A-Za-z0-9_.-' '_')" >/dev/null 2>&1 || true
+    fi
+    return 0
+  fi
 
   local text="[WWWide@$host] $msg"
   if printf '%s' "$webhook" | grep -q 'ntfy'; then
