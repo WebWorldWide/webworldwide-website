@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Web World Wide — Astro site (public-facing). Built from Markdown content collections and React islands; deploys to GitHub Pages.",
+  "description": "Web World Wide \u2014 Astro site (public-facing). Built from Markdown content collections and React islands; deploys to GitHub Pages.",
   "scripts": {
     "dev": "npm run prebuild && astro sync && astro dev --port 4321 --host 127.0.0.1",
     "prebuild": "tsx scripts/prebuild.ts && tsx scripts/build-assets.ts",
@@ -60,6 +60,7 @@
     "brace-expansion": "^5.0.8",
     "yaml": ">=2.8.3",
     "form-data": "^4.0.6",
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "minimatch@>=7 <11.0.1": "^11.0.1"
   }
 }
