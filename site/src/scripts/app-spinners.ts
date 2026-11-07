@@ -24,6 +24,7 @@ const MAX_WALLS = isLiteDevice() ? 96 : 260;
 const DEPTH = 44;
 const SIZE = 200; // .drift box (px); 172 on narrow screens — read at build
 const NOD_CYCLES = 2; // nods per revolution — keeps the loop seamless
+const HOVER_RATE = 2.4; // spin speed multiplier while hovered
 
 const reducedMotion = (): boolean =>
   typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -55,6 +56,7 @@ function attachSpinner(spinner: HTMLElement): void {
   let animRy0 = rotY;
   let spinning = !reducedMotion();
   let onScreen = false;
+  let hovering = false;
 
   const size = (): number => spinner.clientWidth || SIZE;
   const transformFor = (rx: number, ry: number): string =>
@@ -72,18 +74,24 @@ function attachSpinner(spinner: HTMLElement): void {
     return [rotX, rotY];
   }
 
-  /** (Re)start the compositor spin from the current pose. */
-  function startSpin(): void {
+  /** Point in the nod cycle (0..1) whose tilt is closest to `rx`. */
+  function cycleFor(rx: number): number {
+    const phase = Math.asin(Math.max(-1, Math.min(1, (rx - nodBase) / nodAmp))) - nodPhase;
+    return (((phase / (Math.PI * 2 * NOD_CYCLES)) % 1) + 1) % 1;
+  }
+
+  /**
+   * (Re)start the compositor spin from the current pose. `cycle` is where in
+   * the nod loop to begin (defaults to the point matching the current tilt);
+   * the yaw is offset so the loop passes through the current heading.
+   */
+  function startSpin(cycle?: number): void {
     stopSpin();
     if (!spinning || reducedMotion()) {
       spinner.style.transform = transformFor(rotX, rotY);
       return;
     }
-    // Start the loop where the pose is now (no jump after a drag): pick the
-    // point in the nod cycle matching the current tilt, then offset the
-    // yaw so the keyframes pass through the current heading at that time.
-    const phase = Math.asin(Math.max(-1, Math.min(1, (rotX - nodBase) / nodAmp))) - nodPhase;
-    const t0 = (((phase / (Math.PI * 2 * NOD_CYCLES)) % 1) + 1) % 1;
+    const t0 = cycle === undefined ? cycleFor(rotX) : ((cycle % 1) + 1) % 1;
     animRy0 = rotY - t0 * 360;
     const K = 48;
     const frames: Keyframe[] = [];
@@ -94,6 +102,7 @@ function attachSpinner(spinner: HTMLElement): void {
     spinner.style.transform = '';
     anim = spinner.animate(frames, { duration: revMs, iterations: Infinity, easing: 'linear' });
     anim.currentTime = t0 * revMs;
+    if (hovering) anim.updatePlaybackRate(HOVER_RATE);
     if (!onScreen || document.hidden) anim.pause();
   }
 
@@ -153,10 +162,12 @@ function attachSpinner(spinner: HTMLElement): void {
   // property, so it composes with the animation; CSS transitions it).
   spinner.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'touch') return;
+    hovering = true;
     spinner.classList.add('is-hover');
-    if (anim) anim.updatePlaybackRate(2.4);
+    if (anim) anim.updatePlaybackRate(HOVER_RATE);
   });
   spinner.addEventListener('pointerleave', () => {
+    hovering = false;
     spinner.classList.remove('is-hover');
     if (anim) anim.updatePlaybackRate(1);
   });
@@ -167,7 +178,6 @@ function attachSpinner(spinner: HTMLElement): void {
   let lastX = 0;
   let lastY = 0;
   let lastT = 0;
-  let velX = 0;
   let velY = 0;
   let moveSum = 0;
   let coastRaf = 0;
@@ -180,23 +190,69 @@ function attachSpinner(spinner: HTMLElement): void {
     spinner.style.transform = transformFor(rotX, rotY);
   }
 
-  function coast(): void {
+  /**
+   * After a release: let a fling coast, then glide — never snap — back into
+   * the idle motion. Tilt eases onto the nod curve and spin speed eases to
+   * its idle rate together (exponential approach, ~1.5s), then the
+   * compositor animation takes over from exactly that pose and speed.
+   */
+  function settle(): void {
     cancelAnimationFrame(coastRaf);
+    if (!spinning || reducedMotion()) {
+      // No idle motion to return to: just ease the tilt back to level.
+      let last = performance.now();
+      const level = (now: number): void => {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        rotX += (nodBase - rotX) * (1 - Math.exp(-dt * 3));
+        rotY += velY * dt;
+        velY *= Math.exp(-dt * 4);
+        pose();
+        if (Math.abs(rotX - nodBase) > 0.05 || Math.abs(velY) > 0.5)
+          coastRaf = requestAnimationFrame(level);
+        else coastRaf = 0;
+      };
+      coastRaf = requestAnimationFrame(level);
+      return;
+    }
+    // The nod target keeps moving while we glide, so ease the OFFSET from it
+    // (not the pose toward it). The offset follows a critically damped
+    // spring starting at rest: it eases out gently, picks up, then settles
+    // with no overshoot, reaching exactly zero, so the hand-off to the
+    // compositor animation has no residual jump. Spin speed eases from the
+    // release speed to the idle rate exponentially (like friction).
+    let cycle = cycleFor(rotX);
+    let offset = rotX - nodAt(cycle);
+    let offsetVel = 0;
+    const W = 3.2; // spring frequency (rad/s): ~1.5s to settle
     let last = performance.now();
+    const began = last;
+    const K = 2.4; // settle rate (1/s): ~1.25s to within 5%
     const step = (now: number): void => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      const drag = Math.pow(0.94, dt * 60);
-      velY *= drag;
-      velX *= drag;
+      const rate = spinBase * (hovering ? HOVER_RATE : 1);
+      cycle += (dt * 1000 * (rate / spinBase)) / revMs;
+      // Semi-implicit Euler, sub-stepped for stability on slow frames.
+      for (let i = 0, n = Math.ceil(dt / 0.008) || 1, h = dt / n; i < n; i++) {
+        offsetVel += (-2 * W * offsetVel - W * W * offset) * h;
+        offset += offsetVel * h;
+      }
+      velY = rate + (velY - rate) * Math.exp(-dt * K);
+      rotX = nodAt(cycle) + offset;
       rotY += velY * dt;
-      rotX += velX * dt;
       pose();
-      if (Math.abs(velY) > spinBase * 1.2 || Math.abs(velX) > 20) {
+      const done =
+        Math.abs(offset) < 0.03 &&
+        Math.abs(offsetVel) < 0.1 &&
+        Math.abs(velY - rate) < 0.2 &&
+        now - began > 200;
+      if (!done) {
         coastRaf = requestAnimationFrame(step);
       } else {
         coastRaf = 0;
-        startSpin();
+        rotX = nodAt(cycle);
+        startSpin(cycle);
         syncTimers();
       }
     };
@@ -213,7 +269,6 @@ function attachSpinner(spinner: HTMLElement): void {
     lastY = e.clientY;
     lastT = performance.now();
     moveSum = 0;
-    velX = 0;
     velY = 0;
   });
   spinner.addEventListener('pointermove', (e) => {
@@ -225,7 +280,6 @@ function attachSpinner(spinner: HTMLElement): void {
     rotY += dx * 0.5;
     rotX -= dy * 0.35;
     velY = Math.max(-2400, Math.min(2400, (dx * 0.5) / (dt / 1000)));
-    velX = Math.max(-1400, Math.min(1400, -(dy * 0.35) / (dt / 1000)));
     moveSum += Math.abs(dx) + Math.abs(dy);
     lastX = e.clientX;
     lastY = e.clientY;
@@ -242,17 +296,16 @@ function attachSpinner(spinner: HTMLElement): void {
     }
     // A stale velocity (pointer held still before release) shouldn't fling.
     if (performance.now() - lastT > 80) {
-      velX = 0;
       velY = 0;
     }
-    coast();
+    settle();
   };
   spinner.addEventListener('pointerup', end);
   spinner.addEventListener('pointercancel', end);
   spinner.addEventListener('lostpointercapture', () => {
     if (dragging) {
       dragging = false;
-      coast();
+      settle();
     }
   });
 
@@ -261,11 +314,12 @@ function attachSpinner(spinner: HTMLElement): void {
   spinner.addEventListener('keydown', (e) => {
     let handled = true;
     const nudge = (fn: () => void): void => {
+      cancelAnimationFrame(coastRaf);
       stopSpin();
+      velY = spinning ? spinBase : 0;
       fn();
       pose();
-      if (spinning) startSpin();
-      syncTimers();
+      settle();
     };
     switch (e.key) {
       case ' ':
