@@ -306,7 +306,9 @@ app.use((req, res, next) => {
   } catch {
     return next(); // not an admin HTML page — let static/routers handle it
   }
-  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  // no-transform: stops edge proxies (Cloudflare Web Analytics) injecting
+  // third-party scripts into the admin, which the CSP would block anyway.
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate, no-transform');
   res.type('html').send(versionizeHtml(html, ASSET_VERSION));
 });
 
@@ -317,7 +319,7 @@ app.use(
     lastModified: true,
     setHeaders(res, path) {
       if (path.endsWith('.html') || path.endsWith('manifest.json') || path.endsWith('sw.js')) {
-        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate, no-transform');
       } else if (path.endsWith('.woff2') || path.endsWith('.woff') || path.endsWith('.ttf')) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
