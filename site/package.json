@@ -41,7 +41,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@vitest/coverage-v8": "^5.1.0",
     "astro-eslint-parser": "^2.0.0",
     "esbuild": "^0.28.1",
     "eslint": "^10.5.0",
