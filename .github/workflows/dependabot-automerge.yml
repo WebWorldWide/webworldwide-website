@@ -1,0 +1,59 @@
+name: Dependabot auto-merge
+
+# Merges Dependabot PRs once EVERY check on them has passed, then deploys.
+# Runs after the PR's CI workflows finish (workflow_run), in the base repo's
+# context — it never checks out or runs the PR's code. Major version bumps
+# are left open for a human.
+on:
+  workflow_run:
+    workflows: ['Quality', 'E2E + a11y', 'Lighthouse']
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Merge if all checks are green and it is not a major bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr list -R "$REPO" --head "$BRANCH" --state open \
+                 --json number,author -q '.[] | select(.author.login == "app/dependabot") | .number' | head -1)
+          if [ -z "$pr" ]; then echo "No open Dependabot PR for $BRANCH"; exit 0; fi
+
+          title=$(gh pr view "$pr" -R "$REPO" --json title -q .title)
+          # "bump X from 1.2.3 to 2.0.0": a change in the leading number (or
+          # in the minor of a 0.x version) is a breaking bump — leave it.
+          if [[ "$title" =~ from\ v?([0-9]+)\.([0-9]+)[^\ ]*\ to\ v?([0-9]+)\.([0-9]+) ]]; then
+            fm=${BASH_REMATCH[1]} fn=${BASH_REMATCH[2]} tm=${BASH_REMATCH[3]} tn=${BASH_REMATCH[4]}
+            if [ "$fm" != "$tm" ] || { [ "$fm" = 0 ] && [ "$fn" != "$tn" ]; }; then
+              echo "Major bump ($title) — leaving for review."; exit 0
+            fi
+          fi
+
+          checks=$(gh pr checks "$pr" -R "$REPO" --json name,bucket)
+          if ! jq -e 'length > 0 and all(.bucket == "pass" or .bucket == "skipping")' <<<"$checks" >/dev/null; then
+            echo "Checks not all green yet:"; jq -r '.[] | "  \(.bucket)  \(.name)"' <<<"$checks"; exit 0
+          fi
+
+          gh pr merge "$pr" -R "$REPO" --merge --delete-branch
+          # Merges made with GITHUB_TOKEN don't fire push workflows, so
+          # start the Pages deploy explicitly.
+          gh workflow run deploy.yml -R "$REPO" --ref main

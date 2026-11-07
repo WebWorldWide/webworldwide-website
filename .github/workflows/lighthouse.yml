@@ -3,6 +3,10 @@ name: Lighthouse
 on:
   pull_request:
     branches: [main]
+  # Weekly regression check of main (CMS publishes push straight to main and
+  # skip PR checks); a failed run emails the repo owner.
+  schedule:
+    - cron: '23 11 * * 1'
   workflow_dispatch:
 
 permissions:

@@ -1,0 +1,41 @@
+name: Uptime
+
+# Every 15 minutes, from outside the house: is the site (and, via the
+# UPTIME_URLS secret, the admin/comments/analytics hosts) answering? A failed
+# run makes GitHub email the repo owner — no extra service to configure.
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Probe endpoints
+        env:
+          PRIVATE_URLS: ${{ secrets.UPTIME_URLS }}
+        run: |
+          set -uo pipefail
+          fail=0
+          probe() {
+            local label="$1" url="$2" code
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+                     --retry 3 --retry-delay 15 --retry-all-errors "$url" || echo 000)
+            if [[ "$code" =~ ^(2|3) ]]; then echo "ok    $label ($code)"; else echo "DOWN  $label ($code)"; fail=1; fi
+          }
+          probe "site" "https://webworldwide.online/"
+          probe "blog" "https://webworldwide.online/blog/"
+          i=0
+          while IFS= read -r url; do
+            [ -n "$url" ] || continue
+            i=$((i + 1)); probe "private endpoint $i" "$url"
+          done <<<"${PRIVATE_URLS:-}"
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::One or more endpoints are down"
+            exit 1
+          fi
