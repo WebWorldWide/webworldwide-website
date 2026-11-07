@@ -16,6 +16,8 @@ COPY admin/src/ ./src/
 COPY admin/client/ ./client/
 COPY admin/public/ ./public/
 COPY admin/scripts/ ./scripts/
+# Shared with the public site (homepage preview app-icon extrusion).
+COPY site/src/scripts/extrude.ts ../site/src/scripts/extrude.ts
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-bookworm-slim AS runtime

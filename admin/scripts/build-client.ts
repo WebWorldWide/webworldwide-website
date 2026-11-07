@@ -49,6 +49,20 @@ const editorOptions: BuildOptions = {
   },
 };
 
+// The solid app-icon extrusion is shared with the public site so the
+// homepage preview spins exactly like the live page.
+const extrudeOptions: BuildOptions = {
+  entryPoints: [resolve(adminRoot, '../site/src/scripts/extrude.ts')],
+  outfile: resolve(jsOut, 'extrude.js'),
+  bundle: true,
+  format: 'iife',
+  globalName: 'WWWExtrude',
+  target: 'es2020',
+  minify: production,
+  legalComments: 'none',
+  logLevel: 'info',
+};
+
 await Promise.all([
   cp(
     resolve(adminRoot, 'node_modules/katex/dist/katex.min.css'),
@@ -74,14 +88,22 @@ await Promise.all([
 ]);
 
 if (watch) {
-  const contexts = await Promise.all([context(browserOptions), context(editorOptions)]);
+  const contexts = await Promise.all([
+    context(browserOptions),
+    context(editorOptions),
+    context(extrudeOptions),
+  ]);
   await Promise.all(contexts.map((item) => item.watch()));
   process.stdout.write('[build-client] watching TypeScript browser sources\n');
   await new Promise(() => {});
 } else {
-  const results = await Promise.all([build(browserOptions), build(editorOptions)]);
+  const results = await Promise.all([
+    build(browserOptions),
+    build(editorOptions),
+    build(extrudeOptions),
+  ]);
   if (results.some((result) => result.errors.length > 0)) process.exitCode = 1;
   process.stdout.write(
-    `[build-client] emitted ${clientEntries.length + 1} browser bundles from TypeScript\n`,
+    `[build-client] emitted ${clientEntries.length + 2} browser bundles from TypeScript\n`,
   );
 }
