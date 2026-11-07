@@ -84,7 +84,17 @@
         if (!target.hasAttribute('role')) target.setAttribute('role', 'button');
         if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '0');
       }
-      if (!target.hasAttribute('aria-label')) target.setAttribute('aria-label', ariaLabel);
+      // WCAG 2.5.3 (label in name): when the zone shows visible text, the
+      // accessible name must contain it, so speech users can say what they
+      // see. Lead with the visible label, then the purpose.
+      const visible = (target.textContent || '').trim() || label;
+      if (!target.hasAttribute('aria-label')) {
+        const name =
+          visible && ariaLabel && !visible.toLowerCase().includes(ariaLabel.toLowerCase())
+            ? `${visible} (${ariaLabel})`
+            : visible || ariaLabel;
+        target.setAttribute('aria-label', name);
+      }
     }
 
     // Body drop zones don't render a label (they're invisible until

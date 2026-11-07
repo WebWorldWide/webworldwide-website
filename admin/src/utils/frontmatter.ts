@@ -1,5 +1,5 @@
 import matter from 'gray-matter';
-import jsYaml from 'js-yaml';
+import { load as yamlLoad, dump as yamlDump } from 'js-yaml';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,18 +24,18 @@ export { postSchema, validatePostSchema };
 
 /**
  * gray-matter bundles js-yaml 3, which carries a moderate ReDoS advisory
- * (GHSA-h67p-54hq-rp68) and is unmaintained. Drive its YAML through js-yaml 4
- * instead: `load`/`dump` are the v4 names for v3's `safeLoad`/`safeDump` and
+ * (GHSA-h67p-54hq-rp68) and is unmaintained. Drive its YAML through current js-yaml
+ * instead: `load`/`dump` are the modern names for v3's `safeLoad`/`safeDump` and
  * emit byte-compatible output, so existing post frontmatter serializes
- * unchanged. The package override pins gray-matter's js-yaml to 4.x so the
+ * unchanged. The package override pins gray-matter to the same js-yaml so the
  * vulnerable 3.x leaves the dependency tree entirely.
  *
  *   lineWidth: -1 — never wrap long strings; front-matter URLs would otherwise
  *   fold across newlines and break parsers.
  */
 const yamlEngine = {
-  parse: (/** @type {string} */ str) => jsYaml.load(str),
-  stringify: (/** @type {any} */ obj) => jsYaml.dump(obj, { lineWidth: -1 }),
+  parse: (/** @type {string} */ str) => yamlLoad(str),
+  stringify: (/** @type {any} */ obj) => yamlDump(obj, { lineWidth: -1 }),
 };
 // gray-matter MERGES `engines` into its defaults, and the default `js` /
 // `javascript` engines `eval()` the front matter — so a post starting with

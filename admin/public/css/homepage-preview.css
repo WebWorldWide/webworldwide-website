@@ -168,9 +168,16 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   border-radius: calc(4px / var(--pvz, 1));
+  border: 0;
+  cursor: pointer;
 }
-.pvx .pv-block:focus-visible {
-  outline: calc(3px / var(--pvz, 1)) solid #fff;
+/* The edit button is reachable by keyboard: show it when focused. */
+.pvx .pv-block:focus-within .pv-tag {
+  opacity: 1;
+}
+.pvx .pv-tag:focus-visible {
+  outline: calc(2px / var(--pvz, 1)) solid #fff;
+  outline-offset: calc(2px / var(--pvz, 1));
 }
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */

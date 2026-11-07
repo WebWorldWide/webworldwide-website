@@ -11,7 +11,27 @@ updates:
       time: '06:00'
       timezone: America/Chicago
     open-pull-requests-limit: 6
+    ignore:
+      # TypeScript 7 (the native compiler) isn't supported by typescript-eslint
+      # yet (peer: typescript <6.1). Take it together with a typescript-eslint
+      # release that allows it.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     groups:
+      # Toolchains whose packages must move together (a lone major fails
+      # peer-dependency resolution until its plugins catch up).
+      typescript:
+        patterns: [typescript, typescript-eslint, '@typescript-eslint/*', ts-api-utils]
+        update-types: [major]
+      vitest:
+        patterns: [vitest, '@vitest/*']
+        update-types: [major]
+      stylelint:
+        patterns: ['stylelint*']
+        update-types: [major]
+      eslint:
+        patterns: [eslint, '@eslint/*', 'eslint-plugin-*', 'eslint-config-*', globals]
+        update-types: [major]
       minor-and-patch:
         update-types: [minor, patch]
 
@@ -39,6 +59,11 @@ updates:
 
   - package-ecosystem: docker
     directory: /admin
+    # Node majors are a deliberate LTS decision (CI pins the same version),
+    # not a weekly bump.
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
     schedule:
       interval: weekly
       day: monday

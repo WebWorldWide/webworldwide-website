@@ -977,11 +977,12 @@
         else if (id === 'blog_cta') inner = pvBlog();
         // eslint-disable-next-line security/detect-object-injection -- id validated against SECTION_LABELS
         const label = SECTION_LABELS[id] || id;
-        // role=button + tabindex so the block is a keyboard-operable
-        // shortcut to its rail card (global Enter/Space handler clicks it).
+        // Clicking anywhere on a block selects its rail card (mouse); the
+        // keyboard/speech path is the real "Edit <section>" button, whose
+        // name matches its visible text (WCAG 2.5.3).
         return `
-        <div class="pv-block${selected === id ? ' sel' : ''}" data-pv="${esc(id)}" role="button" tabindex="0" aria-label="Edit ${esc(label)} section">
-          <span class="pv-tag" aria-hidden="true">Edit ${esc(label)}</span>
+        <div class="pv-block${selected === id ? ' sel' : ''}" data-pv="${esc(id)}">
+          <button type="button" class="pv-tag">Edit ${esc(label)}</button>
           ${inner}
         </div>`;
       })
