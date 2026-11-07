@@ -42,7 +42,10 @@ const sections = homepage.section_order.filter(
 const homeUrl = new URL('/', siteConfig.site.url).toString();
 const homeAvatar = new URL('/favicon.png', siteConfig.site.url).toString();
 ---
-<BaseLayout title="Home" description="Web World Wide — My World on the Web. Apps, blog, YouTube, and elsewhere.">
+<BaseLayout
+  title="Home"
+  description="Web World Wide — My World on the Web. Apps, blog, YouTube, and elsewhere."
+>
   {/* Representative h-card (hidden) — Bridgy Fed builds the fediverse actor from
       this; the rel=me links in the Socials section verify the identity. */}
   <div class="h-card" hidden>

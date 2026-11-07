@@ -28,6 +28,12 @@ import '@styles/nav.css';
 // from the real font with no fallback-swap flash.
 import cormorant400 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-normal.woff2';
 import cormorant700 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-normal.woff2';
+import spaceMono700 from '@fontsource/space-mono/files/space-mono-latin-700-normal.woff2';
+
+// Preload only the faces a page paints above the fold — a preload for a face
+// the page never uses is a wasted ~23KB download competing with real work.
+const FONT_URLS = { serif400: cormorant400, serif700: cormorant700, mono700: spaceMono700 } as const;
+type PreloadFont = keyof typeof FONT_URLS;
 
 const siteToml = siteConfig;
 
@@ -43,6 +49,8 @@ interface Props {
   modifiedTime?: string;
   bodyClass?: string;
   bodyData?: Record<string, string | boolean | undefined>;
+  /** Font faces to preload (above-the-fold only). Defaults to the serif pair. */
+  preloadFonts?: PreloadFont[];
 }
 
 const {
@@ -55,7 +63,8 @@ const {
   publishedTime,
   modifiedTime,
   bodyClass = '',
-  bodyData = {}
+  bodyData = {},
+  preloadFonts = ['serif700', 'serif400'],
 } = Astro.props;
 
 const siteTitle = siteToml.site.title;
@@ -130,14 +139,13 @@ const dataAttrs = Object.fromEntries(
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     {/* crossorigin is mandatory — font fetches are always CORS; omitting it
         causes a wasted double-fetch. */}
-    <link rel="preload" href={cormorant700} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={cormorant400} as="font" type="font/woff2" crossorigin />
+    {preloadFonts.map((f) => <link rel="preload" href={FONT_URLS[f]} as="font" type="font/woff2" crossorigin />)}
     <title>{documentTitle}</title>
     <meta name="description" content={pageDesc} />
     <meta name="theme-color" content="#1E68F0" />
     <link rel="canonical" href={canonicalURL} />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title={`${siteTitle} RSS`} href="/rss.xml" />
     {/* Webmention autodiscovery — Bridgy Fed delivers fediverse (Mastodon/Threads)

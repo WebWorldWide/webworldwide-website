@@ -1,0 +1,63 @@
+---
+/**
+ * Comments — mounts the self-hosted Remark42 widget when the section nears
+ * the viewport (no framework). Remark42 owns the thread, composer and
+ * persistence; anonymous posting is enabled on the server (AUTH_ANON=true).
+ */
+interface Props {
+  /** Stable thread identifier — the post slug. Used to build the canonical url. */
+  threadId: string;
+  /** Remark42 base URL. If empty, nothing mounts. */
+  remarkUrl: string;
+  /** Remark42 site ID. */
+  remarkSiteId: string;
+}
+const { threadId, remarkUrl, remarkSiteId } = Astro.props;
+---
+{
+  remarkUrl ? (
+    <div id="remark42" class="remark42-wrap" data-host={remarkUrl} data-site={remarkSiteId} data-thread={threadId} />
+  ) : (
+    <p class="comments-empty">Comments aren’t loading right now — the comment service may be offline. Please check back soon.</p>
+  )
+}
+<script>
+  const mount = document.getElementById('remark42');
+  if (mount) {
+    const { host = '', site = '', thread = '' } = mount.dataset;
+    const start = (): void => {
+      (window as unknown as { remark_config: unknown }).remark_config = {
+        host,
+        site_id: site,
+        url: `${location.origin}/blog/${thread}/`,
+        components: ['embed'],
+        theme: 'light',
+        max_shown_comments: 50,
+      };
+      const s = document.createElement('script');
+      s.src = `${host}/web/embed.js`;
+      s.async = true;
+      // If the embed can't load (e.g. Remark42 offline), say so instead of
+      // leaving a blank gap under the heading.
+      s.onerror = () => {
+        const p = document.createElement('p');
+        p.className = 'comments-empty';
+        p.textContent = 'Comments aren’t loading right now — the comment service may be offline. Please check back soon.';
+        mount.replaceWith(p);
+      };
+      document.head.append(s);
+    };
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            io.disconnect();
+            start();
+          }
+        },
+        { rootMargin: '600px 0px' },
+      );
+      io.observe(mount);
+    } else start();
+  }
+</script>

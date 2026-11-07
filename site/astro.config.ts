@@ -1,6 +1,5 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -47,7 +46,7 @@ export default defineConfig({
     legacyRedirects.map(({ from, to }) => [from, { status: 301, destination: to }]),
   ),
 
-  integrations: [react(), sitemap({ changefreq: 'weekly', priority: 0.7 })],
+  integrations: [sitemap({ changefreq: 'weekly', priority: 0.7 })],
   // Content-Security-Policy (emitted as a <meta> tag — GitHub Pages can't set
   // headers). Astro hashes every inline script it emits, so only our own
   // bundles, Umami, and the Remark42 embed can execute; a compromised CMS
@@ -81,6 +80,10 @@ export default defineConfig({
   image: {
     service: { entrypoint: 'astro/assets/services/sharp' },
   },
+
+  // Prefetch internal pages when a link is hovered / focused (or touched), so
+  // opening a post from the blog index or the homepage feels instant.
+  prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
 
   build: {
     format: 'directory',
