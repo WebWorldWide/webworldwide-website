@@ -19,11 +19,19 @@ http://{$DOMAIN_ADMIN} {
 
 http://{$DOMAIN_COMMENTS} {
 	encode zstd gzip
+	# Stop Cloudflare's edge rewriting the HTML (its Web Analytics beacon
+	# was injected here and then blocked by this app's own CSP, logging a
+	# console error on every blog post that embeds comments).
+	header +Cache-Control "no-transform"
 	reverse_proxy remark42:8080
 }
 
 http://{$DOMAIN_ANALYTICS} {
 	encode zstd gzip
+	# Stop Cloudflare's edge rewriting the HTML (its Web Analytics beacon
+	# was injected here and then blocked by this app's own CSP, logging a
+	# console error on every blog post that embeds comments).
+	header +Cache-Control "no-transform"
 	reverse_proxy umami:3000
 }
 
