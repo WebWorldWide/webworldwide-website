@@ -17,7 +17,7 @@ name: web-world-wide-dev
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: t80-dev-postgres
     restart: unless-stopped
     environment:
