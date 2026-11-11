@@ -42,7 +42,7 @@ function isCurrent(path: string): boolean {
 </nav>
 
 <script>
-  // Lazy-load Three.js globe after first paint. requestIdleCallback if
+  // Lazy-load the pixel globe after first paint. requestIdleCallback if
   // available, otherwise setTimeout fallback.
   import('../scripts/globe-nav.ts').then((mod) => {
     const start = () => mod.initGlobes('canvas[data-globe]');

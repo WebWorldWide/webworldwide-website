@@ -33,7 +33,8 @@
   position: relative;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--paper);
+  /* Ocean blue, so the circle never flashes white before the globe draws. */
+  background: #1e68f0;
   border: 2px solid var(--ink);
   box-shadow:
     inset 0 0 0 2px var(--paper),
@@ -46,6 +47,8 @@
   height: 100%;
   display: block;
   border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .topbar-pill a.nav-link {
@@ -123,8 +126,7 @@
   background-repeat: no-repeat;
   background-size: 100% 100%;
   will-change: transform;
-}
-.wordmark-globe .globe-strip-reel {
+  /* Pixel-art globe: scale the N×N frames up with hard pixel edges. */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }

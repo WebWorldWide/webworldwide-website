@@ -115,7 +115,8 @@
   flex-shrink: 0;
   width: 50px;
   height: 50px;
-  background: #fff url("/logo.png") center / 82% no-repeat;
+  /* The site's pixel globe (logo.png is generated from the same art). */
+  background: #1e68f0 url("/logo.png") center / 100% no-repeat;
   border: 2px solid var(--pv-ink);
   border-radius: 50%;
   box-shadow:
@@ -198,11 +199,13 @@
   height: 432px;
 }
 .pvx-wordmark {
-  font-family: var(--pv-serif);
-  font-size: 58px;
-  font-weight: 700;
+  /* The site wordmark is the VT323 pixel face, in capitals. */
+  font-family: var(--pv-pixel);
+  font-size: 66px;
+  font-weight: 400;
   line-height: 1;
   color: #fff;
+  text-transform: uppercase;
   white-space: nowrap;
   text-shadow:
     2px 0 0 var(--pv-ink),
@@ -262,7 +265,7 @@
   height: 240px;
 }
 .pvx-phone .pvx-wordmark {
-  font-size: 34px;
+  font-size: 40px;
 }
 
 /* ── Sections + eyebrow ──────────────────────────────────────────────────── */
