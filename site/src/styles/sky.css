@@ -1,5 +1,5 @@
 /* ============================================================
-   Sky background + pixel cloud puffs
+   Sky background + drifting block clouds (shapes: lib/sky-clouds.ts)
    Same engine on site/ (public) and admin/ (dimmer there).
    ============================================================ */
 .sky {
@@ -16,7 +16,9 @@
   z-index: var(--z-clouds);
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.72;
+  /* Kept quiet: with each cloud's own opacity (≤ 0.56) the brightest body
+     lands around 45% white — pale blue on the sky, never solid white. */
+  opacity: 0.8;
 }
 
 .puff {
@@ -51,13 +53,13 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
 }
 
 /* Dimmer cloud opacity on the post-detail surface so reading copy stays primary. */
 body[data-cloud-dim] .sky-puffs {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 /* Lite mode: the clouds still drift — 19 compositor-only transforms cost

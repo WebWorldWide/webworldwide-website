@@ -33,14 +33,14 @@
   font-display: swap;
   src: url("/fonts/archivo-variable-italic-latin.woff2") format("woff2");
 }
-/* Fraunces Soft 800 — the public site's wordmark face, used only by the
+/* Archivo Black — the public site's wordmark face, used only by the
    homepage editor's live preview (see site/src/styles/fonts.css). */
 @font-face {
-  font-family: "Fraunces Soft";
+  font-family: "Archivo Black";
   font-style: normal;
-  font-weight: 800;
+  font-weight: 400;
   font-display: swap;
-  src: url("/fonts/fraunces-soft-800-latin.woff2") format("woff2");
+  src: url("/fonts/archivo-black-400-latin.woff2") format("woff2");
 }
 @font-face {
   font-family: "Instrument Serif";

@@ -1,224 +1,42 @@
 ---
 /**
- * Sky backdrop — fixed sky gradient + pixel cloud puffs.
+ * Sky backdrop — fixed sky gradient + drifting block clouds.
  *
- * The puffs are rendered at BUILD TIME (seeded PRNG, so every build is
- * the same sky) instead of being injected by a client script: the old
- * clouds.ts ran after hydration, which made a late-painting cloud the
- * page's Largest Contentful Paint and dragged the homepage perf score.
- * Server-rendered divs paint with the first stylesheet — zero JS.
+ * The clouds (shapes, layers, layout) come from lib/sky-clouds.ts, shared
+ * with the CMS homepage preview. They are rendered at BUILD TIME (seeded
+ * PRNG, so every build is the same sky): server-rendered divs paint with the
+ * first stylesheet, zero JS, and never become a late Largest Contentful
+ * Paint.
  *
  * Renders behind everything via z-index: -5 / -3 in sky.css. Decorative,
  * fully aria-hidden.
  */
+import { CLOUDS, cloudImage, skyPuffs } from '@/lib/sky-clouds';
 
-type CloudLayer = {
-  count: number;
-  scaleMin: number;
-  scaleMax: number;
-  durMin: number;
-  durMax: number;
-  opMin: number;
-  opMax: number;
-  outline: string; // url-encoded hex (e.g., '%23a8c8f0')
-  topMin: number;
-  topMax: number;
-};
+// Each cloud image is emitted once, as a class, not inline on every puff.
+const puffCss = CLOUDS.map((c, i) => `.puff-bob.pf${i}{background-image:url("${cloudImage(c)}")}`).join('');
 
-const SHAPES: string[][] = [
-  [
-    '0002220002220000022000',
-    '0022112202211220222110',
-    '0211111211111111111112',
-    '2111111111111111111112',
-    '2111111111111111111112',
-    '0222222222222222222220',
-  ],
-  ['00022200002200', '00211122022112', '02111111111112', '02111111111112', '02222222222220'],
-  [
-    '00022000022000022000022000',
-    '02211220221122022112202112',
-    '21111111111111111111111111',
-    '02222222222222222222222220',
-  ],
-  [
-    '0002220000',
-    '0022112200',
-    '0211111120',
-    '2111111112',
-    '2111111112',
-    '0211111120',
-    '0022222200',
-  ],
-];
-
-const LAYERS: CloudLayer[] = [
-  {
-    count: 4,
-    scaleMin: 3,
-    scaleMax: 5,
-    durMin: 280,
-    durMax: 360,
-    opMin: 0.3,
-    opMax: 0.5,
-    outline: '%23d4dff0',
-    topMin: 0,
-    topMax: 30,
-  },
-  {
-    count: 6,
-    scaleMin: 5,
-    scaleMax: 9,
-    durMin: 220,
-    durMax: 300,
-    opMin: 0.5,
-    opMax: 0.7,
-    outline: '%23c0d0ec',
-    topMin: 2,
-    topMax: 65,
-  },
-  {
-    count: 6,
-    scaleMin: 9,
-    scaleMax: 13,
-    durMin: 150,
-    durMax: 220,
-    opMin: 0.7,
-    opMax: 0.85,
-    outline: '%23a8c8f0',
-    topMin: 6,
-    topMax: 88,
-  },
-  {
-    count: 3,
-    scaleMin: 14,
-    scaleMax: 20,
-    durMin: 100,
-    durMax: 160,
-    opMin: 0.85,
-    opMax: 0.95,
-    outline: '%2388b4e8',
-    topMin: 14,
-    topMax: 96,
-  },
-];
-
-// One SVG per (shape, outline colour) — scale comes from the element box
-// (background-size: 100% 100%), so it isn't baked into the image. Pixels are
-// merged into horizontal runs. Each distinct image is emitted ONCE as a CSS
-// class instead of inline on every puff (that was ~70KB of HTML).
-function shapeToSVG(shape: string[], outlineHex: string): string {
-  const h = shape.length;
-  const w = shape[0].length;
-  const runs = (ch: string): string => {
-    let out = '';
-    for (let y = 0; y < h; y++) {
-      let x = 0;
-      while (x < w) {
-        if (shape[y][x] !== ch) {
-          x++;
-          continue;
-        }
-        const x0 = x;
-        while (x < w && shape[y][x] === ch) x++;
-        out += `<rect x='${x0}' y='${y}' width='${x - x0}' height='1'/>`;
-      }
-    }
-    return out;
-  };
-  const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' preserveAspectRatio='none' shape-rendering='crispEdges'>` +
-    `<g fill='%23ffffff'>${runs('1')}</g>` +
-    `<g fill='${outlineHex}'>${runs('2')}</g></svg>`;
-  return `url("data:image/svg+xml;utf8,${svg}")`;
-}
-
-// Deterministic PRNG (mulberry32) — the sky layout is decided at build
-// time, identical for every visitor, friendly to visual-regression
-// testing.
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-const rng = mulberry32(0x80808080);
-const rand = (min: number, max: number): number => min + rng() * (max - min);
-
-type Puff = {
-  width: number;
-  height: number;
-  top: string;
-  opacity: string;
-  driftDur: string;
-  driftDelay: string;
-  restX: string;
-  bg: string;
-  bobDur: string;
-  bobDelay: string;
-};
-
-const puffImages = new Map<string, { cls: string; url: string }>();
-function puffClass(shape: string[], outline: string): string {
-  const key = `${SHAPES.indexOf(shape)}-${outline}`;
-  let hit = puffImages.get(key);
-  if (!hit) {
-    hit = { cls: `pf${puffImages.size}`, url: shapeToSVG(shape, outline) };
-    puffImages.set(key, hit);
-  }
-  return hit.cls;
-}
-const puffCss = (): string =>
-  [...puffImages.values()].map((p) => `.puff-bob.${p.cls}{background-image:${p.url}}`).join('');
-
-const puffs: Puff[] = [];
-for (const L of LAYERS) {
-  for (let i = 0; i < L.count; i++) {
-    const shape = SHAPES[Math.floor(rng() * SHAPES.length)];
-    const scale = L.scaleMin + Math.floor(rng() * (L.scaleMax - L.scaleMin + 1));
-    const dur = rand(L.durMin, L.durMax);
-    const width = shape[0].length * scale;
-    // PRNG draw order is load-bearing (same sky every build): top, opacity,
-    // then drift progress.
-    const top = `${rand(L.topMin, L.topMax).toFixed(2)}vh`;
-    const opacity = rand(L.opMin, L.opMax).toFixed(2);
-    const progress = rng();
-    puffs.push({
-      width,
-      height: shape.length * scale,
-      top,
-      opacity,
-      driftDur: `${dur.toFixed(1)}s`,
-      driftDelay: `${(-progress * dur).toFixed(1)}s`,
-      // Where the drift animation would place this puff at t=0. Used as the
-      // resting transform when the animation isn't running (reduced motion),
-      // so a still sky is still spread across the screen instead of every
-      // puff stacking at left:0.
-      restX: `calc(${progress.toFixed(3)} * (116vw + ${width}px) - ${width}px - 8vw)`,
-      bg: puffClass(shape, L.outline),
-      bobDur: `${(4 + rng() * 4).toFixed(2)}s`,
-      bobDelay: `${(-rng() * 4).toFixed(2)}s`,
-    });
-  }
-}
+const puffs = skyPuffs().map((p) => ({
+  ...p,
+  // Where the drift would place this puff at t=0 — its resting transform
+  // when animation is off (reduced motion), so a still sky is still spread
+  // across the screen instead of every puff stacking at left:0.
+  restX: `calc(${p.progress.toFixed(3)} * (116vw + ${p.width}px) - ${p.width}px - 8vw)`,
+}));
 ---
 
-<style is:inline set:html={puffCss()} />
+<style is:inline set:html={puffCss} />
 <div class="sky" aria-hidden="true"></div>
 <div class="sky-puffs" id="skyPuffs" aria-hidden="true">
   {
     puffs.map((p) => (
       <div
         class="puff"
-        style={`--w:${p.width}px;--x:${p.restX};width:${p.width}px;height:${p.height}px;top:${p.top};left:0;opacity:${p.opacity};animation-duration:${p.driftDur};animation-delay:${p.driftDelay}`}
+        style={`--w:${p.width}px;--x:${p.restX};width:${p.width}px;height:${p.height}px;top:${p.top.toFixed(2)}vh;left:0;opacity:${p.opacity.toFixed(2)};animation-duration:${p.driftDur.toFixed(1)}s;animation-delay:${p.driftDelay.toFixed(1)}s`}
       >
         <div
-          class={`puff-bob ${p.bg}`}
-          style={`animation-duration:${p.bobDur};animation-delay:${p.bobDelay}`}
+          class={`puff-bob pf${p.cloud}`}
+          style={`animation-duration:${p.bobDur.toFixed(2)}s;animation-delay:${p.bobDelay.toFixed(2)}s`}
         />
       </div>
     ))
