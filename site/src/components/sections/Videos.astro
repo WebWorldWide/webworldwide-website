@@ -1,12 +1,40 @@
 ---
 /**
  * Videos / YouTube section — cinematic film frame + subscribe CTA.
- * Episode tag + film title come from site.toml ([homepage.videos]);
- * channel URL/handle from [social].
+ *
+ * Shows the channel's latest video (thumbnail, title, date, link), fetched
+ * at build time by scripts/youtube-latest.ts. A scheduled workflow
+ * (.github/workflows/youtube-sync.yml) rebuilds the site when a new video
+ * appears. Until the channel has one, the frame shows a drifting block-cloud
+ * sky with the episode tag + title from site.toml ([homepage.videos]).
+ * Channel URL/handle come from [social].
  */
 import { siteConfig, homepage } from '@/lib/site-config';
+import { filmPuffs, imageClass } from '@/lib/sky-clouds';
+
 const { youtube, youtube_handle } = siteConfig.social;
 const { episode, film_title } = homepage.videos;
+
+type LatestVideo = { id: string; title: string; url: string; published: string; thumbnail: string | null };
+// Written by scripts/youtube-latest.ts (prebuild). A glob, not a plain
+// import, so a build that skipped prebuild (astro check, tests) still works:
+// the file is simply absent and the placeholder shows.
+const data = import.meta.glob<{ default: LatestVideo | null }>('../../data/youtube-latest.json', {
+  eager: true,
+});
+const latest: LatestVideo | null = Object.values(data)[0]?.default ?? null;
+
+const published = latest?.published
+  ? new Date(latest.published)
+      .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+      .toUpperCase()
+  : '';
+
+// Placeholder clouds: server-rendered (no JS), reusing the cloud image
+// classes SkyBackdrop emits once on every page.
+// Positions are % of the frame; the drift distance is the frame's own
+// width (container query units), so they cross the frame at any size.
+const clouds = latest ? [] : filmPuffs();
 
 interface Props {
   /** Section number shown in the eyebrow (assigned from section_order). */
@@ -20,23 +48,57 @@ const label = Astro.props.num ? `${String(Astro.props.num).padStart(2, '0')} —
     <h2 class="sr-only">Videos</h2>
 
     <div class="yt-wrap reveal">
-      <a class="film-frame" href={youtube} target="_blank" rel="noopener" aria-label="Watch on YouTube — Web World Wide channel" data-umami-event="youtube: film">
+      <a
+        class:list={['film-frame', { 'has-video': latest }]}
+        href={latest ? latest.url : youtube}
+        target="_blank"
+        rel="noopener"
+        aria-label={latest ? `Watch “${latest.title}” on YouTube` : 'Watch on YouTube — Web World Wide channel'}
+        data-umami-event={latest ? 'youtube: latest video' : 'youtube: film'}
+      >
         <div class="film-bg" aria-hidden="true"></div>
-        <div class="film-clouds" id="film-clouds" aria-hidden="true"></div>
+        {
+          latest?.thumbnail && (
+            <>
+              <img class="film-thumb" src={latest.thumbnail} alt="" width="1280" height="720" loading="lazy" decoding="async" />
+              <div class="film-scrim" aria-hidden="true" />
+            </>
+          )
+        }
+        {
+          !latest && (
+            <div class="film-clouds" aria-hidden="true">
+              {clouds.map((c) => (
+                <div
+                  class="film-cloud"
+                  style={`--w:${c.width}px;--x:${c.progress.toFixed(3)};width:${c.width}px;height:${c.height}px;top:${c.top.toFixed(1)}%;animation-duration:${c.driftDur.toFixed(1)}s;animation-delay:${c.driftDelay.toFixed(1)}s`}
+                >
+                  <div
+                    class={`puff-bob ${imageClass(c)}`}
+                    style={`animation-duration:${c.bobDur.toFixed(2)}s;animation-delay:${c.bobDelay.toFixed(2)}s`}
+                  />
+                </div>
+              ))}
+            </div>
+          )
+        }
 
         <div class="film-handle"><span class="rec-dot" aria-hidden="true"></span> {youtube_handle}</div>
-        <div class="film-meta"><span>{episode}</span><span class="tc">00:00 / —:——</span></div>
+        <div class="film-meta">
+          {latest ? <span>Latest · {published}</span> : <span>{episode}</span>}
+          <span class="tc">{latest ? '▶ Watch' : '00:00 / —:——'}</span>
+        </div>
 
         <div class="film-content">
           <span class="film-play" aria-hidden="true">
             <span class="play-tri"></span>
           </span>
         </div>
-        <div class="film-title">{film_title}</div>
+        <div class="film-title">{latest ? latest.title : film_title}</div>
       </a>
 
       <div class="yt-cta-row">
-        <a class="subscribe-btn" href={youtube} target="_blank" rel="noopener" data-umami-event="youtube: subscribe">
+        <a class="subscribe-btn" href={`${youtube}?sub_confirmation=1`} target="_blank" rel="noopener" data-umami-event="youtube: subscribe">
           <span class="yt-glyph" aria-hidden="true"></span>
           <span>Subscribe</span>
         </a>

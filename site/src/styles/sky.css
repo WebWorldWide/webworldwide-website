@@ -16,9 +16,8 @@
   z-index: var(--z-clouds);
   pointer-events: none;
   overflow: hidden;
-  /* Kept quiet: with each cloud's own opacity (≤ 0.56) the brightest body
-     lands around 45% white — pale blue on the sky, never solid white. */
-  opacity: 0.8;
+  /* Cloud colours are solid tints pre-mixed with the sky (lib/sky-clouds.ts),
+     so no layer opacity is needed: overlaps stay clean. */
 }
 
 .puff {

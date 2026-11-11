@@ -57,7 +57,6 @@
 .pvx-sky-puffs {
   position: absolute;
   inset: 0;
-  opacity: 0.72;
 }
 .pvx-puff {
   position: absolute;
@@ -657,20 +656,33 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  container-type: inline-size;
 }
 .pvx-film-cloud {
   position: absolute;
-  image-rendering: pixelated;
+  left: 0;
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  animation: pvx-film-drift 60s linear infinite;
+  transform-origin: 0 50%;
+  animation: pvx-film-drift linear infinite;
+}
+/* Clouds are sized for a ~1000px frame; shrink them with narrower frames. */
+@container (max-width: 760px) {
+  .pvx-film-cloud {
+    scale: 0.75;
+  }
+}
+@container (max-width: 520px) {
+  .pvx-film-cloud {
+    scale: 0.55;
+  }
 }
 @keyframes pvx-film-drift {
   from {
-    transform: translateX(-300px);
+    transform: translate3d(calc(-1 * var(--w, 200px)), 0, 0);
   }
   to {
-    transform: translateX(calc(var(--pvw) + 300px));
+    transform: translate3d(100cqw, 0, 0);
   }
 }
 .pvx-film::before,
