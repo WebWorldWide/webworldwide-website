@@ -1,7 +1,7 @@
 /**
  * generate-globe-icons.ts — render the favicons and app icons from the same
- * pixel globe the nav and hero draw (src/lib/pixel-globe.ts), at rest
- * (the Atlantic facing you, like the page's first frame).
+ * pixel globe the nav and hero draw (src/lib/pixel-globe.ts), turned to the
+ * Americas like the original logo artwork.
  *
  * The PNGs are committed — rerun when the globe or world map changes:
  *
@@ -18,9 +18,10 @@ import { PALETTE, globeSampler } from '../src/lib/pixel-globe.ts';
 
 const PUB = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
-// Same view as scripts/globe-nav.ts at rest.
-const VIEW_LAT = 5;
-const START_LON = -30;
+// The logo view: both Americas face you, North America tipped slightly
+// toward the viewer (the spinning nav/hero globes start on the Atlantic).
+const VIEW_LAT = 12;
+const START_LON = -75;
 
 type Icon = {
   file: string;
