@@ -4,7 +4,6 @@
  *   - sectionTitleCascade — wrap each char in a span for per-letter reveal
  *   - scrollReveal — IntersectionObserver toggles `.in` on `.reveal` elements
  *   - smoothAnchor — replaces default <a href="#x"> jump with smooth scroll
- *   - filmClouds — pixel-art clouds drifting inside the YouTube film frame
  *
  * All respect `prefers-reduced-motion`.
  */
@@ -117,53 +116,12 @@ export function smoothAnchor(): void {
   });
 }
 
-export function filmClouds(): void {
-  const wrap = document.getElementById('film-clouds');
-  if (!wrap) return;
-  const shape = [
-    '00022200002200',
-    '00211122022112',
-    '02111111111112',
-    '02111111111112',
-    '02222222222220',
-  ];
-  const svg = (scale: number): string => {
-    const h = shape.length;
-    const w = shape[0].length;
-    let body = '';
-    let outline = '';
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const ch = shape[y][x];
-        if (ch === '1') body += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
-        else if (ch === '2') outline += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
-      }
-    }
-    return `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='${w * scale}' height='${h * scale}' viewBox='0 0 ${w} ${h}' shape-rendering='crispEdges'><g fill='%23ffffff'>${body}</g><g fill='%23a8c8f0'>${outline}</g></svg>")`;
-  };
-  for (let i = 0; i < 5; i++) {
-    const c = document.createElement('div');
-    c.className = 'film-cloud';
-    const scale = 4 + Math.floor(Math.random() * 4);
-    c.style.width = `${shape[0].length * scale}px`;
-    c.style.height = `${shape.length * scale}px`;
-    c.style.backgroundImage = svg(scale);
-    c.style.top = `${12 + Math.random() * 60}%`;
-    c.style.opacity = '0.85';
-    const dur = 80 + Math.random() * 70;
-    c.style.animationDuration = `${dur}s`;
-    c.style.animationDelay = `${-Math.random() * dur}s`;
-    wrap.appendChild(c);
-  }
-}
-
 export function initHome(): void {
   // Slow device / connection: CSS drops decorative loops (see .lite rules).
   if (isLiteDevice()) document.documentElement.classList.add('lite');
   scrollReveal();
   sectionTitleCascade();
   smoothAnchor();
-  filmClouds();
   mouseParallax();
 }
 

@@ -69,6 +69,7 @@ export interface SiteConfig {
   social: {
     youtube: string;
     youtube_handle: string;
+    youtube_channel_id?: string;
     github: string;
     twitter: string;
     bluesky: string;

@@ -24,6 +24,9 @@ masthead_kicker = "Blog"
 [social]
 youtube = "https://www.youtube.com/@web_world_wide"
 youtube_handle = "@web_world_wide"
+# Channel id for the Videos section's "latest video" (RSS feed; see
+# scripts/youtube-latest.ts).
+youtube_channel_id = "UCVZ_rHuaj63yZx43Gw0drXA"
 github = "https://github.com/WebWorldWide"
 twitter = "https://x.com/thewebworldwide"
 bluesky = "https://bsky.app/profile/web-world-wide.bsky.social"

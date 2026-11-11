@@ -564,56 +564,6 @@
   /** @type {Array<{title: string, slug: string, date: string, excerpt: string}> | null} */
   let latestPosts = null;
 
-  // Pixel-cloud sky — same shapes, layers and seed as SkyBackdrop.astro, so
-  // the preview sky is the live sky.
-  const CLOUD_SHAPES = [
-    [
-      '0002220002220000022000',
-      '0022112202211220222110',
-      '0211111211111111111112',
-      '2111111111111111111112',
-      '2111111111111111111112',
-      '0222222222222222222220',
-    ],
-    ['00022200002200', '00211122022112', '02111111111112', '02111111111112', '02222222222220'],
-    [
-      '00022000022000022000022000',
-      '02211220221122022112202112',
-      '21111111111111111111111111',
-      '02222222222222222222222220',
-    ],
-    [
-      '0002220000',
-      '0022112200',
-      '0211111120',
-      '2111111112',
-      '2111111112',
-      '0211111120',
-      '0022222200',
-    ],
-  ];
-  /**
-   * @param {string[]} shape
-   * @param {number} scale
-   * @param {string} line
-   */
-  function cloudSvg(shape, scale, line) {
-    let body = '';
-    let edge = '';
-    shape.forEach((row, y) => {
-      for (let x = 0; x < row.length; x++) {
-        if (row[x] === '1') body += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
-        else if (row[x] === '2') edge += `<rect x='${x}' y='${y}' width='1' height='1'/>`;
-      }
-    });
-    const w = shape[0].length;
-    const h = shape.length;
-    return (
-      // &quot; — this lands inside a double-quoted style="" attribute.
-      `url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='${w * scale}' height='${h * scale}' ` +
-      `viewBox='0 0 ${w} ${h}' shape-rendering='crispEdges'><g fill='%23ffffff'>${body}</g><g fill='${line}'>${edge}</g></svg>&quot;)`
-    );
-  }
   /** @type {string | null} */
   let skyHtml = null;
   function pvSky() {
@@ -621,13 +571,16 @@
     // The live site's sky (block clouds + layout), shared via js/sky-clouds.js.
     const S = /** @type {any} */ window.WWWSky;
     if (!S) return '';
-    const images = S.CLOUDS.map((/** @type {any} */ c) => S.cloudImage(c));
+    /** @type {Record<string, string>} */
+    const images = {};
+    const img = (/** @type {any} */ p) =>
+      (images[S.imageClass(p)] ||= S.cloudImage(S.CLOUDS[p.cloud], p.tone));
     let puffs = '';
     for (const p of S.skyPuffs()) {
       puffs +=
-        `<div class="pvx-puff" style="--w:${p.width}px;width:${p.width}px;height:${p.height}px;top:${p.top.toFixed(2)}%;opacity:${p.opacity.toFixed(2)};animation-duration:${p.driftDur.toFixed(1)}s;animation-delay:${p.driftDelay.toFixed(1)}s">` +
+        `<div class="pvx-puff" style="--w:${p.width}px;width:${p.width}px;height:${p.height}px;top:${p.top.toFixed(2)}%;animation-duration:${p.driftDur.toFixed(1)}s;animation-delay:${p.driftDelay.toFixed(1)}s">` +
         // &quot; — this lands inside a double-quoted style="" attribute.
-        `<div class="pvx-puff-bob" style="background-image:url(&quot;${images[p.cloud]}&quot;);animation-duration:${p.bobDur.toFixed(2)}s;animation-delay:${p.bobDelay.toFixed(2)}s"></div></div>`;
+        `<div class="pvx-puff-bob" style="background-image:url(&quot;${img(p)}&quot;);animation-duration:${p.bobDur.toFixed(2)}s;animation-delay:${p.bobDelay.toFixed(2)}s"></div></div>`;
     }
     skyHtml = `<div class="pvx-sky" aria-hidden="true"><div class="pvx-sky-puffs">${puffs}</div></div>`;
     return skyHtml;
@@ -747,16 +700,16 @@
 
   function pvVideos() {
     const handle = esc(siteYoutubeHandle);
-    const film = [
-      [0, 1, 18, 9, 0.9],
-      [2, 3, 46, 26, 0.75],
-      [1, 2, 64, 14, 0.85],
-    ]
-      .map(
-        ([shape, , left, top, op], k) =>
-          `<span class="pvx-film-cloud" style="left:${left}%;top:${top}%;opacity:${op};width:${CLOUD_SHAPES[shape][0].length * 6}px;height:${CLOUD_SHAPES[shape].length * 6}px;background-image:${cloudSvg(CLOUD_SHAPES[shape], 6, '%23c0d0ec')};animation-delay:${-k * 9}s"></span>`,
-      )
-      .join('');
+    // Same block clouds + layout as the live film frame (js/sky-clouds.js).
+    const S = /** @type {any} */ window.WWWSky;
+    const film = S
+      ? S.filmPuffs()
+          .map(
+            (/** @type {any} */ c) =>
+              `<span class="pvx-film-cloud" style="--w:${c.width}px;width:${c.width}px;height:${c.height}px;top:${c.top.toFixed(1)}%;animation-duration:${c.driftDur.toFixed(1)}s;animation-delay:${c.driftDelay.toFixed(1)}s;background-image:url(&quot;${S.cloudImage(S.CLOUDS[c.cloud], c.tone)}&quot;)"></span>`,
+          )
+          .join('')
+      : '';
     return `
       <div class="pvx-section"><div class="pvx-inner">
         ${pvEyebrow('videos')}

@@ -20,6 +20,9 @@ node_modules
 /public/.well-known/webfinger
 /scripts/legacy-redirects.json
 /content/media.json
+/src/data/youtube-latest.json
+/public/youtube-latest.json
+/public/youtube/
 
 # Transient media upload staging
 /.media-staging/

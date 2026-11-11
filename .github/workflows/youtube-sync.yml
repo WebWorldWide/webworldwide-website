@@ -1,0 +1,56 @@
+name: YouTube sync
+
+# Keeps the homepage's Videos section on the channel's newest video.
+# Every 20 minutes: read the channel's RSS feed and the live site's
+# /youtube-latest.json (written by site/scripts/youtube-latest.ts at build
+# time). If they differ, run the Pages deploy, whose build fetches the new
+# video. No commits, no API key; quiet runs take a few seconds.
+
+on:
+  schedule:
+    - cron: '7,27,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: youtube-sync
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check for a new video
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare the feed with the live site
+        id: cmp
+        env:
+          SITE: https://webworldwide.online
+        run: |
+          set -euo pipefail
+          channel=$(curl -fsS "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/site/site.toml" \
+            | sed -n 's/^youtube_channel_id *= *"\(UC[A-Za-z0-9_-]*\)".*/\1/p')
+          if [ -z "$channel" ]; then echo "No youtube_channel_id in site.toml"; exit 0; fi
+          feed=$(curl -fsS --retry 2 "https://www.youtube.com/feeds/videos.xml?channel_id=$channel") || {
+            echo "Feed unreachable; trying again next run."; exit 0; }
+          # Newest entry that isn't a Short (same rule as the build script).
+          latest=$(printf '%s' "$feed" | awk '
+            /<entry>/ { id=""; shorts=0 }
+            /<yt:videoId>/ { gsub(/.*<yt:videoId>|<\/yt:videoId>.*/, ""); id=$0 }
+            /<link rel="alternate"/ && /\/shorts\// { shorts=1 }
+            /<\/entry>/ { if (id != "" && !shorts) { print id; exit } }')
+          live=$(curl -fsS "$SITE/youtube-latest.json?nocache=$(date +%s)" \
+            | sed -n 's/.*"id": *"\([A-Za-z0-9_-]\{11\}\)".*/\1/p' | head -1 || true)
+          echo "feed: ${latest:-none} | live: ${live:-none}"
+          if [ "${latest:-}" != "${live:-}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rebuild the site with the new video
+        if: steps.cmp.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref main

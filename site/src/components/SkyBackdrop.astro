@@ -11,10 +11,11 @@
  * Renders behind everything via z-index: -5 / -3 in sky.css. Decorative,
  * fully aria-hidden.
  */
-import { CLOUDS, cloudImage, skyPuffs } from '@/lib/sky-clouds';
+import { filmPuffs, imageClass, imageCss, skyPuffs } from '@/lib/sky-clouds';
 
-// Each cloud image is emitted once, as a class, not inline on every puff.
-const puffCss = CLOUDS.map((c, i) => `.puff-bob.pf${i}{background-image:url("${cloudImage(c)}")}`).join('');
+// Each cloud image (design × tone) is emitted once, as a class, not inline on
+// every puff. Includes the Videos film-frame clouds, which reuse the classes.
+const puffCss = imageCss([...skyPuffs(), ...filmPuffs()]);
 
 const puffs = skyPuffs().map((p) => ({
   ...p,
@@ -32,10 +33,10 @@ const puffs = skyPuffs().map((p) => ({
     puffs.map((p) => (
       <div
         class="puff"
-        style={`--w:${p.width}px;--x:${p.restX};width:${p.width}px;height:${p.height}px;top:${p.top.toFixed(2)}vh;left:0;opacity:${p.opacity.toFixed(2)};animation-duration:${p.driftDur.toFixed(1)}s;animation-delay:${p.driftDelay.toFixed(1)}s`}
+        style={`--w:${p.width}px;--x:${p.restX};width:${p.width}px;height:${p.height}px;top:${p.top.toFixed(2)}vh;left:0;animation-duration:${p.driftDur.toFixed(1)}s;animation-delay:${p.driftDelay.toFixed(1)}s`}
       >
         <div
-          class={`puff-bob pf${p.cloud}`}
+          class={`puff-bob ${imageClass(p)}`}
           style={`animation-duration:${p.bobDur.toFixed(2)}s;animation-delay:${p.bobDelay.toFixed(2)}s`}
         />
       </div>
