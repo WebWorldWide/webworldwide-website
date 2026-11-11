@@ -44,8 +44,13 @@ function isCurrent(path: string): boolean {
 <script>
   // Lazy-load the pixel globe after first paint. requestIdleCallback if
   // available, otherwise setTimeout fallback.
-  import('../scripts/globe-nav.ts').then((mod) => {
-    const start = () => mod.initGlobes('canvas[data-globe]');
+  // The favicon turns to the visitor's side of the world (time zone based;
+  // shares the pixel-globe chunk with the nav globe).
+  Promise.all([import('../scripts/globe-nav.ts'), import('../scripts/local-favicon.ts')]).then(([mod, fav]) => {
+    const start = () => {
+      mod.initGlobes('canvas[data-globe]');
+      fav.setLocalFavicon();
+    };
     if ('requestIdleCallback' in window) (window as any).requestIdleCallback(start);
     else setTimeout(start, 100);
   });
