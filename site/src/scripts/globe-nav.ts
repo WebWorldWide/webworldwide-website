@@ -15,7 +15,7 @@
 import { globeSampler, paintClasses } from '../lib/pixel-globe.ts';
 
 type GlobeOpts = {
-  /** Globe resolution in pixels across (default: one pixel per 2 CSS px). */
+  /** Globe resolution in pixels across (default: one pixel per 1.5 CSS px). */
   pixels?: number;
   /** Spin (default true). */
   spin?: boolean;
@@ -33,7 +33,7 @@ const G = 2;
 export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {}): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const n = Math.max(12, Math.round(opts.pixels ?? (canvas.clientWidth || 50) / 2));
+  const n = Math.max(12, Math.round(opts.pixels ?? (canvas.clientWidth || 50) / 1.5));
   canvas.width = n;
   canvas.height = n;
   const sample = globeSampler(n, VIEW_LAT);
@@ -68,7 +68,7 @@ export async function makeGlobe(canvas: HTMLCanvasElement, opts: GlobeOpts = {})
   await new Promise<void>((done) => {
     let k = 0;
     const batch = (): void => {
-      const end = Math.min(FRAMES, k + 24);
+      const end = Math.min(FRAMES, k + 16);
       for (; k < end; k++) {
         paintClasses(cell, n, 0, 0, n, sample(START_LON - (k / FRAMES) * 360));
         // Copy into the sheet with the edge pixels repeated into the gutter,

@@ -199,13 +199,12 @@
   height: 432px;
 }
 .pvx-wordmark {
-  /* The site wordmark is the VT323 pixel face, in capitals. */
-  font-family: var(--pv-pixel);
-  font-size: 66px;
+  /* The site wordmark is Instrument Serif (fonts.css self-hosts it). */
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 58px;
   font-weight: 400;
   line-height: 1;
   color: #fff;
-  text-transform: uppercase;
   white-space: nowrap;
   text-shadow:
     2px 0 0 var(--pv-ink),
@@ -265,7 +264,7 @@
   height: 240px;
 }
 .pvx-phone .pvx-wordmark {
-  font-size: 40px;
+  font-size: 34px;
 }
 
 /* ── Sections + eyebrow ──────────────────────────────────────────────────── */

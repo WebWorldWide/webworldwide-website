@@ -36,12 +36,11 @@
   margin: 0;
   padding: 0;
   display: block;
-  /* The site's pixel face (VT323), like the tagline and nav. */
-  font-family: var(--font-pixel);
+  /* Instrument Serif: a condensed display serif (400 only — never bolded). */
+  font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(44px, 9.4vmin, 114px);
+  font-size: clamp(40px, 8vmin, 100px);
   line-height: 1;
-  text-transform: uppercase;
   color: #fff;
   text-shadow:
     2px 0 0 var(--ink),
@@ -932,7 +931,7 @@
 }
 @media (max-width: 380px) {
   .wordmark {
-    font-size: 64px;
+    font-size: 50px;
   }
   .tagline {
     font-size: 20px;

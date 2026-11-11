@@ -75,6 +75,7 @@
   --font-mono:
     "Space Mono", "Space Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-pixel: "VT323", "VT323 Fallback", ui-monospace, "Courier New", monospace;
+  --font-display: "Instrument Serif", "Instrument Serif Fallback", Georgia, serif;
 
   /* Type scale (clamp() so it scales with viewport) */
   --fs-mast: clamp(56px, 9vw, 124px);

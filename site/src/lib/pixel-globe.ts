@@ -1,12 +1,13 @@
 /**
  * Pixel-art Earth: a real world map (lib/world-map.ts, from Natural Earth)
- * projected onto an orthographic globe of N×N chunky pixels.
+ * projected onto an orthographic globe of N×N chunky pixels. Islands too
+ * small for a pixel of their own (Hawaii and ~230 others) always get one.
  *
  * Pure (no DOM), so the same code draws the nav and hero globes in the
  * browser (scripts/globe-nav.ts) and the favicons at build time
  * (scripts/generate-globe-icons.ts).
  */
-import { MAP_H, MAP_RLE, MAP_W } from './world-map.ts';
+import { ISLANDS, MAP_H, MAP_RLE, MAP_W } from './world-map.ts';
 
 /** Ocean, land, desert, tundra, ice — the palette of the globe artwork. */
 export const PALETTE: ReadonlyArray<readonly [number, number, number]> = [
@@ -54,6 +55,7 @@ const SS = 3;
 export function globeSampler(n: number, lat = 0): (lon: number) => Uint8Array {
   const map = worldMap();
   const lat0 = (lat * Math.PI) / 180;
+  const perDeg = MAP_W / 360;
   const cosL = Math.cos(lat0);
   const sinL = Math.sin(lat0);
   const deg = 180 / Math.PI;
@@ -75,12 +77,19 @@ export function globeSampler(n: number, lat = 0): (lon: number) => Uint8Array {
         // Inverse orthographic projection.
         const la = Math.asin(y * cosL + z * sinL) * deg;
         const k = (j * n + i) * K + s;
-        rowOf[k] = Math.min(MAP_H - 1, Math.max(0, Math.floor(90 - la)));
+        rowOf[k] = Math.min(MAP_H - 1, Math.max(0, Math.floor((90 - la) * perDeg)));
         lonOf[k] = Math.atan2(x, z * cosL - y * sinL) * deg + 180;
       }
     }
   }
   const counts = new Uint8Array(PALETTE.length);
+  // Map cell under each island centre, for its colour (tundra, ice…).
+  const islandCell = new Uint32Array(ISLANDS.length / 2);
+  for (let q = 0; q < ISLANDS.length; q += 2) {
+    const r = Math.min(MAP_H - 1, Math.floor((90 - ISLANDS[q]) * perDeg));
+    const c = Math.min(MAP_W - 1, Math.floor((ISLANDS[q + 1] + 180) * perDeg));
+    islandCell[q / 2] = r * MAP_W + c;
+  }
   return (lon: number): Uint8Array => {
     const out = new Uint8Array(n * n);
     for (let p = 0; p < n * n; p++) {
@@ -88,11 +97,30 @@ export function globeSampler(n: number, lat = 0): (lon: number) => Uint8Array {
       let best = 0;
       for (let s = 0; s < K; s++) {
         const k = p * K + s;
-        const col = ((Math.floor(lonOf[k] + lon) % MAP_W) + MAP_W) % MAP_W;
+        const col = ((Math.floor((lonOf[k] + lon) * perDeg) % MAP_W) + MAP_W) % MAP_W;
         const c = map[rowOf[k] * MAP_W + col];
         if (++counts[c] > counts[best]) best = c;
       }
       out[p] = best;
+    }
+    // Small islands (Hawaii, the Azores, Fiji…) would lose every majority
+    // vote; give each one at least the pixel its centre falls in, when it
+    // is on the near side.
+    for (let q = 0; q < ISLANDS.length; q += 2) {
+      const la = ISLANDS[q] / deg;
+      const dl = (ISLANDS[q + 1] - lon) / deg;
+      const cosLa = Math.cos(la);
+      const sinLa = Math.sin(la);
+      if (sinL * sinLa + cosL * cosLa * Math.cos(dl) <= 0.05) continue;
+      const x = cosLa * Math.sin(dl);
+      const y = cosL * sinLa - sinL * cosLa * Math.cos(dl);
+      const i = Math.min(n - 1, Math.floor(((x + 1) / 2) * n));
+      const j = Math.min(n - 1, Math.floor(((1 - y) / 2) * n));
+      const p = j * n + i;
+      if (out[p] === 0) {
+        const c = map[islandCell[q / 2]];
+        out[p] = c === 0 ? 1 : c;
+      }
     }
     return out;
   };

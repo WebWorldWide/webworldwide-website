@@ -24,12 +24,13 @@ import '@styles/sky.css';
 import '@styles/nav.css';
 
 // Hashed URLs for the above-the-fold faces, preloaded below so the LCP text
-// (post title in Cormorant 700, homepage wordmark in VT323; subtitle/body in
-// Cormorant 400) paints from the real font with no fallback-swap flash.
+// (post title in Cormorant 700, homepage wordmark in Instrument Serif and
+// tagline in VT323; subtitle/body in Cormorant 400) paints from the real font with no fallback-swap flash.
 import cormorant400 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-normal.woff2';
 import cormorant700 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-normal.woff2';
 import spaceMono700 from '@fontsource/space-mono/files/space-mono-latin-700-normal.woff2';
 import vt323 from '@fontsource/vt323/files/vt323-latin-400-normal.woff2';
+import instrumentSerif from '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2';
 
 // Preload only the faces a page paints above the fold — a preload for a face
 // the page never uses is a wasted ~23KB download competing with real work.
@@ -38,6 +39,7 @@ const FONT_URLS = {
   serif700: cormorant700,
   mono700: spaceMono700,
   pixel: vt323,
+  display: instrumentSerif,
 } as const;
 type PreloadFont = keyof typeof FONT_URLS;
 
@@ -150,8 +152,11 @@ const dataAttrs = Object.fromEntries(
     <meta name="description" content={pageDesc} />
     <meta name="theme-color" content="#1E68F0" />
     <link rel="canonical" href={canonicalURL} />
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    {/* ?v= busts the browser's long-lived favicon cache when the art changes. */}
+    <link rel="icon" href="/favicon.ico?v=2" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title={`${siteTitle} RSS`} href="/rss.xml" />
     {/* Webmention autodiscovery — Bridgy Fed delivers fediverse (Mastodon/Threads)

@@ -25,12 +25,12 @@ masthead_kicker = "Blog"
 youtube = "https://www.youtube.com/@web_world_wide"
 youtube_handle = "@web_world_wide"
 github = "https://github.com/WebWorldWide"
-twitter = "https://x.com/mywebworldwide"
+twitter = "https://x.com/thewebworldwide"
 bluesky = "https://bsky.app/profile/web-world-wide.bsky.social"
 mastodon = "https://mastodon.social/@webworldwide"
 reddit = "https://www.reddit.com/user/web_world_wide"
-instagram = "https://www.instagram.com/mywebworldwide"
-threads = "https://www.threads.net/@mywebworldwide"
+instagram = "https://www.instagram.com/thewebworldwide"
+threads = "https://www.threads.net/@thewebworldwide"
 
 [comments]
 # Remark42 self-hosted commenting (deployed alongside the admin via Docker).
