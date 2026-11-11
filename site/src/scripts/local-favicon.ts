@@ -46,7 +46,7 @@ function latFor(tz: string): number {
 
 /** The visitor's view from their time zone, or null if there isn't one to go on. */
 export function localView(): View | null {
-  let tz = '';
+  let tz: string;
   try {
     tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
   } catch {
