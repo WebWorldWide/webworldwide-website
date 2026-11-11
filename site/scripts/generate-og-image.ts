@@ -32,10 +32,21 @@ const SKY = '#1e68f0';
 const INK = '#0e2960';
 const PAPER = '#ffffff';
 
+// Globe mark, centered above the wordmark: the pixel globe
+// (public/assets/globe.png, from generate-globe-icons.ts) in an ink ring
+// with the site's hard offset shadow, like the homepage hero.
+const GLOBE_SIZE = 170;
+const GLOBE_TOP = 98;
+const RING = 5;
+const gx = W / 2;
+const gy = GLOBE_TOP + GLOBE_SIZE / 2;
+
 // Hard two-layer text = the site's `text-shadow: 4px 4px 0 var(--ink)`
 // pixel look. SVG has no text-shadow, so draw the shadow as its own text.
 const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
   <rect width="${W}" height="${H}" fill="${SKY}"/>
+  <circle cx="${gx + 8}" cy="${gy + 8}" r="${GLOBE_SIZE / 2 + RING}" fill="${INK}"/>
+  <circle cx="${gx}" cy="${gy}" r="${GLOBE_SIZE / 2 + RING}" fill="${INK}"/>
   <g font-family="VT323" text-anchor="middle">
     <text x="${W / 2 + 6}" y="398" font-size="150" fill="${INK}">WEB WORLD WIDE</text>
     <text x="${W / 2}" y="392" font-size="150" fill="${PAPER}">WEB WORLD WIDE</text>
@@ -43,8 +54,6 @@ const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
   </g>
 </svg>`;
 
-// Globe mark, centered above the wordmark.
-const GLOBE_SIZE = 170;
 const globe = await sharp(resolve(PUB, 'assets', 'globe.png'))
   .resize(GLOBE_SIZE, GLOBE_SIZE)
   .png()
@@ -52,7 +61,7 @@ const globe = await sharp(resolve(PUB, 'assets', 'globe.png'))
 
 const out = resolve(PUB, 'og-image.png');
 await sharp(Buffer.from(svg))
-  .composite([{ input: globe, left: Math.round((W - GLOBE_SIZE) / 2), top: 98 }])
+  .composite([{ input: globe, left: Math.round((W - GLOBE_SIZE) / 2), top: GLOBE_TOP }])
   .png({ compressionLevel: 9, palette: true })
   .toFile(out);
 

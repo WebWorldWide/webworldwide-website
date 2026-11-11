@@ -14,6 +14,8 @@ const ENTRANCE_STAGGER = 38;
 const ENTRANCE_DUR = 700;
 const WARP_STAGGER = 40;
 const DWELL = 450;
+// Pixel-art globe resolution (pixels across) inside the ring.
+const HERO_GLOBE_PX = 48;
 
 export function initWordmarkWarp(): void {
   const wm = document.querySelector<HTMLElement>('.wordmark');
@@ -101,7 +103,7 @@ export function initWordmarkWarp(): void {
     });
     if (globe) globe.classList.add('on');
     const canvas = document.getElementById('wordmark-globe-canvas') as HTMLCanvasElement | null;
-    if (canvas) makeGlobe(canvas, { speed: 0, chunkyPx: 80 }).catch(() => {});
+    if (canvas) makeGlobe(canvas, { pixels: HERO_GLOBE_PX, spin: false }).catch(() => {});
     return;
   }
 
@@ -144,7 +146,7 @@ export function initWordmarkWarp(): void {
     setTimeout(() => {
       if (globe) globe.classList.add('on');
       const canvas = document.getElementById('wordmark-globe-canvas') as HTMLCanvasElement | null;
-      if (canvas) makeGlobe(canvas, { speed: 0.012, chunkyPx: 80 }).catch(() => {});
+      if (canvas) makeGlobe(canvas, { pixels: HERO_GLOBE_PX }).catch(() => {});
     }, 450);
   }, WARP_DELAY);
 
