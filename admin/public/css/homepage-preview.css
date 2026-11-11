@@ -199,10 +199,10 @@
   height: 432px;
 }
 .pvx-wordmark {
-  /* The site wordmark: Fraunces, soft, 800 (fonts.css self-hosts it). */
-  font-family: "Fraunces Soft", Georgia, serif;
-  font-size: 56px;
-  font-weight: 800;
+  /* The site wordmark: Archivo Black (fonts.css self-hosts it). */
+  font-family: "Archivo Black", "Arial Black", sans-serif;
+  font-size: 50px;
+  font-weight: 400;
   line-height: 1;
   color: #fff;
   white-space: nowrap;
@@ -264,7 +264,7 @@
   height: 240px;
 }
 .pvx-phone .pvx-wordmark {
-  font-size: 34px;
+  font-size: 30px;
 }
 
 /* ── Sections + eyebrow ──────────────────────────────────────────────────── */

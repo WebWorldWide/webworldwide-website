@@ -592,56 +592,6 @@
       '0022222200',
     ],
   ];
-  const CLOUD_LAYERS = [
-    {
-      count: 4,
-      sMin: 3,
-      sMax: 5,
-      dMin: 280,
-      dMax: 360,
-      oMin: 0.3,
-      oMax: 0.5,
-      line: '%23d4dff0',
-      tMin: 0,
-      tMax: 30,
-    },
-    {
-      count: 6,
-      sMin: 5,
-      sMax: 9,
-      dMin: 220,
-      dMax: 300,
-      oMin: 0.5,
-      oMax: 0.7,
-      line: '%23c0d0ec',
-      tMin: 2,
-      tMax: 65,
-    },
-    {
-      count: 6,
-      sMin: 9,
-      sMax: 13,
-      dMin: 150,
-      dMax: 220,
-      oMin: 0.7,
-      oMax: 0.85,
-      line: '%23a8c8f0',
-      tMin: 6,
-      tMax: 88,
-    },
-    {
-      count: 3,
-      sMin: 14,
-      sMax: 20,
-      dMin: 100,
-      dMax: 160,
-      oMin: 0.85,
-      oMax: 0.95,
-      line: '%2388b4e8',
-      tMin: 14,
-      tMax: 96,
-    },
-  ];
   /**
    * @param {string[]} shape
    * @param {number} scale
@@ -668,32 +618,16 @@
   let skyHtml = null;
   function pvSky() {
     if (skyHtml) return skyHtml;
-    let a = 0x80808080 >>> 0;
-    const rng = () => {
-      a |= 0;
-      a = (a + 0x6d2b79f5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    const rand = (/** @type {number} */ lo, /** @type {number} */ hi) => lo + rng() * (hi - lo);
+    // The live site's sky (block clouds + layout), shared via js/sky-clouds.js.
+    const S = /** @type {any} */ window.WWWSky;
+    if (!S) return '';
+    const images = S.CLOUDS.map((/** @type {any} */ c) => S.cloudImage(c));
     let puffs = '';
-    for (const L of CLOUD_LAYERS) {
-      for (let i = 0; i < L.count; i++) {
-        const shape = CLOUD_SHAPES[Math.floor(rng() * CLOUD_SHAPES.length)];
-        const scale = L.sMin + Math.floor(rng() * (L.sMax - L.sMin + 1));
-        const dur = rand(L.dMin, L.dMax);
-        const w = shape[0].length * scale;
-        const top = rand(L.tMin, L.tMax).toFixed(2);
-        const op = rand(L.oMin, L.oMax).toFixed(2);
-        const delay = (-rng() * dur).toFixed(1);
-        const bg = cloudSvg(shape, scale, L.line);
-        const bob = (4 + rng() * 4).toFixed(2);
-        const bobDelay = (-rng() * 4).toFixed(2);
-        puffs +=
-          `<div class="pvx-puff" style="--w:${w}px;width:${w}px;height:${shape.length * scale}px;top:${top}%;opacity:${op};animation-duration:${dur.toFixed(1)}s;animation-delay:${delay}s">` +
-          `<div class="pvx-puff-bob" style="background-image:${bg};animation-duration:${bob}s;animation-delay:${bobDelay}s"></div></div>`;
-      }
+    for (const p of S.skyPuffs()) {
+      puffs +=
+        `<div class="pvx-puff" style="--w:${p.width}px;width:${p.width}px;height:${p.height}px;top:${p.top.toFixed(2)}%;opacity:${p.opacity.toFixed(2)};animation-duration:${p.driftDur.toFixed(1)}s;animation-delay:${p.driftDelay.toFixed(1)}s">` +
+        // &quot; — this lands inside a double-quoted style="" attribute.
+        `<div class="pvx-puff-bob" style="background-image:url(&quot;${images[p.cloud]}&quot;);animation-duration:${p.bobDur.toFixed(2)}s;animation-delay:${p.bobDelay.toFixed(2)}s"></div></div>`;
     }
     skyHtml = `<div class="pvx-sky" aria-hidden="true"><div class="pvx-sky-puffs">${puffs}</div></div>`;
     return skyHtml;

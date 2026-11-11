@@ -24,13 +24,13 @@ import '@styles/sky.css';
 import '@styles/nav.css';
 
 // Hashed URLs for the above-the-fold faces, preloaded below so the LCP text
-// (post title in Cormorant 700, homepage wordmark in Fraunces and
+// (post title in Cormorant 700, homepage wordmark in Archivo Black and
 // tagline in VT323; subtitle/body in Cormorant 400) paints from the real font with no fallback-swap flash.
 import cormorant400 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-normal.woff2';
 import cormorant700 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-normal.woff2';
 import spaceMono700 from '@fontsource/space-mono/files/space-mono-latin-700-normal.woff2';
 import vt323 from '@fontsource/vt323/files/vt323-latin-400-normal.woff2';
-import frauncesSoft from '../assets/fonts/fraunces-soft-800-latin.woff2';
+import archivoBlack from '@fontsource/archivo-black/files/archivo-black-latin-400-normal.woff2';
 
 // Preload only the faces a page paints above the fold — a preload for a face
 // the page never uses is a wasted ~23KB download competing with real work.
@@ -39,7 +39,7 @@ const FONT_URLS = {
   serif700: cormorant700,
   mono700: spaceMono700,
   pixel: vt323,
-  display: frauncesSoft,
+  display: archivoBlack,
 } as const;
 type PreloadFont = keyof typeof FONT_URLS;
 

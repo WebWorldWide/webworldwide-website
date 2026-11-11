@@ -36,11 +36,11 @@
   margin: 0;
   padding: 0;
   display: block;
-  /* Fraunces, soft (rounded serifs), extra-bold: reads at every angle round
-     the ring and holds up on the sky. Only the 800 instance ships. */
+  /* Archivo Black: a heavy grotesque that holds its shape at every angle
+     round the ring. Single weight (400 is its only, black, weight). */
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(38px, 7.8vmin, 96px);
+  font-weight: 400;
+  font-size: clamp(34px, 6.8vmin, 84px);
   line-height: 1;
   color: #fff;
   text-shadow:
@@ -932,7 +932,7 @@
 }
 @media (max-width: 380px) {
   .wordmark {
-    font-size: 46px;
+    font-size: 40px;
   }
   .tagline {
     font-size: 20px;

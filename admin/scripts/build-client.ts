@@ -63,6 +63,19 @@ const extrudeOptions: BuildOptions = {
   logLevel: 'info',
 };
 
+// The background sky clouds, shared with the public site likewise.
+const skyOptions: BuildOptions = {
+  entryPoints: [resolve(adminRoot, '../site/src/lib/sky-clouds.ts')],
+  outfile: resolve(jsOut, 'sky-clouds.js'),
+  bundle: true,
+  format: 'iife',
+  globalName: 'WWWSky',
+  target: 'es2020',
+  minify: production,
+  legalComments: 'none',
+  logLevel: 'info',
+};
+
 await Promise.all([
   cp(
     resolve(adminRoot, 'node_modules/katex/dist/katex.min.css'),
@@ -92,6 +105,7 @@ if (watch) {
     context(browserOptions),
     context(editorOptions),
     context(extrudeOptions),
+    context(skyOptions),
   ]);
   await Promise.all(contexts.map((item) => item.watch()));
   process.stdout.write('[build-client] watching TypeScript browser sources\n');
@@ -101,9 +115,10 @@ if (watch) {
     build(browserOptions),
     build(editorOptions),
     build(extrudeOptions),
+    build(skyOptions),
   ]);
   if (results.some((result) => result.errors.length > 0)) process.exitCode = 1;
   process.stdout.write(
-    `[build-client] emitted ${clientEntries.length + 2} browser bundles from TypeScript\n`,
+    `[build-client] emitted ${clientEntries.length + 3} browser bundles from TypeScript\n`,
   );
 }
