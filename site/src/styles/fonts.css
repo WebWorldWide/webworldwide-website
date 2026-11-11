@@ -15,6 +15,8 @@
 @import "@fontsource/space-mono/latin-400.css";
 @import "@fontsource/space-mono/latin-700.css";
 @import "@fontsource/vt323/latin-400.css";
+/* Display face: the homepage wordmark ring. */
+@import "@fontsource/instrument-serif/latin-400.css";
 
 /* Metric-matched fallbacks. While a web font is still downloading the text
    paints in a local system face; without adjustment that face is wider or
@@ -59,5 +61,14 @@
   size-adjust: 66.7%;
   ascent-override: 120%;
   descent-override: 30%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Instrument Serif Fallback";
+  src:
+    local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("Tinos");
+  size-adjust: 84%;
+  ascent-override: 117.9%;
+  descent-override: 36.9%;
   line-gap-override: 0%;
 }

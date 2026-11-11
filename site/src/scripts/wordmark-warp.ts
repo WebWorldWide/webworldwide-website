@@ -15,7 +15,7 @@ const ENTRANCE_DUR = 700;
 const WARP_STAGGER = 40;
 const DWELL = 450;
 // Pixel-art globe resolution (pixels across) inside the ring.
-const HERO_GLOBE_PX = 48;
+const HERO_GLOBE_PX = 64;
 
 export function initWordmarkWarp(): void {
   const wm = document.querySelector<HTMLElement>('.wordmark');
@@ -74,6 +74,10 @@ export function initWordmarkWarp(): void {
   });
   ringSpans.push(seam);
   const M = ringSpans.length;
+  // Centre the first word at 12 o'clock: rotate the ring back by half its
+  // width in glyph slots, so "Web" sits symmetrically at the top.
+  const lead = ((text.split(' ')[0] || '').length - 1) / 2;
+  const thetaFor = (j: number): number => ((j - lead) / M) * Math.PI * 2 - Math.PI / 2;
 
   function computeRadius(): number {
     const r = area!.getBoundingClientRect();
@@ -83,7 +87,7 @@ export function initWordmarkWarp(): void {
   function placeOnRing(): void {
     const R = computeRadius();
     ringSpans.forEach((s, j) => {
-      const theta = (j / M) * Math.PI * 2 - Math.PI / 2;
+      const theta = thetaFor(j);
       const tx = R * Math.cos(theta);
       const ty = R * Math.sin(theta);
       const rotDeg = ((theta + Math.PI / 2) * 180) / Math.PI;
@@ -124,7 +128,7 @@ export function initWordmarkWarp(): void {
   setTimeout(() => {
     const R = computeRadius();
     ringSpans.forEach((s, j) => {
-      const theta = (j / M) * Math.PI * 2 - Math.PI / 2;
+      const theta = thetaFor(j);
       const tx = R * Math.cos(theta);
       const ty = R * Math.sin(theta);
       const rotDeg = ((theta + Math.PI / 2) * 180) / Math.PI;
