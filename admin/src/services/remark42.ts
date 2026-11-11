@@ -7,18 +7,17 @@
  *
  * Auth model
  * ----------
- * Remark42 has two distinct flavours of admin auth:
+ * Every admin operation (reply, edit, delete, pin, block, verify, the
+ * blocked list) goes out as the Remark42 admin user, `admin: true` in
+ * `call()`: HTTP basic `admin:<REMARK42_ADMIN_PASSWD>` (Remark42's
+ * documented admin auth, enabled by ADMIN_PASSWD on its container), or a
+ * short-lived admin JWT self-minted with the shared SECRET when no
+ * password is configured.
  *
- *   1. A `Bearer` JWT obtained by signing in as the `admin` user.
- *   2. A pre-shared `?secret=…` query param on `/api/v1/admin/*`
- *      endpoints (Remark42 v1.10+ honours both; we pick the latter
- *      because the CMS already has the secret in env and we don't need
- *      to manage a session token round-trip).
- *
- * The admin-side reply / edit / delete operations require we post as an
- * admin-flagged user — Remark42 derives this from the JWT's `aud`/`admin`
- * claims. We mint a short-lived self-signed JWT using the same shared
- * `SECRET` so the upstream accepts our writes as the site admin.
+ * Do NOT use a `?secret=` query param for `/api/v1/admin/*`: current
+ * Remark42 answers it with 401 (that silently broke delete / pin / block
+ * in production), and Remark42 logs full request URLs, so it would also
+ * write the secret into its logs.
  *
  * Configuration (env vars)
  * ------------------------
@@ -455,7 +454,7 @@ export async function deleteComment(id, postUrl) {
   if (!id) throw new Remark42Error('id required', 400, '/api/v1/admin/comment');
   await call(`/api/v1/admin/comment/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    secret: true,
+    admin: true,
     query: { site: siteId(), url: postUrl || '' },
   });
   return { id, deleted: true };
@@ -472,7 +471,7 @@ export async function pinComment(id, postUrl, pinned) {
   if (!id) throw new Remark42Error('id required', 400, '/api/v1/admin/pin');
   await call(`/api/v1/admin/pin/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    secret: true,
+    admin: true,
     query: { pin: pinned ? 1 : 0, site: siteId(), url: postUrl || '' },
   });
   return { id, pinned };
@@ -497,7 +496,7 @@ export async function blockUser(userId: string, opts: { block?: boolean; ttl?: s
   if (block && opts?.ttl) query.ttl = opts.ttl;
   await call(`/api/v1/admin/user/${encodeURIComponent(userId)}`, {
     method: 'PUT',
-    secret: true,
+    admin: true,
     query,
   });
   return { userId, blocked: block };
@@ -508,7 +507,7 @@ export async function blockUser(userId: string, opts: { block?: boolean; ttl?: s
  */
 export async function listBlockedUsers() {
   const data = await call(`/api/v1/admin/blocked`, {
-    secret: true,
+    admin: true,
     query: { site: siteId() },
   });
   if (!Array.isArray(data)) return [];
@@ -548,7 +547,7 @@ export async function verifyUser(userId, verified) {
   if (!userId) throw new Remark42Error('userId required', 400, '/api/v1/admin/verify');
   await call(`/api/v1/admin/verify/${encodeURIComponent(userId)}`, {
     method: 'PUT',
-    secret: true,
+    admin: true,
     query: { verified: verified ? 1 : 0, site: siteId() },
   });
   return { userId, verified };
