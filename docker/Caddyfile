@@ -23,7 +23,16 @@ http://{$DOMAIN_COMMENTS} {
 	# was injected here and then blocked by this app's own CSP, logging a
 	# console error on every blog post that embeds comments).
 	header +Cache-Control "no-transform"
-	reverse_proxy remark42:8080
+	# Comment accounts (username + password) are served by the CMS on this
+	# same origin, so the sign-in cookies reach the Remark42 widget.
+	redir /account /account/ 308
+	handle_path /account/* {
+		rewrite * /commenter{path}
+		reverse_proxy cms:3000
+	}
+	handle {
+		reverse_proxy remark42:8080
+	}
 }
 
 http://{$DOMAIN_ANALYTICS} {

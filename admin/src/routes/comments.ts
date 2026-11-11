@@ -366,7 +366,16 @@ router.get('/', async (req, res) => {
 // directly (remark42 up to 500, webmentions via SQL COUNT) so the badges
 // don't undercount the way a capped list page did.
 router.get('/counts', async (req, res) => {
-  const counts = { all: 0, visible: 0, pinned: 0, spam: 0, deleted: 0, pending: 0, blocked: 0 };
+  const counts = {
+    all: 0,
+    visible: 0,
+    pinned: 0,
+    spam: 0,
+    deleted: 0,
+    pending: 0,
+    blocked: 0,
+    accounts: 0,
+  };
   try {
     const list = await remark42.lastComments({ max: 500 });
     for (const c of list.map(normaliseRemarkComment)) {
@@ -389,6 +398,12 @@ router.get('/counts', async (req, res) => {
     .prepare(`SELECT COUNT(*) AS n FROM blocks WHERE site_id = ?`)
     .get(siteFilter);
   counts.blocked = Number(blockRow && blockRow.n) || 0;
+  try {
+    const acctRow = db().prepare(`SELECT COUNT(*) AS n FROM commenter_accounts`).get();
+    counts.accounts = Number(acctRow && acctRow.n) || 0;
+  } catch {
+    /* table missing on a not-yet-migrated DB */
+  }
   res.json({ counts });
 });
 

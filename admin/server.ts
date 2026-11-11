@@ -40,6 +40,10 @@ import {
 } from './src/routes/webmentions.js';
 // Unified comment moderation — proxies Remark42 + webmentions into one surface.
 import commentsRoutes from './src/routes/comments.js';
+import {
+  publicRouter as commenterPublicRoutes,
+  adminRouter as commenterAdminRoutes,
+} from './src/routes/commenter.js';
 import * as remark42Poller from './src/services/remark42-poller.js';
 // Server-side Umami analytics proxy — the dashboard traffic widgets
 // read /api/analytics/* so the browser never talks to Umami directly
@@ -290,6 +294,13 @@ const proofreadLimiter = rateLimit({
 //
 // The static() max-age option only sets the default; setHeaders runs
 // after and can override per-path. We use it for the HTML + font split.
+// Commenter accounts (username + password sign-in for blog comments). Public,
+// but only reachable through the comments domain: Caddy maps
+// https://comments.<domain>/account/* here. Mounted before the admin HTML and
+// static handlers so nothing else answers under /commenter. The router does
+// its own origin check, JSON parsing and rate limiting (routes/commenter.ts).
+app.use('/commenter', commenterPublicRoutes, (_req, res) => res.status(404).end());
+
 // Serve admin HTML pages ourselves (before express.static) so we can rewrite
 // local /js + /css references to carry a per-deploy ?v=<ASSET_VERSION> query.
 // Combined with the no-cache header on HTML, this makes deploys land instantly
@@ -470,6 +481,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/embed', embedRoutes);
 app.use('/api/webmentions', webmentionAdminRoutes);
 app.use('/api/comments', commentsRoutes);
+app.use('/api/commenters', commenterAdminRoutes);
 // Templates static mount — read-only access to admin/templates/*.md so
 // the "New Post" picker can fetch each scaffold.
 app.use('/api/templates', express.static(join(__dirname, 'templates'), { fallthrough: false }));

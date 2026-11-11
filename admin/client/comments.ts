@@ -38,11 +38,12 @@
     { id: 'spam', label: 'Spam' },
     { id: 'deleted', label: 'Deleted' },
     { id: 'blocked', label: 'Blocked' },
+    { id: 'accounts', label: 'Accounts' },
   ];
 
   const LAST_VISIT_KEY = 'te.comments.lastVisit';
 
-  /** @type {{ activeTab: string, page: number, limit: number, items: any[], total: number, hasMore: boolean, postFilter: string, authorFilter: string, selected: Set<string>, counts: Record<string, number>, blocked: any[], evt: EventSource|null, opened: boolean }} */
+  /** @type {{ activeTab: string, page: number, limit: number, items: any[], total: number, hasMore: boolean, postFilter: string, authorFilter: string, selected: Set<string>, counts: Record<string, number>, blocked: any[], accounts: any[], evt: EventSource|null, opened: boolean }} */
   const state = {
     activeTab: 'all',
     page: 1,
@@ -55,6 +56,7 @@
     selected: new Set(),
     counts: {},
     blocked: [],
+    accounts: [],
     evt: null,
     opened: false,
   };
@@ -193,7 +195,10 @@
   // ── API helpers ──────────────────────────────────────────────
   async function fetchList() {
     const qs = new URLSearchParams();
-    qs.set('status', state.activeTab === 'blocked' ? 'all' : state.activeTab);
+    qs.set(
+      'status',
+      state.activeTab === 'blocked' || state.activeTab === 'accounts' ? 'all' : state.activeTab,
+    );
     qs.set('page', String(state.page));
     qs.set('limit', String(state.limit));
     if (state.postFilter) qs.set('post', state.postFilter);
@@ -244,6 +249,10 @@
     `;
     if (state.activeTab === 'blocked') {
       renderBlocked(list);
+      return;
+    }
+    if (state.activeTab === 'accounts') {
+      renderAccounts(list);
       return;
     }
     if (!state.items.length) {
@@ -391,6 +400,109 @@
     }
     $('cm-foot-text').textContent = `${state.blocked.length} blocked`;
     $('cm-total').textContent = `${state.blocked.length} total`;
+    $('cm-prev').disabled = true;
+    $('cm-next').disabled = true;
+  }
+
+  /**
+   * Commenter accounts (username + password sign-in on the blog). Passwords
+   * are never visible here; "Reset password" sets a one-time temporary one to
+   * pass on to the commenter, "Delete" removes the account and blocks its
+   * existing sign-in.
+   */
+  function renderAccounts(list) {
+    if (!state.accounts.length) {
+      list.removeAttribute('role');
+      list.insertAdjacentHTML(
+        'beforeend',
+        `<div class="te-cm-empty" role="presentation">No commenter accounts yet. Readers create one from the link above the comments on any post.</div>`,
+      );
+      $('cm-foot-text').textContent = '0 accounts';
+      $('cm-total').textContent = '0 total';
+      $('cm-prev').disabled = true;
+      $('cm-next').disabled = true;
+      return;
+    }
+    list.setAttribute('role', 'list');
+    const now = Date.now();
+    for (const a of state.accounts) {
+      const locked = a.locked_until && a.locked_until > now;
+      const row = document.createElement('div');
+      row.className = 'te-cm-row';
+      row.setAttribute('role', 'listitem');
+      row.dataset.id = a.id;
+      row.style.position = 'relative';
+      row.innerHTML = `
+        <span class="te-cm-check"></span>
+        <span class="te-cm-author">
+          <span class="badge">ACCOUNT</span>
+          <span class="name">${escape(a.username)}</span>
+        </span>
+        <span class="te-cm-body">
+          <span class="post">Joined ${escape(TE.fmtTs(a.created_at))}</span>
+          <span class="excerpt">${a.last_login_at ? `Last signed in ${escape(TE.fmtTs(a.last_login_at))}` : 'Never signed in since joining'}</span>
+        </span>
+        <span class="te-cm-status ${locked ? 's-spam' : 's-visible'}">${locked ? 'locked' : 'active'}</span>
+        <span class="te-cm-ts"></span>
+      `;
+      const actions = document.createElement('span');
+      actions.style.position = 'absolute';
+      actions.style.right = '16px';
+      actions.style.marginTop = '6px';
+      actions.style.display = 'flex';
+      actions.style.gap = '6px';
+      const mk = (label, cls) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `btn-mini ${cls}`;
+        b.textContent = label;
+        actions.appendChild(b);
+        return b;
+      };
+      mk('Reset password', '').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (
+          !confirm(`Give ${a.username} a temporary password? Their current password stops working.`)
+        )
+          return;
+        try {
+          const r = await TE.fetchJSON(`/api/commenters/${encodeURIComponent(a.id)}/reset`, {
+            method: 'POST',
+            body: '{}',
+          });
+          window.prompt(
+            `Temporary password for ${a.username}. Copy it now (it won't be shown again); they can change it after signing in:`,
+            r.temporaryPassword,
+          );
+          await reloadActive();
+        } catch (err) {
+          TE.toast((err.data && err.data.message) || err.message || 'Reset failed.', 'error');
+        }
+      });
+      mk('Delete', 'bad').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (
+          !confirm(
+            `Delete ${a.username}'s account? Their name becomes free again; existing comments stay.`,
+          )
+        )
+          return;
+        try {
+          await TE.fetchJSON(`/api/commenters/${encodeURIComponent(a.id)}`, {
+            method: 'DELETE',
+            body: undefined,
+          });
+          TE.toast('Account deleted.');
+          await reloadActive();
+        } catch (err) {
+          TE.toast((err.data && err.data.message) || err.message || 'Delete failed.', 'error');
+        }
+      });
+      row.appendChild(actions);
+      list.appendChild(row);
+    }
+    $('cm-foot-text').textContent = `${state.accounts.length} accounts`;
+    $('cm-total').textContent = `${state.accounts.length} total`;
     $('cm-prev').disabled = true;
     $('cm-next').disabled = true;
   }
@@ -878,6 +990,13 @@
         state.items = [];
         state.total = state.blocked.length;
         state.hasMore = false;
+      } else if (state.activeTab === 'accounts') {
+        const accts = await TE.fetchJSON('/api/commenters');
+        state.accounts = Array.isArray(accts?.items) ? accts.items : [];
+        state.items = [];
+        state.total = state.accounts.length;
+        state.hasMore = false;
+        state.counts = { ...state.counts, accounts: state.accounts.length };
       } else {
         const data = await fetchList();
         state.items = Array.isArray(data?.items) ? data.items : [];

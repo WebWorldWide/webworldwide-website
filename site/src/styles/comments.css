@@ -163,6 +163,18 @@
 }
 
 /* Shown by the CommentForm island when Remark42 isn't configured. */
+.comments-account {
+  margin: 0 0 14px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--ink-soft);
+}
+.comments-account a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .comments-empty {
   font-family: var(--font-serif);
   font-style: italic;
