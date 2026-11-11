@@ -156,6 +156,7 @@ type Puff = {
   opacity: string;
   driftDur: string;
   driftDelay: string;
+  restX: string;
   bg: string;
   bobDur: string;
   bobDelay: string;
@@ -180,13 +181,24 @@ for (const L of LAYERS) {
     const shape = SHAPES[Math.floor(rng() * SHAPES.length)];
     const scale = L.scaleMin + Math.floor(rng() * (L.scaleMax - L.scaleMin + 1));
     const dur = rand(L.durMin, L.durMax);
+    const width = shape[0].length * scale;
+    // PRNG draw order is load-bearing (same sky every build): top, opacity,
+    // then drift progress.
+    const top = `${rand(L.topMin, L.topMax).toFixed(2)}vh`;
+    const opacity = rand(L.opMin, L.opMax).toFixed(2);
+    const progress = rng();
     puffs.push({
-      width: shape[0].length * scale,
+      width,
       height: shape.length * scale,
-      top: `${rand(L.topMin, L.topMax).toFixed(2)}vh`,
-      opacity: rand(L.opMin, L.opMax).toFixed(2),
+      top,
+      opacity,
       driftDur: `${dur.toFixed(1)}s`,
-      driftDelay: `${(-rng() * dur).toFixed(1)}s`,
+      driftDelay: `${(-progress * dur).toFixed(1)}s`,
+      // Where the drift animation would place this puff at t=0. Used as the
+      // resting transform when the animation isn't running (reduced motion),
+      // so a still sky is still spread across the screen instead of every
+      // puff stacking at left:0.
+      restX: `calc(${progress.toFixed(3)} * (116vw + ${width}px) - ${width}px - 8vw)`,
       bg: puffClass(shape, L.outline),
       bobDur: `${(4 + rng() * 4).toFixed(2)}s`,
       bobDelay: `${(-rng() * 4).toFixed(2)}s`,
@@ -202,7 +214,7 @@ for (const L of LAYERS) {
     puffs.map((p) => (
       <div
         class="puff"
-        style={`--w:${p.width}px;width:${p.width}px;height:${p.height}px;top:${p.top};left:0;opacity:${p.opacity};animation-duration:${p.driftDur};animation-delay:${p.driftDelay}`}
+        style={`--w:${p.width}px;--x:${p.restX};width:${p.width}px;height:${p.height}px;top:${p.top};left:0;opacity:${p.opacity};animation-duration:${p.driftDur};animation-delay:${p.driftDelay}`}
       >
         <div
           class={`puff-bob ${p.bg}`}

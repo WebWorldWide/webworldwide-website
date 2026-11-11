@@ -4,7 +4,8 @@
  * "Lite" = a slow CPU, little memory, a slow or metered connection, or the
  * user asked for reduced data/motion. Decorative work scales down on lite
  * devices (fewer 3D slices, 30fps idle animation, no cursor parallax, no
- * drifting clouds); content and interactions are identical.
+ * cloud bob — the clouds themselves keep drifting); content and
+ * interactions are identical.
  */
 type NavigatorHints = Navigator & {
   deviceMemory?: number;

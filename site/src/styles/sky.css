@@ -23,6 +23,8 @@
   position: absolute;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  /* Resting place (reduced motion): where the drift would put it at t=0. */
+  transform: translate3d(var(--x, 0), 0, 0);
   animation: puffDrift linear infinite;
   will-change: transform;
 }
@@ -58,8 +60,12 @@ body[data-cloud-dim] .sky-puffs {
   opacity: 0.55;
 }
 
-/* Lite mode: the clouds stay, they just don't drift. */
-.lite .puff,
+/* Lite mode: the clouds still drift — 19 compositor-only transforms cost
+   the main thread nothing — but drop the secondary bob loop, which halves
+   the animations the compositor ticks. Never freeze the drift here: lite
+   matches ordinary 4-core laptops and phones on a "3g" network estimate,
+   and a frozen sky reads as a broken page. Reduced motion is handled by the
+   global rule in base.css (puffs rest at --x). */
 .lite .puff-bob {
   animation: none !important;
 }
