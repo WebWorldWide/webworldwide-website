@@ -225,20 +225,53 @@ test('lastComments hits /api/v1/last/N and parses array body', skipOpts(), async
   assert.equal(rows[0].author.name, 'Bob');
 });
 
-test('blockUser issues PUT /api/v1/admin/user/:id?block=1&secret=…', skipOpts(), async () => {
+test(
+  'blockUser issues PUT /api/v1/admin/user/:id?block=1 with admin auth',
+  skipOpts(),
+  async () => {
+    resetFetch();
+    let calledUrl = null;
+    let calledInit = null;
+    registerFetch(/\/api\/v1\/admin\/user\//, (url, init) => {
+      calledUrl = url;
+      calledInit = init;
+      return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+    await remark42.blockUser('alice', { block: true, ttl: '24h' });
+    assert.ok(calledUrl);
+    const u = new URL(calledUrl);
+    assert.equal(u.pathname, '/api/v1/admin/user/alice');
+    assert.equal(u.searchParams.get('block'), '1');
+    assert.equal(u.searchParams.get('ttl'), '24h');
+    // Remark42's /api/v1/admin/* endpoints answer 401 to `?secret=` alone;
+    // they need the admin identity (basic admin:ADMIN_PASSWD, or the
+    // self-minted admin JWT). The secret must never ride in the URL either:
+    // Remark42 logs full request URLs.
+    assert.equal(u.searchParams.get('secret'), null);
+    assert.match(String(calledInit?.headers?.Authorization || ''), /^(Basic|Bearer) /);
+  },
+);
+
+test('every admin write sends admin auth, never ?secret=', skipOpts(), async () => {
   resetFetch();
-  let calledUrl = null;
-  registerFetch(/\/api\/v1\/admin\/user\//, (url) => {
-    calledUrl = url;
-    return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+  /** @type {Array<{ url: string, init: any }>} */
+  const seen = [];
+  registerFetch(/\/api\/v1\/admin\//, (url, init) => {
+    seen.push({ url, init });
+    return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
   });
-  await remark42.blockUser('alice', { block: true, ttl: '24h' });
-  assert.ok(calledUrl);
-  const u = new URL(calledUrl);
-  assert.equal(u.pathname, '/api/v1/admin/user/alice');
-  assert.equal(u.searchParams.get('block'), '1');
-  assert.equal(u.searchParams.get('ttl'), '24h');
-  assert.equal(u.searchParams.get('secret'), 'test-secret-please-rotate');
+  const postUrl = 'https://webworldwide.online/blog/x/';
+  await remark42.deleteComment('c1', postUrl);
+  await remark42.pinComment('c1', postUrl, true);
+  await remark42.pinComment('c1', postUrl, false);
+  await remark42.blockUser('alice', { block: false });
+  await remark42.listBlockedUsers();
+  await remark42.verifyUser('alice', true);
+  assert.equal(seen.length, 6);
+  for (const { url, init } of seen) {
+    assert.equal(new URL(url).searchParams.get('secret'), null, url);
+    assert.match(String(init?.headers?.Authorization || ''), /^(Basic|Bearer) /, url);
+  }
 });
 
 test('listBlockedUsers parses the admin/blocked response', skipOpts(), async () => {
