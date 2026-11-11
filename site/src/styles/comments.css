@@ -164,16 +164,55 @@
 
 /* Shown by the CommentForm island when Remark42 isn't configured. */
 .comments-account {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
+}
+.comments-account p {
+  margin: 0 0 10px;
   font-family: var(--font-serif);
   font-size: 18px;
   color: var(--ink-soft);
 }
-.comments-account a {
+.comments-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+/* Real buttons, 44px tall: comfortable tap targets on phones (WCAG 2.5.5). */
+.acct-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--ink);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.acct-btn.primary {
+  color: #fff;
+  background: var(--sky);
+}
+.acct-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.acct-btn:focus-visible {
+  outline: 3px solid var(--sky);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .acct-btn {
+    transition: none;
+  }
 }
 .comments-empty {
   font-family: var(--font-serif);

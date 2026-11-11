@@ -17,17 +17,17 @@ const { threadId, remarkUrl, remarkSiteId } = Astro.props;
 {
   remarkUrl ? (
     <>
-      <p class="comments-account">
-        Want to keep your name?{' '}
-        <a href={`${remarkUrl}/account/#register`} target="_blank" rel="noopener" data-comments-account>
-          Create a free account
-        </a>{' '}
-        or{' '}
-        <a href={`${remarkUrl}/account/`} target="_blank" rel="noopener" data-comments-account>
-          sign in
-        </a>
-        . You can also comment as a guest.
-      </p>
+      <div class="comments-account">
+        <p>Want to keep your name on every device? Make a free account, or comment as a guest.</p>
+        <div class="comments-account-actions">
+          <a class="acct-btn primary" href={`${remarkUrl}/account/#register`} target="_blank" rel="noopener" data-comments-account>
+            Create a free account
+          </a>
+          <a class="acct-btn" href={`${remarkUrl}/account/`} target="_blank" rel="noopener" data-comments-account>
+            Sign in
+          </a>
+        </div>
+      </div>
       <div id="remark42" class="remark42-wrap" data-host={remarkUrl} data-site={remarkSiteId} data-thread={threadId} />
     </>
   ) : (
