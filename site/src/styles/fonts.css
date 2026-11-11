@@ -15,8 +15,6 @@
 @import "@fontsource/space-mono/latin-400.css";
 @import "@fontsource/space-mono/latin-700.css";
 @import "@fontsource/vt323/latin-400.css";
-/* Display face: the homepage wordmark ring. */
-@import "@fontsource/instrument-serif/latin-400.css";
 
 /* Metric-matched fallbacks. While a web font is still downloading the text
    paints in a local system face; without adjustment that face is wider or
@@ -63,12 +61,29 @@
   descent-override: 30%;
   line-gap-override: 0%;
 }
+/* Display face for the homepage wordmark ring: Fraunces (SIL OFL 1.1), one
+   static instance of the variable font at wght 800, SOFT 100 (rounded
+   serifs), WONK 0, opsz 72, subset to Latin — 16KB instead of the 121KB
+   full variable file. Rebuilt with fonttools from @fontsource-variable/fraunces
+   (files/fraunces-latin-full-normal.woff2):
+     fonttools varLib.instancer full.woff2 wght=800 SOFT=100 WONK=0 opsz=72 -o i.ttf
+     pyftsubset i.ttf --unicodes="U+0020-007E,U+00A0-00FF,U+2013-2014,U+2018-201D,U+2022,U+2026,U+00B7" \
+       --layout-features=kern,liga,calt --flavor=woff2 --output-file=fraunces-soft-800-latin.woff2 */
 @font-face {
-  font-family: "Instrument Serif Fallback";
+  font-family: "Fraunces Soft";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../assets/fonts/fraunces-soft-800-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fraunces Soft Fallback";
+  font-weight: 800;
   src:
-    local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("Tinos");
-  size-adjust: 84%;
-  ascent-override: 117.9%;
-  descent-override: 36.9%;
+    local("Times New Roman Bold"), local("TimesNewRomanPS-BoldMT"), local("Liberation Serif Bold"),
+    local("Tinos Bold");
+  size-adjust: 109.5%;
+  ascent-override: 89.4%;
+  descent-override: 23.3%;
   line-gap-override: 0%;
 }

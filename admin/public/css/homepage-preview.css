@@ -199,10 +199,10 @@
   height: 432px;
 }
 .pvx-wordmark {
-  /* The site wordmark is Instrument Serif (fonts.css self-hosts it). */
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 58px;
-  font-weight: 400;
+  /* The site wordmark: Fraunces, soft, 800 (fonts.css self-hosts it). */
+  font-family: "Fraunces Soft", Georgia, serif;
+  font-size: 56px;
+  font-weight: 800;
   line-height: 1;
   color: #fff;
   white-space: nowrap;

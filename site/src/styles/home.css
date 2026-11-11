@@ -36,10 +36,11 @@
   margin: 0;
   padding: 0;
   display: block;
-  /* Instrument Serif: a condensed display serif (400 only — never bolded). */
+  /* Fraunces, soft (rounded serifs), extra-bold: reads at every angle round
+     the ring and holds up on the sky. Only the 800 instance ships. */
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(40px, 8vmin, 100px);
+  font-weight: 800;
+  font-size: clamp(38px, 7.8vmin, 96px);
   line-height: 1;
   color: #fff;
   text-shadow:
@@ -931,7 +932,7 @@
 }
 @media (max-width: 380px) {
   .wordmark {
-    font-size: 50px;
+    font-size: 46px;
   }
   .tagline {
     font-size: 20px;
