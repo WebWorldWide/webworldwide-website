@@ -27,7 +27,8 @@
 @font-face {
   font-family: "Cormorant Garamond Fallback";
   font-style: normal;
-  src: local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("Tinos");
+  src:
+    local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("Tinos");
   size-adjust: 97.2%;
   ascent-override: 95.1%;
   descent-override: 29.5%;
@@ -36,7 +37,9 @@
 @font-face {
   font-family: "Cormorant Garamond Fallback";
   font-style: italic;
-  src: local("Times New Roman Italic"), local("TimesNewRomanPS-ItalicMT"), local("Liberation Serif Italic"), local("Tinos Italic");
+  src:
+    local("Times New Roman Italic"), local("TimesNewRomanPS-ItalicMT"),
+    local("Liberation Serif Italic"), local("Tinos Italic");
   size-adjust: 88%;
   ascent-override: 105%;
   descent-override: 32.6%;
