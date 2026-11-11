@@ -11,8 +11,12 @@
  *      around the sides instead of becoming one flat colour.
  *   3. Render a front face, a back face, and one thin wall per edge piece,
  *      standing perpendicular to the face along the outline.
- *   4. Shade each wall from its normal as the object turns (shadeSolid), so
- *      it reads as lit volume rather than painted card.
+ *   4. Shade each wall from its normal (shadeSolid), so it reads as lit
+ *      volume rather than painted card. Colour and normal are blended with
+ *      the neighbouring pieces at each end (a gradient along the wall), so
+ *      rounded corners and the artwork's own rim gradients come out smooth
+ *      instead of banded — while real colour breaks (FileID's stripes) stay
+ *      hard.
  *
  * Shared by the public homepage (app-spinners.ts) and the CMS homepage
  * preview (bundled into admin/public/js/extrude.js). No dependencies.
@@ -31,6 +35,11 @@ export interface Wall {
   r: number;
   g: number;
   b: number;
+  /** Colour and normal at the piece's start / end, blended with neighbours. */
+  c0: [number, number, number];
+  c1: [number, number, number];
+  n0: [number, number];
+  n1: [number, number];
 }
 
 export interface Solid {
@@ -244,7 +253,7 @@ function wallsFrom(data: ImageData, maxWalls: number): Wall[] {
     let g = 0;
     let b = 0;
     let n = 0;
-    for (const t of [2, 3.5, 5]) {
+    for (const t of [1.5, 2.5, 3.5]) {
       const ix = Math.round(x + inx * t);
       const iy = Math.round(y + iny * t);
       if (ix < 0 || iy < 0 || ix >= W || iy >= data.height) continue;
@@ -307,16 +316,23 @@ function wallsFrom(data: ImageData, maxWalls: number): Wall[] {
         const t1 = end / n;
         const len = (t1 - t0) * e.L;
         const tm = (t0 + t1) / 2;
+        const c: [number, number, number] = [acc[0] / cnt, acc[1] / cnt, acc[2] / cnt];
         out.push({
-          x: (e.ax + e.ux * e.L * tm) / GRID,
-          y: (e.ay + e.uy * e.L * tm) / GRID,
+          // The contour runs through the centres of the outermost opaque
+          // pixels, half a pixel inside the image's real (50% alpha) edge.
+          x: (e.ax + e.ux * e.L * tm + e.nx * 0.5) / GRID,
+          y: (e.ay + e.uy * e.L * tm + e.ny * 0.5) / GRID,
           len: len / GRID,
           angle: Math.atan2(e.uy, e.ux),
           nx: e.nx,
           ny: e.ny,
-          r: acc[0] / cnt,
-          g: acc[1] / cnt,
-          b: acc[2] / cnt,
+          r: c[0],
+          g: c[1],
+          b: c[2],
+          c0: c,
+          c1: c,
+          n0: [e.nx, e.ny],
+          n1: [e.nx, e.ny],
         });
       };
       for (let s = 1; s < n; s++) {
@@ -346,7 +362,46 @@ function wallsFrom(data: ImageData, maxWalls: number): Wall[] {
     tol *= 1.5;
     walls = build(tol);
   }
+  blendJoints(walls);
   return walls;
+}
+
+/** Sum of channel differences between two colours. */
+const colourGap = (a: [number, number, number], b: [number, number, number]): number =>
+  Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+
+/**
+ * Walls come out in order around the outline. Where two neighbours meet,
+ * share one colour and one normal at the joint (smooth shading), unless the
+ * artwork's colour really changes there (a stripe edge) or the outline turns
+ * a sharp corner — those joints stay crisp.
+ */
+function blendJoints(walls: Wall[]): void {
+  const n = walls.length;
+  if (n < 3) return;
+  for (let i = 0; i < n; i++) {
+    const a = walls[i];
+    const b = walls[(i + 1) % n];
+    const ca: [number, number, number] = [a.r, a.g, a.b];
+    const cb: [number, number, number] = [b.r, b.g, b.b];
+    if (colourGap(ca, cb) < 90) {
+      const mid: [number, number, number] = [
+        (ca[0] + cb[0]) / 2,
+        (ca[1] + cb[1]) / 2,
+        (ca[2] + cb[2]) / 2,
+      ];
+      a.c1 = mid;
+      b.c0 = mid;
+    }
+    // cos 40° — softer bends than that belong to one smooth curve.
+    if (a.nx * b.nx + a.ny * b.ny > 0.76) {
+      const mx = a.nx + b.nx;
+      const my = a.ny + b.ny;
+      const m = Math.hypot(mx, my) || 1;
+      a.n1 = [mx / m, my / m];
+      b.n0 = [mx / m, my / m];
+    }
+  }
 }
 
 /** Parse "linear-gradient(135deg,#aaa,#bbb)" into two stops (fallback tiles). */
@@ -459,12 +514,18 @@ export function renderSolid(
   for (const w of solid.walls) {
     const el = document.createElement('span');
     el.className = 'x-wall';
-    // +1px overlap so neighbouring pieces never show a hairline seam.
-    const len = w.len * size + 1;
+    // Overlap neighbours so no hairline seam shows between pieces (they
+    // share colour at the joint, so the overlap is invisible).
+    const len = w.len * size + 1.5;
+    // 1px past each face too: where a face's anti-aliased rim meets the
+    // wall's own anti-aliased edge, both half-cover the same pixels and the
+    // background shows through as a hairline. Reaching past the face hides
+    // the joint (seen face-on the extra is edge-on, so invisible).
+    const tall = depth + 2;
     el.style.width = `${len.toFixed(2)}px`;
-    el.style.height = `${depth}px`;
+    el.style.height = `${tall}px`;
     el.style.left = `${(w.x * size - len / 2).toFixed(2)}px`;
-    el.style.top = `${(w.y * size - depth / 2).toFixed(2)}px`;
+    el.style.top = `${(w.y * size - tall / 2).toFixed(2)}px`;
     el.style.transform = `rotateZ(${w.angle.toFixed(4)}rad) rotateX(90deg)`;
     walls.push({ el, w, last: -1 });
     frag.appendChild(el);
@@ -493,18 +554,28 @@ export function shadeSolid(r: Rendered, rxDeg: number, ryDeg: number): void {
   const sx = Math.sin(rx);
   const cy = Math.cos(ry);
   const sy = Math.sin(ry);
-  for (const item of r.walls) {
-    const { nx, ny } = item.w;
+  // Wrapped (half-Lambert) light with a high floor: the walls should read as
+  // the artwork's own rim colour turned to the side, not a dark band.
+  const toneFor = ([nx, ny]: [number, number]): number => {
     // n' = Rx · Ry · (nx, ny, 0)
     const x1 = cy * nx;
     const z1 = -sy * nx;
     const y2 = cx * ny - sx * z1;
     const z2 = sx * ny + cx * z1;
-    const lambert = Math.max(0, x1 * LIGHT[0] + y2 * LIGHT[1] + z2 * LIGHT[2]);
-    const tone = Math.round((0.38 + 0.62 * lambert) * 64) / 64;
-    if (tone === item.last) continue;
-    item.last = tone;
-    const { r: R, g: G, b: B } = item.w;
-    item.el.style.backgroundColor = `rgb(${Math.round(R * tone)} ${Math.round(G * tone)} ${Math.round(B * tone)})`;
+    const wrap = (x1 * LIGHT[0] + y2 * LIGHT[1] + z2 * LIGHT[2]) * 0.5 + 0.5;
+    return Math.round((0.6 + 0.42 * wrap) * 128) / 128;
+  };
+  const rgb = (c: [number, number, number], t: number): string =>
+    `rgb(${Math.min(255, Math.round(c[0] * t))} ${Math.min(255, Math.round(c[1] * t))} ${Math.min(255, Math.round(c[2] * t))})`;
+  for (const item of r.walls) {
+    const w = item.w;
+    const t0 = toneFor(w.n0);
+    const t1 = toneFor(w.n1);
+    const key = t0 * 1000 + t1;
+    if (key === item.last) continue;
+    item.last = key;
+    const a = rgb(w.c0, t0);
+    const b = rgb(w.c1, t1);
+    item.el.style.background = a === b ? a : `linear-gradient(90deg, ${a}, ${b})`;
   }
 }

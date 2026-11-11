@@ -69,9 +69,12 @@
   --r-button: 3px;
 
   /* Type stacks */
-  --font-serif: "Cormorant Garamond", "Apple Garamond", "ITC Garamond", Garamond, serif;
-  --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-pixel: "VT323", ui-monospace, "Courier New", monospace;
+  --font-serif:
+    "Cormorant Garamond", "Cormorant Garamond Fallback", "Apple Garamond", "ITC Garamond", Garamond,
+    serif;
+  --font-mono:
+    "Space Mono", "Space Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-pixel: "VT323", "VT323 Fallback", ui-monospace, "Courier New", monospace;
 
   /* Type scale (clamp() so it scales with viewport) */
   --fs-mast: clamp(56px, 9vw, 124px);
