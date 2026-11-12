@@ -145,10 +145,11 @@
     notify('signed-out');
   });
 
+  const signedOut = () => {
+    show(null);
+    if (location.hash === '#register') tab('register');
+  };
   call('me')
-    .then((d) => show(d.username))
-    .catch(() => {
-      show(null);
-      if (location.hash === '#register') tab('register');
-    });
+    .then((d) => (d.username ? show(d.username) : signedOut()))
+    .catch(signedOut);
 })();

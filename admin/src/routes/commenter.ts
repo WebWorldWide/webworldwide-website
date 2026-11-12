@@ -5,7 +5,7 @@
  *
  *   GET  /commenter/            sign-in / create-account page
  *   GET  /commenter/app.js      its script (no inline JS: strict CSP)
- *   GET  /commenter/me          { username } or 401
+ *   GET  /commenter/me          { username } (null when signed out)
  *   POST /commenter/register    { username, password }
  *   POST /commenter/login       { username, password }
  *   POST /commenter/logout
@@ -140,10 +140,11 @@ for (const asset of ['app.js', 'style.css']) {
   });
 }
 
+// Signed out is a normal answer here (200, username null), not an error, so
+// visitors' consoles stay clean.
 publicRouter.get('/me', (req, res) => {
   const acct = accounts.sessionAccount(sessionCookie(req));
-  if (!acct) return res.status(401).json({ error: 'signed_out' });
-  res.json({ username: acct.username });
+  res.json({ username: acct ? acct.username : null });
 });
 
 const body = json({ limit: '2kb' });
