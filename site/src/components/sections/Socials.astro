@@ -106,6 +106,10 @@ interface Props {
   num?: number;
 }
 const label = Astro.props.num ? `${String(Astro.props.num).padStart(2, '0')} — Socials` : 'Socials';
+
+// Break points for long handles: before "@" (not the first), "." and "/", so
+// "@webworldwide@mastodon.social" wraps at a seam, not mid-word.
+const splitHandle = (h: string): string[] => h.split(/(?=[@./])/).filter(Boolean);
 ---
 <section class="section" id="socials">
   <div class="section-inner">
@@ -126,7 +130,7 @@ const label = Astro.props.num ? `${String(Astro.props.num).padStart(2, '0')} —
           <span class="icon-box" aria-hidden="true" set:html={t.icon}></span>
           <span class="text">
             <span class="name">{t.name}</span>
-            <span class="handle">{t.handle}</span>
+            <span class="handle">{splitHandle(t.handle).map((part, i) => (i ? [<wbr />, part] : part))}</span>
           </span>
           <span class="arrow" aria-hidden="true">→</span>
         </a>

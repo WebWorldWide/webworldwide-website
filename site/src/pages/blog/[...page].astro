@@ -60,7 +60,10 @@ const pageTitle = page.currentPage === 1 ? 'Blog' : `Blog · Page ${page.current
 
 <BaseLayout title={pageTitle} description={metaDescription} preloadFonts={['mono700']}>
   <div class="frame">
-    <!-- MASTHEAD -->
+    <!-- MASTHEAD: first page only. Later pages go straight to the posts
+         (the pager says which page you're on). -->
+    {page.currentPage > 1 && <h1 class="sr-only">{`${masthead} · Page ${page.currentPage}`}</h1>}
+    {page.currentPage === 1 && (
     <header class="card masthead">
       <TermBar path="blog" />
       <div class="body">
@@ -92,6 +95,7 @@ const pageTitle = page.currentPage === 1 ? 'Blog' : `Blog · Page ${page.current
         </div>
       </div>
     </header>
+    )}
 
     <!-- POST CARDS -->
     <div class="post-grid">
