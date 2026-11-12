@@ -1,101 +1,105 @@
 name: Dependabot auto-merge
 
-# Hands-off dependency updates. Runs after each Dependabot PR's CI workflows
-# finish (workflow_run), in the base repo's context — it never checks out or
-# runs the PR's code.
+# Hands-off dependency updates. Every run sweeps ALL open Dependabot PRs and
+# settles each one; it never checks out or runs the PR's code.
 #
-# - All checks green → merge and deploy.
-#   npm majors only arrive as security fixes (dependabot.yml ignores them as
-#   routine updates), and the full test suite has just passed them, so they
-#   merge too. Docker image majors (e.g. a Postgres data-format change) are
-#   never merged here: CI doesn't exercise the images, so those PRs are
-#   closed instead.
-# - A check failed → re-run the failed jobs once (CI mirrors flake); if it
-#   fails again, close the PR. Dependabot offers the next release later.
+# Triggers: whenever one of the PR check workflows finishes, plus every 30
+# minutes as a safety net (GitHub occasionally drops workflow_run events; on
+# 2026-11-12 the last check finishing never fired one, leaving a green PR
+# unmerged).
+#
+# For each open Dependabot PR:
+# - any check still running → leave it for a later run;
+# - all checks green → merge and deploy. npm majors only arrive as security
+#   fixes (dependabot.yml ignores them as routine updates) and the full suite
+#   has passed them, so they merge too. Container-image majors (e.g. a
+#   Postgres data-format change) are closed instead: CI doesn't exercise
+#   the images;
+# - a check failed → re-run the failed jobs once (CI mirrors flake); if that
+#   workflow already failed on a re-run, close the PR. Dependabot offers the
+#   next release later.
 # Nothing is ever left open waiting for a person.
 on:
   workflow_run:
     workflows: ['Quality', 'E2E + a11y', 'Lighthouse']
     types: [completed]
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
   actions: write
+  checks: read
 
 concurrency:
-  group: dependabot-automerge-${{ github.event.workflow_run.head_branch }}
+  group: dependabot-automerge
   cancel-in-progress: false
 
 jobs:
-  merge:
-    if: >-
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+  sweep:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Merge once every check is green
+      - name: Settle every open Dependabot PR
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -euo pipefail
-          pr=$(gh pr list -R "$REPO" --head "$BRANCH" --state open \
-                 --json number,author -q '.[] | select(.author.login == "app/dependabot") | .number' | head -1)
-          if [ -z "$pr" ]; then echo "No open Dependabot PR for $BRANCH"; exit 0; fi
+          deploy=false
+          prs=$(gh pr list -R "$REPO" --state open --author app/dependabot --json number,title,headRefName \
+                  -q '.[] | [.number, .headRefName, .title] | @tsv')
+          if [ -z "$prs" ]; then echo "No open Dependabot PRs."; exit 0; fi
 
-          title=$(gh pr view "$pr" -R "$REPO" --json title -q .title)
-          # "bump X from 1.2.3 to 2.0.0": a change in the leading number (or
-          # in the minor of a 0.x version) is a breaking bump.
-          major=false
-          if [[ "$title" =~ from\ v?([0-9]+)\.([0-9]+)[^\ ]*\ to\ v?([0-9]+)\.([0-9]+) ]]; then
-            fm=${BASH_REMATCH[1]} fn=${BASH_REMATCH[2]} tm=${BASH_REMATCH[3]} tn=${BASH_REMATCH[4]}
-            if [ "$fm" != "$tm" ] || { [ "$fm" = 0 ] && [ "$fn" != "$tn" ]; }; then major=true; fi
-          fi
-          if $major && [[ "$BRANCH" == dependabot/docker* ]]; then
-            gh pr close "$pr" -R "$REPO" --delete-branch --comment \
-              "Closed automatically: a major container-image update can change its data format, and CI doesn't test the images. It stays on the current major."
-            exit 0
-          fi
+          while IFS=$'\t' read -r pr branch title; do
+            echo "── #$pr $title"
 
-          checks=$(gh pr checks "$pr" -R "$REPO" --json name,bucket)
-          if ! jq -e 'length > 0 and all(.bucket == "pass" or .bucket == "skipping")' <<<"$checks" >/dev/null; then
-            echo "Checks not all green yet:"; jq -r '.[] | "  \(.bucket)  \(.name)"' <<<"$checks"; exit 0
-          fi
+            # "bump X from 1.2.3 to 2.0.0": a change in the leading number (or
+            # in the minor of a 0.x version) is a breaking bump.
+            major=false
+            if [[ "$title" =~ from\ v?([0-9]+)\.([0-9]+)[^\ ]*\ to\ v?([0-9]+)\.([0-9]+) ]]; then
+              fm=${BASH_REMATCH[1]} fn=${BASH_REMATCH[2]} tm=${BASH_REMATCH[3]} tn=${BASH_REMATCH[4]}
+              if [ "$fm" != "$tm" ] || { [ "$fm" = 0 ] && [ "$fn" != "$tn" ]; }; then major=true; fi
+            fi
+            if $major && [[ "$branch" == dependabot/docker* ]]; then
+              gh pr close "$pr" -R "$REPO" --delete-branch --comment \
+                "Closed automatically: a major container-image update can change its data format, and CI doesn't test the images. It stays on the current major."
+              continue
+            fi
 
-          gh pr merge "$pr" -R "$REPO" --merge --delete-branch
-          # Merges made with GITHUB_TOKEN don't fire push workflows, so
-          # start the Pages deploy explicitly.
-          gh workflow run deploy.yml -R "$REPO" --ref main
+            checks=$(gh pr checks "$pr" -R "$REPO" --json name,bucket || true)
+            if ! jq -e 'length > 0' <<<"$checks" >/dev/null 2>&1; then
+              echo "   no checks reported yet"; continue
+            fi
+            if jq -e 'any(.bucket == "pending")' <<<"$checks" >/dev/null; then
+              echo "   checks still running"; continue
+            fi
+            if jq -e 'all(.bucket == "pass" or .bucket == "skipping")' <<<"$checks" >/dev/null; then
+              gh pr merge "$pr" -R "$REPO" --merge --delete-branch && deploy=true
+              echo "   merged"
+              continue
+            fi
 
-  failed:
-    if: >-
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'failure' &&
-      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Retry once, then close
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
-          WORKFLOW: ${{ github.event.workflow_run.name }}
-        run: |
-          set -euo pipefail
-          pr=$(gh pr list -R "$REPO" --head "$BRANCH" --state open \
-                 --json number,author -q '.[] | select(.author.login == "app/dependabot") | .number' | head -1)
-          if [ -z "$pr" ]; then echo "No open Dependabot PR for $BRANCH"; exit 0; fi
-          if [ "$ATTEMPT" -lt 2 ]; then
-            echo "$WORKFLOW failed on attempt $ATTEMPT — re-running its failed jobs once."
-            gh run rerun "$RUN_ID" -R "$REPO" --failed
-            exit 0
-          fi
-          gh pr close "$pr" -R "$REPO" --delete-branch --comment \
-            "Closed automatically: **$WORKFLOW** failed twice on this update, so it would have broken the site. Dependabot will offer a later release."
+            # Something failed or was cancelled: look at each check workflow's
+            # latest run on this branch.
+            runs=$(gh run list -R "$REPO" --branch "$branch" --event pull_request --limit 20 \
+                     --json databaseId,workflowName,attempt,conclusion,createdAt)
+            latest=$(jq -c 'sort_by(.createdAt) | reverse | unique_by(.workflowName)
+                            | map(select(.conclusion == "failure" or .conclusion == "cancelled"))' <<<"$runs")
+            if jq -e 'any(.attempt >= 2)' <<<"$latest" >/dev/null; then
+              names=$(jq -r 'map(.workflowName) | join(", ")' <<<"$latest")
+              gh pr close "$pr" -R "$REPO" --delete-branch --comment \
+                "Closed automatically: **$names** failed again after a re-run, so this update would have broken the site. Dependabot will offer a later release."
+              echo "   closed (failed twice)"
+            else
+              for id in $(jq -r '.[].databaseId' <<<"$latest"); do
+                gh run rerun "$id" -R "$REPO" --failed && echo "   re-running $id"
+              done
+            fi
+          done <<<"$prs"
+
+          # Merges made with GITHUB_TOKEN don't fire push workflows, so start
+          # the Pages deploy explicitly (once, however many merged).
+          if $deploy; then gh workflow run deploy.yml -R "$REPO" --ref main; fi
