@@ -120,13 +120,15 @@ if ! docker compose --project-directory "$DOCKER_DIR" up -d --build --remove-orp
 fi
 wwwide_notify_clear auto-update-rebuild
 
-# The Caddyfile is a bind mount: compose doesn't restart Caddy when only its
-# contents change, so reload it (graceful, no dropped connections).
+# The Caddyfile is bind-mounted as a single file. git replaces files rather
+# than editing them in place, and a single-file bind mount keeps pointing at
+# the old file, so Caddy never sees the update (a `caddy reload` re-reads the
+# stale copy and reports "config is unchanged"). Restarting the container
+# re-attaches the mount to the new file; Caddy is back in about a second.
 if ! wwwide_git diff --quiet "$LOCAL" HEAD -- docker/Caddyfile docker/caddy-sites.d; then
-    echo "$(date): Caddyfile changed — reloading Caddy..."
-    docker compose --project-directory "$DOCKER_DIR" exec -T caddy \
-        caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || \
-        wwwide_notify auto-update-caddy 3600 "Caddy reload failed after updating to $(wwwide_git rev-parse --short HEAD)."
+    echo "$(date): Caddyfile changed — restarting Caddy to load it..."
+    docker compose --project-directory "$DOCKER_DIR" restart caddy || \
+        wwwide_notify auto-update-caddy 3600 "Caddy restart failed after updating to $(wwwide_git rev-parse --short HEAD)."
 fi
 
 echo "$(date): Update and deployment complete."

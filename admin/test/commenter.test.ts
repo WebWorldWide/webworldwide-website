@@ -146,7 +146,7 @@ test('password change requires the current password and revokes old sessions on 
   );
   assert.equal(ok.status, 200);
   const me = await fetch(`${base}/commenter/me`, { headers: { cookie: `JWT=${old}` } });
-  assert.equal(me.status, 401);
+  assert.deepEqual(await me.json(), { username: null });
   const relog = await post('login', { username: 'Grace Hopper', password: 'brand new phrase' });
   assert.equal(relog.status, 200);
 });
