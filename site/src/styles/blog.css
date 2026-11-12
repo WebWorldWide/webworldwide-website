@@ -172,12 +172,31 @@
   color: var(--ink);
   font-weight: 700;
 }
-.mast-foot {
-  margin-top: 20px;
+.mast-foot,
+.blog-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+.mast-foot {
+  margin-top: 20px;
+}
+/* Pages 2+: search + RSS on their own, above the posts. */
+.blog-toolbar {
+  flex-wrap: nowrap;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.blog-toolbar .search-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.blog-toolbar .rss-btn {
+  flex-shrink: 0;
 }
 
 /* ============================================================
