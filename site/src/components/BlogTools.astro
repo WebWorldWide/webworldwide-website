@@ -1,0 +1,19 @@
+---
+/**
+ * Blog search + RSS buttons. On the first blog page they sit in the
+ * masthead card; later pages show them alone in a slim bar at the top.
+ */
+import { siteConfig } from '@/lib/site-config';
+---
+  <button class="search-pill" type="button" data-open-cmdk aria-label="Search posts">
+    <span class="prompt" aria-hidden="true">›</span>
+    <span>search posts…</span>
+  </button>
+  <a class="rss-btn" href={siteConfig.rss.url} aria-label="RSS feed">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <circle cx="6.18" cy="17.82" r="2.18"></circle>
+      <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83C19.56 11.4 12.6 4.44 4 4.44z"></path>
+      <path d="M4 10.1v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83C13.9 14.93 9.47 10.1 4 10.1z"></path>
+    </svg>
+    <span>RSS</span>
+  </a>
