@@ -79,9 +79,20 @@ export function initWordmarkWarp(): void {
   const lead = ((text.split(' ')[0] || '').length - 1) / 2;
   const thetaFor = (j: number): number => ((j - lead) / M) * Math.PI * 2 - Math.PI / 2;
 
+  // Ring radius: at least the area's usual 41%, but always far enough out
+  // that every glyph clears the globe AND its hard 8px offset shadow
+  // (which reaches ~8px further toward the lower right). Measured from the
+  // real globe and font sizes, so it holds at every screen size; on phones
+  // the fixed 41% put the right-hand letters inside the shadow.
+  const SHADOW = 8;
+  const GAP = 14;
   function computeRadius(): number {
     const r = area!.getBoundingClientRect();
-    return Math.min(r.width, r.height) * 0.41;
+    const globeR = (globe ? globe.offsetWidth : 0) / 2;
+    const fs = parseFloat(getComputedStyle(wm!).fontSize) || 40;
+    // A rotated glyph's half-height, with a little room for its text-shadow.
+    const glyph = fs * 0.55;
+    return Math.max(Math.min(r.width, r.height) * 0.41, globeR + SHADOW + GAP + glyph);
   }
 
   function placeOnRing(): void {
