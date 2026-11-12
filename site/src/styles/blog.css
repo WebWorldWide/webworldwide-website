@@ -172,6 +172,19 @@
   color: var(--ink);
   font-weight: 700;
 }
+/* Phones: "24 posts" and "Updated …" don't fit on one line, so stack them
+   instead of leaving a stray divider and a ragged second line. */
+@media (max-width: 400px) {
+  .mast-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .mast-meta > span {
+    padding: 0;
+    border-right: 0;
+  }
+}
 .mast-foot,
 .blog-toolbar {
   display: flex;
@@ -184,19 +197,26 @@
 }
 /* Pages 2+: search + RSS on their own, above the posts. */
 .blog-toolbar {
-  flex-wrap: nowrap;
   padding: 14px 18px;
   margin-bottom: 16px;
 }
+/* Both places: the search box fills the row and RSS sits at the far right,
+   on one line at every width (down to 320px). */
+.mast-foot,
+.blog-toolbar {
+  flex-wrap: nowrap;
+}
+.mast-foot .search-pill,
 .blog-toolbar .search-pill {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 320px;
   white-space: nowrap;
   overflow: hidden;
 }
+.mast-foot .rss-btn,
 .blog-toolbar .rss-btn {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* ============================================================
