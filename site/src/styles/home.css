@@ -178,6 +178,12 @@
   position: relative;
   padding: 64px 22px 84px;
 }
+/* The app icons' soft glow (.app-halo) reaches past the section edge on some
+   widths, which made the whole page scroll sideways. Clip it horizontally
+   (clip, not hidden: no scroll container, so the 3D icons are unaffected). */
+#apps {
+  overflow-x: clip;
+}
 .section-inner {
   max-width: 1240px;
   margin: 0 auto;
@@ -658,7 +664,7 @@
 }
 .film-play {
   position: relative;
-  width: clamp(110px, 14vw, 168px);
+  width: clamp(56px, 14vw, 168px);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: linear-gradient(180deg, rgb(255, 255, 255, 0.45), rgb(255, 255, 255, 0.15));
@@ -934,11 +940,15 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  /* Long handles (e.g. the Mastodon address) must truncate, not spill out. */
+  /* Long handles (the Bluesky and Mastodon addresses) wrap onto a second
+     line rather than being cut off; never more than two lines. */
   max-width: 100%;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .elsewhere-tile .arrow {
   font-family: var(--font-pixel);
@@ -949,6 +959,43 @@
 }
 .elsewhere-tile:hover .arrow {
   transform: translate(6px, 0);
+}
+
+/* Socials on phones: tighter tiles so names and handles get the width, and
+   room on the right for the tiles' offset shadow. */
+@media (max-width: 560px) {
+  #socials .elsewhere-grid {
+    gap: 14px;
+    padding-right: 6px;
+  }
+  #socials .elsewhere-tile {
+    flex-basis: 100%;
+    max-width: none;
+    min-height: 0;
+    padding: 18px 14px 14px;
+    gap: 12px;
+    box-shadow:
+      4px 4px 0 var(--ink),
+      0 0 0 2px #fff inset;
+  }
+  .elsewhere-tile .icon-box {
+    width: 46px;
+    height: 46px;
+  }
+  .elsewhere-tile .icon-box svg {
+    width: 26px;
+    height: 26px;
+  }
+  .elsewhere-tile .name {
+    font-size: 24px;
+  }
+  .elsewhere-tile .handle {
+    font-size: 13px;
+    letter-spacing: 0.06em;
+  }
+  .elsewhere-tile .arrow {
+    margin-left: 0;
+  }
 }
 
 /* RESPONSIVE TWEAKS */
@@ -969,8 +1016,19 @@
   .film-frame::after {
     height: 28px;
   }
+  /* Keep the play button clear of the title on small frames. */
+  .film-content {
+    padding: 28px 0 46px;
+  }
+  .film-play .play-tri {
+    border-left-width: 18px;
+    border-top-width: 12px;
+    border-bottom-width: 12px;
+    margin-left: 5px;
+  }
   .film-title {
     bottom: 38px;
+    font-size: 15px;
   }
 }
 @media (max-width: 380px) {
