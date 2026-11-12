@@ -1,6 +1,8 @@
-# Weekly, grouped dependency updates. Minor/patch groups (and security fixes)
-# are merged automatically once every check passes
-# (.github/workflows/dependabot-automerge.yml); majors wait for a human.
+# Weekly, grouped dependency updates, fully hands-off: every update is
+# merged automatically once all checks pass and then deployed, and one whose
+# checks keep failing is closed (.github/workflows/dependabot-automerge.yml).
+# Routine major versions are ignored everywhere; a security fix that needs
+# a major still arrives and is merged if the full test suite passes.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -12,31 +14,17 @@ updates:
       timezone: America/Chicago
     open-pull-requests-limit: 6
     ignore:
-      # TypeScript 7 (the native compiler) isn't supported by typescript-eslint
-      # yet (peer: typescript <6.1). Take it together with a typescript-eslint
-      # release that allows it.
-      - dependency-name: typescript
+      - dependency-name: '*'
         update-types: [version-update:semver-major]
     groups:
-      # Toolchains whose packages must move together (a lone major fails
-      # peer-dependency resolution until its plugins catch up).
-      typescript:
-        patterns: [typescript, typescript-eslint, '@typescript-eslint/*', ts-api-utils]
-        update-types: [major]
-      vitest:
-        patterns: [vitest, '@vitest/*']
-        update-types: [major]
-      stylelint:
-        patterns: ['stylelint*']
-        update-types: [major]
-      eslint:
-        patterns: [eslint, '@eslint/*', 'eslint-plugin-*', 'eslint-config-*', globals]
-        update-types: [major]
       minor-and-patch:
         update-types: [minor, patch]
 
   - package-ecosystem: github-actions
     directory: /
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     schedule:
       interval: weekly
       day: monday
@@ -48,6 +36,10 @@ updates:
 
   - package-ecosystem: docker-compose
     directory: /docker
+    # Image majors (e.g. Postgres 15 -> 18) need a data migration; never automatic.
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     schedule:
       interval: weekly
       day: monday
@@ -62,7 +54,7 @@ updates:
     # Node majors are a deliberate LTS decision (CI pins the same version),
     # not a weekly bump.
     ignore:
-      - dependency-name: node
+      - dependency-name: '*'
         update-types: [version-update:semver-major]
     schedule:
       interval: weekly

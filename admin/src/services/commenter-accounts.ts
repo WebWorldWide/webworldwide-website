@@ -18,7 +18,7 @@
  * - Brute force: per-account lockout (5 failures → 15 min, doubling up to
  *   24 h), on top of per-IP rate limits in the route.
  * - Sessions: 30-day JWT in an HttpOnly + Secure cookie on the comments
- *   domain. A password change or admin reset bumps token_version, which
+ *   domain. A password change bumps token_version, which
  *   locks older sessions out of the account page at once; Remark42 itself
  *   only checks the signature, so an older session can still comment until
  *   it expires (deleting an account also blocks it in Remark42 at once).
@@ -274,18 +274,6 @@ export async function changePassword(
     )
     .run(await hashPassword(String(next)), id);
   return findById(id) as Account;
-}
-
-/** Admin: set a one-time temporary password (returned once), revoking sessions. */
-export async function adminResetPassword(id: string): Promise<string> {
-  if (!findById(id)) throw new AccountError('not_found', 'Account not found.', 404);
-  const temp = randomBytes(9).toString('base64url');
-  db()
-    .prepare(
-      'UPDATE commenter_accounts SET password_hash = ?, token_version = token_version + 1, failed_attempts = 0, locked_until = NULL WHERE id = ?',
-    )
-    .run(await hashPassword(temp), id);
-  return temp;
 }
 
 export function adminDelete(id: string): boolean {

@@ -11,7 +11,7 @@
  *   POST /commenter/logout
  *   POST /commenter/password    { current, next }
  *
- * Admin moderation (list / reset / delete) is in adminRouter, mounted under
+ * Admin moderation (list / delete) is in adminRouter, mounted under
  * the session-protected /api/commenters.
  */
 import { Router, json, type Request, type Response, type NextFunction } from 'express';
@@ -193,16 +193,6 @@ export const adminRouter = Router();
 
 adminRouter.get('/', (_req, res) => {
   res.json({ items: accounts.list() });
-});
-
-adminRouter.post('/:id/reset', async (req, res) => {
-  try {
-    const temp = await accounts.adminResetPassword(String(req.params.id));
-    logActivity({ req, action: 'commenter.reset', target: String(req.params.id) });
-    res.json({ temporaryPassword: temp });
-  } catch (err) {
-    fail(res, err);
-  }
 });
 
 adminRouter.delete('/:id', async (req, res) => {

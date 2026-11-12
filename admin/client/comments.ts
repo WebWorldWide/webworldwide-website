@@ -405,10 +405,9 @@
   }
 
   /**
-   * Commenter accounts (username + password sign-in on the blog). Passwords
-   * are never visible here; "Reset password" sets a one-time temporary one to
-   * pass on to the commenter, "Delete" removes the account and blocks its
-   * existing sign-in.
+   * Commenter accounts (username + password sign-in on the blog). Fully
+   * self-service; nothing here needs attention. Passwords are never visible.
+   * "Delete" (optional moderation) removes an account and blocks its sign-in.
    */
   function renderAccounts(list) {
     if (!state.accounts.length) {
@@ -459,26 +458,6 @@
         actions.appendChild(b);
         return b;
       };
-      mk('Reset password', '').addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (
-          !confirm(`Give ${a.username} a temporary password? Their current password stops working.`)
-        )
-          return;
-        try {
-          const r = await TE.fetchJSON(`/api/commenters/${encodeURIComponent(a.id)}/reset`, {
-            method: 'POST',
-            body: '{}',
-          });
-          window.prompt(
-            `Temporary password for ${a.username}. Copy it now (it won't be shown again); they can change it after signing in:`,
-            r.temporaryPassword,
-          );
-          await reloadActive();
-        } catch (err) {
-          TE.toast((err.data && err.data.message) || err.message || 'Reset failed.', 'error');
-        }
-      });
       mk('Delete', 'bad').addEventListener('click', async (e) => {
         e.stopPropagation();
         if (
