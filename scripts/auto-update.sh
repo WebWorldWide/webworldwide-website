@@ -120,4 +120,13 @@ if ! docker compose --project-directory "$DOCKER_DIR" up -d --build --remove-orp
 fi
 wwwide_notify_clear auto-update-rebuild
 
+# The Caddyfile is a bind mount: compose doesn't restart Caddy when only its
+# contents change, so reload it (graceful, no dropped connections).
+if ! wwwide_git diff --quiet "$LOCAL" HEAD -- docker/Caddyfile docker/caddy-sites.d; then
+    echo "$(date): Caddyfile changed — reloading Caddy..."
+    docker compose --project-directory "$DOCKER_DIR" exec -T caddy \
+        caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || \
+        wwwide_notify auto-update-caddy 3600 "Caddy reload failed after updating to $(wwwide_git rev-parse --short HEAD)."
+fi
+
 echo "$(date): Update and deployment complete."

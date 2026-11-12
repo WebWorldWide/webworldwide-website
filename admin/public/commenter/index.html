@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Comment account · Web World Wide</title>
+    <link rel="stylesheet" href="/account/style.css" />
+  </head>
+  <body data-site-origin="__SITE_ORIGIN__">
+    <main class="card" id="main">
+      <h1>Keep your name</h1>
+      <p class="lede">
+        A free account keeps your display name yours on every device, with a
+        <span class="tick" aria-hidden="true">✓</span> verified mark on your comments.
+      </p>
+
+      <section id="signed-in" hidden>
+        <p class="status">Signed in as <strong id="me-name"></strong>.</p>
+        <p class="hint" id="back-hint">You can close this window and comment.</p>
+        <details>
+          <summary>Change password</summary>
+          <form id="form-password" novalidate>
+            <label for="pw-current">Current password</label>
+            <input id="pw-current" type="password" autocomplete="current-password" required />
+            <label for="pw-next">New password</label>
+            <input
+              id="pw-next"
+              type="password"
+              autocomplete="new-password"
+              minlength="10"
+              required
+            />
+            <button type="submit">Change password</button>
+          </form>
+        </details>
+        <button type="button" class="secondary" id="btn-logout">Sign out</button>
+      </section>
+
+      <section id="signed-out" hidden>
+        <div class="tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            id="tab-login"
+            aria-selected="true"
+            aria-controls="form-login"
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="tab-register"
+            aria-selected="false"
+            aria-controls="form-register"
+          >
+            Create account
+          </button>
+        </div>
+
+        <form id="form-login" role="tabpanel" aria-labelledby="tab-login" novalidate>
+          <label for="login-user">Username</label>
+          <input
+            id="login-user"
+            autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
+            required
+          />
+          <label for="login-pass">Password</label>
+          <input id="login-pass" type="password" autocomplete="current-password" required />
+          <button type="submit">Sign in</button>
+        </form>
+
+        <form id="form-register" role="tabpanel" aria-labelledby="tab-register" hidden novalidate>
+          <label for="reg-user">Username <span class="hint">(shown on your comments)</span></label>
+          <input
+            id="reg-user"
+            autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
+            minlength="3"
+            maxlength="24"
+            required
+          />
+          <label for="reg-pass"
+            >Password <span class="hint">(10+ characters; a short phrase works well)</span></label
+          >
+          <input
+            id="reg-pass"
+            type="password"
+            autocomplete="new-password"
+            minlength="10"
+            required
+          />
+          <button type="submit">Create account</button>
+          <p class="fine">
+            Your password is stored only as an Argon2id hash: nobody, including the site owner, can
+            read it. There is no email reset, so keep it in a password manager.
+          </p>
+        </form>
+      </section>
+
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    </main>
+    <script src="/account/app.js"></script>
+  </body>
+</html>

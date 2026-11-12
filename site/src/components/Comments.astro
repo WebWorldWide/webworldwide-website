@@ -16,7 +16,20 @@ const { threadId, remarkUrl, remarkSiteId } = Astro.props;
 ---
 {
   remarkUrl ? (
-    <div id="remark42" class="remark42-wrap" data-host={remarkUrl} data-site={remarkSiteId} data-thread={threadId} />
+    <>
+      <div class="comments-account">
+        <p>Want to keep your name on every device? Make a free account, or comment as a guest.</p>
+        <div class="comments-account-actions">
+          <a class="acct-btn primary" href={`${remarkUrl}/account/#register`} target="_blank" rel="noopener" data-comments-account>
+            Create a free account
+          </a>
+          <a class="acct-btn" href={`${remarkUrl}/account/`} target="_blank" rel="noopener" data-comments-account>
+            Sign in
+          </a>
+        </div>
+      </div>
+      <div id="remark42" class="remark42-wrap" data-host={remarkUrl} data-site={remarkSiteId} data-thread={threadId} />
+    </>
   ) : (
     <p class="comments-empty">Comments aren’t loading right now — the comment service may be offline. Please check back soon.</p>
   )
@@ -47,6 +60,25 @@ const { threadId, remarkUrl, remarkSiteId } = Astro.props;
       };
       document.head.append(s);
     };
+    // Account links open a small window on the comments domain (where the
+    // sign-in cookie lives). When it reports a sign-in, remount the widget so
+    // it picks the session up.
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-comments-account]')) {
+      a.addEventListener('click', (e) => {
+        const w = window.open(a.href, 'www-comments-account', 'popup,width=460,height=680');
+        if (w) e.preventDefault();
+      });
+    }
+    window.addEventListener('message', (e) => {
+      if (e.origin !== new URL(host).origin) return;
+      if ((e.data as { type?: string } | null)?.type !== 'www-comments-auth') return;
+      const R = (window as unknown as { REMARK42?: { destroy?: () => void; createInstance?: (c: unknown) => void } }).REMARK42;
+      const cfg = (window as unknown as { remark_config: unknown }).remark_config;
+      if (R?.destroy && R.createInstance && cfg) {
+        R.destroy();
+        R.createInstance(cfg);
+      } else location.reload();
+    });
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(
         (entries) => {
