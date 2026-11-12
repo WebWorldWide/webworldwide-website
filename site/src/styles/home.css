@@ -203,7 +203,9 @@
   color: #fff;
   text-shadow: 3px 3px 0 var(--ink);
   position: relative;
-  margin: 0 0 clamp(20px, 3vw, 34px);
+  /* The underline bar (::after) hangs 16px below this box, so the margin
+     has to clear it: ≥ 18px of air under the bar at every width. */
+  margin: 0 0 clamp(36px, 4vw, 44px);
 }
 .eyebrow::before {
   content: "";
@@ -312,7 +314,7 @@
 @media (max-width: 520px) {
   .apps-float {
     grid-template-columns: 1fr;
-    gap: 64px 0;
+    gap: 40px 0;
     padding-top: 8px;
   }
 }
@@ -1002,11 +1004,14 @@
 
 /* RESPONSIVE TWEAKS */
 @media (max-width: 720px) {
+  /* Phones: the hero sizes to its content (no tall empty band under the
+     tagline) and sections sit closer together. */
   .hero {
-    padding: 100px 14px 70px;
+    min-height: 0;
+    padding: 96px 14px 24px;
   }
   .section {
-    padding: 80px 16px 100px;
+    padding: 44px 16px 56px;
   }
   .film-handle,
   .film-meta {

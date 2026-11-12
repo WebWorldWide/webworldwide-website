@@ -780,4 +780,14 @@ a.pager-btn:focus-visible {
   .end-actions {
     grid-template-columns: 1fr 1fr;
   }
+  /* Third button (Next post) gets the whole second row, not half of it. */
+  .end-actions > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+  /* Keep each label on one line down to 320px. */
+  .end-action {
+    padding: 12px 8px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
 }
