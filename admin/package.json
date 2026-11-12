@@ -60,7 +60,7 @@
     "multer": "^2.5.0",
     "nanoid": "^6.0.2",
     "prosemirror-markdown": "^1.13.9",
-    "prosemirror-model": "^1.25.12",
+    "prosemirror-model": "^1.25.13",
     "sharp": "^0.35.5",
     "shiki": "^4.6.0",
     "simple-git": "^4.0.2",
