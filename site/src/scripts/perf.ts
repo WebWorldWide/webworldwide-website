@@ -3,9 +3,9 @@
  *
  * "Lite" = a slow CPU, little memory, a slow or metered connection, or the
  * user asked for reduced data/motion. Decorative work scales down on lite
- * devices (fewer 3D slices, 30fps idle animation, no cursor parallax, no
- * cloud bob — the clouds themselves keep drifting); content and
- * interactions are identical.
+ * devices (fewer 3D wall pieces on the app icons, no cursor parallax, no
+ * backdrop blur). Decorative animation is never frozen: it is all
+ * compositor-only and costs nothing on the main thread.
  */
 type NavigatorHints = Navigator & {
   deviceMemory?: number;

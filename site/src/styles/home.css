@@ -140,9 +140,6 @@
   animation-delay: 0.2s;
   animation-duration: 1.6s;
 }
-.lite .tagline .sep::after {
-  animation: none;
-}
 .tagline .sep:nth-child(4) {
   animation-delay: 0.4s;
   animation-duration: 2s;
@@ -988,14 +985,13 @@
 
 /* ==========================================================================
    Lite mode (slow CPU / low memory / slow or metered connection / reduced
-   data). Set by scripts/perf.ts. Content is identical; only decorative
-   infinite loops and blur passes are dropped.
+   data). Set by scripts/perf.ts. Content and motion are identical: the
+   decorative loops (tagline squares, floating app icons, clouds) are
+   compositor-only transforms/opacity that cost the main thread nothing,
+   and lite matches ordinary 4-core laptops and phones, so freezing them
+   just made the page look broken there. Only the GPU-heavy blur pass is
+   dropped.
    ========================================================================== */
-.lite .drift,
-.lite .tagline .sep,
-.lite .floating-app {
-  animation: none !important;
-}
 .lite .film-play {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
