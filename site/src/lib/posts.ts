@@ -63,3 +63,18 @@ export function getPostContent(id: string): PostModule['Content'] | undefined {
   }
   return undefined;
 }
+
+/**
+ * A post's rendered HTML (for the RSS feed's full-content entries). Relative
+ * links and image paths are made absolute against `siteUrl`, since feed
+ * readers resolve them against the feed, not the post.
+ */
+export async function getPostHtml(id: string, siteUrl: string): Promise<string> {
+  for (const [path, mod] of Object.entries(modules)) {
+    if (idFromPath(path) !== id) continue;
+    const html = await mod.compiledContent();
+    const base = siteUrl.replace(/\/$/, '');
+    return html.replace(/(\s(?:src|href|poster)=")\/(?!\/)/g, `$1${base}/`);
+  }
+  return '';
+}
