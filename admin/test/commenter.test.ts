@@ -151,23 +151,16 @@ test('password change requires the current password and revokes old sessions on 
   assert.equal(relog.status, 200);
 });
 
-test('admin list never exposes password hashes; reset and delete work', async () => {
+test('admin list never exposes password hashes; delete works', async () => {
   const list = await (await fetch(`${base}/api/commenters`)).json();
   assert.ok(list.items.length >= 2);
   assert.ok(!JSON.stringify(list).includes('argon2'));
   const grace = list.items.find((x: { username: string }) => x.username === 'Grace Hopper');
-  const reset = await (
-    await fetch(`${base}/api/commenters/${grace.id}/reset`, { method: 'POST' })
-  ).json();
-  assert.ok(reset.temporaryPassword.length >= 10);
-  const viaTemp = await post('login', {
-    username: 'Grace Hopper',
-    password: reset.temporaryPassword,
-  });
-  assert.equal(viaTemp.status, 200);
+  const reset = await fetch(`${base}/api/commenters/${grace.id}/reset`, { method: 'POST' });
+  assert.equal(reset.status, 404, 'no admin password reset: accounts are self-service');
   const del = await fetch(`${base}/api/commenters/${grace.id}`, { method: 'DELETE' });
   assert.equal(del.status, 204);
-  const gone = await post('login', { username: 'Grace Hopper', password: reset.temporaryPassword });
+  const gone = await post('login', { username: 'Grace Hopper', password: 'brand new phrase' });
   assert.equal(gone.status, 401);
 });
 

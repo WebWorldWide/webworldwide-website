@@ -222,20 +222,6 @@ services:
       - IMAGE_MAX_SIZE=500000
       # Basic-auth admin used by the CMS moderation view (empty = disabled).
       - ADMIN_PASSWD=${REMARK42_ADMIN_PASSWD:-}
-      # Optional sign-in providers. Each turns on only when its values are
-      # set in docker/.env (see docker/README-comments-signin.md):
-      # GitHub / Google OAuth apps, and email sign-in links over SMTP.
-      - AUTH_GITHUB_CID=${REMARK42_GITHUB_CID:-}
-      - AUTH_GITHUB_CSEC=${REMARK42_GITHUB_CSEC:-}
-      - AUTH_GOOGLE_CID=${REMARK42_GOOGLE_CID:-}
-      - AUTH_GOOGLE_CSEC=${REMARK42_GOOGLE_CSEC:-}
-      - AUTH_EMAIL_ENABLE=${REMARK42_EMAIL_ENABLE:-false}
-      - AUTH_EMAIL_FROM=${REMARK42_EMAIL_FROM:-}
-      - SMTP_HOST=${SMTP_HOST:-}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USERNAME=${SMTP_USER:-}
-      - SMTP_PASSWORD=${SMTP_PASS:-}
-      - SMTP_STARTTLS=${REMARK42_SMTP_STARTTLS:-true}
     volumes:
       - remark_data:/srv/var
     networks: [app]
