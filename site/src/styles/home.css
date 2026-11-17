@@ -187,7 +187,10 @@
   overflow-x: clip;
 }
 .section-inner {
-  max-width: 1240px;
+  /* 1240px up to ~1880px windows, then grows with the window (keeping at
+     least 320px of sky either side) to 1600px on 1440p/ultrawide/4K
+     screens, so the column doesn't shrink to a sliver in a sea of blue. */
+  max-width: clamp(1240px, 100vw - 640px, 1600px);
   margin: 0 auto;
 }
 .eyebrow {
@@ -312,10 +315,20 @@
   }
 }
 @media (max-width: 520px) {
+  /* Phones: two smaller icons a row instead of a tall single column. */
   .apps-float {
-    grid-template-columns: 1fr;
-    gap: 40px 0;
+    gap: 40px 8px;
     padding-top: 8px;
+  }
+  .floating-app {
+    gap: 24px;
+  }
+  .floating-app .caption {
+    font-size: 21px;
+  }
+  .floating-app .caption .status {
+    font-size: 14px;
+    letter-spacing: 0.12em;
   }
 }
 
@@ -379,8 +392,32 @@
 }
 @media (max-width: 520px) {
   .drift {
-    width: 172px;
-    height: 172px;
+    width: 124px;
+    height: 124px;
+  }
+  .app-shadow {
+    width: 104px;
+    bottom: -24px;
+  }
+  .app-halo {
+    inset: -28px;
+  }
+  .app-placeholder {
+    font-size: 60px;
+    border-radius: 24px;
+  }
+}
+@media (max-width: 340px) {
+  .drift {
+    width: 104px;
+    height: 104px;
+  }
+}
+/* Big monitors: icons grow with the wider column. */
+@media (min-width: 2000px) {
+  .drift {
+    width: 240px;
+    height: 240px;
   }
 }
 @keyframes bob {
@@ -805,8 +842,15 @@
   justify-content: center;
 }
 #socials .elsewhere-tile {
-  flex: 1 1 280px;
-  max-width: 360px;
+  /* Two a row on tablets and small laptops, four on wide screens — eight
+     tiles always land in full rows; an odd last tile still centres. */
+  flex: 0 1 calc((100% - 18px) / 2);
+  min-width: 0;
+}
+@media (min-width: 1180px) {
+  #socials .elsewhere-tile {
+    flex-basis: calc((100% - 3 * 18px) / 4);
+  }
 }
 
 /* App icons spin via a custom pointer gesture — block the browser's native
@@ -1038,6 +1082,24 @@
     font-size: 15px;
   }
 }
+@media (max-width: 520px) {
+  /* Narrow frames are too short for the caption to sit under the play
+     button, so it moves into the bottom bar (in place of the decorative
+     episode counter). */
+  .film-content {
+    padding: 28px 0;
+  }
+  .film-meta {
+    display: none;
+  }
+  .film-title {
+    bottom: 0;
+    z-index: 4;
+    max-width: calc(100% - 24px);
+    font-size: 14px;
+    line-height: 28px;
+  }
+}
 @media (max-width: 380px) {
   .wordmark {
     font-size: 40px;
@@ -1045,6 +1107,16 @@
   .tagline {
     font-size: 20px;
     letter-spacing: 0.32em;
+  }
+}
+@media (max-width: 340px) {
+  /* Keep the ring of letters inside a 280px screen. */
+  .wordmark {
+    font-size: 34px;
+  }
+  .wordmark-globe {
+    width: 116px;
+    height: 116px;
   }
 }
 
