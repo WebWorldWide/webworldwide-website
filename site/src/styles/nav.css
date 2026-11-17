@@ -111,6 +111,26 @@
   }
 }
 
+/* Smallest phones (≤340px, e.g. 320px iPhone SE / 280px Galaxy Fold
+   cover screen): tighten the links so the pill fits without spilling past
+   the screen edge. Tap targets stay 44px tall. */
+@media (max-width: 340px) {
+  .topbar {
+    padding: 0 8px;
+  }
+  .topbar-pill a.nav-link {
+    font-size: 14px;
+    padding: 8px 5px;
+    letter-spacing: 0.02em;
+    /* WCAG 2.5.5: short labels (APPS, BLOG) still get a 44px-wide target. */
+    min-width: 44px;
+    justify-content: center;
+  }
+  .topbar-pill {
+    padding-right: 4px;
+  }
+}
+
 /* Baked globe spin (scripts/globe-nav.ts): a strip of pre-drawn frames
    flipped by a steps() transform animation on the compositor. */
 .globe-strip {

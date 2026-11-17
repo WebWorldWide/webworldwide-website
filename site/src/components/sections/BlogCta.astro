@@ -184,14 +184,20 @@ const label = num ? `${String(num).padStart(2, '0')} — Blog` : 'Blog';
     white-space: nowrap;
   }
 
+  /* Tablets and phones: two latest posts + the index card — side by side
+     while there's room, stacked on phones. */
   @media (max-width: 900px) {
     .hb {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 18px;
     }
-    /* On phones show two latest posts + the index card. */
     .hb-post:nth-of-type(3) {
       display: none;
+    }
+  }
+  @media (max-width: 600px) {
+    .hb {
+      grid-template-columns: 1fr;
     }
   }
   @media (prefers-reduced-motion: reduce) {
